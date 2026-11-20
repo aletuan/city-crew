@@ -8,8 +8,9 @@
 // Until that day this held comments alone, the tab added requests and
 // badges of its own, and the bell said only comments: three marks, three
 // meanings. Now the number is everything "For you" on Activity that is
-// later than the mark, plus each request waiting (`freshCount`), and the
-// tab's dot, the bell's figure and Activity's pill all read it. Badges
+// later than the mark, friend requests one row of them (`freshCount`),
+// and the tab's dot, the bell's figure and Activity's pill all read it.
+// Opening Activity clears it, with no exception. Badges
 // went to the sheet they are drawn in.
 //
 // ── one copy, at the root ──
@@ -47,7 +48,7 @@ import React, {
 } from 'react';
 import { AppState } from 'react-native';
 import { useSession } from './auth';
-import { activityGroups, type CommentNews, freshCount, newerThan } from './commentNews';
+import { activityGroups, type CommentNews, freshCount, latestRequest, newerThan } from './commentNews';
 import { useCrew } from './crew';
 import { type Fetch, type LogNews, useCommentNewsQuery, useLogNewsQuery } from './data';
 import { buildActivity, friendsMade, splitFriendships } from './friends';
@@ -64,8 +65,8 @@ export type FreshNews = {
   read: boolean;
   /** Likes and copies of the reader's lists over the same window. */
   log: Fetch<LogNews>;
-  /** "For you" rows later than the mark, and requests waiting — the
-   *  bell's figure and the tab's dot (`freshCount`). */
+  /** "For you" rows later than the mark, the requests' row among them
+   *  — the bell's figure and the tab's dot (`freshCount`). */
   fresh: number;
   /** Activity has shown rows up to this time. */
   see: (at: string) => void;
@@ -123,7 +124,7 @@ export function FreshNewsProvider({ children }: { children: React.ReactNode }) {
     if (!read || !me) return 0;
     const items = buildActivity(log.data.applause, log.data.copies, undefined, friendsMade(ships.data, me, log.data.since));
     const { forYou } = activityGroups(items, news.data, '');
-    return freshCount(forYou, mark, splitFriendships(ships.data, me).incoming.length);
+    return freshCount(forYou, mark, latestRequest(splitFriendships(ships.data, me).incoming));
   }, [read, me, log.data, ships.data, news.data, mark]);
   const value = useMemo<FreshNews>(() => ({ news, log, mark, read, fresh, see, freshen }),
     // Each field rather than the wrapper: a Fetch object is new every

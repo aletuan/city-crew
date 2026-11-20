@@ -137,7 +137,7 @@ export function newerThan(at: string, mark: string | null): boolean {
 
 /**
  * The bell's number, and whether the last tab wears its dot: the rows
- * of "For you" later than the mark, and each friend request waiting.
+ * of "For you" later than the mark, the friend requests among them.
  *
  * One rule since 20 Nov 2026 (owner): the tab's dot is the bell's dot,
  * and everything somebody else did for the reader is in it — a like or
@@ -152,11 +152,25 @@ export function newerThan(at: string, mark: string | null): boolean {
  * to answer": the same is true of a like, and the owner wanted a like to
  * be heard.
  *
- * A request has no time to be later than the mark: it is news until it
- * is answered, as the tab's dot always had it.
+ * Friend requests are one row, as Activity draws them (`requestRow`),
+ * timed by the latest of them, and new by the same mark as the rest
+ * (owner, the same evening). For a few hours a request counted until it
+ * was answered, whatever the mark — the tab's old rule for its dot —
+ * and the owner opened the bell, saw the 1 stay, and read it as broken:
+ * "opening the bell clears it" had one exception, and an exception to
+ * the rule a reader learns is a bug to that reader. What keeps a request
+ * from being forgotten is the card on your own page, which stays until
+ * it is answered (`person/Requests`), not the bell.
  */
-export function freshCount(forYou: readonly { at: string }[], mark: string | null, requests: number): number {
-  return forYou.filter((e) => newerThan(e.at, mark)).length + requests;
+export function freshCount(forYou: readonly { at: string }[], mark: string | null, latestRequest: string | null): number {
+  const rows = forYou.filter((e) => newerThan(e.at, mark)).length;
+  return rows + (latestRequest !== null && newerThan(latestRequest, mark) ? 1 : 0);
+}
+
+/** When the latest of the friend requests waiting was sent, or null for
+ *  none: the time of their one row. */
+export function latestRequest(incoming: readonly { created_at: string }[]): string | null {
+  return newestAt(incoming.map((r) => ({ at: r.created_at })));
 }
 
 /** The number on the bell: past nine it says only that it is more. A

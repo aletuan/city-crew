@@ -154,10 +154,18 @@ const show = (trips: Trip[] = [], over: Partial<typeof state.trips> = {}) => {
   return n;
 };
 const text = () => document.body.textContent ?? '';
-/** Section headings, top to bottom. */
-const sections = () => [...document.querySelectorAll('div')]
-  .map((el) => el.textContent ?? '')
-  .filter((s) => /^(Invitations|Upcoming|Past) · \d+$/.test(s));
+/** A tab by its word; its aria-label carries the figure, when there is one. */
+const tab = (name: RegExp) => screen.getByRole('tab', { name });
+/** The chosen tab: the web stub drops `selected`, so it is read the way a
+ *  reader reads it — the one word set apart from the others (a weight
+ *  heavier and in ink, see `WordTabs`), here by its style class. */
+const chosen = () => {
+  const all = screen.getAllByRole('tab');
+  const look = (el: HTMLElement) => el.querySelector('[dir="auto"]')!.className;
+  const on = all.filter((el) => all.filter((o) => look(o) === look(el)).length === 1);
+  return on.length === 1 ? on[0].getAttribute('aria-label') : undefined;
+};
+const tabs = () => screen.getAllByRole('tab').map((el) => el.getAttribute('aria-label'));
 
 beforeEach(() => {
   state.uid = 'u1';
@@ -219,6 +227,8 @@ describe('nothing saved yet', () => {
     expect(screen.queryByText(/four questions/)).toBeNull();
     // One invitation to do one thing: the header pill waits for a list.
     expect(screen.queryByRole('button', { name: 'New trip' })).toBeNull();
+    // And no switch between three empty rooms.
+    expect(screen.queryAllByRole('tab')).toHaveLength(0);
     fireEvent.click(screen.getByRole('button', { name: 'Plan a trip' }));
     expect(n.parent.navigate).toHaveBeenCalledWith('Ideas');
   });
@@ -259,45 +269,77 @@ describe('arriving from Profile', () => {
   });
 });
 
-describe('the two halves', () => {
-  it('puts what is coming above what has been, each with its count, soonest and most recent first', () => {
+describe('the tabs', () => {
+  it('splits invitations, what is coming and what has been, each with its figure, soonest and most recent first', () => {
     show([
       trip({ id: 'far', title: 'Far ahead', day: addDays(TODAY, 10) }),
       trip({ id: 'old', title: 'Long ago', day: addDays(TODAY, -30) }),
       trip({ id: 'soon', title: 'Soon', day: SOON }),
       trip({ id: 'last', title: 'Last week', day: GONE }),
     ]);
-    expect(sections()).toEqual(['Upcoming · 2', 'Past · 2']);
-    const titles = ['Soon', 'Far ahead', 'Last week', 'Long ago'].map((s) => text().indexOf(s));
-    expect([...titles].sort((a, b) => a - b)).toEqual(titles);
-    expect(screen.getByText('Your journeys')).toBeTruthy();
-  });
-
-  // UX-10: the lede said "your next plans" over a list that was all
-  // behind the reader. Three states, one line each.
-  it('draws only the half that exists, and says there is nothing ahead', () => {
-    show([trip({ day: GONE })]);
-    expect(sections()).toEqual(['Past · 1']);
-    expect(screen.queryByText(/Upcoming/)).toBeNull();
-    // A card in the upcoming section's place, with the trips' calendar.
-    const none = screen.getByTestId('trips-none-ahead');
-    expect(none.textContent).toBe('No upcoming trips');
-    expect(none.querySelector('[data-icon="calendar-outline"]')).toBeTruthy();
+    // Zero draws no pill: Invites says nothing about a count it does not have.
+    expect(tabs()).toEqual(['Invites', 'Upcoming (2)', 'Past (2)']);
+    expect(chosen()).toBe('Upcoming (2)');
+    const ahead = ['Soon', 'Far ahead'].map((s) => text().indexOf(s));
+    expect(ahead.every((i) => i >= 0)).toBe(true);
+    expect([...ahead].sort((a, b) => a - b)).toEqual(ahead);
+    expect(screen.queryByText('Last week')).toBeNull();
+    fireEvent.click(tab(/Past/));
+    const behind = ['Last week', 'Long ago'].map((s) => text().indexOf(s));
+    expect(behind.every((i) => i >= 0)).toBe(true);
+    expect([...behind].sort((a, b) => a - b)).toEqual(behind);
+    expect(screen.queryByText('Soon')).toBeNull();
+    // The old caption headings and the lede over them are gone with the scroll they divided.
+    expect(screen.queryByText(/ · \d+$/)).toBeNull();
     expect(screen.queryByText('Your journeys')).toBeNull();
   });
 
-  it('keeps the next-plans line when only upcoming trips exist', () => {
+  // UX-10, as tabs: an account whose trips are all behind it opens on
+  // them, not on an empty Upcoming that hides the only list there is.
+  it('opens on Past when nothing is ahead, and says so on Upcoming', () => {
+    show([trip({ day: GONE })]);
+    expect(chosen()).toBe('Past (1)');
+    expect(tab(/Upcoming/).getAttribute('aria-label')).toBe('Upcoming');
+    fireEvent.click(tab(/Upcoming/));
+    const none = screen.getByTestId('trips-none-upcoming');
+    expect(none.textContent).toBe('No upcoming trips');
+    expect(none.querySelector('[data-icon="calendar-outline"]')).toBeTruthy();
+    // No second offer to plan: the header's pill is the one.
+    expect(none.querySelector('button')).toBeNull();
+  });
+
+  it('says how a trip reaches Past while nothing has', () => {
     show([trip({ day: SOON })]);
-    expect(sections()).toEqual(['Upcoming · 1']);
-    expect(screen.getByText('Your journeys')).toBeTruthy();
-    expect(screen.queryByTestId('trips-none-ahead')).toBeNull();
+    expect(chosen()).toBe('Upcoming (1)');
+    fireEvent.click(tab(/Past/));
+    expect(screen.getByTestId('trips-none-past').textContent).toBe('Trips move here once their day is over');
+  });
+
+  it('says where an invitation comes from while none is waiting', () => {
+    show([trip()]);
+    fireEvent.click(tab(/Invites/));
+    const none = screen.getByTestId('trips-none-invites');
+    expect(none.textContent).toBe('When a friend invites you on a trip, it shows up here');
+    expect(none.querySelector('[data-icon="mail-outline"]')).toBeTruthy();
+  });
+
+  // The greeting is decided once: a reload that changes what is in each
+  // half does not move the tab under a reader who chose one.
+  it('keeps the tab the reader chose across a reload', () => {
+    state.trips = { loaded: true, error: null, data: [trip({ day: SOON })] };
+    const n = nav();
+    const { rerender } = render(<TripsScreen navigation={n} />);
+    fireEvent.click(tab(/Past/));
+    state.trips = { loaded: true, error: null, data: [trip({ day: GONE })] };
+    rerender(<TripsScreen navigation={n} />);
+    expect(chosen()).toBe('Past (1)');
   });
 
   // Today is still upcoming: an evening you are on does not become a
   // memory at midnight.
   it('keeps today’s trip among the upcoming ones', () => {
     show([trip({ day: TODAY, trip_stops: [stop(place(), { arrive_min: 23 * 60 + 59 })] })]);
-    expect(sections()).toEqual(['Upcoming · 1']);
+    expect(tabs()).toEqual(['Invites', 'Upcoming (1)', 'Past']);
   });
 
   it('opens a trip on its detail', () => {
@@ -310,7 +352,7 @@ describe('the two halves', () => {
   // ever been tapped.
   it('opens a past trip on its detail', () => {
     const n = show([trip({ id: 'old', title: 'Last week', day: GONE })]);
-    fireEvent.click(screen.getByText('Last week'));
+    fireEvent.click(screen.getByTestId('trip-past-0'));
     expect(n.navigate).toHaveBeenCalledWith('TripDetail', { id: 'old' });
   });
 
@@ -444,11 +486,13 @@ describe('the card', () => {
 describe('invitations', () => {
   const asked = () => trip({ id: 'asked-1', owner_id: 'lan', title: 'Lan’s evening' });
 
-  it('rides above the plans with its own count, names who asked, and opens the invitation', () => {
+  it('opens on the invitations, with a count, names who asked, and opens the invitation', () => {
     state.invites = [invite()];
     const n = show([trip(), asked()]);
-    expect(sections()).toEqual(['Invitations · 1', 'Upcoming · 1']);
+    expect(tabs()).toEqual(['Invites (1)', 'Upcoming (1)', 'Past']);
+    expect(chosen()).toBe('Invites (1)');
     expect(screen.getByText('Lan’s evening from lanphuong')).toBeTruthy();
+    expect(screen.queryByText('Old Quarter crawl')).toBeNull();
     fireEvent.click(screen.getByRole('button', { name: 'open asked-1' }));
     expect(n.navigate).toHaveBeenCalledWith('TripInvitation', { id: 'asked-1' });
   });
@@ -464,8 +508,31 @@ describe('invitations', () => {
   it('shows an accepted invitation among the plans, not on the rail', () => {
     state.invites = [invite({ status: 'accepted' })];
     show([asked()]);
-    expect(sections()).toEqual(['Upcoming · 1']);
+    expect(tabs()).toEqual(['Invites', 'Upcoming (1)', 'Past']);
+    expect(chosen()).toBe('Upcoming (1)');
     expect(screen.queryByTestId('invite-asked-1')).toBeNull();
+  });
+
+  // The trip the last invitation was now lives on Upcoming.
+  it('follows the last accepted invitation to Upcoming, and stays while more are waiting', async () => {
+    state.invites = [invite(), invite({ trip_id: 'asked-2', created_at: '2026-09-11T00:00:00Z' })];
+    show([asked(), trip({ id: 'asked-2', owner_id: 'lan', title: 'Second' })]);
+    fireEvent.click(screen.getByRole('button', { name: 'accept asked-1' }));
+    await waitFor(() => expect(spies.invitesReload).toHaveBeenCalledTimes(1));
+    expect(chosen()).toBe('Invites (2)');
+    cleanup();
+    state.invites = [invite()];
+    show([asked()]);
+    fireEvent.click(screen.getByRole('button', { name: 'accept asked-1' }));
+    await waitFor(() => expect(chosen()).toMatch(/^Upcoming/));
+  });
+
+  it('stays on an emptied Invites after a decline', async () => {
+    state.invites = [invite()];
+    show([asked(), trip()]);
+    fireEvent.click(screen.getByRole('button', { name: 'decline asked-1' }));
+    await waitFor(() => expect(spies.invitesReload).toHaveBeenCalledTimes(1));
+    expect(chosen()).toMatch(/^Invites/);
   });
 
   it('answers through the write, then reloads both lists', async () => {

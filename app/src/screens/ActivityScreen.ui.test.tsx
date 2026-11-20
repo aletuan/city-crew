@@ -738,8 +738,11 @@ describe('a friendship that began', () => {
   it('opens For you on a row for the requests waiting, counted in its pill, and goes to Crew', async () => {
     crew.ships.data = [ask('u-e')];
     crew.people = { 'u-e': person('u-e', 'em') };
+    data.before = null;
     const navigation = await renderScreen();
     expect(screen.getByTestId('activity-tab-for-you').textContent).toBe('For you1');
+    // Opening the page moves the mark past it, as past any row.
+    expect(data.seenThrough).toHaveBeenLastCalledWith('2026-09-01');
     const row = screen.getByTestId('activity-requests');
     expect(screen.getByTestId('activity-for-you').contains(row)).toBe(true);
     expect(row.querySelector('[data-icon="person-add"]')).toBeTruthy();
@@ -755,6 +758,20 @@ describe('a friendship that began', () => {
     expect(navigation.navigate).not.toHaveBeenCalled();
     expect(screen.queryByTestId('activity-empty')).toBeNull();
     expect(screen.queryByTestId('activity-tab-empty')).toBeNull();
+  });
+
+  // New by the mark, as every row is (owner, 20 Nov 2026): a request the
+  // reader has already seen here keeps its row, at the head, without the
+  // dot, and the pill does not count it. The bell opened clears it.
+  it('keeps a request seen before at the head, undotted and uncounted', async () => {
+    crew.ships.data = [ask('u-e', '2026-09-01T09:00:00Z')];
+    crew.people = { 'u-e': person('u-e', 'em') };
+    data.before = '2026-09-02T00:00:00Z';
+    await renderScreen();
+    const row = screen.getByTestId('activity-requests');
+    expect(screen.getByTestId('activity-for-you').children[0]).toBe(row);
+    expect(within(row).queryByTestId('row-new')).toBeNull();
+    expect(screen.getByTestId('activity-tab-for-you').textContent).toBe('For you');
   });
 });
 

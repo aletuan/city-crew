@@ -662,8 +662,8 @@ export default function CrewScreen({ navigation }: { navigation: Nav }) {
                 the same two verbs.
 
                 Each heading carries its own figure, as Trips' "Upcoming ·
-                1" does (owner, 20 Nov 2026). The Requests tab's pill
-                counts these alone — the ones waiting on you — and "Pending
+                1" did before its halves became tabs (owner, 20 Nov 2026).
+                The Requests tab's pill counts these alone — the ones waiting on you — and "Pending
                 · 1" under it is the same number, so the pill says what it
                 counts without a word of explanation, while "Sent · 2" says
                 what you are waiting on. Suggestions get none: they are not
