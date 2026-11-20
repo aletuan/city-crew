@@ -1,0 +1,401 @@
+# P3, one account: CM-1…CM-6 and CM-10 of docs/testing/e2e-plan.md, on a
+# public collection A makes here and deletes at the end.
+#
+# Account A (@maestro) is one of the five with a row in `app_flag_testers`
+# for `comments`; the disposable trip accounts are not. With the flag off
+# the bubble is not drawn, and the flow stops at the first wait on
+# `collection-comments` — a red, not a skip (condition 1 of the plan).
+#
+# Order is set by the system alerts. Deleting a comment raises one, and
+# after an alert the ⋯ sheets read to XCUITest as an empty tree (rule 11a
+# of GUIDELINES.md). So every sheet this flow needs (the owner's on/off)
+# comes before the one deletion, and the deletion takes everything at once:
+# the banned-word check's accepted line (CM-10) is written as a reply under
+# the first comment, so deleting that comment (CM-6) removes all three
+# rows. The app is relaunched before the collection is deleted.
+#
+# Three comments are posted a run (the refused one is not stored), well
+# under the 30 a day `own_comments_today` allows. A run that dies leaves
+# them on "Maestro Comments" until the next run deletes that list first;
+# deleting a list deletes its comments, hearts and tags.
+#
+# The banned word `zzmaestroban` sits in the live `banned_words` table by
+# the owner's leave (20 Nov 2026). Only an editor can change that table,
+# and this account is not one: the flow neither adds nor removes it.
+appId: host.exp.Exponent
+env:
+  EXPO_URL: ${EXPO_URL || 'exp://127.0.0.1:8081'}
+---
+- runFlow: common/start.yaml
+- runFlow: common/ensure-signed-in.yaml
+# The alerts below are matched by text in each language; English keeps the
+# owner's sheet titles predictable in the screenshots of a failed run.
+- runFlow:
+    file: common/pick-language.yaml
+    env:
+      LANG_ID: en
+
+- tapOn:
+    id: "tab-collections"
+- extendedWaitUntil:
+    visible:
+      id: "collections-yours"
+    timeout: 20000
+- tapOn:
+    id: "collections-yours"
+- waitForAnimationToEnd:
+    timeout: 5000
+
+# A list a failed run left, comments and all — then a fresh start, as 11
+# does, because the delete's alert blinds the next ⋯ menu.
+- runFlow:
+    when:
+      visible:
+        text: "^Maestro Comments(,.*)?$"
+    commands:
+      - repeat:
+          while:
+            visible:
+              text: "^Maestro Comments(,.*)?$"
+          commands:
+            - tapOn:
+                text: "^Maestro Comments(,.*)?$"
+            - extendedWaitUntil:
+                visible:
+                  id: "collection-more"
+                timeout: 15000
+            - runFlow: common/delete-open-collection.yaml
+      - runFlow: common/start.yaml
+      - tapOn:
+          id: "tab-collections"
+      - extendedWaitUntil:
+          visible:
+            id: "collections-yours"
+          timeout: 20000
+      - tapOn:
+          id: "collections-yours"
+      - waitForAnimationToEnd:
+          timeout: 5000
+
+# A public list. Public is the form's default (#1483); it is chosen anyway,
+# so a change of default turns this red here rather than at the bubble,
+# which a private list never draws.
+- extendedWaitUntil:
+    visible:
+      id: "collection-new"
+    timeout: 15000
+- tapOn:
+    id: "collection-new"
+- extendedWaitUntil:
+    visible:
+      id: "collection-name"
+    timeout: 10000
+- tapOn:
+    id: "collection-form-seen"
+- tapOn:
+    id: "sheet-action-public"
+- extendedWaitUntil:
+    notVisible:
+      id: "sheet-action-public"
+    timeout: 10000
+- tapOn:
+    id: "collection-name"
+- inputText: "Maestro Comments"
+- hideKeyboard
+# `hideKeyboard` can submit the form itself — see 11.
+- runFlow:
+    when:
+      visible:
+        id: "collection-submit"
+    commands:
+      - tapOn:
+          id: "collection-submit"
+- extendedWaitUntil:
+    notVisible:
+      id: "collection-name"
+    timeout: 15000
+- scrollUntilVisible:
+    element:
+      text: "^Maestro Comments(,.*)?$"
+    direction: UP
+    timeout: 15000
+- waitForAnimationToEnd:
+    timeout: 5000
+# Seen on 21 November: the first tap on the new card completed and the page
+# did not open — the card had just been inserted at the head of the grid.
+# The tap is repeated until the page is there.
+- retry:
+    maxRetries: 2
+    commands:
+      - tapOn:
+          text: "^Maestro Comments(,.*)?$"
+      - extendedWaitUntil:
+          visible:
+            id: "collection-more"
+          timeout: 10000
+# The saved audience, read before anything depends on it.
+- extendedWaitUntil:
+    visible:
+      id: "collection-visibility"
+    timeout: 15000
+- tapOn:
+    id: "collection-visibility"
+- assertVisible:
+    id: "sheet-action-public"
+    selected: true
+- tapOn:
+    id: "sheet-action-public"
+- extendedWaitUntil:
+    notVisible:
+      id: "sheet-action-public"
+    timeout: 10000
+
+# CM-1. The owner's bubble opens the thread even while it is empty — the
+# owner's on/off switch lives there (`quickOrThread`, `mine`). A reader who
+# is not the owner gets the quick field over the page instead; that is the
+# two-account part of the plan.
+- extendedWaitUntil:
+    visible:
+      id: "collection-comments"
+    timeout: 20000
+# The figure is drawn inside the bubble's button, which XCUITest reads as
+# one element: the count is in its label ("Comments, 1"), not under its
+# own id.
+- assertNotVisible:
+    id: "collection-comments"
+    text: ".*, [0-9]+$"
+- tapOn:
+    id: "collection-comments"
+- extendedWaitUntil:
+    visible:
+      id: "comments-empty"
+    timeout: 20000
+- assertVisible:
+    id: "composer-field"
+- assertVisible:
+    id: "comments-owner"
+
+# CM-2. Post; the row carries the words; the list's bubble counts one.
+- tapOn:
+    id: "composer-field"
+- inputText: "Maestro CM-2 first"
+- tapOn:
+    id: "composer-send"
+- extendedWaitUntil:
+    visible:
+      id: "comment-words"
+      text: ".*Maestro CM-2 first.*"
+    timeout: 20000
+- assertNotVisible:
+    id: "comments-empty"
+- tapOn:
+    id: "comments-back"
+- extendedWaitUntil:
+    visible:
+      id: "collection-comments"
+      text: ".*, 1$"
+    timeout: 20000
+- tapOn:
+    id: "collection-comments"
+- extendedWaitUntil:
+    visible:
+      id: "comment-words"
+      text: ".*Maestro CM-2 first.*"
+    timeout: 20000
+
+# CM-3. Answer the first comment. Its reply bubble is the first in the tree.
+- tapOn:
+    id: "comment-reply"
+    index: 0
+- extendedWaitUntil:
+    visible:
+      id: "composer-replying"
+    timeout: 10000
+- inputText: "Maestro CM-3 reply"
+- tapOn:
+    id: "composer-send"
+- extendedWaitUntil:
+    visible:
+      id: "comment-words"
+      text: ".*Maestro CM-3 reply.*"
+    timeout: 20000
+# As on the list's bubble, the figure is in the reply button's label.
+- assertVisible:
+    id: "comment-reply"
+    text: ".*, 1 reply$"
+- assertNotVisible:
+    id: "composer-replying"
+# Reply mode can be left without sending.
+- tapOn:
+    id: "comment-reply"
+    index: 0
+- extendedWaitUntil:
+    visible:
+      id: "composer-replying"
+    timeout: 10000
+- tapOn:
+    id: "composer-cancel-reply"
+- extendedWaitUntil:
+    notVisible:
+      id: "composer-replying"
+    timeout: 10000
+
+# CM-10. A banned word, in capitals and with punctuation, is refused: the
+# reason shows, nothing is posted, and the words stay in the field. The same
+# letters inside a longer word go through — the rule matches whole words.
+# Both are written as replies under the first comment, so CM-6 takes them.
+- tapOn:
+    id: "comment-reply"
+    index: 0
+- extendedWaitUntil:
+    visible:
+      id: "composer-replying"
+    timeout: 10000
+- inputText: "Test ZZMAESTROBAN!"
+- tapOn:
+    id: "composer-send"
+- extendedWaitUntil:
+    visible:
+      id: "composer-error"
+    timeout: 20000
+- assertNotVisible:
+    id: "comment-words"
+    text: ".*ZZMAESTROBAN.*"
+- copyTextFrom:
+    id: "composer-field"
+- assertTrue: ${maestro.copiedText.indexOf('Test ZZMAESTROBAN!') >= 0}
+- tapOn:
+    id: "composer-field"
+- eraseText: 30
+- inputText: "zzmaestrobanned"
+- tapOn:
+    id: "composer-send"
+- extendedWaitUntil:
+    visible:
+      id: "comment-words"
+      text: ".*zzmaestrobanned.*"
+    timeout: 20000
+- assertNotVisible:
+    id: "composer-error"
+- assertVisible:
+    id: "comment-reply"
+    text: ".*, 2 replies$"
+
+# CM-4. Past the 500-character ceiling (`BODY_MAX`): the count shows, the
+# send is off, and a press on it posts nothing. 520 characters, so the
+# count reads past the ceiling and not on it.
+- evalScript: ${output.long = 'Maestro CM-4 ' + 'x'.repeat(507)}
+- tapOn:
+    id: "composer-field"
+- inputText: ${output.long}
+- extendedWaitUntil:
+    visible:
+      id: "composer-count"
+      text: "520/500"
+    timeout: 20000
+- assertVisible:
+    id: "composer-send"
+    enabled: false
+- tapOn:
+    id: "composer-send"
+- assertNotVisible:
+    id: "comment-words"
+    text: ".*Maestro CM-4.*"
+- tapOn:
+    id: "composer-field"
+- eraseText: 530
+- extendedWaitUntil:
+    notVisible:
+      id: "composer-count"
+    timeout: 10000
+
+# CM-5. The owner closes the thread: the field gives way to a line. The
+# list's bubble stays (#1453) — its comments are still there to read —
+# and the thread opens again from the same sheet.
+- hideKeyboard
+- tapOn:
+    id: "comments-owner"
+- extendedWaitUntil:
+    visible:
+      id: "sheet-action-off"
+    timeout: 10000
+- tapOn:
+    id: "sheet-action-off"
+- extendedWaitUntil:
+    visible:
+      id: "composer-closed"
+    timeout: 20000
+- assertNotVisible:
+    id: "composer-field"
+- tapOn:
+    id: "comments-back"
+- extendedWaitUntil:
+    visible:
+      id: "collection-comments"
+    timeout: 10000
+- tapOn:
+    id: "collection-comments"
+- extendedWaitUntil:
+    visible:
+      id: "composer-closed"
+    timeout: 20000
+- tapOn:
+    id: "comments-owner"
+- extendedWaitUntil:
+    visible:
+      id: "sheet-action-on"
+    timeout: 10000
+- tapOn:
+    id: "sheet-action-on"
+- extendedWaitUntil:
+    visible:
+      id: "composer-field"
+    timeout: 20000
+- assertNotVisible:
+    id: "composer-closed"
+
+# CM-6. Delete the first comment; its replies go with it. Its ⋯ is the
+# first in the tree. The alert takes no ids: matched in each language.
+- tapOn:
+    id: "comment-more-menu"
+    index: 0
+- extendedWaitUntil:
+    visible:
+      id: "sheet-action-delete"
+    timeout: 10000
+- tapOn:
+    id: "sheet-action-delete"
+- tapOn:
+    text: "Delete|Xoá|削除|删除|刪除"
+- extendedWaitUntil:
+    visible:
+      id: "comments-empty"
+    timeout: 20000
+- assertNotVisible:
+    id: "comment-row"
+
+# Clean up: relaunch (the alert above blinds the next ⋯ menu), then delete
+# the list, which deletes anything left on it.
+- runFlow: common/start.yaml
+- tapOn:
+    id: "tab-collections"
+- extendedWaitUntil:
+    visible:
+      id: "collections-yours"
+    timeout: 20000
+- tapOn:
+    id: "collections-yours"
+- scrollUntilVisible:
+    element:
+      text: "^Maestro Comments(,.*)?$"
+    direction: UP
+    timeout: 15000
+- tapOn:
+    text: "^Maestro Comments(,.*)?$"
+- extendedWaitUntil:
+    visible:
+      id: "collection-more"
+    timeout: 15000
+- runFlow: common/delete-open-collection.yaml
+- assertNotVisible:
+    text: "^Maestro Comments(,.*)?$"

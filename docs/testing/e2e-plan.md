@@ -63,22 +63,22 @@ PA-7 và PA-8 cần A và B **chưa** là bạn, mà `17-unfriend` để họ l�
 
 | Ca | Bước và assertion |
 | --- | --- |
-| CM-1 mở luồng trống | Bộ vừa tạo → `collection-comments` → `comments-empty`, `composer-field` |
+| CM-1 mở luồng trống | Bộ vừa tạo → `collection-comments` → `comments-empty`, `composer-field`, `comments-owner`. Chỉ đúng với chủ bộ: với người khác, bấm bong bóng của một bộ chưa có bình luận mở ô viết nhanh đè lên trang (`comment-quick`, `quickOrThread`), không mở màn bình luận |
 | CM-2 đăng | gõ vào `composer-field` → `composer-send` → một `comment-row`, `comment-words` đúng nội dung; quay lại bộ → `collection-comments-count` = 1 |
 | CM-3 trả lời | `comment-reply` trên dòng đầu → `composer-replying` hiện → gửi → `comment-replies` hoặc `comment-branch` hiện; `composer-cancel-reply` thoát được chế độ trả lời |
 | CM-4 giới hạn độ dài | gõ 501 ký tự → `composer-count` hiện (nó chỉ hiện trong 40 ký tự cuối trước trần), `composer-send` bị tắt; bấm vẫn không thêm `comment-row` nào |
 | CM-5 chủ bộ tắt bình luận | `comments-owner` → `sheet-action-off` → `composer-closed` hiện; bong bóng trên thẻ mờ đi nhưng vẫn còn (#1453) → `comments-owner` → `sheet-action-on` bật lại |
-| CM-6 xoá kéo theo câu trả lời | `comment-more` trên bình luận gốc → `sheet-action-delete` → xác nhận → không còn `comment-row` nào (câu trả lời mất theo), `comments-empty` |
+| CM-6 xoá kéo theo câu trả lời | `comment-more-menu` (dấu ⋯ của dòng; `comment-more` là nút "Xem thêm N trả lời") trên bình luận gốc → `sheet-action-delete` → xác nhận → không còn `comment-row` nào (câu trả lời mất theo), `comments-empty` |
 
 ### Hai tài khoản (A là chủ bộ, B viết)
 
 | Ca | Bước và assertion |
 | --- | --- |
-| CM-7 tag và thông báo | B mở bộ của A (qua tìm kiếm hoặc trang cá nhân của A), gõ `@` → `composer-offers` có A (chủ bộ tag được) → chọn → gửi. A đăng nhập: `dot-profile` trên tab bar, `person-bell-figure` trên chuông → `person-bell` → `activity-tab-for-you` có một dòng với `news-quote` chứa nội dung → bấm → màn bình luận, bình luận của B hiện (`useThreadFocus` cuộn tới) → quay lại: số trên chuông đã hết |
+| CM-7 tag và thông báo | B mở bộ của A (qua tìm kiếm hoặc trang cá nhân của A). Nếu bộ chưa có bình luận, bong bóng mở `comment-quick` chứ không mở màn bình luận; gõ `@` → `composer-offers` có A (chủ bộ tag được) → chọn → gửi. A đăng nhập: `dot-profile` trên tab bar, `person-bell-figure` trên chuông → `person-bell` → `activity-tab-for-you` có một dòng với `news-quote` chứa nội dung → bấm → màn bình luận, bình luận của B hiện (`useThreadFocus` cuộn tới) → quay lại: số trên chuông đã hết |
 | CM-8 trả lời báo cho người được trả lời | A trả lời bình luận của B; B thấy dòng trả lời trong "Dành cho bạn" |
 | CM-9 tim | B thả `comment-heart` vào bình luận của A; A thấy số tim; Hoạt động của A có dòng tim nhưng **không** làm chuông hiện số (luật của C7c) |
-| CM-10 từ cấm | gửi một câu có `zzmaestroban` (viết hoa, kèm dấu câu, ví dụ "Test ZZMAESTROBAN!") → `composer-error`, không có `comment-row` mới, chữ vẫn còn trong `composer-field`; rồi gửi "zzmaestrobanned" → đăng được (luật khớp cả từ), xoá nó trước khi xoá bộ |
-| CM-11 báo cáo | A đăng một bình luận có chữ "Maestro CM-11" trên bộ của A. B mở bộ đó → `comment-more` trên bình luận của A → menu chỉ có `sheet-action-report` (B không phải chủ bộ, nên không có `sheet-action-delete`) → bấm → sheet lý do → `sheet-action-other` → hộp thoại hệ thống "Thanks for telling us" → bấm "OK". Kiểm tra bằng SQL sau lượt đầu: có đúng một dòng `reports` mới, `kind = 'comment'`, `reason = 'other'`, người báo là B. Không thử báo cáo bình luận của chính mình: menu không có nút đó (`useCommentMenu`). |
+| CM-10 từ cấm | gửi một câu có `zzmaestroban` (viết hoa, kèm dấu câu, ví dụ "Test ZZMAESTROBAN!") → `composer-error`, không có `comment-row` mới, chữ vẫn còn trong `composer-field`; rồi gửi "zzmaestrobanned" → đăng được (luật khớp cả từ). Trong `23` cả hai được gửi như trả lời dưới bình luận đầu, để CM-6 xoá luôn: sau hộp thoại xoá, sheet ⋯ không còn đọc được (luật 11a) |
+| CM-11 báo cáo | A đăng một bình luận có chữ "Maestro CM-11" trên bộ của A. B mở bộ đó → `comment-more-menu` trên bình luận của A → menu chỉ có `sheet-action-report` (B không phải chủ bộ, nên không có `sheet-action-delete`) → bấm → sheet lý do → `sheet-action-other` → hộp thoại hệ thống "Thanks for telling us" → bấm "OK". Kiểm tra bằng SQL sau lượt đầu: có đúng một dòng `reports` mới, `kind = 'comment'`, `reason = 'other'`, người báo là B. Không thử báo cáo bình luận của chính mình: menu không có nút đó (`useCommentMenu`). |
 
 Dọn dẹp: A xoá bộ ở cuối flow. Sau lượt đầu, kiểm tra bằng SQL rằng không còn bình luận nào của A hay B trên bộ đã xoá.
 
@@ -87,9 +87,9 @@ Không đưa vào Maestro (đã có unit test, hoặc kiểm tay): ánh sáng 1,
 ## Thứ tự
 
 1. **P1:** PA-1, PA-2, PA-5, PA-6 trong một flow; rồi PA-3, PA-4.
-2. **P3, một tài khoản:** CM-1 tới CM-6.
+2. **P3, một tài khoản:** CM-1 tới CM-6 và CM-10 — `23-comments-own.yaml` ✅ hai lượt xanh liền 21/11/2026 (`20261121-045850`, `20261121-050415`), xem `e2e-latest.md`.
 3. **P3, hai tài khoản:** CM-7 tới CM-9, sau khi CM-1…6 đạt hai lượt liền.
 4. **P2:** PA-7, PA-8, sau khi chốt cách giữ trạng thái kết bạn của cặp A–B.
-5. CM-10 làm cùng CM-1…6; CM-11 làm cùng CM-7…9 (cần hai tài khoản). Chặn không làm (điều kiện 6).
+5. CM-10 đã nằm trong `23`; CM-11 làm cùng CM-7…9 (cần hai tài khoản). Chặn không làm (điều kiện 6).
 
 Mỗi flow mới thêm vào `config.yaml` và vào bảng của `docs/testing/e2e-simulator.md`; kết quả chạy ghi vào `e2e-latest.md` (SHA, run ID, phạm vi thật).
