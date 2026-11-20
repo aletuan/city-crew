@@ -30,7 +30,7 @@ import { windowStart } from '../activityWindow';
 import type { Taggable } from '../commentTags';
 import type { CommentRow, Preview, Subject } from '../comments';
 import { changes, onChange } from '../commentsChanged';
-import { fetchCollectionStats, fetchListUse, type ListUseRow, recordCollectionView } from './stats';
+import { type CopyCountRow, fetchCollectionStats, fetchCopyCounts, fetchListUse, type ListUseRow, recordCollectionView } from './stats';
 import type { StatsRow } from '../listStats';
 import type { ShareRow } from '../shares';
 
@@ -517,6 +517,15 @@ const NO_USE: ListUseRow[] = [];
 
 export const useListUseQuery = (): Fetch<ListUseRow[]> =>
   useSharedFetch(cacheKey('listuse', 'all'), fetchListUse, NO_USE);
+
+// How many people copied each public list, for the copy button's figure
+// (owner, 20 Nov 2026). Shared and kept between launches as the use
+// counts are: every card on a feed reads the one answer, and a card
+// opens with the figure it had rather than none.
+const NO_COPY_COUNTS: CopyCountRow[] = [];
+
+export const useCopyCountsQuery = (): Fetch<CopyCountRow[]> =>
+  useSharedFetch(cacheKey('copycounts', 'all'), fetchCopyCounts, NO_COPY_COUNTS);
 
 // ── a subject's thread ──
 //

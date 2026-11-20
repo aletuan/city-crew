@@ -1597,6 +1597,13 @@ export type Database = {
           views_total: number
         }[]
       }
+      collection_copy_counts: {
+        Args: never
+        Returns: {
+          copies: number
+          slug: string
+        }[]
+      }
       collection_use_counts: {
         Args: never
         Returns: {

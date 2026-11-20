@@ -161,7 +161,9 @@ vi.mock('../lib/data', async (orig) => ({
 }));
 // The count itself, under the real `useCountView`: what is under test
 // here is when this page counts an open, not how the call is made.
-vi.mock('../lib/data/stats', () => ({ recordCollectionView: spies.countView }));
+// How many people copied each public list, for the copy button's figure.
+const copyRows = vi.hoisted(() => ({ rows: [] as { slug: string; copies: number }[] }));
+vi.mock('../lib/data/stats', () => ({ recordCollectionView: spies.countView, fetchCopyCounts: async () => copyRows.rows }));
 // What the door to the comments asks for its figure, when it is drawn.
 vi.mock('../lib/data/comments', async (orig) => ({
   ...(await orig<Record<string, unknown>>()),
@@ -296,7 +298,7 @@ const nav = () => {
   focusListeners.length = 0;
   const parent = { navigate: vi.fn() };
   const n = {
-    navigate: vi.fn(), goBack: vi.fn(), getParent: vi.fn(() => parent), setOptions: vi.fn(), setParams: vi.fn(),
+    navigate: vi.fn(), push: vi.fn(), goBack: vi.fn(), getParent: vi.fn(() => parent), setOptions: vi.fn(), setParams: vi.fn(),
     // The dock hands its slot back on focus; a test fires it through here.
     addListener: vi.fn((_e: string, cb: () => void) => { focusListeners.push(cb); return () => {}; }),
   };
@@ -631,8 +633,10 @@ describe('the ⋯ in the card', () => {
     state.cols = [theirs()];
     show();
     expect(screen.queryByTestId('collection-desc-copy')).toBeNull();
-    expect(screen.queryByRole('button', { name: 'Save a copy' })).toBeNull();
-    expect(card().querySelector('[data-icon="duplicate-outline"]')).toBeNull();
+    // The copy's glyph on the card is the activity row's button since
+    // 20 Nov 2026, not a control in the corner.
+    expect(card().querySelectorAll('[data-icon="duplicate-outline"]')).toHaveLength(1);
+    expect(screen.getByTestId('collection-copy').querySelector('[data-icon="duplicate-outline"]')).toBeTruthy();
   });
 });
 
@@ -1021,7 +1025,7 @@ describe('Share, at the card’s foot', () => {
     state.cols = [collection({ is_public: true, owner_id: 'curator', curator_handle: '@maydidaudo' })];
     show();
     expect(screen.queryByTestId('collection-share')).toBeNull();
-    expect(iconsOf(footer())).toEqual(['heart-outline', 'chevron-forward']);
+    expect(iconsOf(footer())).toEqual(['heart-outline', 'duplicate-outline', 'chevron-forward']);
   });
 });
 
@@ -2974,8 +2978,9 @@ describe('the introduction card', () => {
   it('keeps the heart in the activity row, first, and the way to the activity after it on a visitor\u2019s', () => {
     show();
     const foot = screen.getByTestId('collection-activity').firstElementChild as HTMLElement;
+    // The copy between them since 20 Nov 2026 (`CopyDoor`).
     expect([...foot.querySelectorAll('[data-icon]')].map((i) => i.getAttribute('data-icon')))
-      .toEqual(['heart-outline', 'chevron-forward']);
+      .toEqual(['heart-outline', 'duplicate-outline', 'chevron-forward']);
     // In that order on screen too, from the start of the row.
     expect(getComputedStyle(foot).flexDirection).toBe('row');
     expect(getComputedStyle(foot).justifyContent).not.toBe('space-between');
@@ -4354,5 +4359,66 @@ describe('the way into the comments', () => {
     // The bench's own list is private unless a test says otherwise.
     show();
     expect(door()).toBeNull();
+  });
+});
+
+// The copy button in the activity row, with how many people copied the
+// list (owner, 20 Nov 2026) — `collectionDetail/CopyDoor`.
+describe('the copy button', () => {
+  const copyBtn = () => screen.queryByTestId('collection-copy');
+  const count = () => screen.queryByTestId('collection-copy-count')?.textContent ?? null;
+  beforeEach(() => {
+    state.mine = [];
+    state.cols = [theirs()];
+    copyRows.rows = [];
+  });
+  afterEach(() => { copyRows.rows = []; });
+
+  it('sits after the comments, and draws no figure while nobody has copied the list', async () => {
+    show();
+    await act(async () => {});
+    expect(copyBtn()).toBeTruthy();
+    expect(count()).toBeNull();
+    expect(copyBtn()!.getAttribute('aria-label')).toBe('Save a copy');
+  });
+
+  it('says how many people copied it, and starts a copy as the ⋯ row does', async () => {
+    copyRows.rows = [{ slug: 'old-quarter', copies: 10 }, { slug: 'elsewhere', copies: 3 }];
+    const { raw } = show();
+    await act(async () => {});
+    expect(count()).toBe('10');
+    expect(copyBtn()!.getAttribute('aria-label')).toBe('Save a copy, 10');
+    fireEvent.click(copyBtn()!);
+    expect(raw.navigate).toHaveBeenCalledWith('CollectionForm', {
+      copyFrom: expect.objectContaining({ sourceId: 'c1', cityId: 'hanoi', placeSlugs: ['pho', 'cafe', 'museum'] }),
+    });
+  });
+
+  it('opens the copy the reader already has, filled, and makes no second', async () => {
+    copyRows.rows = [{ slug: 'old-quarter', copies: 11 }];
+    state.mine = [collection({ id: 'mine-1', slug: 'my-old-quarter', copied_from: 'c1' })];
+    const { raw } = show();
+    await act(async () => {});
+    expect(copyBtn()!.querySelector('[data-icon="duplicate"]')).toBeTruthy();
+    expect(copyBtn()!.getAttribute('aria-label')).toBe('Open your copy, 11');
+    fireEvent.click(copyBtn()!);
+    expect(raw.push).toHaveBeenCalledWith('CollectionDetail', { slug: 'my-old-quarter' });
+    expect(raw.navigate).not.toHaveBeenCalledWith('CollectionForm', expect.anything());
+  });
+
+  it('is on the owner’s list once somebody copied it, and opens who did', async () => {
+    state.cols = [];
+    state.mine = [collection({ is_public: true })];
+    show();
+    await act(async () => {});
+    expect(copyBtn()).toBeNull();
+    cleanup();
+    copyRows.rows = [{ slug: 'old-quarter', copies: 2 }];
+    const { raw } = show();
+    await act(async () => {});
+    expect(count()).toBe('2');
+    expect(copyBtn()!.getAttribute('aria-label')).toBe('Who saved a copy, 2');
+    fireEvent.click(copyBtn()!);
+    expect(raw.navigate).toHaveBeenCalledWith('CollectionActivity', { slug: 'old-quarter' });
   });
 });
