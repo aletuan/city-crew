@@ -31,10 +31,14 @@ minute or more per run; keep the suite short.
 
 **Selecting**
 
-1. **Select by `testID`, never by label.** Every label is trilingual. The
-   only exception is iOS's own alerts, which take no id — match those in
+1. **Prefer existing `testID`s.** Translated labels need the explicit exceptions below. The
+   usual exception is iOS's own alerts, which take no id — match those in
    all three languages: `text: "Delete|Xoá|削除"`. Generated fixture titles
-   may be matched as data; they are not translated UI labels. Use a stable
+   may be matched as data; they are not translated UI labels. Account
+   rows share `feature-row`: follow `common/open-crew.yaml` and select
+   the row by text, with English selected explicitly in P1. P1 also uses
+   the existing AuthHeader Back label because it has no testID; do not
+   add an app id just for these established paths. Use a stable
    slug to compare place identity across screens that shorten names differently.
 2. **Give a state its own id when the flow must wait on it.** The bookmark
    is `detail-save` / `detail-saved`, so a flow can wait for a save to

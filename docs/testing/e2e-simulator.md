@@ -8,7 +8,7 @@ File này không lặp lại hai file đó; nó là bản đồ và lộ trình.
 
 ## Kết quả mới nhất và bàn giao
 
-Xem [bàn giao ngày 20/11/2026](e2e-latest.md): revision đã push, kết quả từng lượt, unit/integration test, artifacts local, cleanup và việc còn mở. Năm ca lỗi mục tiêu đã PASS sau sửa helper qua hai lượt; **chưa chạy lại toàn bộ 22 flow trên revision cuối**.
+Xem [bàn giao ngày 20/11/2026](e2e-latest.md): revision đã push, kết quả từng lượt, unit/integration test, artifacts local, cleanup và việc còn mở. P1 đạt hai lượt liên tiếp; suite 22 flow đạt trong lượt `20261120-192724`, cùng SHA `54bdd563`. Sau đó mới đăng ký flow P1: config có 23 flow, chưa phải bằng chứng một lượt 23/23.
 
 Các số liệu tháng 9–10 và kế hoạch dưới đây là lịch sử, không phải release gate hiện tại. Danh sách flow thực thi lấy từ `app/.maestro/config.yaml`; signup/delete (07), guest resume (18/20), privacy (19) và tab responsive (21) đã có flow tự động.
 
@@ -238,6 +238,14 @@ Xanh: đã có flow. Vàng: QA tay. Cam: chưa có.
 Nguyên tắc chọn flow (từ GUIDELINES): chỉ thêm đường mà **hỏng thì người dùng
 không dùng được app**, và **vitest không phủ được**. Mỗi flow tốn ~1 phút; ngân
 sách toàn suite < 30 phút (xem mục 2).
+
+### P1 Profile/Account — 20/11/2026
+
+| Flow | Tài khoản / dữ liệu | Phạm vi | Bằng chứng |
+| --- | --- | --- | --- |
+| `22-profile-account` ✅ | TEST_EMAIL (@maestro), bộ Private `Maestro smoke` có sẵn; không tạo dữ liệu mới | PA-1…PA-6, gồm hai lối Activity và search/cancel | Hai lượt `20261120-181004`, `20261120-181405`; suite 22/22 `20261120-192724`, cùng `54bdd563`; đăng ký config sau nghiệm thu |
+
+Kế hoạch còn lại giữ tại [e2e-plan.md](e2e-plan.md). P2/P3 chưa triển khai.
 
 ### Đợt 1 — những gì 1.0.4 vừa đổi (ưu tiên cao)
 

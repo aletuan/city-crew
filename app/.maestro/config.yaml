@@ -22,6 +22,7 @@ flows:
   - "19-collection-privacy.yaml"
   - "20-guest-trip-resume.yaml"
   - "21-tab-bar-responsive.yaml"
+  - "22-profile-account.yaml"
   # Last: the language it picks persists on the device. See its header.
   - "12-language.yaml"
 executionOrder:
@@ -48,4 +49,5 @@ executionOrder:
     - 19-collection-privacy
     - 20-guest-trip-resume
     - 21-tab-bar-responsive
+    - 22-profile-account
     - 12-language
