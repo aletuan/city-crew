@@ -1660,7 +1660,7 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
         planRow,
         canCopy && {
           key: 'copy',
-          icon: 'duplicate-outline',
+          icon: 'copy-outline',
           title: t('Save a copy', 'Lưu bản sao', 'コピーを保存', '保存副本', '儲存副本'),
           onPress: copy,
           testID: 'collection-menu-copy',
@@ -1825,7 +1825,7 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
           />
         ) : canCopy ? (
           <AddPill
-            icon="duplicate-outline"
+            icon="copy-outline"
             label={t('Save a copy', 'Lưu bản sao', 'コピーを保存', '保存副本', '儲存副本')}
             onPress={copy}
             testID="collection-dock-copy"

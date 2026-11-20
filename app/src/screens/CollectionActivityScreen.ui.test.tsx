@@ -693,7 +693,7 @@ describe('the rows', () => {
     expect(liked.querySelector('[data-icon]')!.getAttribute('data-icon')).toBe('heart');
     expect(liked.querySelector('[data-icon]')!.getAttribute('data-color')).toBe('#FFFFFF');
     expect(viewStyleOf(copied).backgroundColor).toBe(colors.accentFill);
-    expect(copied.querySelector('[data-icon]')!.getAttribute('data-icon')).toBe('duplicate');
+    expect(copied.querySelector('[data-icon]')!.getAttribute('data-icon')).toBe('copy');
     expect(copied.querySelector('[data-icon]')!.getAttribute('data-color')).toBe(String(colors.accentInk));
     for (const b of [liked, copied]) {
       expect(viewStyleOf(b)).toMatchObject({ position: 'absolute', right: -3, bottom: -3, width: 20, borderWidth: 2 });

@@ -241,7 +241,7 @@ describe('the tiles', () => {
     await show();
     const mark = (k: string) => tile(k).querySelector('[data-icon]')?.getAttribute('data-icon');
     expect([mark('views'), mark('likes'), mark('copies'), mark('trips')])
-      .toEqual(['eye-outline', 'heart-outline', 'duplicate-outline', 'calendar-outline']);
+      .toEqual(['eye-outline', 'heart-outline', 'copy-outline', 'calendar-outline']);
   });
 
   it('sets the total large in the display face, on one line that shrinks rather than wraps', async () => {

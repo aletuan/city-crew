@@ -2186,7 +2186,7 @@ describe('copying from a card', () => {
     state.mine = [list('my-pho', { owner_id: 'me-id', copied_from: 'pho' })];
     const navigation = await show();
     const btn = copyOn()!;
-    expect(btn.querySelector('[data-icon="duplicate"]')).toBeTruthy();
+    expect(btn.querySelector('[data-icon="copy"]')).toBeTruthy();
     expect(within(btn).queryByTestId('activity-copy-count')).toBeNull();
     fireEvent.click(btn);
     expect(navigation.navigate).toHaveBeenCalledWith('CollectionDetail', { slug: 'my-pho' });
