@@ -126,6 +126,11 @@ export const s = StyleSheet.create({
   cardPast: { opacity: 0.72 },
 
 
+  // Activity's "You could try" heading, at its size: the same offer on
+  // the same kind of empty screen. The air above it is the gap Activity's
+  // screen puts between its card and its heading.
+  // The guest's card, which stands outside any list and so keeps its own
+  // page margin; the signed-in one is the shared `EmptyState`.
   first: {
     alignItems: 'center', gap: 10, marginHorizontal: space.page,
     paddingHorizontal: space.cardPadding + 6, paddingTop: 26, paddingBottom: 22,
@@ -142,6 +147,7 @@ export const s = StyleSheet.create({
     color: colors.textSecondary, fontSize: 15, lineHeight: 21,
     textAlign: 'center', marginBottom: 6,
   },
+  tryHead: { color: colors.text, ...type.section, marginTop: space.titleToContent, marginBottom: space.headingToContent },
   guestHint: { color: colors.textSecondary, fontSize: 13, lineHeight: 19, textAlign: 'center' },
   guestReturning: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', alignItems: 'center', marginHorizontal: space.page, marginBottom: space.titleToContent },
   guestSignIn: { minHeight: SECONDARY_CONTROL_H, justifyContent: 'center', paddingHorizontal: 6 },

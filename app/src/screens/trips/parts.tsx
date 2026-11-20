@@ -2,7 +2,7 @@ import { Text, View } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { Glyph, ICON } from '../../components/ui/glyph';
 import { Image } from 'expo-image';
-import { GradientCta, PressableScale } from '../../components/ui';
+import { EmptyState, GradientCta, PressableScale } from '../../components/ui';
 import { fromISO } from '../../lib/day';
 import { type Trip } from '../../lib/data';
 import { clockOf, dateline } from '../../lib/format';
@@ -208,39 +208,39 @@ export function TripCard({ trip, past, onPress, testID }: {
 /**
  * Signed in, nothing saved yet.
  *
- * Mirrors Collections' first-run card — same tinted well, same gradient
- * action — because it is the same argument aimed at a different tab. The
+ * The shared `EmptyState` — the card Crew, Activity and Collections draw
+ * for the same situation — rather than the copy of it this file kept. The
+ * copy carried its own `marginHorizontal: space.page` from the days it sat
+ * outside the list, and inside the list's padding that margin counted
+ * twice: the card stood a full page margin in from the title above it,
+ * the one card in the app that did (owner's screenshot, 20 Nov 2026). The
  * button jumps to Ideas, which is where a trip comes from; an empty state
  * that only says "empty" leaves the reader to find that out themselves.
  */
 export function FirstTrip({ onPress }: { onPress: () => void }) {
   const { t } = useI18n();
   return (
-    <View style={s.first} testID="trips-empty">
-      <View style={s.firstIcon}>
-        <Glyph name="map" size={ICON.feature} color={colors.accent} />
-      </View>
-      <Text style={s.firstTitle}>
-        {t('No trips yet', 'Chưa có chuyến đi nào', '旅程はまだありません', '还没有行程', '還沒有行程')}
-      </Text>
-      {/* The owner's words (25 Oct 2026). It read "Answer four
-          questions in Explore and keep the plan you like": a count where
-          the point belonged, and a tab's name the button below already
-          goes to. "chuyến đi", not "lịch trình", the same evening (owner):
-          the screen is called Chuyến đi, and so is what it suggests. */}
-      <Text style={s.firstBody}>
-        {t(
-          'Pick a few options and the app will suggest a trip that suits you.',
-          'Trả lời một vài lựa chọn để ứng dụng tự động gợi ý chuyến đi phù hợp.',
-          'いくつかの質問に答えると、アプリがぴったりのプランを自動で提案します。',
-          '回答几个选项，应用会自动为你推荐合适的行程。', '回答幾個選項，App會自動為你推薦合適的行程。',
-        )}
-      </Text>
+    <EmptyState
+      icon="map"
+      title={t('No trips yet', 'Chưa có chuyến đi nào', '旅程はまだありません', '还没有行程', '還沒有行程')}
+      // The owner's words (25 Oct 2026). It read "Answer four questions
+      // in Explore and keep the plan you like": a count where the point
+      // belonged, and a tab's name the button below already goes to.
+      // "chuyến đi", not "lịch trình", the same evening (owner): the
+      // screen is called Chuyến đi, and so is what it suggests.
+      body={t(
+        'Pick a few options and the app will suggest a trip that suits you.',
+        'Trả lời một vài lựa chọn để ứng dụng tự động gợi ý chuyến đi phù hợp.',
+        'いくつかの質問に答えると、アプリがぴったりのプランを自動で提案します。',
+        '回答几个选项，应用会自动为你推荐合适的行程。', '回答幾個選項，App會自動為你推薦合適的行程。',
+      )}
+      testID="trips-empty"
+    >
       <GradientCta
         icon="sparkles"
         label={t('Plan a trip', 'Lên kế hoạch', 'プランを立てる', '规划行程', '規劃行程')}
         onPress={onPress}
       />
-    </View>
+    </EmptyState>
   );
 }
