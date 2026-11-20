@@ -118,6 +118,28 @@ const COMMUNITY_VIEW_KEY = 'citycrew.collections.community.view';
  * moment, and now the same row, as the one under Explore's places.
  */
 
+/**
+ * How many lists a tab holds, for its pill (owner, 20 Nov 2026) — or
+ * nothing until every source the tab is drawn from is in.
+ *
+ * Counted from the very lists the tab draws, never asked of the server:
+ * a count of public lists there was 66 the day this was written, where
+ * the tab shows the ones with a place in the catalog, and a pill that
+ * disagrees with the cards under it is worse than none. Nor is a second
+ * request quicker: the catalog and your lists open from the phone's own
+ * copy, `catalog:collections(cached)` at 368ms after launch in the one
+ * measured start (docs/tracing.md), before a reader reaches this tab;
+ * the fresh answer comes some 2.7s later and replaces it, which moves the
+ * figure only when a list was really added or taken away.
+ *
+ * Nothing while a source is still out, rather than the 0 it holds then:
+ * on a first launch with no copy on the phone the pill arrives once,
+ * with the cards, instead of counting up from nothing. Community's own
+ * list is the public lists with a place in the catalog (`community`), so
+ * it includes the reader's own published ones, as the tab does.
+ */
+const tallyOnceIn = (ready: boolean[], n: number): number | undefined => (ready.every(Boolean) ? n : undefined);
+
 export default function CollectionsScreen({ navigation, route }: {
   navigation: Nav;
   route: { params?: { tab?: 'yours' | 'community'; at?: number } };
@@ -772,8 +794,8 @@ export default function CollectionsScreen({ navigation, route }: {
   const tabsRow = (floating: boolean) => (session ? (
       <WordTabs
         tabs={[
-          { key: 'community', testID: floating ? undefined : 'collections-community', label: t('Community', 'Cộng đồng', 'みんなの', '社区', '社群') },
-          { key: 'yours', label: t('Yours', 'Của bạn', '自分の', '我的', '我的'), testID: floating ? undefined : 'collections-yours' },
+          { key: 'community', testID: floating ? undefined : 'collections-community', label: t('Community', 'Cộng đồng', 'みんなの', '社区', '社群'), tally: tallyOnceIn([!holding], community.length) },
+          { key: 'yours', label: t('Yours', 'Của bạn', '自分の', '我的', '我的'), testID: floating ? undefined : 'collections-yours', tally: tallyOnceIn([mine.loaded, shared.loaded], mine.data.length + shared.data.length) },
         ]}
         active={tab}
         onChange={pickTab}

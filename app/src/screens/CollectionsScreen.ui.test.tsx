@@ -414,6 +414,43 @@ describe('CollectionsScreen — as a guest', () => {
 describe('CollectionsScreen — signed in', () => {
   beforeEach(() => { state.uid = 'u1'; });
 
+  // Each tab's pill is how many lists it holds, counted from what it
+  // draws (owner, 20 Nov 2026) — `tallyOnceIn` has why not the server's.
+  describe('the tabs’ figures', () => {
+    const said = () => screen.getAllByRole('tab').map((x) => x.getAttribute('aria-label'));
+    beforeEach(() => {
+      state.cols.data = [col('p1', ['a']), col('p2', ['b']), col('p3', ['a'], { owner_id: 'u1' }), col('empty', ['nowhere'])];
+      state.mine.data = [col('m1', ['a'], { owner_id: 'u1' }), col('m2', ['b'], { owner_id: 'u1', is_public: false })];
+      state.shared.data = [col('lent', ['a'], { owner_id: 'u9' })];
+    });
+
+    it('counts Community as the public lists with a place, yours among them, and Yours as yours and those shared with you', () => {
+      show();
+      // "empty" has no place in the catalog and is not drawn: not counted.
+      expect(said()).toEqual(['Community (3)', 'Yours (3)']);
+      expect(screen.getByTestId('collections-community').textContent).toBe('Community3');
+    });
+
+    it('draws no figure on Community while the catalog is still out, rather than a 0', () => {
+      state.placesLoaded = false;
+      show();
+      expect(said()[0]).toBe('Community');
+    });
+
+    it('draws no figure on Yours until both your lists and the shared ones are in', () => {
+      state.shared.loaded = false;
+      show();
+      expect(said()[1]).toBe('Yours');
+    });
+
+    it('draws nothing for a tab with nothing in it', () => {
+      state.mine.data = [];
+      state.shared.data = [];
+      show();
+      expect(said()[1]).toBe('Yours');
+    });
+  });
+
   it('reloads your library on the first focus', () => {
     show();
     expect(spies.mineReload).toHaveBeenCalled();
@@ -429,7 +466,9 @@ describe('CollectionsScreen — signed in', () => {
     // Community stands first since 19 Nov 2026, and the tab that is open
     // is still Yours for a reader with lists — the two lines under this
     // one: the order moved, not the default.
-    expect(screen.getAllByRole('tab').map((t) => t.textContent)).toEqual(['Community', 'Yours']);
+    // Each word with its pill since 20 Nov 2026: one public list for
+    // Community, your two for Yours.
+    expect(screen.getAllByRole('tab').map((t) => t.getAttribute('aria-label'))).toEqual(['Community (1)', 'Yours (2)']);
     expect(screen.getByText('List mine1')).toBeTruthy();
     expect(screen.queryByText('List theirs')).toBeNull();
     // The pin and the figure on the tile (owner, 2 Nov 2026), the word
@@ -650,7 +689,9 @@ describe('CollectionsScreen — signed in', () => {
     expect(screen.getByText('me')).toBeTruthy();
     // Two heart controls, yours and theirs: a curator may like their own.
     expect(screen.getAllByRole('button', { name: 'Like this collection' })).toHaveLength(2);
-    expect(screen.getByText('2')).toBeTruthy();
+    // Your list's two likes — and Community's pill reads 2 too, so the
+    // heart's figure is the one inside a card.
+    expect(screen.getAllByText('2').filter((el) => !el.closest('[role="tab"]'))).toHaveLength(1);
     state.likes = {};
   });
 
@@ -1101,7 +1142,7 @@ describe('CollectionsScreen — search', () => {
     open();
     pickKind('Cafés');
     expect(screen.getByText('My cafés')).toBeTruthy();
-    fireEvent.click(screen.getByRole('tab', { name: 'Community' }));
+    fireEvent.click(screen.getByRole('tab', { name: /^Community/ }));
     // Words: the miss names them.
     type('cafes');
     expect(screen.getByText('Nothing here matches "cafes".')).toBeTruthy();
@@ -1352,7 +1393,7 @@ describe('scrolled', () => {
     // The pinned copy is the same words-alone row (20 Nov 2026): no
     // glyph on either tab, the chosen one in the heavier weight.
     const pinnedTabs = within(pinned).getAllByRole('tab');
-    expect(pinnedTabs.map((x) => x.getAttribute('aria-label'))).toEqual(['Community', 'Yours']);
+    expect(pinnedTabs.map((x) => x.getAttribute('aria-label'))).toEqual(['Community', 'Yours (1)']);
     expect(pinnedTabs.every((x) => !x.querySelector('[data-icon]'))).toBe(true);
     expect(screen.getByTestId('collections-top').getAttribute('aria-hidden')).toBe('true');
     scrollTo(400);
