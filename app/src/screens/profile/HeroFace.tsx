@@ -40,8 +40,10 @@
 // doing. So the sheet is the level's card and then the badges'
 // (`BadgeShelf`), in a scroll for the phone too short for both.
 //
-// The pill wears a dot while a badge is new, and the banner that
-// announced it opens this sheet from wherever it was pressed
+// The pill wore a dot while a badge was new, 17 to 20 Nov 2026; it went
+// with the tab's (owner: one bell — `lib/commentNews`' `freshCount`).
+// The badge's own dot in the sheet stays. The banner that announced it
+// opens this sheet from wherever it was pressed
 // (`useRewards().wanted`): the sheet is here and nowhere else, so the
 // banner asks and this answers.
 //
@@ -91,7 +93,7 @@ export function HeroFace({ saved, size, answers = true, children }: {
   const { t } = useI18n();
   const [open, setOpen] = useState(false);
   const { height } = useWindowDimensions();
-  const { unseen, wanted, opened, closed } = useRewards();
+  const { wanted, opened, closed } = useRewards();
   const show = useCallback(() => { setOpen(true); opened(); }, [opened]);
   const close = () => { setOpen(false); closed(); };
   // The banner was pressed: it has brought the reader to this tab, and
@@ -102,7 +104,7 @@ export function HeroFace({ saved, size, answers = true, children }: {
   return (
     <>
       <View style={s.avatarBox} testID="avatar-box">
-        <EngagementRing size={size} level={level} progress={progress} fresh={unseen.length > 0} onExplain={show}>
+        <EngagementRing size={size} level={level} progress={progress} onExplain={show}>
           {children}
         </EngagementRing>
       </View>

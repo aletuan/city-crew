@@ -1,8 +1,9 @@
 // @vitest-environment jsdom
 //
-// What is new in comments, held once (C7c): the number the last tab's
-// dot and the bell read, the mark on the phone that decides it, and the
-// hook Activity's rows use to say which are new and to move the mark.
+// What is new for the reader, held once (C7c, and one bell since 20 Nov
+// 2026): the number the last tab's dot and the bell read, the mark on
+// the phone that decides it, and the hook Activity's rows use to say
+// which are new and to move the mark.
 
 import React from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -17,8 +18,13 @@ const world = vi.hoisted(() => ({
   ready: true,
   session: { user: { id: 'me' } } as { user: { id: string } } | null,
   rows: [] as unknown[],
+  applause: [] as unknown[],
+  copies: [] as unknown[],
+  ships: [] as unknown[],
 }));
 const fetchCommentNews = vi.hoisted(() => vi.fn(async (_since: string) => [...world.rows] as never[]));
+const fetchApplause = vi.hoisted(() => vi.fn(async (_since: string) => [...world.applause] as never[]));
+const fetchCopies = vi.hoisted(() => vi.fn(async (_since: string) => [...world.copies] as never[]));
 
 vi.mock('./auth', () => {
   const m = { useAuth: () => ({ ready: world.ready, session: world.session }) };
@@ -29,6 +35,12 @@ vi.mock('./data/comments', async (orig) => ({
   ...(await orig<Record<string, unknown>>()),
   fetchCommentNews,
 }));
+vi.mock('./data/people', async (orig) => ({
+  ...(await orig<Record<string, unknown>>()),
+  fetchApplause,
+  fetchCopies,
+}));
+vi.mock('./crew', () => ({ useCrew: () => ({ ships: { data: world.ships } }) }));
 
 import { FreshNewsProvider, markKey, useFreshNews, useSeenThrough } from './freshNews';
 
@@ -72,10 +84,15 @@ beforeEach(async () => {
   world.ready = true;
   world.session = { user: { id: 'me' } };
   world.rows = [];
+  world.applause = [];
+  world.copies = [];
+  world.ships = [];
   appFlags.set('comments', true);
   await AsyncStorage.removeItem(markKey('me')!);
   await AsyncStorage.removeItem(markKey('you')!);
   fetchCommentNews.mockClear();
+  fetchApplause.mockClear();
+  fetchCopies.mockClear();
 });
 afterEach(() => { appFlags.reset(); });
 
@@ -90,11 +107,39 @@ describe('with no provider above', () => {
 });
 
 describe('the number', () => {
-  it('counts every reply, tag and comment on a phone that has marked nothing, and no heart', async () => {
+  // One bell (owner, 20 Nov 2026): a heart counts as a reply does.
+  it('counts every comment row on a phone that has marked nothing, hearts too', async () => {
     world.rows = [row(ELEVEN, 'tag'), row(TEN, 'reply'), row(NINE, 'on_list'), row(ELEVEN, 'heart')];
     mount();
-    await waitFor(() => expect(text('fresh')).toBe('3'));
+    await waitFor(() => expect(text('fresh')).toBe('4'));
     expect(text('mark')).toBe('null');
+  });
+
+  // A like and a copy of the reader's lists ring the bell too, gathered
+  // one row a list as Activity draws them; a friend request waiting is
+  // news until answered, whatever the mark; a request of yours accepted
+  // since the window opened is a row like any other.
+  it('counts likes and copies one row a list, requests waiting, and friendships begun', async () => {
+    await AsyncStorage.setItem(markKey('me')!, TEN);
+    const now = new Date().toISOString();
+    world.applause = [
+      { collection_id: 'c1', liked_at: ELEVEN, liker_id: 'u2', liker_handle: 'hado', liker_name: 'Ha Do' },
+      { collection_id: 'c1', liked_at: ELEVEN, liker_id: 'u3', liker_handle: 'tuan', liker_name: 'Tuan' },
+      { collection_id: 'c2', liked_at: NINE, liker_id: 'u2', liker_handle: 'hado', liker_name: 'Ha Do' },
+    ];
+    world.copies = [{ collection_id: 'c1', copied_at: ELEVEN, copier_id: 'u4', copier_handle: 'an', copier_name: 'An' }];
+    world.ships = [
+      { requester: 'u5', addressee: 'me', status: 'pending', created_at: NINE, responded_at: null },
+      { requester: 'me', addressee: 'u6', status: 'accepted', created_at: NINE, responded_at: now },
+      { requester: 'u7', addressee: 'me', status: 'accepted', created_at: NINE, responded_at: now },
+    ];
+    mount();
+    // c1's likes (one row), c1's copy, the request, the friendship you
+    // asked for — and not c2's like, older than the mark, nor the
+    // friendship you accepted, which you did.
+    await waitFor(() => expect(text('fresh')).toBe('4'));
+    expect(fetchApplause).toHaveBeenCalledTimes(1);
+    expect(fetchCopies.mock.calls[0][0]).toBe(fetchApplause.mock.calls[0][0]);
   });
 
   it('counts only what is later than the mark the phone kept', async () => {
@@ -205,6 +250,8 @@ describe('asking again', () => {
     app.later(2 * STALE_MS);
     fireEvent.click(screen.getByText('freshen'));
     await waitFor(() => expect(fetchCommentNews).toHaveBeenCalledTimes(3));
+    // The likes and copies keep the same time as the comments.
+    expect(fetchApplause).toHaveBeenCalledTimes(3);
   });
 
   it('does not ask twice while an ask is out', async () => {
@@ -260,6 +307,9 @@ describe('Activity\'s rows', () => {
     expect(text('new')).toBe(`${TEN} ${ELEVEN}`);
     await waitFor(() => expect(text('mark')).toBe(ELEVEN));
     expect(fetchCommentNews).toHaveBeenCalledTimes(2);
+    // The likes are asked again with it, so the figure is worked from
+    // what the page shows.
+    expect(fetchApplause).toHaveBeenCalledTimes(2);
     expect(text('fresh')).toBe('0');
     expect(await AsyncStorage.getItem(markKey('me')!)).toBe(ELEVEN);
     // For this visit the rows stay new: judged against the mark as it

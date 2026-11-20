@@ -32,8 +32,10 @@
 //
 // ── the dot ──
 //
-// On a badge earned since the sheet was last closed, in the accent, the
-// mark the tab bar and the "Lv" pill led here with. It goes when the
+// On a badge earned since the sheet was last closed, in the accent. The
+// tab bar and the "Lv" pill led here with the same mark from 17 to 20
+// Nov 2026; under one bell (owner) this is the only place a new badge is
+// marked, the banner having said so as it was earned. It goes when the
 // sheet closes (`useRewards().closed`), not when it opens: opening is
 // when the reader is looking for which one is new.
 

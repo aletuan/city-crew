@@ -68,15 +68,12 @@ const STROKE = 4;
  *  (a negative margin of this much). */
 export const RING_OUT = GAP + STROKE;
 
-export default function EngagementRing({ size, level, progress, fresh = false, onExplain, children }: {
+export default function EngagementRing({ size, level, progress, onExplain, children }: {
   /** The avatar's diameter. The ring is drawn outside it. */
   size: number;
   level: number;
   /** 0–1 through the current level. */
   progress: number;
-  /** Something behind the pill is new — a badge earned since its sheet
-   *  was last closed (`lib/rewards`): the pill wears the tab bar's dot. */
-  fresh?: boolean;
   /** The pill, pressed: say what the level is. */
   onExplain: () => void;
   children: React.ReactNode;
@@ -174,7 +171,6 @@ export default function EngagementRing({ size, level, progress, fresh = false, o
           >
             <Text style={s.badgeText}>{`Lv ${level}`}</Text>
           </LinearGradient>
-          {fresh ? <View style={s.freshHalo} testID="level-fresh"><View style={s.fresh} /></View> : null}
         </PressableScale>
       </View>
       </View>
@@ -203,14 +199,4 @@ const s = StyleSheet.create({
     color: colors.accentInk, fontSize: 12, lineHeight: 15, fontWeight: font.bold,
     letterSpacing: 0.2,
   },
-  // The dot for something new behind the pill, on its top-right corner:
-  // the accent, in a ring of page so it parts from the pill, which is
-  // the accent's own gradient. Background, not a border, for the reason
-  // the halo above gives. 8 in 11: the tab bar's dot is 9, and this one
-  // sits on a 21pt pill, not over a 22pt glyph.
-  freshHalo: {
-    position: 'absolute', top: -4, right: -4,
-    padding: 1.5, borderRadius: 999, backgroundColor: colors.bg,
-  },
-  fresh: { width: 8, height: 8, borderRadius: 4, backgroundColor: colors.accent },
 });

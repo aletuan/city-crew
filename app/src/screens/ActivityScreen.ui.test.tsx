@@ -707,7 +707,26 @@ describe('a friendship that began', () => {
     crew.people = { 'u-c': person('u-c', 'chi'), 'u-e': person('u-e', 'em') };
     await renderScreen();
     expect(screen.queryByText(/chi/)).toBeNull();
-    expect(screen.queryByText(/em/)).toBeNull();
+    // A request still only asked is no friendship row; since one bell
+    // (20 Nov 2026) it is the notice above the rows, and only that.
+    const rows = screen.queryByTestId('activity-for-you');
+    expect(rows?.textContent ?? '').not.toMatch(/em/);
+    expect(screen.getByTestId('person-requests').textContent).toBe('1 friend request@em wants to be friends');
+  });
+
+  // One bell: the bell counts a request, so "For you" opens on it — the
+  // card your page shows, the way to Crew — and its pill counts it.
+  it('opens For you on the requests waiting, counted in its pill, and goes to Crew', async () => {
+    crew.ships.data = [ask('u-e')];
+    crew.people = { 'u-e': person('u-e', 'em') };
+    const navigation = await renderScreen();
+    expect(screen.getByTestId('activity-tab-for-you').textContent).toBe('For you1');
+    fireEvent.click(screen.getByTestId('person-requests'));
+    // From the last tab's stack, through the tabs: `toProfileRoom`.
+    expect(tabs.navigate).toHaveBeenCalledWith('Profile', { screen: 'Crew', initial: false });
+    expect(navigation.navigate).not.toHaveBeenCalled();
+    expect(screen.queryByTestId('activity-empty')).toBeNull();
+    expect(screen.queryByTestId('activity-tab-empty')).toBeNull();
   });
 });
 

@@ -46,17 +46,39 @@ trang cá nhân của mình. Cài đặt là một trang con mở từ đầu tr
 Một chấm mà bấm vào tab không tìm ra lý do là một chấm dạy người ta bỏ
 qua chấm.
 
-| Lý do | Có từ | Hiện ở đâu trên Trang cá nhân | Hết khi |
-|---|---|---|---|
-| Lời mời kết bạn | Hôm nay | Thẻ "2 lời mời kết bạn" dưới bốn con số, có mặt người gửi; bấm mở Bạn bè | Chấp nhận hoặc từ chối hết |
-| Huy hiệu mới | Hôm nay | Vòng cấp độ quanh ảnh đại diện sáng lên; bấm mở Thành tích | Mở bảng Thành tích |
-| Trả lời, tag, bình luận mới | C7c (phiên bình luận) | Chấm trên chuông ở đầu trang; chuông mở Hoạt động | Mở Hoạt động |
+**Một chuông (chủ dự án, 20/11/2026).** Chấm trên tab cuối *là* chuông:
+cùng một con số (`freshCount` trong `lib/commentNews`, giữ một bản ở
+`lib/freshNews`), cùng bật và cùng tắt. Người đọc chỉ cần nhớ một câu: có
+chấm thì vào chuông.
+
+| Vào chuông | Hết khi |
+|---|---|
+| Trả lời, tag, bình luận trên bộ của bạn, tim trên bình luận của bạn | Mở Hoạt động |
+| Lượt thích và bản sao bộ sưu tập của bạn (gộp một dòng một bộ) | Mở Hoạt động |
+| Lời mời kết bạn của bạn được chấp nhận | Mở Hoạt động |
+| Lời mời kết bạn đang chờ (cũng là thẻ dưới bốn con số) | Chấp nhận hoặc từ chối hết |
+
+Chuông mang **số**, đếm theo dòng của "Dành cho bạn", từ 10 trở lên là
+"9+"; tab chỉ mang chấm, như mọi chấm trên thanh tab. Không có nút "đánh
+dấu đã đọc": mở chuông đã là việc đó, vì không dòng nào có trạng thái đọc
+riêng. Hoạt động mở vào "Dành cho bạn" với thẻ lời mời ở đầu nếu có, và
+pill của tab đó đếm cả lời mời, để chuông, pill và chấm trên các dòng là
+một con số.
+
+**Huy hiệu không bật chấm nào nữa**, cả trên tab lẫn chip Lv. Banner đã
+báo lúc đạt được; trong bảng Thành tích, huy hiệu mới vẫn có chấm của nó
+cho tới khi đóng bảng.
 
 Lời mời chuyến đi và chuyến đi hôm nay vẫn là chấm của tab Chuyến đi,
 không đổi.
 
-Tim (bộ sưu tập hay bình luận) không bật chấm, như `comments-plan.md` đã
-chốt: tim là tin vui, không phải việc cần đáp.
+*Trước ngày 20/11:* ba chấm ba nghĩa. Tab bật cho lời mời, huy hiệu
+(17/11) và bình luận (C7c, 19/11); chuông chỉ bật cho bình luận; tim và
+lượt thích không bật gì ("tin vui, không phải việc cần đáp"). Chủ dự án
+gặp trên máy thật: tab sáng mà chuông tối, và một lượt thích không báo
+gì. Được vẽ ra từng trường hợp, ba chấm thấy quá nhiều thứ phải học; các
+ứng dụng mạng xã hội được đem so đều có một chỗ cho tin và một dấu chỉ
+về đó.
 
 Luật này có một test: mỗi lý do mà `spokenTab` đọc cho tab Hồ sơ phải có
 một phần tử tương ứng trên Trang cá nhân ở cùng trạng thái. Thêm lý do
@@ -73,8 +95,8 @@ P1–P2 phần chỉ chủ trang thấy chỉ có ở gốc tab; đã bỏ giớ
    đây là trang của ai) và không có nút quay lại. Bên phải là một hàng ba
    nút (chủ dự án, 20/11, theo ảnh mẫu của anh; `person/Tools`):
    **Tìm kiếm** (trong trang này, mục 9), **Chuông** (Hoạt động) và **Bánh răng**
-   (Tài khoản). Chuông có chấm khi có trả lời, tag hoặc bình luận chưa xem
-   (C7c). Từ 19/11 chuông nổi ở góc ảnh bìa (cách A; cách B là cạnh "Tài
+   (Tài khoản). Chuông mang số tin mới cho bạn (mục 3, từ 20/11; trước đó
+   là chấm cho trả lời, tag hoặc bình luận chưa xem, C7c). Từ 19/11 chuông nổi ở góc ảnh bìa (cách A; cách B là cạnh "Tài
    khoản ›"); lên đầu trang thì vẫn thấy ngay khi mở mà không nằm đè lên
    ảnh. Mở từ tab khác thì hàng nút nằm cạnh nút quay lại, ở cùng chỗ.
 2. **Ảnh bìa, ảnh đại diện, tên, handle, tiểu sử** như hôm nay. Ảnh đại

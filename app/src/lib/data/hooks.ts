@@ -20,7 +20,7 @@ import {
 } from './collections';
 import { fetchPreferences, NO_PREFERENCES, type Preferences } from './preferences';
 import {
-  fetchCopiesOfList, fetchCuratorAvatars, fetchLikesOnList, fetchListsLikedInCommon, fetchPlacesInCommon,
+  fetchApplause, fetchCopies, fetchCopiesOfList, fetchCuratorAvatars, fetchLikesOnList, fetchListsLikedInCommon, fetchPlacesInCommon,
   fetchRoleOf, type FriendProfile, type PersonRole, type PlaceInCommon, profileByHandle,
 } from './people';
 import { fetchMyListShares } from './shares';
@@ -623,4 +623,31 @@ export const useCommentNewsQuery = (readerId: string | null | undefined, on: boo
     [readerId, on, stamp],
   );
   return useFetch(fetcher, NO_NEWS);
+};
+
+// ── likes and copies of the reader's lists, for the bell ──
+//
+// Activity asks these for itself, page by page (`ActivityScreen`, with
+// its pull). The bell's number needs them before Activity is opened, so
+// since 20 Nov 2026 (owner: "every piece of news for you goes to the
+// bell") they are asked here too, once for the app, by `lib/freshNews`.
+// Two asks rather than Activity's three: what the reader did is not
+// news to them.
+//
+// The window opens at the moment of each ask, as Activity's does, and
+// travels with the answer so the friendships can be cut at the same
+// instant.
+
+/** Likes and copies of the reader's lists over Activity's window. */
+export type LogNews = { applause: Applause[]; copies: Copy[]; since: string };
+const NO_LOG: LogNews = { applause: [], copies: [], since: '' };
+
+export const useLogNewsQuery = (readerId: string | null | undefined): Fetch<LogNews> => {
+  const fetcher = useCallback(async (): Promise<LogNews> => {
+    if (!readerId) return NO_LOG;
+    const since = windowStart(new Date());
+    const [applause, copies] = await Promise.all([fetchApplause(since), fetchCopies(since)]);
+    return { applause, copies, since };
+  }, [readerId]);
+  return useFetch(fetcher, NO_LOG);
 };

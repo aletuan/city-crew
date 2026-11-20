@@ -73,11 +73,13 @@ import { Avatar, Card, PressableScale, WordTabs } from '../../components/ui';
 import { Glyph, ICON } from '../../components/ui/glyph';
 import { type ActivityEntry, type CommentNews, newestAt } from '../../lib/commentNews';
 import type { FriendProfile } from '../../lib/data';
-import type { ActivityItem } from '../../lib/friends';
+import { type ActivityItem, splitFriendships } from '../../lib/friends';
+import { useCrew } from '../../lib/crew';
 import { useSeenThrough } from '../../lib/freshNews';
 import { atHandle } from '../../lib/handle';
 import { useI18n } from '../../lib/i18n';
-import { type Nav, toPerson } from '../../nav';
+import { type Nav, toPerson, toProfileRoom } from '../../nav';
+import { Requests } from '../person/Requests';
 import { colors, space, type } from '../../theme';
 
 type Translate = (en: string, vi: string, ja: string, zh?: string, hant?: string) => string;
@@ -85,7 +87,7 @@ type Glyphs = keyof typeof Ionicons.glyphMap;
 /** A list as a row needs it: where it opens, and what it is called. */
 type Titled = { slug: string; title_en: string; title_vi: string; title_ja?: string | null };
 
-export function ActivityGroups({ groups, people, faces, collectionOf, ago, navigation }: {
+export function ActivityGroups({ groups, people, faces, collectionOf, ago, navigation, me = null }: {
   groups: { forYou: ActivityEntry[]; yours: ActivityEntry[] };
   /** The crew, by id: a friendship row's other person. */
   people: Record<string, FriendProfile>;
@@ -97,6 +99,10 @@ export function ActivityGroups({ groups, people, faces, collectionOf, ago, navig
    *  third destination arrived and the page's function was at its
    *  ceiling. */
   navigation: Nav;
+  /** The reader. When friend requests wait on them "For you" opens on
+   *  your own page's card for them (`person/Requests`), counted in its
+   *  pill, as the bell counts it. */
+  me?: string | null;
 }) {
   const { t } = useI18n();
   const onList = (slug: string) => navigation.navigate('CollectionDetail', { slug });
@@ -105,8 +111,10 @@ export function ActivityGroups({ groups, people, faces, collectionOf, ago, navig
   const onComment = (n: CommentNews) =>
     navigation.navigate('Comments', { subject: { kind: 'collection', id: n.list.id }, focus: n.comment_id });
   const isNew = useSeenThrough(newestAt(groups.forYou));
+  const { ships } = useCrew();
+  const asking = me ? splitFriendships(ships.data, me).incoming.length : 0;
   const [tab, setTab] = useState<'forYou' | 'yours'>(() =>
-    (groups.forYou.length === 0 && groups.yours.length > 0 ? 'yours' : 'forYou'));
+    (groups.forYou.length === 0 && asking === 0 && groups.yours.length > 0 ? 'yours' : 'forYou'));
   const news = tab === 'forYou';
   const entries = news ? groups.forYou : groups.yours;
   return (
@@ -117,14 +125,15 @@ export function ActivityGroups({ groups, people, faces, collectionOf, ago, navig
       <View style={s.tabs}>
         <WordTabs
           tabs={[
-            { key: 'forYou', label: t('For you', 'Dành cho bạn', 'あなたへ', '与你有关', '與你有關'), count: groups.forYou.filter((e) => isNew(e.at)).length, testID: 'activity-tab-for-you' },
+            { key: 'forYou', label: t('For you', 'Dành cho bạn', 'あなたへ', '与你有关', '與你有關'), count: groups.forYou.filter((e) => isNew(e.at)).length + asking, testID: 'activity-tab-for-you' },
             { key: 'yours', label: t('What you did', 'Việc bạn đã làm', 'あなたがしたこと', '你做过的', '你做過的'), testID: 'activity-tab-yours' },
           ]}
           active={tab}
           onChange={setTab}
         />
       </View>
-      {entries.length === 0 ? (
+      {news && me && asking > 0 ? <Requests me={me} onOpen={() => toProfileRoom(navigation, 'Crew')} /> : null}
+      {entries.length === 0 && !(news && asking > 0) ? (
         <Text style={s.none} testID="activity-tab-empty">
           {news
             ? t('Nothing from anybody else in the last two weeks.', 'Hai tuần qua chưa có gì từ người khác.', 'この2週間、ほかの人からは何もありません。', '过去两周没有来自他人的动态。', '過去兩週沒有來自他人的動態。')

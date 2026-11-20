@@ -15,12 +15,14 @@
 // Profile's count on the way in still counts only what others did — news
 // is the part worth a number.
 //
-// Friend requests waiting are still not here. They lived here once, as a REQUESTS section above
-// the timeline with the same Accept and Decline as the Requests tab on
-// Your crew — the same list in two places, and on Profile the same
-// request counted twice, as the dot on Connect with friends and inside
-// Activity's number. The owner took them out on 20 Oct 2026; Crew has
-// been the inbox since #309, and nothing but Profile opens this screen.
+// Friend requests waiting are here as a notice, not as an inbox. They
+// lived here once, as a REQUESTS section above the timeline with the
+// same Accept and Decline as the Requests tab on Your crew — the same
+// list in two places — and the owner took them out on 20 Oct 2026; Crew
+// has been the inbox since #309. They came back on 20 Nov 2026 (owner:
+// one bell — every piece of news for you is in the bell, and a request
+// is in its figure) as the card your own page shows (`person/Requests`):
+// who is asking, and the way to Crew, where each is answered.
 //
 // Your own plans are not here. An UPCOMING section carried the nearest
 // trip for a day (6–7 Oct 2026) and went: by then the same fact was on
@@ -107,7 +109,7 @@ import {
   fetchApplause, fetchCopies, fetchMyActs, type MyActs, useCuratorAvatarsQuery, useMyCollections,
 } from '../lib/data';
 import { useCrew } from '../lib/crew';
-import { type ActivityItem, type Applause, buildActivity, type Copy, friendsMade } from '../lib/friends';
+import { type ActivityItem, type Applause, buildActivity, type Copy, friendsMade, splitFriendships } from '../lib/friends';
 import { useFreshNews } from '../lib/freshNews';
 import { useI18n } from '../lib/i18n';
 import { colors, type } from '../theme';
@@ -185,7 +187,7 @@ export default function ActivityScreen({ navigation }: { navigation: Nav }) {
   // Two groups, what is for the reader above what the reader did — see
   // `lib/commentNews`.
   const groups = useMemo(() => activityGroups(earlier, news.data, since), [earlier, news.data, since]);
-  const nothing = groups.forYou.length + groups.yours.length === 0;
+  const nothing = groups.forYou.length + groups.yours.length === 0 && !(me && splitFriendships(crew.ships.data, me).incoming.length);
 
   const actors = useMemo(
     () => earlier.map((it) => handleOf(it, crew.people) ?? '').filter(Boolean),
@@ -345,7 +347,7 @@ export default function ActivityScreen({ navigation }: { navigation: Nav }) {
           faces={faces.data}
           collectionOf={collectionOf}
           ago={ago}
-          navigation={navigation}
+          navigation={navigation} me={me}
         />
       )}
     </AuthScreen>
