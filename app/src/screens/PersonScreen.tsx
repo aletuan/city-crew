@@ -129,6 +129,8 @@ import {
 } from '../components/ui';
 import { Glyph, ICON } from '../components/ui/glyph';
 import { useFriendButtons } from '../components/FriendButton';
+import { usePullControl } from '../lib/usePull';
+import { useFreshNews } from '../lib/freshNews';
 import InCommon from '../components/InCommon';
 import { usePersonMenu } from '../components/PersonMenu';
 import PersonRole from '../components/RoleBadge';
@@ -239,6 +241,8 @@ export default function PersonScreen({ navigation, route, home }: {
   // read again — `useReloadOnReturn`.
   const own = !!me && personId === me;
   useReloadOnReturn(navigation, own, who.reload);
+  const { news, log } = useFreshNews();
+  const refresh = usePullControl(own ? [who, crew.ships, crew.blocks, news, log] : [who, crew.ships]);
   // The same button, small, for the header once the row has scrolled
   // away — a thing to do only (`actsOnly`): a fact is not worth the
   // header's room. Switched off for now: `TOP_FRIEND_ON`.
@@ -346,6 +350,7 @@ export default function PersonScreen({ navigation, route, home }: {
         scrollEventThrottle={16}
         contentContainerStyle={[s.content, { paddingBottom: tabClearance }]}
         showsVerticalScrollIndicator={false}
+        refreshControl={refresh}
       >
         {page}
       </ScrollView>
