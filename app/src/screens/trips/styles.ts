@@ -28,7 +28,6 @@ export const s = StyleSheet.create({
   // cards ran to both edges and the card's own corner radius clipped the
   // first glyph of every title.
   body: { gap: space.cardGap, paddingHorizontal: space.page },
-  lede: { ...type.body, color: colors.textSecondary, marginBottom: space.titleToContent },
   // The trip card's own ground and corner, at a row's height.
   none: {
     flexDirection: 'row', alignItems: 'center', gap: 12,
@@ -38,20 +37,6 @@ export const s = StyleSheet.create({
   },
   noneText: { ...type.body, color: colors.textSecondary, flexShrink: 1 },
 
-  // Caption weight and letterspaced rather than a second title. There is
-  // one title on this screen; these divide it, and at `type.section` they
-  // competed with the card names underneath them.
-  section: {
-    ...CAPTION, color: colors.textTertiary, fontWeight: font.semibold,
-    letterSpacing: 0.8, textTransform: 'uppercase',
-    marginBottom: space.headingToContent,
-  },
-  // The second heading needs air above it that the first, sitting under the
-  // screen title, already has.
-  // The rail's heading is the first thing on the screen, so it does not
-  // take the top margin the sections below it need.
-  sectionInvite: { marginTop: 0 },
-  sectionAfter: { marginTop: space.titleToContent },
   row: { marginBottom: space.cardGap },
 
   // The card is the tap now, so it carries its own surface rather than

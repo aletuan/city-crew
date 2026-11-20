@@ -51,6 +51,7 @@ import {
   Screen,
   Skeleton,
   useTabBarClearance,
+  WordTabs,
 } from '../components/ui';
 import { useDuckOnScroll } from '../components/tabBarDuck';
 import { holdResume } from '../lib/resume';
@@ -64,12 +65,126 @@ import { splitTrips } from '../lib/trips';
 import { useCrew } from '../lib/crew';
 import { useInvitations } from '../lib/invitations';
 import { answerInvite } from '../lib/data';
-import { sortInvites, splitByStanding } from '../lib/invites';
+import { sortInvites, splitByStanding, type InviteRow } from '../lib/invites';
+import type { Trip } from '../lib/data';
 import InviteCard from '../components/InviteCard';
 import { colors, space } from '../theme';
 import type { Nav } from '../nav';
 import { TripCard, FirstTrip } from './trips/parts';
 import { s } from './trips/styles';
+
+type TripsTab = 'invites' | 'upcoming' | 'past';
+
+type T = ReturnType<typeof useI18n>['t'];
+
+/** What an empty tab says, and the glyph it says it with — the tab's own
+ *  subject, in the accent every trip's calendar wears. */
+const NONE: Record<TripsTab, { icon: React.ComponentProps<typeof Glyph>['name']; text: (t: T) => string }> = {
+  invites: {
+    icon: 'mail-outline',
+    text: (t) => t(
+      'When a friend invites you on a trip, it shows up here',
+      'Khi bạn bè rủ bạn đi cùng, lời mời sẽ hiện ở đây',
+      '友達に旅程に誘われると、ここに表示されます',
+      '朋友邀请你加入行程时，会显示在这里', '朋友邀請你加入行程時，會顯示在這裡',
+    ),
+  },
+  upcoming: {
+    icon: 'calendar-outline',
+    text: (t) => t(
+      'No upcoming trips',
+      'Chưa có chuyến đi sắp tới',
+      'これからの旅はまだありません',
+      '暂无即将到来的行程', '暫無即將到來的行程',
+    ),
+  },
+  past: {
+    icon: 'time-outline',
+    text: (t) => t(
+      'Trips move here once their day is over',
+      'Chuyến đi sẽ chuyển vào đây khi đã qua ngày',
+      '日付が過ぎた旅程はここに移ります',
+      '行程日期过后会移到这里', '行程日期過後會移到這裡',
+    ),
+  },
+};
+
+/**
+ * The half the tabs chose: its cards, or the one line an empty tab says.
+ *
+ * Its own component so the screen reads as what it decides — which tab,
+ * when to greet, what the header offers — and this as what each tab draws.
+ */
+function TabBody({ tab, rail, upcoming, past, people, answering, navigation, onAnswer }: {
+  tab: TripsTab;
+  rail: { invite: InviteRow; trip: Trip }[];
+  upcoming: Trip[];
+  past: Trip[];
+  people: ReturnType<typeof useCrew>['people'];
+  answering: string | null;
+  navigation: Nav;
+  onAnswer: (tripId: string, said: 'accepted' | 'declined') => void;
+}) {
+  const { t } = useI18n();
+  const list = tab === 'upcoming' ? upcoming : past;
+  const shown = tab === 'invites' ? rail.length : list.length;
+
+  // An empty tab is a state of the list, drawn where the list would
+  // stand: the card "No upcoming trips" has been since 24 Oct 2026
+  // (owner), one quiet line on the trip card's ground, now one per tab.
+  // Reached only by choosing it — the greeting never opens on one while
+  // another tab has something.
+  //
+  // No button in it. The way to a new trip is the header's plus, one
+  // glance up, and two offers to do one thing read as two things (the
+  // rule `FirstTrip` and the pill keep). An invitation is not something
+  // the reader can make happen from here, so its line says where one
+  // comes from instead; Past's says how a trip gets there.
+  if (!shown) {
+    return (
+      <View style={s.none} testID={`trips-none-${tab}`}>
+        <Glyph name={NONE[tab].icon} size={ICON.nav} color={colors.accent} />
+        <Text style={s.noneText}>{NONE[tab].text(t)}</Text>
+      </View>
+    );
+  }
+
+  // Oldest first: an invitation is owed rather than news, so the one that
+  // has waited longest is the one to answer next.
+  if (tab === 'invites') {
+    return (
+      <>
+        {rail.map(({ invite, trip }, i) => (
+          <InviteCard
+            key={trip.id}
+            index={i}
+            trip={trip}
+            from={people[invite.inviter_id] ?? null}
+            busy={answering === trip.id}
+            onOpen={() => navigation.navigate('TripInvitation', { id: trip.id })}
+            onAnswer={(said) => onAnswer(trip.id, said)}
+          />
+        ))}
+      </>
+    );
+  }
+
+  // Upcoming soonest first, past most recent first — `splitTrips` sorts.
+  return (
+    <>
+      {list.map((trip, i) => (
+        <View key={trip.id} style={s.row}>
+          <TripCard
+            trip={trip}
+            testID={`trip-${tab}-${i}`}
+            past={tab === 'past'}
+            onPress={() => navigation.navigate('TripDetail', { id: trip.id })}
+          />
+        </View>
+      ))}
+    </>
+  );
+}
 
 export default function TripsScreen({ navigation, route }: { navigation: Nav; route?: { params?: { at?: number } } }) {
   const { t } = useI18n();
@@ -148,6 +263,12 @@ export default function TripsScreen({ navigation, route }: { navigation: Nav; ro
       await answerInvite(tripId, said);
       invites.reload();
       trips.reload();
+      // The last invitation accepted: the trip it was now lives on
+      // Upcoming, so the screen goes there with it rather than leaving
+      // the reader in front of an emptied tab. With more still waiting
+      // the tab stays — they are the next thing to answer. A decline
+      // has nowhere to go.
+      if (said === 'accepted' && rail.length === 1) setTab('upcoming');
     } catch (e) {
       Alert.alert(
         t('Could not answer', 'Không trả lời được', '回答できません', '无法回复', '無法回覆'),
@@ -162,6 +283,38 @@ export default function TripsScreen({ navigation, route }: { navigation: Nav; ro
   // Split what they are actually going on — a trip nobody has agreed to
   // must not appear among the plans they have.
   const { upcoming, past } = splitTrips(mine, toISO(now), minutesOf(now));
+
+  // ── three tabs, not three headings (owner, 20 Nov 2026) ──
+  //
+  // The screen was one scroll with "Invitations · 1", "Upcoming · 2" and
+  // "Past · 55" as caption headings, and on an account with a long past
+  // the invitations and the next trip were the top of a list nobody
+  // finished. As tabs, the figures ride on the switch the way they do on
+  // Crew, Activity and Collections (`WordTabs`): what waits on an answer
+  // is a `count` — news, the accent pill — and how many trips each half
+  // holds is a `tally`, a fact in the quiet one. Zero draws no pill.
+  //
+  // Opened once per visit on the tab that has something in it, and never
+  // re-decided under the reader's thumb — the Crew screen's rule:
+  // invitations if one is waiting, else what is coming, else what has
+  // been. Opening on an empty Upcoming above a full Past would hide the
+  // only list there is behind a tap; the missing pill on Upcoming already
+  // says why the screen opened where it did.
+  const [tab, setTab] = useState<TripsTab>('upcoming');
+  const greeted = useRef(false);
+  const settled = trips.loaded && invites.loaded;
+  useEffect(() => {
+    if (greeted.current || !settled || !session) return;
+    greeted.current = true;
+    if (rail.length) setTab('invites');
+    else if (!upcoming.length && past.length) setTab('past');
+  // Once, when both reads first land; see above.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [settled, session]);
+
+  // Anything to switch between: a trip of their own or one waiting on an
+  // answer. A declined invitation's trip is neither.
+  const anything = mine.length > 0 || rail.length > 0;
 
   // Signed out is not an empty list, it is a different question, so it gets
   // the whole screen rather than a banner above nothing.
@@ -227,15 +380,16 @@ export default function TripsScreen({ navigation, route }: { navigation: Nav; ro
       // this screen cannot do for itself is make another trip. It jumps to
       // Ideas, which is where a trip comes from.
       //
-      // Only once there is a list. With none, `FirstTrip` below is already
-      // making the same offer and saying what a trip is for — two
+      // Only once there is something to switch between. With nothing,
+      // `FirstTrip` below is already making the same offer and saying
+      // what a trip is for — two
       // invitations to do one thing read as two different things, which is
       // the rule Collections keeps on its own section heading and this
       // screen shipped without.
       //
       // The header's plus (`HeaderAdd`), the one every header that makes
       // something wears.
-      right={trips.data.length > 0 ? (
+      right={anything ? (
         <HeaderAdd
           label={t('New trip', 'Chuyến đi mới', '新しい旅程', '新建行程', '新增行程')}
           onPress={() => navigation.getParent()?.navigate('Ideas')}
@@ -264,11 +418,29 @@ export default function TripsScreen({ navigation, route }: { navigation: Nav; ro
           : <LoadFailBanner kind={tripsFail} onRetry={trips.reload} testID="trips-load-banner" />
       )}
 
+      {/* Above the list rather than in it, as on Crew: the switch stays
+          put while the half it chose scrolls. Not drawn while there is
+          nothing at all — three empty rooms are the same absence said
+          three times, and `FirstTrip` says it once, with the way out. */}
+      {trips.loaded && anything && (
+        <WordTabs
+          tabs={[
+            { key: 'invites', label: t('Invites', 'Lời mời', '招待', '邀请', '邀請'), count: rail.length, testID: 'trips-tab-invites' },
+            { key: 'upcoming', label: t('Upcoming', 'Sắp tới', 'これから', '即将到来', '即將到來'), tally: upcoming.length, testID: 'trips-tab-upcoming' },
+            // "Past", not "Been there": a trip moves here when its day is
+            // over, and nothing records that anyone went (UX-10).
+            { key: 'past', label: t('Past', 'Đã qua', 'これまで', '已结束', '已結束'), tally: past.length, testID: 'trips-tab-past' },
+          ]}
+          active={tab}
+          onChange={setTab}
+        />
+      )}
+
       {trips.loaded && !(tripsFail && trips.data.length === 0) && (
         <ScrollView
           testID={!trips.loading && !trips.fromCache && !trips.error && invites.loaded && !invites.loading && !invites.error ? 'trips-ready' : undefined}
           ref={scrollRef}
-          contentContainerStyle={{ paddingHorizontal: space.page, paddingBottom: clearance }}
+          contentContainerStyle={{ paddingHorizontal: space.page, paddingTop: 4, paddingBottom: clearance }}
           showsVerticalScrollIndicator={false}
           onScroll={duckScroll}
           scrollEventThrottle={16}
@@ -276,111 +448,22 @@ export default function TripsScreen({ navigation, route }: { navigation: Nav; ro
           {/* "No trips yet" is false while somebody is waiting on an
               answer, and offering to plan a first one would be the app
               talking over an invitation it is already showing. */}
-          {!mine.length && !rail.length && (
+          {!anything && (
             <FirstTrip onPress={() => navigation.getParent()?.navigate('Ideas')} />
           )}
 
-          {/* The rail, above the plans that are already agreed. A count on
-              the heading for the same reason the sections below carry one:
-              it says how much is owed before the scan starts. */}
-          {!!rail.length && (
-            <Text style={[s.section, s.sectionInvite]}>
-              {t('Invitations', 'Lời mời', '招待', '邀请', '邀請')} · {rail.length}
-            </Text>
-          )}
-          {rail.map(({ invite, trip }, i) => (
-            <InviteCard
-              key={trip.id}
-              index={i}
-              trip={trip}
-              from={people[invite.inviter_id] ?? null}
-              busy={answering === trip.id}
-              onOpen={() => navigation.navigate('TripInvitation', { id: trip.id })}
-              onAnswer={(said) => answer(trip.id, said)}
+          {anything && (
+            <TabBody
+              tab={tab}
+              rail={rail}
+              upcoming={upcoming}
+              past={past}
+              people={people}
+              answering={answering}
+              navigation={navigation}
+              onAnswer={answer}
             />
-          ))}
-
-          {/* The lede speaks to the half that exists. It said "your next
-              plans" over every list, and on an account whose 55 trips were
-              all behind it, it sat directly above "Been there · 55"
-              (UX-10, 17 Oct 2026). With nothing ahead it says so, which
-              is also the line that makes "New trip" above it the obvious
-              next move.
-
-              "Your journeys", owner's words (14 Nov 2026), after "Your
-              next plans, in order." lost its last clause the same day: the
-              order is visible, and "next plans" said again what the
-              "Upcoming" heading under it says. No full stop, as given. */}
-          {!!mine.length && !!upcoming.length && (
-            <Text style={s.lede}>
-              {t(
-                'Your journeys',
-                'Những hành trình của bạn',
-                'あなたの旅',
-                '你的旅程', '你的旅程',
-              )}
-            </Text>
           )}
-          {/* Nothing ahead is a state of the list, so it is drawn as one: a
-              quiet card where the upcoming trips would stand, not a
-              sentence under the title (owner, 24 Oct 2026). As a lede it
-              read as the screen's subtitle and was passed over; as a card
-              it takes the place of the section it stands in for, and the
-              first thing above "Past" says why there is no "Upcoming".
-              The calendar is coral, as every trip's calendar is — see
-              `IconSubtitle` on the one glyph wearing two colours. Not a
-              button: "New trip" is in the header, one glance up. */}
-          {!!mine.length && !upcoming.length && (
-            <View style={s.none} testID="trips-none-ahead">
-              <Glyph name="calendar-outline" size={ICON.nav} color={colors.accent} />
-              <Text style={s.noneText}>
-                {t(
-                  'No upcoming trips',
-                  'Chưa có chuyến đi sắp tới',
-                  'これからの旅はまだありません',
-                  '暂无即将到来的行程', '暫無即將到來的行程',
-                )}
-              </Text>
-            </View>
-          )}
-
-          {/* The count belongs on the heading rather than under it: this is
-              a list somebody scans to find one trip, and how many there are
-              is the first thing that tells them how long the scan is. */}
-          {!!upcoming.length && (
-            <Text style={s.section}>
-              {t('Upcoming', 'Sắp tới', 'これから', '即将到来', '即將到來')} · {upcoming.length}
-            </Text>
-          )}
-          {upcoming.map((trip, i) => (
-            <View key={trip.id} style={s.row}>
-              <TripCard
-                trip={trip}
-                testID={`trip-upcoming-${i}`}
-                past={false}
-                onPress={() => navigation.navigate('TripDetail', { id: trip.id })}
-              />
-            </View>
-          ))}
-
-          {!!past.length && (
-            // "Past", not "Been there": a trip moves here when its day is
-            // over, and nothing records that anyone went. The heading
-            // states the date, the one thing the split knows — the pair
-            // to "Upcoming" (UX-10).
-            <Text style={[s.section, !!upcoming.length && s.sectionAfter]}>
-              {t('Past', 'Đã qua', 'これまで', '已结束', '已結束')} · {past.length}
-            </Text>
-          )}
-          {past.map((trip) => (
-            <View key={trip.id} style={s.row}>
-              <TripCard
-                trip={trip}
-                past
-                onPress={() => navigation.navigate('TripDetail', { id: trip.id })}
-              />
-            </View>
-          ))}
         </ScrollView>
       )}
     </Screen>
