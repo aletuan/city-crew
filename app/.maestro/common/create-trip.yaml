@@ -31,12 +31,7 @@ appId: host.exp.Exponent
     id: "ideas-sketch"
 
 # Sketching holds its last step for the model's words, up to its cap.
-- extendedWaitUntil:
-    visible:
-      id: "plan-card-best"
-    timeout: 90000
-- tapOn:
-    id: "plan-card-best"
+- runFlow: open-best-plan.yaml
 - scrollUntilVisible:
     element:
       id: "plan-save"
