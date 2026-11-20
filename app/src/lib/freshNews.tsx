@@ -1,6 +1,16 @@
-// What is new for the reader in comments, held once for the whole app:
-// the rows, and the mark that says which of them Activity has shown.
-// C7c of docs/comments-plan.md; the arithmetic is `lib/commentNews`.
+// What is new for the reader, held once for the whole app: the comment
+// news, the likes and copies of their lists, the friend requests
+// waiting, and the mark that says which rows Activity has shown. C7c of
+// docs/comments-plan.md; the arithmetic is `lib/commentNews`.
+//
+// ── one bell (owner, 20 Nov 2026) ──
+//
+// Until that day this held comments alone, the tab added requests and
+// badges of its own, and the bell said only comments: three marks, three
+// meanings. Now the number is everything "For you" on Activity that is
+// later than the mark, plus each request waiting (`freshCount`), and the
+// tab's dot, the bell's figure and Activity's pill all read it. Badges
+// went to the sheet they are drawn in.
 //
 // ── one copy, at the root ──
 //
@@ -37,8 +47,10 @@ import React, {
 } from 'react';
 import { AppState } from 'react-native';
 import { useSession } from './auth';
-import { type CommentNews, freshNews, newerThan } from './commentNews';
-import { type Fetch, useCommentNewsQuery } from './data';
+import { activityGroups, type CommentNews, freshCount, newerThan } from './commentNews';
+import { useCrew } from './crew';
+import { type Fetch, type LogNews, useCommentNewsQuery, useLogNewsQuery } from './data';
+import { buildActivity, friendsMade, splitFriendships } from './friends';
 import { shouldRefresh } from './stale';
 import { type Codec, useStored } from './stored';
 import { useFlag } from './useFlag';
@@ -50,7 +62,10 @@ export type FreshNews = {
   mark: string | null;
   /** The phone has said what it remembers: `mark` can be believed. */
   read: boolean;
-  /** Replies, tags and comments later than the mark — the dot. */
+  /** Likes and copies of the reader's lists over the same window. */
+  log: Fetch<LogNews>;
+  /** "For you" rows later than the mark, and requests waiting — the
+   *  bell's figure and the tab's dot (`freshCount`). */
   fresh: number;
   /** Activity has shown rows up to this time. */
   see: (at: string) => void;
@@ -61,7 +76,8 @@ export type FreshNews = {
 const NO_NEWS: Fetch<CommentNews[]> = {
   loading: true, loaded: false, error: null, data: [], loadedAt: null, fromCache: false, reload: () => {},
 };
-const NOTHING: FreshNews = { news: NO_NEWS, mark: null, read: false, fresh: 0, see: () => {}, freshen: () => {} };
+const NO_LOG: Fetch<LogNews> = { ...NO_NEWS, data: { applause: [], copies: [], since: '' } };
+const NOTHING: FreshNews = { news: NO_NEWS, log: NO_LOG, mark: null, read: false, fresh: 0, see: () => {}, freshen: () => {} };
 const Ctx = createContext<FreshNews>(NOTHING);
 
 /** A time, stored as itself. Text that is not one is not a mark: read as
@@ -78,16 +94,17 @@ export function FreshNewsProvider({ children }: { children: React.ReactNode }) {
   const { ready, session } = useSession();
   const me = ready ? session?.user?.id ?? null : null;
   const news = useCommentNewsQuery(me, useFlag('comments'));
+  const log = useLogNewsQuery(me);
+  const { ships } = useCrew();
   const [mark, remember, origin] = useStored<string | null>(markKey(me), null, MARK);
   // Signed out there is no key, and a read with no key never ends
   // (`useStored`): `read` says "somebody is signed in" as well.
   const read = origin !== 'reading';
 
-  const latest = useRef(news);
-  latest.current = news;
+  const latest = useRef([news, log] as const);
+  latest.current = [news, log];
   const freshen = useCallback(() => {
-    const f = latest.current;
-    if (!f.loading && shouldRefresh(f.loadedAt, Date.now())) f.reload();
+    for (const f of latest.current) if (!f.loading && shouldRefresh(f.loadedAt, Date.now())) f.reload();
   }, []);
   useEffect(() => {
     const sub = AppState.addEventListener('change', (next) => { if (next === 'active') freshen(); });
@@ -98,12 +115,22 @@ export function FreshNewsProvider({ children }: { children: React.ReactNode }) {
   // what came after it new.
   const see = useCallback((at: string) => { if (newerThan(at, mark)) remember(at); }, [mark, remember]);
 
-  const fresh = read ? freshNews(news.data, mark) : 0;
-  const value = useMemo<FreshNews>(() => ({ news, mark, read, fresh, see, freshen }),
+  // "For you" as Activity draws it, from the app's copies: the crew's
+  // friendships cut where the likes were asked from. The likes and the
+  // comment news were each cut by the server at their own ask, so they
+  // are not cut again here.
+  const fresh = useMemo(() => {
+    if (!read || !me) return 0;
+    const items = buildActivity(log.data.applause, log.data.copies, undefined, friendsMade(ships.data, me, log.data.since));
+    const { forYou } = activityGroups(items, news.data, '');
+    return freshCount(forYou, mark, splitFriendships(ships.data, me).incoming.length);
+  }, [read, me, log.data, ships.data, news.data, mark]);
+  const value = useMemo<FreshNews>(() => ({ news, log, mark, read, fresh, see, freshen }),
     // Each field rather than the wrapper: a Fetch object is new every
     // render (`lib/invitations` has the same list, and why).
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [news.data, news.loading, news.loaded, news.error, news.loadedAt, news.reload, mark, read, fresh, see, freshen]);
+    [news.data, news.loading, news.loaded, news.error, news.loadedAt, news.reload,
+      log.data, log.loading, log.loaded, log.error, log.loadedAt, log.reload, mark, read, fresh, see, freshen]);
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }
 
@@ -125,7 +152,7 @@ export const useFreshNews = () => useContext(Ctx);
  * that fails moves nothing; the dot stays for the next visit.
  */
 export function useSeenThrough(newest: string | null): (at: string) => boolean {
-  const { news, mark, read, see } = useFreshNews();
+  const { news, log, mark, read, see } = useFreshNews();
   const [before, setBefore] = useState<{ mark: string | null } | null>(null);
   // Set during render, React's pattern for state taken once from a value
   // that arrives late: an effect would paint a frame with no row new.
@@ -133,11 +160,12 @@ export function useSeenThrough(newest: string | null): (at: string) => boolean {
 
   const [opened] = useState(() => Date.now());
   const { loadedAt } = news;
-  const ask = useRef(news.reload);
-  ask.current = news.reload;
-  // Once, as the page opens. Not on `reload`'s identity: that changes
-  // when a comment is written, and the query asks again for itself then.
-  useEffect(() => { ask.current(); }, []);
+  const ask = useRef([news.reload, log.reload]);
+  ask.current = [news.reload, log.reload];
+  // Once, as the page opens — the likes too, so the bell's figure is
+  // worked from what the page shows. Not on `reload`'s identity: that
+  // changes when a comment is written, and the query asks again then.
+  useEffect(() => { for (const r of ask.current) r(); }, []);
   const current = loadedAt !== null && loadedAt >= opened;
   useEffect(() => {
     if (current && read && newest !== null) see(newest);

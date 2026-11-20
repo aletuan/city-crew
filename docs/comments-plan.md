@@ -126,7 +126,9 @@ Chủ dự án chốt ngày 19/11/2026, làm ở C7c:
   chấm.
 - **Một chấm trên tab cuối và trên cái chuông** ở Trang cá nhân khi có trả
   lời, tag hoặc bình luận mới hơn mốc. Tim không bật chấm: tim là tin
-  vui, không phải việc cần đáp.
+  vui, không phải việc cần đáp. *(Đổi ngày 20/11/2026: một chuông, có
+  số, đếm cả tim và lượt thích — xem C7c bên dưới và mục 3 của
+  `profile-home-plan.md`.)*
 
 Mốc lưu trên máy nghĩa là đổi máy thì mọi thứ trong hai tuần lại "mới"
 một lần. Chấp nhận được; lưu trên máy chủ thì thêm một bảng cho một cái
@@ -571,6 +573,10 @@ sở dữ liệu thật ngày 19/11/2026, kiểu dữ liệu đã sinh lại):*
   số (`fresh`). Chuông tự đọc hook đó, không nhận số từ ngoài vào.
 - **Chấm trên tab cuối và trên chuông** khi có trả lời, tag hoặc bình
   luận mới hơn mốc. Tim không bật chấm. VoiceOver đọc kèm con số.
+  **Đổi ngày 20/11/2026 (chủ dự án: một chuông):** chấm trên tab là chuông,
+  và chuông đếm mọi dòng "Dành cho bạn" mới hơn mốc, tim và lượt thích bộ
+  sưu tập cũng tính, cộng lời mời kết bạn đang chờ. Chuông mang số, "9+"
+  từ 10. Chi tiết và lý do ở mục 3 của `profile-home-plan.md`.
 - **Mốc lưu trên máy, theo từng tài khoản**, và là *thời điểm của dòng
   mới nhất mà Hoạt động đã hiện*, không phải giờ của máy lúc mở màn. Đây
   là chỗ khác với câu chữ ban đầu ("lần cuối mở Hoạt động"). Lý do: so

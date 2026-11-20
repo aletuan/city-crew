@@ -492,6 +492,7 @@ describe('the waiting dots', () => {
   it('rings the dot in the app\u2019s side of the pair, whatever the phone says', () => {
     const ring = () => (screen.getByTestId('dot-profile') as HTMLElement).style.borderTopColor;
     crew.ships.data = [request('me')];
+    freshNews.fresh = 1;
     const { unmount } = mount(propsFor(0).props);
     expect(ring()).toBe('rgb(255, 111, 91)'); // badgeSolidHex.dark
     unmount();
@@ -507,12 +508,21 @@ describe('the waiting dots', () => {
     expect(tab('Profile').getAttribute('aria-label')).toBe('Profile');
   });
 
+  // One bell (owner, 20 Nov 2026): Profile's dot is the bell's figure,
+  // which counts each request waiting (`lib/freshNews`, tested there).
   it('marks Profile when somebody is waiting on an answer from this reader', () => {
     const { unmount } = mount(propsFor(0).props);
     const quiet = dotsIn('Profile');
     unmount();
 
+    // The dot is the bell's and nothing else's: a request the bell has
+    // not counted yet (the phone's mark still being read) lights nothing.
     crew.ships.data = [request('me')];
+    const early = mount(propsFor(0).props);
+    expect(dotsIn('Profile')).toBe(quiet);
+    early.unmount();
+
+    freshNews.fresh = 1;
     mount(propsFor(0).props);
     expect(dotsIn('Profile')).toBe(quiet + 1);
   });
@@ -583,48 +593,34 @@ describe('the waiting dots', () => {
     expect(dotsIn('Trips')).toBe(quiet + 1);
   });
 
-  // The fourth reason for a dot (17 Nov 2026): a badge earned since the
-  // reader last closed the sheet behind "Lv" on that tab.
-  it('marks Profile for a badge not yet looked at, and says how many', () => {
+  // A badge lit Profile from 17 to 20 Nov 2026; under one bell it marks
+  // itself in its sheet, and the tab says nothing of it.
+  it('does not mark Profile for a badge', () => {
     const { unmount } = mount(propsFor(0).props);
     const quiet = dotsIn('Profile');
-    expect(tab('Profile').getAttribute('aria-label')).toBe('Profile');
     unmount();
-
     rewards.unseen = ['beenThere'];
-    const one = mount(propsFor(0).props);
-    expect(dotsIn('Profile')).toBe(quiet + 1);
-    expect(tab('Profile').getAttribute('aria-label')).toBe('Profile, 1 new badge');
-    // And no other tab is marked for it.
-    expect(tab('Trips').getAttribute('aria-label')).toBe('Trips');
-    one.unmount();
-
-    rewards.unseen = ['beenThere', 'curator'];
     mount(propsFor(0).props);
-    expect(tab('Profile').getAttribute('aria-label')).toBe('Profile, 2 new badges');
+    expect(dotsIn('Profile')).toBe(quiet);
+    expect(tab('Profile').getAttribute('aria-label')).toBe('Profile');
   });
 
-  // C7c (19 Nov 2026): a reply, a tag or a comment on your list since
-  // Activity was last opened — the number the bell on your page reads.
-  it('marks Profile for news in comments, said before a badge and after a request', () => {
+  // Anything the bell counts — a reply, a like, a copy — is reason
+  // enough for the dot, said by its count; a request is said first.
+  it('marks Profile for anything new in the bell, said after a request', () => {
     const { unmount } = mount(propsFor(0).props);
     const quiet = dotsIn('Profile');
     unmount();
 
-    // On its own it is reason enough for the dot.
     freshNews.fresh = 2;
     const alone = mount(propsFor(0).props);
     expect(dotsIn('Profile')).toBe(quiet + 1);
+    expect(tab('Profile').getAttribute('aria-label')).toBe('Profile, 2 new');
+    expect(tab('Trips').getAttribute('aria-label')).toBe('Trips');
     alone.unmount();
 
-    rewards.unseen = ['beenThere'];
-    const both = mount(propsFor(0).props);
-    expect(dotsIn('Profile')).toBe(quiet + 1);
-    expect(tab('Profile').getAttribute('aria-label')).toBe('Profile, 2 new in comments');
-    expect(tab('Trips').getAttribute('aria-label')).toBe('Trips');
-    both.unmount();
-
     crew.ships.data = [request('me')];
+    freshNews.fresh = 3;
     mount(propsFor(0).props);
     expect(dotsIn('Profile')).toBe(quiet + 1);
     expect(tab('Profile').getAttribute('aria-label')).toBe('Profile, 1 friend request waiting');
@@ -642,26 +638,16 @@ describe('the waiting dots', () => {
     expect(freshNews.freshen).toHaveBeenCalledTimes(2);
   });
 
-  // One dot, whatever is behind it; and the person waiting is said first.
-  it('says the friend request, not the badge, when both are waiting on Profile', () => {
-    crew.ships.data = [request('me')];
-    const { unmount } = mount(propsFor(0).props);
-    const one = dotsIn('Profile');
-    unmount();
-
-    rewards.unseen = ['beenThere'];
-    mount(propsFor(0).props);
-    expect(dotsIn('Profile')).toBe(one);
-    expect(tab('Profile').getAttribute('aria-label')).toBe('Profile, 1 friend request waiting');
-  });
-
   it('marks nothing for a reader who is signed out', () => {
     crew.ships.data = [request('me')];
+    freshNews.fresh = 1;
     const { unmount } = mount(propsFor(0).props);
     const signedIn = dotsIn('Profile');
     unmount();
 
+    // Signed out, the bell's figure is nought (`lib/freshNews`).
     auth.session = null;
+    freshNews.fresh = 0;
     mount(propsFor(0).props);
     expect(dotsIn('Profile')).toBe(signedIn - 1);
   });

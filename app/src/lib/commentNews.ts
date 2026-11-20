@@ -136,15 +136,33 @@ export function newerThan(at: string, mark: string | null): boolean {
 }
 
 /**
- * How many rows call for the dot on the last tab and on the bell: a
- * tag, a reply, or a comment on the reader's list, later than the mark.
+ * The bell's number, and whether the last tab wears its dot: the rows
+ * of "For you" later than the mark, and each friend request waiting.
  *
- * Not a heart (owner, 19 Nov 2026): a heart is good news, and nothing
- * to answer. Its row is still marked new on the page; it does not send
- * anybody there.
+ * One rule since 20 Nov 2026 (owner): the tab's dot is the bell's dot,
+ * and everything somebody else did for the reader is in it — a like or
+ * a copy of their list as much as a reply. It replaced three dots with
+ * three meanings (the tab kept to what wants an answer, the bell to
+ * comments, "Lv" to badges), drawn out for him case by case and found
+ * too much to learn: a reader saw the tab lit and the bell dark, and a
+ * like that rang nothing. Of the social apps it was weighed against,
+ * each has one place news goes and one mark that points there.
+ *
+ * Hearts count too, which C7c had kept out as "good news, and nothing
+ * to answer": the same is true of a like, and the owner wanted a like to
+ * be heard.
+ *
+ * A request has no time to be later than the mark: it is news until it
+ * is answered, as the tab's dot always had it.
  */
-export function freshNews(news: readonly CommentNews[], mark: string | null): number {
-  return news.filter((n) => n.kind !== 'heart' && newerThan(n.at, mark)).length;
+export function freshCount(forYou: readonly { at: string }[], mark: string | null, requests: number): number {
+  return forYou.filter((e) => newerThan(e.at, mark)).length + requests;
+}
+
+/** The number on the bell: past nine it says only that it is more. A
+ *  larger figure decides nothing a reader would do differently. */
+export function bellFigure(n: number): string {
+  return n > 9 ? '9+' : String(n);
 }
 
 /** The latest time among rows, or null for none: what the mark moves to. */

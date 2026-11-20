@@ -1964,14 +1964,22 @@ describe('your own page', () => {
     expect(bell.getAttribute('aria-label')).toBe('Activity');
     fireEvent.click(bell);
     expect(navigation.navigate).toHaveBeenCalledExactlyOnceWith('Activity');
-    // No dot with nothing new in comments; one, and its count said, with
-    // something (C7c) — the number the tab's dot reads (`lib/freshNews`).
-    expect(screen.queryByTestId('person-bell-dot')).toBeNull();
+    // No figure with nothing new; with something, the figure and its
+    // count said — the number the tab's dot reads (`lib/freshNews`),
+    // and past nine "9+" (owner, 20 Nov 2026: one bell).
+    expect(screen.queryByTestId('person-bell-figure')).toBeNull();
     cleanup();
     state.fresh = 2;
     await show('me', true, PROFILE_STACK);
-    expect(screen.getByTestId('person-bell').parentElement!.contains(screen.getByTestId('person-bell-dot'))).toBe(true);
+    const figure = screen.getByTestId('person-bell-figure');
+    expect(screen.getByTestId('person-bell').parentElement!.contains(figure)).toBe(true);
+    expect(figure.textContent).toBe('2');
     expect(screen.getByTestId('person-bell').getAttribute('aria-label')).toBe('Activity, 2 new');
+    cleanup();
+    state.fresh = 12;
+    await show('me', true, PROFILE_STACK);
+    expect(screen.getByTestId('person-bell-figure').textContent).toBe('9+');
+    expect(screen.getByTestId('person-bell').getAttribute('aria-label')).toBe('Activity, 12 new');
     cleanup();
     state.fresh = 0;
     await show('me', false, ['CollectionsHome', 'Person']);
@@ -2042,10 +2050,11 @@ describe('your own page', () => {
 
   // The plan's rule (docs/profile-home-plan.md §3): every reason the last
   // tab wears a dot for is in sight on your own page. A reason added to
-  // the tab's dot with no place here turns this red.
+  // the tab's dot with no place here turns this red. Since one bell (20
+  // Nov 2026) the bell's figure holds all of them, the request too.
   it('has a place on the page for every reason the tab wears a dot', async () => {
-    const places: Record<string, string> = { requests: 'owner-requests', badges: 'level-badge', comments: 'person-bell-dot' };
-    const none = { requests: 0, invites: 0, today: null, badges: 0, comments: 0 };
+    const places: Record<string, string> = { requests: 'owner-requests', news: 'person-bell-figure' };
+    const none = { requests: 0, invites: 0, today: null, news: 0 };
     for (const key of Object.keys(none) as (keyof typeof none)[]) {
       const said = spokenTab('Profile', 'Profile', { ...none, [key]: key === 'today' ? 'x' : 1 }, (en) => en);
       if (said === 'Profile') continue;

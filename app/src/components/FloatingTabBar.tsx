@@ -45,7 +45,6 @@ import { useI18n } from '../lib/i18n';
 import { useInvitations } from '../lib/invitations';
 import { useMyTrips } from '../lib/mytrips';
 import { useFreshNews } from '../lib/freshNews';
-import { useRewards } from '../lib/rewards';
 import { minutesOf, todayISO } from '../lib/day';
 import { tripsToday } from '../lib/trips';
 import { shouldRefresh } from '../lib/stale';
@@ -155,25 +154,29 @@ type T = (en: string, vi: string, ja?: string, zh?: string, hant?: string) => st
  * (`oversize.js`) and had a fourth reason for a dot to say.
  */
 /**
- * What lights the Profile tab besides a request: badges not yet looked
- * at, and comment news not yet seen (`lib/freshNews` — the bell on the
- * reader's own page reads the same number). The news is asked again on
- * a change of tab once it has gone stale, as the requests are.
+ * The bell's figure, which is the Profile tab's dot (owner, 20 Nov
+ * 2026: one bell): everything for you on Activity since it was last
+ * opened, and each friend request waiting — `lib/freshNews`. It is
+ * asked again on a change of tab once it has gone stale, as the crew is.
+ *
+ * Badges no longer light the tab. They are not news somebody gave you,
+ * the banner said so as each was earned, and the sheet marks which are
+ * new; the tab lit for a badge was found by the owner as a dot with no
+ * reason in sight.
  *
  * A hook of its own because the bar's function stands at its ceiling
  * (`oversize.js`).
  */
-function useProfileNews(index: number): { badges: number; comments: number } {
-  const badges = useRewards().unseen.length;
+function useProfileNews(index: number): number {
   const { fresh, freshen } = useFreshNews();
   useEffect(() => { freshen(); }, [index, freshen]);
-  return { badges, comments: fresh };
+  return fresh;
 }
 
 export function spokenTab(
   name: string,
   label: string,
-  on: { requests: number; invites: number; today: string | null; badges: number; comments: number },
+  on: { requests: number; invites: number; today: string | null; news: number },
   t: T,
 ): string {
   if (name === 'Profile' && on.requests > 0) {
@@ -184,22 +187,14 @@ export function spokenTab(
       `${label}，${on.requests} 个好友请求待处理`, `${label}，${on.requests} 個好友請求待處理`,
     );
   }
-  // After the request, when both apply: the person waiting comes first.
-  // Then what somebody said to the reader, before what the reader earned.
-  if (name === 'Profile' && on.comments > 0) {
+  // After the request, when both apply: the person waiting comes first,
+  // then the rest of what the bell holds, counted as the bell counts.
+  if (name === 'Profile' && on.news > 0) {
     return t(
-      `${label}, ${on.comments} new in comments`,
-      `${label}, ${on.comments} bình luận mới`,
-      `${label}、新しいコメント${on.comments}件`,
-      `${label}，${on.comments} 条新评论`, `${label}，${on.comments} 條新評論`,
-    );
-  }
-  if (name === 'Profile' && on.badges > 0) {
-    return t(
-      `${label}, ${on.badges} new badge${on.badges === 1 ? '' : 's'}`,
-      `${label}, ${on.badges} huy hiệu mới`,
-      `${label}、新しいバッジ${on.badges}個`,
-      `${label}，${on.badges} 枚新徽章`, `${label}，${on.badges} 枚新徽章`,
+      `${label}, ${on.news} new`,
+      `${label}, ${on.news} tin mới`,
+      `${label}、新着${on.news}件`,
+      `${label}，${on.news} 条新消息`, `${label}，${on.news} 條新訊息`,
     );
   }
   if (name === 'Trips' && on.invites > 0) {
@@ -279,7 +274,6 @@ export default function FloatingTabBar({ state, descriptors, navigation }: Botto
     if (me && shouldRefresh(loadedAtRef.current, Date.now())) reload();
   }, [index, me, reload]);
   const requestsWaiting = me ? splitFriendships(ships.data, me).incoming.length : 0;
-  const waiting = requestsWaiting > 0;
 
   // And the same mark on Trips, for an invitation waiting on an answer.
   // The second signal the bar carries, and it earns its place by the same
@@ -297,21 +291,16 @@ export default function FloatingTabBar({ state, descriptors, navigation }: Botto
   // dot needs to be right.
   const myTrips = useMyTrips();
   const today = tripsToday(myTrips.data, todayISO(), minutesOf());
-  // And a fourth, on Profile, of the third's kind (17 Nov 2026): nobody
-  // is waiting, but a badge was earned since the reader last looked at
-  // them, and the sheet that shows which is behind "Lv" on that tab. The
-  // banner said so for four seconds; this is what is left when it has
-  // gone. From `lib/rewards`, which works the badges out once.
-  //
-  // And a fifth, the first's kind again (C7c, 19 Nov 2026): a reply, a
-  // tag or a comment on the reader's list since Activity was last
-  // opened. Both are `useProfileNews`.
+  // Profile's dot is the bell's (owner, 20 Nov 2026): the request above
+  // is in its figure, with everything else for you since Activity was
+  // last opened — `useProfileNews`. Badges lit it for three days from 17
+  // Nov, and comments from the 19th, each as a reason of its own.
   const news = useProfileNews(index);
   const { t } = useI18n();
 
   // What VoiceOver says for a tab wearing a dot — `spokenTab`.
   const spoken = (name: string, label: string) => (
-    spokenTab(name, label, { requests: requestsWaiting, invites: invitesWaiting, today: today[0]?.title ?? null, ...news }, t)
+    spokenTab(name, label, { requests: requestsWaiting, invites: invitesWaiting, today: today[0]?.title ?? null, news }, t)
   );
 
   // The dot wears one pair per theme, selected or not: pill-ink core,
@@ -534,7 +523,7 @@ export default function FloatingTabBar({ state, descriptors, navigation }: Botto
           {state.routes.map((route) => (
             <View key={route.key} style={[s.windowCell, { width: cell }]}>
               <View style={s.dotBox}>
-                {(route.name === 'Profile' && (waiting || news.badges + news.comments > 0))
+                {(route.name === 'Profile' && news > 0)
                   || (route.name === 'Trips' && (invitesWaiting > 0 || today.length > 0))
                   ? <View style={[s.reqDot, dotInk]} testID={`dot-${route.name.toLowerCase()}`} /> : null}
               </View>

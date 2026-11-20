@@ -1186,13 +1186,12 @@ describe('the badges, under the level', () => {
     expect(rewards.opened).toHaveBeenCalledTimes(1);
   });
 
-  it('tells the pill when a badge is new, and not otherwise', () => {
-    draw();
-    expect(screen.getByTestId('ring').getAttribute('data-fresh')).toBe('false');
-    cleanup();
+  // One bell (owner, 20 Nov 2026): a new badge marks itself in the
+  // sheet, and the pill wears nothing for it.
+  it('tells the pill nothing when a badge is new', () => {
     rewards.unseen = ['beenThere'];
     draw();
-    expect(screen.getByTestId('ring').getAttribute('data-fresh')).toBe('true');
+    expect(screen.getByTestId('ring').getAttribute('data-fresh')).toBe('false');
   });
 
   // The banner was pressed somewhere else in the app: it brought the

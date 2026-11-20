@@ -17,7 +17,7 @@
 import React from 'react';
 import { Text } from 'react-native';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { cleanup, fireEvent, render, screen, viewStyleOf } from '../uitest/render';
+import { cleanup, fireEvent, render, screen } from '../uitest/render';
 import { bgHex, ringTrack } from '../theme';
 import { visibleSweep } from '../lib/ring';
 
@@ -43,26 +43,12 @@ const ring = (progress: number, level = 3) =>
 describe('the engagement ring', () => {
   beforeEach(() => { theme.scheme = 'dark'; explain.mockClear(); });
 
-  // Something new behind the pill (17 Nov 2026): a badge earned since
-  // its sheet was last closed.
-  it('wears a dot on the pill only when told something behind it is new', () => {
-    const quiet = ring(0.4);
-    expect(screen.queryByTestId('level-fresh')).toBeNull();
-    quiet.unmount();
-    render(
-      <EngagementRing size={88} level={3} progress={0.4} fresh onExplain={explain}>
-        <Text>face</Text>
-      </EngagementRing>,
-    );
-    const dot = screen.getByTestId('level-fresh');
-    // On the pill, so a press on the dot is a press on the pill.
-    expect(screen.getByTestId('level-badge').contains(dot)).toBe(true);
-    fireEvent.click(dot);
-    expect(explain).toHaveBeenCalledOnce();
-    // The pill still reads as the level and nothing more.
+  // A dot on the pill for a new badge, 17 to 20 Nov 2026, went with the
+  // tab's (owner: one bell).
+  it('wears nothing on the pill but the level', () => {
+    ring(0.4);
     expect(screen.getByTestId('level-badge').textContent).toBe('Lv 3');
-    // On its corner, laid over it.
-    expect(viewStyleOf(dot).position).toBe('absolute');
+    expect(screen.getByTestId('level-badge').querySelectorAll('[data-testid]')).toHaveLength(0);
   });
 
   // The pill says what the level is, when pressed (owner, 16 Nov 2026):
