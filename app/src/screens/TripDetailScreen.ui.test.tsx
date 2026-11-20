@@ -16,7 +16,7 @@
 import React from 'react';
 import { Alert, Linking } from 'react-native';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { act, fireEvent, fontSizeOf, render, screen, waitFor } from '../uitest/render';
+import { act, fireEvent, fontSizeOf, pullControl, render, screen, waitFor } from '../uitest/render';
 import type { Nav, RootRoute } from '../nav';
 import type { Place } from '../lib/types';
 import type { Trip, TripStopRow } from '../lib/data';
@@ -230,6 +230,25 @@ beforeEach(() => {
   crewProps.last = null;
   sheetProps.last = null;
   pager.x = 0;
+});
+
+// Whether a friend has said yes is the one thing on this page another
+// person changes (owner, 21 Nov 2026): the owner who stayed in the app
+// watched "waiting" on a face whose answer had landed.
+describe('keeping the answers current', () => {
+  it('reads the invitations again whenever the page is in focus', () => {
+    show();
+    expect(invitesReload).toHaveBeenCalledTimes(1);
+  });
+
+  it('reads the trips and the invitations again on a pull', () => {
+    show();
+    tripsReload.mockClear();
+    invitesReload.mockClear();
+    act(() => { pullControl().onRefresh(); });
+    expect(tripsReload).toHaveBeenCalledTimes(1);
+    expect(invitesReload).toHaveBeenCalledTimes(1);
+  });
 });
 
 describe('before the trip is there', () => {
@@ -599,6 +618,7 @@ describe('who is coming', () => {
   it('says why a send failed and keeps the sheet open', async () => {
     sendInvites.mockRejectedValueOnce(new Error('offline'));
     show();
+    invitesReload.mockClear();
     fireEvent.click(screen.getByRole('button', { name: 'Invite' }));
     fireEvent.click(screen.getByRole('button', { name: 'Send' }));
     await waitFor(() => expect(alert).toHaveBeenCalledWith('Could not send', 'offline'));
