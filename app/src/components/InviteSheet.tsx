@@ -166,11 +166,13 @@ export default function InviteSheet({
       }}
       // The Crew screen is where that happens — and no link to it from
       // here: a link out of a sheet mid-plan is a way to lose the plan.
+      // In the share sheet's words (owner, 20 Nov 2026): "friends", not
+      // "crew" / "nhóm".
       none={t(
-        'Nobody in your crew yet. Add a friend first, then you can invite them.',
-        'Chưa có ai trong nhóm. Thêm bạn trước rồi mới mời được.',
-        'まだ仲間がいません。先に友だちを追加してください。',
-        '你还没有好友。先添加好友，然后就可以邀请了。', '你還沒有好友。先新增好友，然後就可以邀請了。',
+        'You have no friends here yet. Add one, then come back to invite.',
+        'Bạn chưa có bạn bè nào. Thêm bạn rồi quay lại mời nhé.',
+        'まだ友だちがいません。友だちを追加してから招待しましょう。',
+        '你还没有好友。添加好友后再回来邀请吧。', '你還沒有好友。新增好友後再回來邀請吧。',
       )}
       note={{ icon: 'time-outline', text: note }}
       cta={{

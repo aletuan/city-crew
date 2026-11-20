@@ -143,11 +143,14 @@ export default function ShareSheet({
       across
       rows={rows.map((id) => ({ id, on: picked.has(id) }))}
       people={people}
+      // "Friends", the app's word for them — the line said "crew" /
+      // "nhóm" until 20 Nov 2026 (owner), a word no other screen uses for
+      // your friends.
       none={t(
-        'Nobody in your crew yet. Add a friend first, then you can share with them.',
-        'Chưa có ai trong nhóm. Thêm bạn trước rồi mới chia sẻ được.',
-        'まだ仲間がいません。先に友だちを追加すると共有できます。',
-        '你还没有好友。先添加好友，然后就可以分享了。', '你還沒有好友。先新增好友，然後就可以分享了。',
+        'You have no friends here yet. Add one, then come back to share.',
+        'Bạn chưa có bạn bè nào. Thêm bạn rồi quay lại chia sẻ nhé.',
+        'まだ友だちがいません。友だちを追加してから共有しましょう。',
+        '你还没有好友。添加好友后再回来分享吧。', '你還沒有好友。新增好友後再回來分享吧。',
       )}
       cta={{ ...button, testID: 'share-save' }}
       rowTestID={(i) => `share-friend-${i}`}

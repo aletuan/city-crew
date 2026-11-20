@@ -73,7 +73,7 @@ describe('the list', () => {
 
   it('points at the Crew screen rather than dead-ending an empty list', () => {
     show({ friendIds: [] });
-    expect(screen.getByText(/Nobody in your crew yet/)).toBeTruthy();
+    expect(screen.getByText(/You have no friends here yet/)).toBeTruthy();
     // And no line about picking who joins: nobody to pick.
     expect(screen.queryByText(/pick who joins/)).toBeNull();
   });
