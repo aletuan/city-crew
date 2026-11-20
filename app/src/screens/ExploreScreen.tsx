@@ -8,7 +8,7 @@
 // where it is needed — bookmarking a place — rather than from a
 // permanent control in a corner.
 
-import { useSignupTour, useTourAnchor } from '../components/SignupTour';
+import { useSignupTour } from '../components/SignupTour';
 import { memo, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { Animated, Platform, SectionList, Text, useWindowDimensions, View } from 'react-native';
 import { useScrollToTop, type ParamListBase } from '@react-navigation/native';
@@ -679,24 +679,20 @@ export default function ExploreScreen({ navigation }: { navigation: Nav }) {
    */
   const [headerH, setHeaderH] = useState(0);
   const tour = useSignupTour();
-  const filterAnchor = useTourAnchor('filter', () => setFilterOpen(true));
-  const pinnedFilterAnchor = useTourAnchor('filter', () => setFilterOpen(true));
   const tourHandled = useRef(-1);
   useEffect(() => {
     if (tour.step < 0) { tourHandled.current = -1; return; }
     if (mapMode) { pickView('list'); return; }
     if (holding || headerH === 0 || tourHandled.current === tour.step) return;
     tourHandled.current = tour.step;
-    if (tour.step === 2) {
+    if (tour.step === 1) {
       // A real catalog entry, never a fabricated tutorial place or a write.
       if (shown[0]) navigation.navigate('PlaceDetail', { slug: shown[0].slug });
       else tour.next();
     } else {
-      if (tour.step === 3) goTo('Explore', { screen: 'ExploreHome' });
-      listRef.current?.getScrollResponder()?.scrollTo({
-        y: tour.step === 1 ? Math.max(0, headerH - insets.top - 80) : 0,
-        animated: false,
-      });
+      // The tabs' steps ring the bar back on Explore, from the top.
+      if (tour.step === 2) goTo('Explore', { screen: 'ExploreHome' });
+      listRef.current?.getScrollResponder()?.scrollTo({ y: 0, animated: false });
     }
   }, [tour, holding, headerH, shown, navigation, mapMode, pickView, insets.top]);
   // The floating bar's own measured height, in map mode: there the bar
@@ -754,7 +750,6 @@ export default function ExploreScreen({ navigation }: { navigation: Nav }) {
           accessibilityState={{ selected: filterCount > 0 }}
           hitSlop={4}
           contentStyle={s.filterButton}
-          anchorRef={floating ? pinnedFilterAnchor : filterAnchor}
           testID={floating ? 'explore-filter-pinned' : 'explore-filter'}
         >
           {/* Ink at rest, coral once something is applied — and that is

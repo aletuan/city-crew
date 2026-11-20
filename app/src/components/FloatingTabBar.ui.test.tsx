@@ -60,9 +60,18 @@ vi.mock('../lib/channel', () => ({ CHANNEL: 'preview', IS_PRODUCTION_CHANNEL: fa
 // The guide's anchor on the collections tab, as the bar asks for it: the
 // real hook, with what it was asked kept.
 const anchorCalls = vi.hoisted(() => [] as unknown[][]);
+const anchorRefs = vi.hoisted(() => new Map<string, { current: unknown }>());
 vi.mock('./SignupTour', async (orig) => {
   const real = await orig<typeof import('./SignupTour')>();
-  return { ...real, useTourAnchor: (...args: Parameters<typeof real.useTourAnchor>) => { anchorCalls.push(args); return real.useTourAnchor(...args); } };
+  return {
+    ...real,
+    useTourAnchor: (...args: Parameters<typeof real.useTourAnchor>) => {
+      anchorCalls.push(args);
+      const ref = real.useTourAnchor(...args);
+      anchorRefs.set(args[0], ref);
+      return ref;
+    },
+  };
 });
 
 import { PALETTES, PILL_FADE } from '../theme';
@@ -715,22 +724,43 @@ describe('the duck', () => {
 // pill's inset, so it is the selected tab's mark and never stands out past
 // the bar. Ringed as other controls are, it was 82×70 against a 75×56 pill.
 describe('the guide’s ring on the collections tab', () => {
-  it('is the pill’s size: the cell’s width, the pill’s height', () => {
+  // Three tabs are rung since 21 Nov 2026: collections, your page, and the
+  // planner. Each the pill's shape, each handing the press back as its tab.
+  const rung = () => {
     anchorCalls.length = 0;
-    mount(propsFor(0).props);
-    const [id, , , outset] = anchorCalls.at(-1)! as [string, unknown, unknown, { x: number; y: number }];
-    expect(id).toBe('collections');
-    expect(outset.x).toBe(0);
-    expect(TAB_BAR_HEIGHT + outset.y * 2).toBe(parseFloat(getComputedStyle(pill()).height));
+    const out = propsFor(0);
+    mount(out.props);
+    const seen = new Map<string, [string, () => void, unknown, { x: number; y: number }]>();
+    for (const call of anchorCalls) seen.set(call[0] as string, call as [string, () => void, unknown, { x: number; y: number }]);
+    return { seen, navigation: out.navigation };
+  };
+
+  it('is the pill’s size: the cell’s width, the pill’s height', () => {
+    const { seen } = rung();
+    expect([...seen.keys()].sort()).toEqual(['collections', 'ideas', 'profile']);
+    for (const [, , , outset] of seen.values()) {
+      expect(outset.x).toBe(0);
+      expect(TAB_BAR_HEIGHT + outset.y * 2).toBe(parseFloat(getComputedStyle(pill()).height));
+    }
+  });
+
+  // Each ring stands on its own tab's cell, not a neighbour's.
+  it('is fixed to the tab it names', () => {
+    rung();
+    for (const [id, name] of [['collections', 'Collections'], ['profile', 'Profile'], ['ideas', 'Ideas']]) {
+      const cell = anchorRefs.get(id)!.current as HTMLElement;
+      expect(cell.contains(tab(name)) || tab(name).contains(cell), id).toBe(true);
+    }
   });
 
   // Tapping the ring is tapping the tab: the guide hands the press back.
-  it('opens Collections when the guide hands the press back', () => {
-    anchorCalls.length = 0;
-    const { navigation, props } = propsFor(0);
-    mount(props);
-    const [, press] = anchorCalls.at(-1)! as [string, () => void];
-    press();
-    expect(navigation.navigate).toHaveBeenCalledWith('Collections');
+  it('opens the tab it rings when the guide hands the press back', () => {
+    const { seen, navigation } = rung();
+    seen.get('collections')![1]();
+    expect(navigation.navigate).toHaveBeenLastCalledWith('Collections');
+    seen.get('profile')![1]();
+    expect(navigation.navigate).toHaveBeenLastCalledWith('Profile');
+    seen.get('ideas')![1]();
+    expect(navigation.navigate).toHaveBeenLastCalledWith('Ideas');
   });
 });
