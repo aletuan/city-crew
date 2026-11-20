@@ -296,19 +296,19 @@ const nav = () => {
   focusListeners.length = 0;
   const parent = { navigate: vi.fn() };
   const n = {
-    navigate: vi.fn(), goBack: vi.fn(), getParent: vi.fn(() => parent), setOptions: vi.fn(),
+    navigate: vi.fn(), goBack: vi.fn(), getParent: vi.fn(() => parent), setOptions: vi.fn(), setParams: vi.fn(),
     // The dock hands its slot back on focus; a test fires it through here.
     addListener: vi.fn((_e: string, cb: () => void) => { focusListeners.push(cb); return () => {}; }),
   };
   return { n: n as unknown as Nav, parent, raw: n };
 };
 
-const show = (slug = 'old-quarter', share?: boolean) => {
+const show = (slug = 'old-quarter', seen?: 'public' | 'friends' | 'private') => {
   const navigation = nav();
   render(
     <CollectionDetailScreen
       navigation={navigation.n}
-      route={{ params: { slug, share } } as RootRoute<'CollectionDetail'>}
+      route={{ params: { slug, seen } } as RootRoute<'CollectionDetail'>}
     />,
   );
   return navigation;
@@ -1368,14 +1368,36 @@ describe('sharing with friends', () => {
       expect(screen.getByTestId('sheet-action-friends').textContent).toBe('FriendsSomeone');
     });
 
-    // A list just made with Friends chosen arrives with the picker up
-    // (owner, 20 Nov 2026; the form's `leaveForm`), and only then.
-    it('opens the picker on arrival when the form says so, and not otherwise', () => {
-      show('old-quarter', true);
+    // What the form was told arrives with the list (owner, 20 Nov 2026;
+    // the form's `leaveForm`), done by the sheet's own rows and then
+    // cleared from the route so a return does not do it twice.
+    it('opens the picker on arrival when the form says Friends, and not otherwise', () => {
+      const navigation = show('old-quarter', 'friends');
       expect(screen.getByText('Share with friends')).toBeTruthy();
+      expect(navigation.raw.setParams).toHaveBeenCalledWith({ seen: undefined });
       cleanup();
-      show();
+      const plain = show();
       expect(screen.queryByText('Share with friends')).toBeNull();
+      expect(plain.raw.setParams).not.toHaveBeenCalled();
+    });
+
+    it('publishes on arrival when the form says Public, and makes private when it says Private', async () => {
+      state.shares = [share('minh')];
+      show('old-quarter', 'public');
+      await waitFor(() => expect(spies.setCollectionPublic).toHaveBeenCalledWith('old-quarter', true));
+      cleanup();
+      vi.mocked(spies.setCollectionPublic).mockClear();
+      show('old-quarter', 'private');
+      await waitFor(() => expect(spies.setShares).toHaveBeenCalledWith(expect.any(String), [], ['minh']));
+      expect(spies.setCollectionPublic).not.toHaveBeenCalled();
+    });
+
+    // The answer the list already has is no change: nothing is written.
+    it('writes nothing on arrival when the form’s answer is the list’s own', async () => {
+      show('old-quarter', 'private');
+      await new Promise((r) => setTimeout(r, 300));
+      expect(spies.setShares).not.toHaveBeenCalled();
+      expect(spies.setCollectionPublic).not.toHaveBeenCalled();
     });
 
     it('opens the picker in its place: who has it first and ticked, then the crew in its order', () => {

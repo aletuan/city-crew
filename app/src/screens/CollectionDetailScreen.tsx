@@ -45,7 +45,7 @@ import type { Place } from '../lib/types';
 import { goTo, toPerson, type Nav, type RootRoute } from '../nav';
 import { DraggableCard, DraggableTile, LiftCell, LiftedCard, StillCard, StillTile } from './collectionDetail/cells';
 import { OwnEmpty } from './collectionDetail/OwnEmpty';
-import { ReaderSeen, readerWord, sendRows, ShareButton, ShareHead, whoHint } from './collectionDetail/Share';
+import { ReaderSeen, readerWord, sendRows, ShareButton, ShareHead, whoHint, whoSeesRows } from './collectionDetail/Share';
 import { CommentsDoor } from './collectionDetail/CommentsDoor';
 import { ACT_GLYPH, ACTIVITY_CHEVRON, BYLINE_SLOP, FACE, GRID_GAP, s } from './collectionDetail/styles';
 import { useKindFilter } from './collectionDetail/useKindFilter';
@@ -572,10 +572,7 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
      (the insert fails whole, and the removal comes after it), so the
      sheet stays open with its ticks, the crew is read again so the name
      goes, and the alert says why rather than relaying a policy. */
-  // Open on arrival when the form that made the list was told Friends:
-  // choosing Friends is choosing which, and the list had no row to share
-  // until the form had made it (`formParts`' `leaveForm`).
-  const [picking, setPicking] = useState(route.params.share === true);
+  const [picking, setPicking] = useState(false);
   const saveShares = (list: Collection, add: string[], remove: string[]) => {
     const n = sharedWith.length + add.length - remove.length;
     const unpublish = n > 0 && isPublic;
@@ -937,36 +934,23 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
     const p = people[id];
     return p?.full_name || (p?.handle ? `@${p.handle}` : t('Someone', 'Ai đó', '誰か', '某人', '某人'));
   };
-  const whoSeesRows: SheetAction[] = [
-    {
-      key: 'public',
-      icon: 'globe-outline',
-      title: t('Public', 'Công khai', '公開', '公开', '公開'),
-      desc: someUnseen
-        ? unseenSentence(unseen, t)
-        : t('Shown in Explore and in search', 'Hiện trên Khám phá và trong tìm kiếm', '「探索する」と検索に表示されます', '会显示在探索和搜索中', '會顯示在探索和搜尋中'),
-      selected: seen === 'public',
-      onPress: choose('public'),
-    },
-    {
-      key: 'friends',
-      icon: SEEN_GLYPH.friends,
-      title: seenName('friends', t),
-      desc: sharedWith.length
-        ? namesBriefly(sharedWith.map(nameOf), t)
-        : t('Only the friends you choose', 'Chỉ những bạn bè bạn chọn', '選んだ友だちだけが見られます', '仅你选择的好友可见', '僅你選擇的好友可見'),
-      selected: seen === 'friends',
-      onPress: () => setPicking(true),
-    },
-    {
-      key: 'private',
-      icon: 'lock-closed-outline',
-      title: t('Private', 'Riêng tư', '非公開', '私密', '私密'),
-      desc: t('Only you can see it', 'Chỉ mình bạn thấy', '自分だけが見られます', '仅你可见', '僅你可見'),
-      selected: seen === 'private',
-      onPress: choose('private'),
-    },
-  ];
+  const whoSees3 = whoSeesRows(t, {
+    seen,
+    publicDesc: someUnseen ? unseenSentence(unseen, t) : undefined,
+    friendsDesc: sharedWith.length ? namesBriefly(sharedWith.map(nameOf), t) : undefined,
+    onChoose: (v) => (v === 'friends' ? setPicking(true) : choose(v)()),
+  });
+  // What the form was told (`formParts`' `leaveForm`): done here, by the
+  // sheet's own rows, once the list is in hand — then cleared, so coming
+  // back to the page does not do it again.
+  const arrived = route.params.seen;
+  useEffect(() => {
+    if (!arrived || !col) return;
+    navigation.setParams({ seen: undefined });
+    whoSees3.find((r) => r.key === arrived)?.onPress();
+  // Once per arrival: the rows are new every render.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [arrived, !col]);
 
   /* One heart, and it is both the gesture and the tally — the shape the
      shelf card settled on: two marks for one meaning is one too many, and
@@ -1865,7 +1849,7 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
         onClose={() => setWhoSees(false)}
         header={<ShareHead />}
       >
-        <SheetRows actions={whoSeesRows} onClose={() => setWhoSees(false)} />
+        <SheetRows actions={whoSees3} onClose={() => setWhoSees(false)} />
         <SheetRows actions={sendRows(t)} onClose={() => setWhoSees(false)} />
       </ActionSheet>
     </Screen>
