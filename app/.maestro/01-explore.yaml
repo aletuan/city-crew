@@ -2,7 +2,7 @@
 # can be switched and switched back.
 appId: host.exp.Exponent
 env:
-  EXPO_URL: exp://127.0.0.1:8081
+  EXPO_URL: ${EXPO_URL || 'exp://127.0.0.1:8081'}
 ---
 # Kill Expo Go first so every flow starts from a fresh bundle load on
 # Explore, not from wherever the previous flow left the app.
