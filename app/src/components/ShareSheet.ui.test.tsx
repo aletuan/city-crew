@@ -238,6 +238,9 @@ describe('an empty crew', () => {
   it('says so, and the button goes to the Crew screen', () => {
     show({ friendIds: [] });
     expect(screen.getByText(/Nobody in your crew yet/)).toBeTruthy();
+    // Nothing about who will see it: there is nobody to choose
+    // (owner, 20 Nov 2026).
+    expect(screen.queryByText(/friends you choose/)).toBeNull();
     expect(cta().textContent).toBe('Find friends');
     const onClose = vi.fn();
     cleanup();

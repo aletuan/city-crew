@@ -661,7 +661,9 @@ describe('what they did', () => {
       list('old', { created_at: daysBack(3) }),
     ];
     await show();
-    expect(screen.getByText('Activity')).toBeTruthy();
+    // No heading over it since 20 Nov 2026 (owner): each card says what
+    // was done.
+    expect(screen.queryByText('Activity')).toBeNull();
     expect(screen.queryByTestId('person-grid')).toBeNull();
     expect(acts()).toHaveLength(2);
     // Who did what, the name first.
@@ -692,7 +694,7 @@ describe('what they did', () => {
     state.lang = 'vi';
     state.shelf = [list('one', { created_at: daysBack(1), collection_places: members(1) as Collection['collection_places'] })];
     await show();
-    expect(screen.getByText('Hoạt động')).toBeTruthy();
+    expect(screen.queryByText('Hoạt động')).toBeNull();
     expect(inCard(0).getByTestId('activity-line').textContent).toBe('Lan Phạm đã tạo bộ sưu tập');
     expect(inCard(0).getByTestId('activity-when').textContent).toBe('hôm qua');
     expect(inCard(0).getByText('1 địa điểm')).toBeTruthy();
@@ -720,10 +722,10 @@ describe('what they did', () => {
   // every list, and back, until 19 Nov 2026. It went so that somebody
   // else's page and your own are one page: yours had lost it to
   // "Profile ›" that morning.
-  it('is the feed and nothing else: no count on the heading, no grid to turn to', async () => {
+  it('is the feed and nothing else: no heading, no grid to turn to', async () => {
     state.shelf = [list('one'), list('two'), list('three')];
     await show();
-    expect(screen.getByText('Activity')).toBeTruthy();
+    expect(screen.queryByText('Activity')).toBeNull();
     expect(screen.queryByTestId('person-turn')).toBeNull();
     expect(screen.queryByTestId('person-grid')).toBeNull();
     expect(screen.queryByText('Collections')).toBeNull();
@@ -1906,7 +1908,8 @@ describe('your own page', () => {
   it('draws your counts, then the requests waiting, between your head and your activity', async () => {
     await show('me', true, PROFILE_STACK);
     const [tools, name, counts, requests] = ['person-own-tools', 'person-name', 'owner-counts', 'owner-requests'].map((id) => screen.getByTestId(id));
-    const activity = screen.getByText('Activity');
+    // No lists of yours in this test: the feed's place is its empty card.
+    const activity = screen.getByTestId('person-no-lists');
     for (const [a, b] of [[tools, name], [name, counts], [counts, requests], [requests, activity]]) {
       expect(a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     }
