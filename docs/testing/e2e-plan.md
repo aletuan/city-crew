@@ -44,8 +44,8 @@ PA-7 và PA-8 cần A và B **chưa** là bạn, mà `17-unfriend` để họ l�
 2. **Bình luận chỉ có trên bộ công khai.** Bộ mới mặc định là Công khai từ #1483, và `common/choose-private-collection.yaml` chọn Riêng tư. Flow bình luận thì cố ý để Công khai, tạo bộ trong flow và xoá ở cuối (`common/delete-open-collection.yaml`). Xoá bộ là xoá luôn bình luận, tim và tag trên đó. Không giữ một bộ công khai cố định, vì nó sẽ hiện trong Cộng đồng cho người dùng thật.
 3. **Giới hạn 30 bình luận mỗi người mỗi 24 giờ** (`own_comments_today`, chỉ đếm các dòng còn tồn tại). Mỗi flow đăng tối đa khoảng 3 bình luận. Một lượt fail giữa chừng để lại bình luận cho tới khi bộ bị xoá, nên phần dọn phải chạy cả khi flow fail, hoặc lượt sau phải dọn trước.
 4. **Từ cấm cho CM-10: đã duyệt** (chủ dự án, 20/11/2026 17:58). Từ `zzmaestroban` nằm trong bảng `banned_words` thật từ lúc đó. Đã kiểm bằng `comment_clean`: "Test ZZMAESTROBAN!" bị chặn; "zzmaestrobanned" và một câu bình thường thì qua (luật khớp cả từ). Flow không thêm hay xoá từ này: chỉ tài khoản biên tập sửa được bảng, và tài khoản Maestro không phải biên tập. Không xoá từ này khỏi bảng khi dọn dẹp.
-5. **Hai việc còn chờ chủ dự án quyết**, đừng viết trước khi có câu trả lời:
-   - **Báo cáo:** một báo cáo rơi vào hàng chờ Data Desk thật.
+5. **Báo cáo cho CM-11: đã duyệt** (chủ dự án, 20/11/2026 18:12). Flow được gửi một báo cáo bình luận thật; nó vào hàng chờ Reports của Data Desk. Màn báo cáo không có ô ghi chú (chỉ chọn lý do, `reportFlow.tsx`), nên báo cáo không tự nói mình là test. Nhận ra nó bằng: người báo là `@usera8b792a2`, lý do "Something else", và sau khi bộ bị xoá thì dòng đó hiện "Nothing left to show". Flow không đóng được báo cáo (chỉ biên tập viên đóng được), nên nó nằm lại trong hàng chờ cho tới khi chủ dự án bấm "Nothing wrong". Mỗi người gửi tối đa 20 báo cáo một ngày (`my_reports_today`); vượt mức thì app báo "Could not send this report".
+6. **Còn chờ chủ dự án quyết**, đừng viết trước khi có câu trả lời:
    - **Chặn:** chặn sẽ cắt tình bạn A–B, mà `17-unfriend` đang dùng cặp đó.
 
 ### Một tài khoản (A, trên bộ công khai A tạo trong flow)
@@ -67,10 +67,11 @@ PA-7 và PA-8 cần A và B **chưa** là bạn, mà `17-unfriend` để họ l�
 | CM-8 trả lời báo cho người được trả lời | A trả lời bình luận của B; B thấy dòng trả lời trong "Dành cho bạn" |
 | CM-9 tim | B thả `comment-heart` vào bình luận của A; A thấy số tim; Hoạt động của A có dòng tim nhưng **không** làm chuông hiện số (luật của C7c) |
 | CM-10 từ cấm | gửi một câu có `zzmaestroban` (viết hoa, kèm dấu câu, ví dụ "Test ZZMAESTROBAN!") → `composer-error`, không có `comment-row` mới, chữ vẫn còn trong `composer-field`; rồi gửi "zzmaestrobanned" → đăng được (luật khớp cả từ), xoá nó trước khi xoá bộ |
+| CM-11 báo cáo | A đăng một bình luận có chữ "Maestro CM-11" trên bộ của A. B mở bộ đó → `comment-more` trên bình luận của A → menu chỉ có `sheet-action-report` (B không phải chủ bộ, nên không có `sheet-action-delete`) → bấm → sheet lý do → `sheet-action-other` → hộp thoại hệ thống "Thanks for telling us" → bấm "OK". Kiểm tra bằng SQL sau lượt đầu: có đúng một dòng `reports` mới, `kind = 'comment'`, `reason = 'other'`, người báo là B. Không thử báo cáo bình luận của chính mình: menu không có nút đó (`useCommentMenu`). |
 
 Dọn dẹp: A xoá bộ ở cuối flow. Sau lượt đầu, kiểm tra bằng SQL rằng không còn bình luận nào của A hay B trên bộ đã xoá.
 
-Không đưa vào Maestro (đã có unit test, hoặc kiểm tay): ánh sáng 1,5 giây của dòng được mở (`useThreadFocus`), bàn phím đóng sau khi gửi, màu của tag trong composer, xuất dữ liệu (bản sao dữ liệu định dạng 4).
+Không đưa vào Maestro (đã có unit test, hoặc kiểm tay): ánh sáng 1,5 giây của dòng được mở (`useThreadFocus`), bàn phím đóng sau khi gửi, màu của tag trong composer, xuất dữ liệu (bản sao dữ liệu định dạng 4), và việc biên tập viên gỡ bình luận trên Data Desk (C8; flow không đăng nhập Data Desk).
 
 ## Thứ tự
 
@@ -78,6 +79,6 @@ Không đưa vào Maestro (đã có unit test, hoặc kiểm tay): ánh sáng 1,
 2. **P3, một tài khoản:** CM-1 tới CM-6.
 3. **P3, hai tài khoản:** CM-7 tới CM-9, sau khi CM-1…6 đạt hai lượt liền.
 4. **P2:** PA-7, PA-8, sau khi chốt cách giữ trạng thái kết bạn của cặp A–B.
-5. **Chờ chủ dự án:** báo cáo, chặn. CM-10 đã được duyệt và có thể làm cùng CM-1…6.
+5. **Chờ chủ dự án:** chặn. CM-10 đã được duyệt và có thể làm cùng CM-1…6; CM-11 làm cùng CM-7…9 (cần hai tài khoản).
 
 Mỗi flow mới thêm vào `config.yaml` và vào bảng của `docs/testing/e2e-simulator.md`; kết quả chạy ghi vào `e2e-latest.md` (SHA, run ID, phạm vi thật).
