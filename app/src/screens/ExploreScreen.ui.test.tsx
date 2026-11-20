@@ -2327,7 +2327,9 @@ describe('signup highlight tour', () => {
     await screen.findByTestId('explore-list');
     expect(screen.queryByTestId('places-map')).toBeNull();
   });
-  it('scrolls to search and filter, then opens a real place and returns home', () => {
+  // Five steps since 21 Nov 2026: search, save, then three tabs. No
+  // filter step, so nothing scrolls the filter button into view.
+  it('keeps search in view, opens a real place for save, then rings the tabs from home', () => {
     state.places.data = [place('p1')];
     const navigation = nav();
     const view = render(<ExploreScreen navigation={navigation} />);
@@ -2338,19 +2340,24 @@ describe('signup highlight tour', () => {
     measureHeader(600);
     expect(scroll).toHaveBeenLastCalledWith({ y: 0, animated: false });
     tourState.step = 1; view.rerender(<ExploreScreen navigation={navigation} />);
-    expect(scroll).toHaveBeenLastCalledWith({ y: 520, animated: false });
-    tourState.step = 2; view.rerender(<ExploreScreen navigation={navigation} />);
     expect(navigation.navigate).toHaveBeenCalledWith('PlaceDetail', { slug: 'p1' });
-    tourState.step = 3; view.rerender(<ExploreScreen navigation={navigation} />);
+    expect(scroll).toHaveBeenCalledTimes(1);
+    tourState.step = 2; view.rerender(<ExploreScreen navigation={navigation} />);
     expect(spies.goTo).toHaveBeenCalledWith('Explore', { screen: 'ExploreHome' });
     expect(scroll).toHaveBeenLastCalledWith({ y: 0, animated: false });
+    spies.goTo.mockClear();
+    tourState.step = 3; view.rerender(<ExploreScreen navigation={navigation} />);
+    tourState.step = 4; view.rerender(<ExploreScreen navigation={navigation} />);
+    // Once home, the later tabs need no second trip there.
+    expect(spies.goTo).not.toHaveBeenCalled();
+    expect(navigation.navigate).toHaveBeenCalledTimes(1);
     tourState.step = -1; view.rerender(<ExploreScreen navigation={navigation} />);
   });
   it('skips the save example when there are no real places', () => {
     state.places.data = [];
     const navigation = nav();
     render(<ExploreScreen navigation={navigation} />);
-    tourState.step = 2; measureHeader(600);
+    tourState.step = 1; measureHeader(600);
     expect(tourState.next).toHaveBeenCalledOnce();
     expect(navigation.navigate).not.toHaveBeenCalled();
   });

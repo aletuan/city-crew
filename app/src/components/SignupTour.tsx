@@ -11,13 +11,33 @@ import { colors, font, gradAI, radius, space } from '../theme';
 import { SECONDARY_CONTROL_H, TAB_BAR_HEIGHT, useTabBarLift } from './ui';
 import { AttentionPulse, attentionRing } from './Attention';
 
-type Target = 'search' | 'filter' | 'save' | 'collections';
+// ── the five steps (owner, 21 Nov 2026) ──
+//
+// Find, save, find it again, your page, and plan. Weighed with the owner
+// against the four the guide had until then — search, filter, save,
+// collections:
+//
+//   - filter went. A reader minutes old has nothing to narrow yet, and
+//     the button is on the screen the day they do.
+//   - plan came, last. The planner is what this app does that a map does
+//     not, and the guide had taught only finding and keeping; ending on
+//     it turns the saves of step 2 into a reason to come back. Last, so
+//     the card a reader leaves on is the one worth remembering.
+//   - your page came, before plan, so "invite your friends" in the last
+//     card has a place behind it. Its card speaks of what it will hold —
+//     friends, who liked or commented on a list — since a new account's
+//     page is empty.
+//
+// Steps 3 to 5 all ring a tab in the floating bar, which stands on every
+// screen: the ring moves along the bar with no page to wait for.
+type Target = 'search' | 'save' | 'collections' | 'profile' | 'ideas';
 /** How far the ring stands out from the control it marks, each side;
  *  negative draws it inside. */
 type Outset = { x: number; y: number };
 type Anchor = { ref: React.RefObject<React.ComponentRef<typeof View> | null>; press: () => void; focused: () => boolean; outset: Outset };
 type Rect = { x: number; y: number; width: number; height: number };
-const targets: Target[] = ['search', 'filter', 'save', 'collections'];
+const targets: Target[] = ['search', 'save', 'collections', 'profile', 'ideas'];
+const LAST = targets.length - 1;
 const noop = () => {};
 const always = () => true;
 /** A little clear of the control on every side, so the ring outlines it
@@ -79,6 +99,21 @@ export function useTourAnchor(id: Target, press: () => void, focused: () => bool
   return ref;
 }
 
+/** Each step's title and line, in step order (`targets`). */
+function words(t: ReturnType<typeof useI18n>['t']) {
+  const titles = [t('Find a place', 'Tìm nơi bạn muốn đến', '行きたい場所を探す', '寻找地点', '尋找地點'),
+    t('Save places you love', 'Lưu nơi bạn thích', '好きな場所を保存', '保存喜欢的地点', '儲存喜歡的地點'),
+    t('Your collections', 'Bộ sưu tập của bạn', 'あなたのコレクション', '你的合集', '你的合集'),
+    t('Your page', 'Trang của bạn', 'あなたのページ', '你的主页', '你的主頁'),
+    t('Plan an outing', 'Lên kế hoạch', 'お出かけを計画', '规划出行', '規劃出行')];
+  const descriptions = [t('Search by place, dish or neighbourhood.', 'Tìm theo tên quán, món ăn hay khu phố.', '店名、料理、エリアで探せます。', '按店名、菜品或街区搜索。', '按店名、菜品或街區搜尋。'),
+    t('Add a place to a collection to find it again easily.', 'Thêm địa điểm vào bộ sưu tập để dễ tìm lại.', '場所をコレクションに保存して、あとで簡単に見つけましょう。', '把地点加入合集，之后就能轻松找到。', '把地點加入合集，之後就能輕鬆找到。'),
+    t('Find your saved places here.', 'Những địa điểm bạn đã lưu nằm ở đây.', '保存した場所はこちらにあります。', '你保存的地点都在这里。', '你儲存的地點都在這裡。'),
+    t('Add friends, and see who liked or commented on your collections.', 'Kết bạn, và xem ai đã thích hay bình luận bộ sưu tập của bạn.', '友だちを追加し、コレクションへのいいねやコメントを確認できます。', '添加好友，看看谁赞了或评论了你的合集。', '新增好友，看看誰讚了或評論了你的合集。'),
+    t('Let City Crew suggest an outing from the places you saved, then invite friends along.', 'Để City Crew gợi ý một buổi đi chơi từ những nơi bạn đã lưu, rồi rủ bạn bè cùng đi.', '保存した場所から City Crew がお出かけプランを提案。友だちも誘えます。', '让 City Crew 根据你保存的地点推荐一次出行，再约上好友一起去。', '讓 City Crew 根據你儲存的地點推薦一次出行，再約上好友一起去。')];
+  return { titles, descriptions };
+}
+
 /** Automatic entry belongs to the successful signup welcome screen; replay
  * belongs to Profile. A session appearing never starts either entry point. */
 export function SignupTourProvider({ children, getRoute, onReplay = noop }: { children: React.ReactNode; getRoute: () => string | undefined; onReplay?: () => void }) {
@@ -136,7 +171,7 @@ export function SignupTourProvider({ children, getRoute, onReplay = noop }: { ch
     finish(); persist(false, 0); setNotice('off');
   }, [finish, persist]);
   const next = useCallback(() => {
-    persist(true, step + 1); setRect(null); setStep(step >= 3 ? -1 : step + 1);
+    persist(true, step + 1); setRect(null); setStep(step >= LAST ? -1 : step + 1);
   }, [persist, step]);
   const start = useCallback((account: string) => {
     if (started.current.has(account) || account !== uid) return;
@@ -166,10 +201,8 @@ export function SignupTourProvider({ children, getRoute, onReplay = noop }: { ch
     if (step < 0) return;
     let alive = true;
     // A step appears only once its target holds still: two readings
-    // SETTLE_MS apart that agree. Step 2's filter button is still on its
-    // way up when the step begins (Explore scrolls it into place in the
-    // same commit), and step 3's save button slides in with the place's
-    // page; the first reading caught the old place, the card was drawn
+    // SETTLE_MS apart that agree. Step 2's save button slides in with the
+    // place's page, and step 3's tab is ringed as that page slides away; the first reading caught the old place, the card was drawn
     // there and jumped 250ms later (owner, 19 Oct 2026). Once shown, a
     // move is followed at once: that is the reader scrolling.
     let settling: Rect | null = null;
@@ -177,12 +210,12 @@ export function SignupTourProvider({ children, getRoute, onReplay = noop }: { ch
     // Re-measure while visible: scrolling, rotation, font size and the floating
     // tab bar can move the actual target. Never leave a ring at an old position.
     const measure = () => {
-      // Search and filter live on Explore, save on a place's page. The
-      // collections tab lives in the floating bar, which is on every screen
-      // the guide passes through, so step 4 follows step 3 on the place's
-      // page; asking for Explore there showed nothing (owner, 19 Oct 2026).
+      // Search lives on Explore, save on a place's page. The tabs live in
+      // the floating bar, which is on every screen the guide passes
+      // through, so steps 3 to 5 follow wherever the reader is; asking for
+      // Explore there showed nothing (owner, 19 Oct 2026).
       const route = getRoute();
-      const expected = step === 2 ? 'PlaceDetail' : step === 3 ? route : 'ExploreHome';
+      const expected = step === 1 ? 'PlaceDetail' : step >= 2 ? route : 'ExploreHome';
       if (route !== expected) { settling = null; setRect(null); return; }
       const entries = [...(anchors.current.get(targets[step]) ?? [])].filter(a => a.ref.current && a.focused());
       let remaining = entries.length;
@@ -222,14 +255,7 @@ export function SignupTourProvider({ children, getRoute, onReplay = noop }: { ch
   }, [step, width, height, insets.top, insets.bottom, getRoute]);
   const value = useMemo(() => ({ step, start, finish, next, register, enabled, setEnabled, replay, notice, noticeTop }),
     [step, start, finish, next, register, enabled, setEnabled, replay, notice, noticeTop]);
-  const titles = [t('Find a place', 'Tìm nơi bạn muốn đến', '行きたい場所を探す', '寻找地点', '尋找地點'),
-    t('Filter and sort', 'Lọc và sắp xếp', '絞り込み・並べ替え', '筛选和排序', '篩選和排序'),
-    t('Save places you love', 'Lưu nơi bạn thích', '好きな場所を保存', '保存喜欢的地点', '儲存喜歡的地點'),
-    t('Your collections', 'Bộ sưu tập của bạn', 'あなたのコレクション', '你的合集', '你的合集')];
-  const descriptions = [t('Find or add a place you like', 'Tìm hoặc bổ sung địa điểm bạn thích', '好きな場所を探したり追加したりできます', '寻找或添加你喜欢的地点', '尋找或新增你喜歡的地點'),
-    t('Adjust filters to find places that suit you.', 'Điều chỉnh bộ lọc để tìm địa điểm phù hợp hơn.', 'フィルターで自分に合った場所を探しましょう。', '调整筛选条件，找到适合你的地点。', '調整篩選條件，找到適合你的地點。'),
-    t('Add a place to a collection to find it again easily.', 'Thêm địa điểm vào bộ sưu tập để dễ tìm lại.', '場所をコレクションに保存して、あとで簡単に見つけましょう。', '把地点加入合集，之后就能轻松找到。', '把地點加入合集，之後就能輕鬆找到。'),
-    t('Find your saved places here.', 'Những địa điểm bạn đã lưu nằm ở đây.', '保存した場所はこちらにあります。', '你保存的地点都在这里。', '你儲存的地點都在這裡。')];
+  const { titles, descriptions } = words(t);
   const cardWidth = Math.min(width - 32, 340);
   const left = rect ? Math.max(16, Math.min(rect.x + rect.width / 2 - cardWidth / 2, width - cardWidth - 16)) : 16;
   // The card stands 12 clear of the ring, above or below it.
@@ -271,7 +297,7 @@ export function SignupTourProvider({ children, getRoute, onReplay = noop }: { ch
       </Pressable>
     </View>}
     <Modal visible={step >= 0 && !!rect && owner === uid} transparent animationType="none" statusBarTranslucent onRequestClose={dismiss}
-      onShow={() => AccessibilityInfo.announceForAccessibility(`${step + 1}/4. ${titles[step]}. ${descriptions[step]}`)}>
+      onShow={() => AccessibilityInfo.announceForAccessibility(`${step + 1}/${targets.length}. ${titles[step]}. ${descriptions[step]}`)}>
       <View style={StyleSheet.absoluteFill} accessibilityViewIsModal>
         <Pressable style={StyleSheet.absoluteFill} onPress={dismiss} accessibilityRole="button" accessibilityLabel={t('Close guide', 'Đóng hướng dẫn', 'ガイドを閉じる', '关闭新手引导', '關閉新手引導')} />
         {rect && <Svg width={width} height={height} style={StyleSheet.absoluteFill} pointerEvents="none">
@@ -291,14 +317,14 @@ export function SignupTourProvider({ children, getRoute, onReplay = noop }: { ch
                 the × had a 44pt row to itself, a quarter of a 185pt card,
                 for a third way to close beside Skip and a tap outside. */}
             <View style={s.heading}>
-              <Text style={s.count}>{step + 1}/4</Text>
+              <Text style={s.count}>{step + 1}/{targets.length}</Text>
               <Text style={s.title} accessibilityRole="header">{titles[step]}</Text>
             </View>
             <Text style={s.body}>{descriptions[step]}</Text>
             <View style={s.actions}>
-              {step < 3 && <Pressable onPress={dismiss} accessibilityRole="button" style={s.skip}><Text style={s.skipText}>{t('Skip guide', 'Bỏ qua hướng dẫn', 'ガイドをスキップ', '跳过新手引导', '跳過新手引導')}</Text></Pressable>}
+              {step < LAST && <Pressable onPress={dismiss} accessibilityRole="button" style={s.skip}><Text style={s.skipText}>{t('Skip guide', 'Bỏ qua hướng dẫn', 'ガイドをスキップ', '跳过新手引导', '跳過新手引導')}</Text></Pressable>}
               <Pressable onPress={next} accessibilityRole="button" testID="signup-tour-next" style={s.next}>
-                <LinearGradient {...gradAI} style={s.nextFill}><Text style={s.nextText}>{step === 3 ? t('Done', 'Hoàn tất', '完了', '完成', '完成') : t('Next', 'Tiếp theo', '次へ', '下一步', '下一步')}</Text></LinearGradient>
+                <LinearGradient {...gradAI} style={s.nextFill}><Text style={s.nextText}>{step === LAST ? t('Done', 'Hoàn tất', '完了', '完成', '完成') : t('Next', 'Tiếp theo', '次へ', '下一步', '下一步')}</Text></LinearGradient>
               </Pressable>
             </View>
           </ScrollView>

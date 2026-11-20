@@ -222,13 +222,25 @@ export function spokenTab(
  */
 const settled = tabSettled({ platform: Platform.OS, osVersion: String(Platform.Version), isDev: __DEV__, channel: CHANNEL });
 
+/**
+ * The guide's rings on the tabs it shows (`SignupTour`): collections,
+ * and since 21 Nov 2026 your page and the planner. Each is the pill's own
+ * shape (owner, 22 Oct 2026): the cell's width, and the inset in from the
+ * island's rim above and below. Ringed as other controls are, a little
+ * clear of the cell's box, it was 82×70 against the 75×56 pill a reader
+ * knows as "the selected tab", and stood 4pt out past the island's rim
+ * top and foot. Out of the bar for its ceiling.
+ */
+function useTabAnchors(navigation: BottomTabBarProps['navigation']) {
+  const ring = { x: 0, y: -PILL_INSET };
+  const Collections = useTourAnchor('collections', () => navigation.navigate('Collections'), undefined, ring);
+  const Profile = useTourAnchor('profile', () => navigation.navigate('Profile'), undefined, ring);
+  const Ideas = useTourAnchor('ideas', () => navigation.navigate('Ideas'), undefined, ring);
+  return { Collections, Profile, Ideas } as Record<string, typeof Collections | undefined>;
+}
+
 export default function FloatingTabBar({ state, descriptors, navigation }: BottomTabBarProps) {
-  // The guide's ring on this tab is the pill's own shape (owner, 22 Oct
-  // 2026): the cell's width, and the inset in from the island's rim above
-  // and below. Ringed as other controls are, a little clear of the cell's
-  // box, it was 82×70 against the 75×56 pill a reader knows as "the
-  // selected tab", and stood 4pt out past the island's rim top and foot.
-  const collectionAnchor = useTourAnchor('collections', () => navigation.navigate('Collections'), undefined, { x: 0, y: -PILL_INSET });
+  const anchors = useTabAnchors(navigation);
   const light = useScheme().scheme === 'light';
   const duck = useTabBarDuck();
 
@@ -450,7 +462,7 @@ export default function FloatingTabBar({ state, descriptors, navigation }: Botto
           return (
             <PressableScale
               key={route.key}
-              anchorRef={route.name === 'Collections' ? collectionAnchor : undefined}
+              anchorRef={anchors[route.name]}
               // The whole cell is the target; the pill over it is only
               // the mark.
               style={s.tab}
