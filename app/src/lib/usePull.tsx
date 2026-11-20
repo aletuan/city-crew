@@ -71,3 +71,12 @@ export function useKeepCurrent(onFocus: readonly Reloadable[], onPull: readonly 
   const { pulling, pull } = usePull(onPull);
   return <RefreshControl refreshing={pulling} onRefresh={pull} />;
 }
+
+/**
+ * A pull and nothing on focus, for a page that already reads as it
+ * opens and only needs to be asked again by hand.
+ */
+export function usePullControl(fetches: readonly Reloadable[]) {
+  const { pulling, pull } = usePull(fetches);
+  return <RefreshControl refreshing={pulling} onRefresh={pull} />;
+}

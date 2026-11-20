@@ -12,7 +12,7 @@
 import React from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { Image } from 'expo-image';
-import { act, cleanup, fireEvent, render, screen, textStyleOf, viewStyleOf, waitFor, within } from '../uitest/render';
+import { act, cleanup, pullControl, fireEvent, render, screen, textStyleOf, viewStyleOf, waitFor, within } from '../uitest/render';
 import type { Nav, RootRoute } from '../nav';
 import type { FriendshipRow } from '../lib/friends';
 import type { Collection } from '../lib/types';
@@ -147,7 +147,13 @@ vi.mock('../lib/person', async (orig) => {
 });
 // The tab bar's duck, which hears every scroll of the page.
 const duck = vi.hoisted(() => vi.fn());
-vi.mock('../lib/freshNews', () => ({ useFreshNews: () => ({ fresh: state.fresh }) }));
+// The news the bell and the tab's dot are counted from: what a pull on your
+// own page asks again.
+const news = vi.hoisted(() => ({
+  news: { loading: false, reload: vi.fn() },
+  log: { loading: false, reload: vi.fn() },
+}));
+vi.mock('../lib/freshNews', () => ({ useFreshNews: () => ({ fresh: state.fresh, ...news }) }));
 vi.mock('../components/tabBarDuck', () => ({ useDuckOnScroll: () => duck }));
 vi.mock('../lib/theme', () => ({ useScheme: () => ({ scheme: state.scheme }) }));
 vi.mock('../lib/i18n', () => ({
@@ -243,6 +249,8 @@ beforeEach(() => {
   crew.ships.reload.mockClear();
   crew.blocks.data = [];
   crew.blocks.reload.mockClear();
+  news.news.reload.mockClear();
+  news.log.reload.mockClear();
   crew.mutual = {};
   data.blockUser.mockReset();
   data.blockUser.mockImplementation(async () => {});
@@ -1887,6 +1895,29 @@ describe('comments on the cards', () => {
 // The last tab's first page, your own (owner, 19 Nov 2026 —
 // docs/profile-home-plan.md): no way back, no title. What only you see is
 // on your own page wherever it opens (owner, 19 Nov 2026).
+describe('pulling the page down', () => {
+  it('on your own page reads the profile, the friends and the news again', async () => {
+    state.people = { ...state.people, me: { id: 'me-id', handle: 'me', full_name: 'Me', avatar_url: '' } };
+    await show('me', true);
+    act(() => { pullControl().onRefresh(); });
+    expect(state.lookup.reload).toHaveBeenCalledTimes(1);
+    expect(crew.ships.reload).toHaveBeenCalledTimes(1);
+    expect(crew.blocks.reload).toHaveBeenCalledTimes(1);
+    expect(news.news.reload).toHaveBeenCalledTimes(1);
+    expect(news.log.reload).toHaveBeenCalledTimes(1);
+  });
+
+  it('on somebody else’s reads their profile and the friendships, and not your news', async () => {
+    await show('lan');
+    act(() => { pullControl().onRefresh(); });
+    expect(state.lookup.reload).toHaveBeenCalledTimes(1);
+    expect(crew.ships.reload).toHaveBeenCalledTimes(1);
+    expect(crew.blocks.reload).not.toHaveBeenCalled();
+    expect(news.news.reload).not.toHaveBeenCalled();
+    expect(news.log.reload).not.toHaveBeenCalled();
+  });
+});
+
 describe('your own page', () => {
   const PROFILE_STACK = ['ProfileHome', 'Account', 'Activity', 'Crew', 'Visited', 'Person'];
 
