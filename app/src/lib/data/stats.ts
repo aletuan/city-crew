@@ -57,3 +57,21 @@ export async function fetchListUse(): Promise<ListUseRow[]> {
   if (error) throw new Error(error.message);
   return (data ?? []) as ListUseRow[];
 }
+
+/** One public list's copiers, as `collection_copy_counts` answers it. */
+export type CopyCountRow = { slug: string; copies: number };
+
+/**
+ * How many people other than its owner saved a copy of each public list,
+ * for the figure beside the copy button (owner, 20 Nov 2026). A list
+ * nobody copied has no row. Totals and no names, the same for every
+ * reader (`20261120160000_collection_copy_counts.sql`).
+ *
+ * Throws on a failure, a server without the function included; the
+ * hook's empty answer draws every button with no figure.
+ */
+export async function fetchCopyCounts(): Promise<CopyCountRow[]> {
+  const { data, error } = await supabase.rpc('collection_copy_counts');
+  if (error) throw new Error(error.message);
+  return (data ?? []) as CopyCountRow[];
+}

@@ -14,7 +14,7 @@ vi.mock('../supabase', async () => {
 });
 
 import { PRIVACY } from '../legal';
-import { fetchCollectionStats, fetchListUse, recordCollectionView } from './stats';
+import { fetchCollectionStats, fetchCopyCounts, fetchListUse, recordCollectionView } from './stats';
 
 const fake = () => h.fake!;
 beforeEach(() => fake().reset());
@@ -104,5 +104,26 @@ describe('the privacy policy', () => {
   it('says the totals order the public collections, and that it is never who', () => {
     says('The app also orders public collections by these totals, and by how many people liked a list or saved a copy of it — numbers only, never who');
     says('App cũng xếp thứ tự các bộ sưu tập công khai theo những tổng số này, và theo số người đã thích hoặc lưu bản sao của một bộ sưu tập — chỉ là con số, không bao giờ là ai');
+  });
+});
+
+describe('fetchCopyCounts', () => {
+  const row = { slug: 'ca-phe-ha-noi', copies: 3 };
+
+  it('asks the function, with nothing to tell it, and hands back its rows', async () => {
+    fake().replies({ data: [row] });
+    expect(await fetchCopyCounts()).toEqual([row]);
+    expect(fake().log).toEqual([{ fn: 'collection_copy_counts', op: 'rpc', payload: undefined, filters: [] }]);
+  });
+
+  it('answers empty rather than null when nobody copied anything', async () => {
+    fake().replies({ data: null });
+    expect(await fetchCopyCounts()).toEqual([]);
+  });
+
+  // A server without the migration: every button is drawn with no figure.
+  it('throws when the server cannot answer', async () => {
+    fake().replies({ error: { message: 'Could not find the function public.collection_copy_counts' } });
+    await expect(fetchCopyCounts()).rejects.toThrow('Could not find the function');
   });
 });

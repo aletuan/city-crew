@@ -163,7 +163,7 @@ function withMembers(data: unknown): Collection[] {
 // `CollectionDetailScreen`'s byline): every row here has an owner, so the
 // stamp is when somebody made it.
 const MY_COLLECTION_COLS =
-  `id, slug, created_at, title_en, title_vi, title_ja, desc_en, desc_vi, desc_ja, curator_handle, owner_id, city_id, is_public, cover:place_photos!collections_cover_photo_id_fkey(id, photo_uri, place:places(slug)), collection_places(sort_order, places(${PLACE_COLS(true)}))`;
+  `id, slug, created_at, title_en, title_vi, title_ja, desc_en, desc_vi, desc_ja, curator_handle, owner_id, city_id, is_public, copied_from, cover:place_photos!collections_cover_photo_id_fkey(id, photo_uri, place:places(slug)), collection_places(sort_order, places(${PLACE_COLS(true)}))`;
 
 export async function fetchMyCollections(ownerId: string): Promise<Collection[]> {
   // One photograph a member, as the public lists carry (`fetchCollections`).

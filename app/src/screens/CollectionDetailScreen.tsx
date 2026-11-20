@@ -47,6 +47,7 @@ import { DraggableCard, DraggableTile, LiftCell, LiftedCard, StillCard, StillTil
 import { OwnEmpty } from './collectionDetail/OwnEmpty';
 import { ReaderSeen, readerWord, sendRows, ShareButton, ShareHead, whoHint, whoSeesRows } from './collectionDetail/Share';
 import { CommentsDoor } from './collectionDetail/CommentsDoor';
+import { CopyDoor } from './collectionDetail/CopyDoor';
 import { ACT_GLYPH, ACTIVITY_CHEVRON, BYLINE_SLOP, FACE, GRID_GAP, s } from './collectionDetail/styles';
 import { useKindFilter } from './collectionDetail/useKindFilter';
 import { useReorderDraft } from './collectionDetail/useReorderDraft';
@@ -743,9 +744,11 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
    * the copy takes the original's stamp, not the tab's.
    */
   const copyCityId = col?.city_id || city?.id;
-  // Where the copy's two doors open — the ⋯'s sheet and the dock's pill
-  // (the card's corner was a third until 13 Nov 2026): with a city to
-  // file it under, and never on a list lent to you (`sharedToMe`).
+  // Where the copy's doors open — the ⋯'s sheet, the dock's pill and,
+  // since 20 Nov 2026, the activity row with its figure
+  // (`collectionDetail/CopyDoor`; the card's corner held one until 13
+  // Nov): with a city to file it under, and never on a list lent to you
+  // (`sharedToMe`).
   const canCopy = !!copyCityId && !sharedToMe;
   const copyRef = useRef<() => void>(() => {});
   const copy = () => {
@@ -1126,7 +1129,7 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
     : null;
   const activity = (
     <View style={s.activity} testID="collection-activity">
-      <View style={s.activityRow}>{heart ?? keptHeart}<CommentsDoor list={col} about={title} onPress={(id) => navigation.navigate('Comments', { subject: { kind: 'collection', id } })} />{shareButton}{activityLink}</View>
+      <View style={s.activityRow}>{heart ?? keptHeart}<CommentsDoor list={col} about={title} onPress={(id) => navigation.navigate('Comments', { subject: { kind: 'collection', id } })} /><CopyDoor list={col} canCopy={canCopy} onCopy={copy} navigation={navigation} />{shareButton}{activityLink}</View>
     </View>
   );
 
