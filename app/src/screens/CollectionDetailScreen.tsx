@@ -572,7 +572,10 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
      (the insert fails whole, and the removal comes after it), so the
      sheet stays open with its ticks, the crew is read again so the name
      goes, and the alert says why rather than relaying a policy. */
-  const [picking, setPicking] = useState(false);
+  // Open on arrival when the form that made the list was told Friends:
+  // choosing Friends is choosing which, and the list had no row to share
+  // until the form had made it (`formParts`' `leaveForm`).
+  const [picking, setPicking] = useState(route.params.share === true);
   const saveShares = (list: Collection, add: string[], remove: string[]) => {
     const n = sharedWith.length + add.length - remove.length;
     const unpublish = n > 0 && isPublic;

@@ -372,6 +372,10 @@ export async function createCollection(input: {
    *  `copied_from`, which is what lets the original's curator hear about
    *  it (`copies_of_mine`); null for a list made from scratch. */
   copiedFrom?: string | null;
+  /** Made public from the start, as the form now offers (owner, 20 Nov
+   *  2026; `20261120120000_lists_born_public.sql`). Private unless asked:
+   *  a copy, and any caller that does not say, is made as before. */
+  isPublic?: boolean;
 }): Promise<string> {
   const title = input.title.trim();
   const desc = input.desc?.trim() || null;
@@ -394,7 +398,7 @@ export async function createCollection(input: {
       owner_id: input.ownerId,
       title_en: title, title_vi: title, title_ja: title,
       desc_en: desc, desc_vi: desc, desc_ja: desc,
-      is_public: false,
+      is_public: input.isPublic === true,
       copied_from: input.copiedFrom ?? null,
       // `kinds_hidden` and `kinds_added` are left to their defaults, both
       // empty: this app no longer reads either — see `lib/collectionKinds`.

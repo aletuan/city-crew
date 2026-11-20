@@ -44,7 +44,7 @@ describe('createCollection', () => {
       // them, and an empty title in Japanese would be worse than English.
       title_en: 'Quán cà phê cũ', title_vi: 'Quán cà phê cũ', title_ja: 'Quán cà phê cũ',
       desc_en: 'yên tĩnh', desc_vi: 'yên tĩnh', desc_ja: 'yên tĩnh',
-      // RLS refuses an owned row created public. The app never asks.
+      // Private unless asked: `isPublic` was not given.
       is_public: false,
       // Made from scratch: no list it was copied from.
       copied_from: null,
@@ -53,6 +53,16 @@ describe('createCollection', () => {
       // to their defaults (16 Nov 2026) — see `lib/collectionKinds`.
     });
     expect(slug).toMatch(/^quan-ca-phe-cu-[a-z0-9]{1,6}$/);
+  });
+
+  // Since 20 Nov 2026 a list may be made public from the start, when the
+  // form says so; and only `true` makes it so.
+  it('makes the list public only when asked', async () => {
+    await createCollection({ ...input, isPublic: true });
+    expect(fake().log[0].payload).toMatchObject({ is_public: true });
+    fake().reset();
+    await createCollection({ ...input, isPublic: false });
+    expect(fake().log[0].payload).toMatchObject({ is_public: false });
   });
 
   it('stores a blank description as nothing rather than as an empty string', async () => {

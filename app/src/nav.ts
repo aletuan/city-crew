@@ -113,7 +113,10 @@ export type RootStackParamList = {
    *  Reached from Explore's footer and its scroll offer; Search asks
    *  Google in place now rather than sending anyone here. */
   AddPlace: undefined;
-  CollectionDetail: { slug: string };
+  /** `share`: open "Share with friends" on arrival — a list just made
+   *  with Friends chosen, whose friends are chosen here (owner, 20 Nov
+   *  2026; `collectionForm/formParts`' `leaveForm`). */
+  CollectionDetail: { slug: string; share?: boolean };
   /** Who liked and who copied one of your lists, all time — the card's
    *  "View activity ›". By slug, like the page it opens from: the row is
    *  already in memory among your own lists, so only the key travels. */

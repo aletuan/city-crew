@@ -769,3 +769,11 @@ for f in "$ROOT"/supabase/migrations/*_comment_takeout.sql; do
   run "$DB" -f "$f" >/dev/null
 done
 run "$DB" -f "$HERE/comment_takeout_test.sql"
+
+# A list may be made public from the start (20 Nov 2026). After the daily
+# caps, whose insert policy it rewrites with one clause taken out.
+echo "→ lists born public"
+for f in "$ROOT"/supabase/migrations/*_lists_born_public.sql; do
+  run "$DB" -f "$f" >/dev/null
+done
+run "$DB" -f "$HERE/lists_born_public_test.sql"
