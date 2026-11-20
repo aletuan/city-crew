@@ -582,10 +582,9 @@ export function UnderlineChoice<K extends string>({ items, chosen, onPick, all, 
   );
 }
 
-export function RoundIconButton({ icon, onPress, label, size = ICON.nav, color, bare, disabled, style, testID }: {
+export function RoundIconButton({ icon, onPress, label, size = ICON.nav, color, bare, style, testID }: {
   icon: keyof typeof Ionicons.glyphMap;
-  /** Absent only on a `disabled` button, which has nothing to do. */
-  onPress?: () => void;
+  onPress: () => void;
   label?: string;
   size?: IconSize;
   /**
@@ -619,14 +618,6 @@ export function RoundIconButton({ icon, onPress, label, size = ICON.nav, color, 
    * whose ground is what keeps a white glyph legible on a pale picture.
    */
   bare?: boolean;
-  /**
-   * Drawn and pressing nothing: a door that is not built yet, shown so
-   * its place is known (the person page's search, owner, 20 Nov 2026).
-   * Dimmed to the 0.35 a closed comment bubble wears (`ActivityCard`'s
-   * `off`), so one look means "not now" across the app, and `disabled`
-   * so VoiceOver says "dimmed" by itself.
-   */
-  disabled?: boolean;
   /** The outer box: where a bare control hangs its target past the
    *  margin so the glyph's ink, not the empty box, meets it — see
    *  `BACK_HANG`. */
@@ -636,11 +627,9 @@ export function RoundIconButton({ icon, onPress, label, size = ICON.nav, color, 
   return (
     <PressableScale
       onPress={onPress}
-      scaleTo={disabled ? 1 : 0.92}
-      disabled={disabled}
-      aria-disabled={disabled}
+      scaleTo={0.92}
       style={style}
-      contentStyle={[s.backBtn, bare && s.backBtnBare, disabled && s.backBtnOff]}
+      contentStyle={bare ? [s.backBtn, s.backBtnBare] : s.backBtn}
       testID={testID}
       accessibilityRole="button"
       accessibilityLabel={label}
@@ -979,6 +968,5 @@ const s = StyleSheet.create({
     backgroundColor: colors.surfaceGlass,
   },
   backBtnBare: { backgroundColor: 'transparent' },
-  backBtnOff: { opacity: 0.35 },
   backHang: { marginLeft: -BACK_HANG },
 });

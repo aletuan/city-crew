@@ -72,7 +72,7 @@ P1–P2 phần chỉ chủ trang thấy chỉ có ở gốc tab; đã bỏ giớ
 1. **Đầu trang:** không có tiêu đề (chủ dự án bỏ ngày 19/11: tab đã nói
    đây là trang của ai) và không có nút quay lại. Bên phải là một hàng ba
    nút (chủ dự án, 20/11, theo ảnh mẫu của anh; `person/Tools`):
-   **Tìm kiếm** (đang tắt, mục 9), **Chuông** (Hoạt động) và **Bánh răng**
+   **Tìm kiếm** (trong trang này, mục 9), **Chuông** (Hoạt động) và **Bánh răng**
    (Tài khoản). Chuông có chấm khi có trả lời, tag hoặc bình luận chưa xem
    (C7c). Từ 19/11 chuông nổi ở góc ảnh bìa (cách A; cách B là cạnh "Tài
    khoản ›"); lên đầu trang thì vẫn thấy ngay khi mở mà không nằm đè lên
@@ -212,12 +212,10 @@ trên tab; P3 sửa *lối vào* Hoạt động. Để hai bên không giẫm l�
    chủ trang, cho tới khi có lý do khác.
 3. **Về tôi và Sở thích** có nên lên Trang cá nhân không. Tiểu sử đã ở
    đó; email và ngày tham gia là của riêng tài khoản. Để sau P4.
-4. **Tìm kiếm trên Trang cá nhân** (nút có từ 20/11, đang tắt). Đề xuất:
-   tìm trong nội dung của chính trang đang xem — bộ sưu tập (tên, mô tả)
-   và địa điểm trong các bộ sưu tập đó, theo đúng quyền người xem được
-   thấy — không phải tìm toàn app (người, địa điểm toàn thành phố đã có
-   chỗ ở Khám phá và Kết nối bạn bè). Vì vậy nút hiện trên trang của mọi
-   người, không chỉ trang của mình: người cần tìm trong 24 bộ sưu tập của
-   một curator nhất là khách. `person/Shared` đã ghi đây là câu trả lời
-   đầu tiên nên cân nhắc cho lưới đã bỏ.
+4. ~~Tìm kiếm trên Trang cá nhân~~ Đã làm (chủ dự án, 20/11; `person/Find`):
+   tìm trong các bộ sưu tập mà feed của trang đang hiện cho người xem —
+   theo tên, mô tả, tên và thành phố của các địa điểm trong đó — bằng
+   `siftCollections` của màn Bộ sưu tập. Ô tìm thay chỗ phần đầu trang,
+   feed thu hẹp theo chữ gõ, mỗi thẻ ghi lý do ("Là Việt Coffee · 1
+   trong 4 địa điểm"). Có trên trang của mọi người. Không tìm toàn app.
 5. ~~Tiêu đề "Hoạt động" còn cần không?~~ Bỏ (chủ dự án, 20/11).

@@ -19,14 +19,14 @@
 // for the name, the handle, the photograph and the bio — a button on
 // Account, one press further.
 //
-// ── search, drawn and not built ──
+// ── search ──
 //
-// Disabled until it does something: the owner wanted its place known
-// now. What it will search is open and written in the plan (§8): the
-// person's own collections and the places in them, the answer
-// `person/Shared` names for the grid it gave up — somebody's oldest list
-// is the end of a feed. So it stands on everybody's page, not only your
-// own: a visitor is who scrolls a stranger's 24 lists.
+// Drawn disabled on 20 Nov 2026 so its place was known, and working the
+// same afternoon (`person/Find`): the lists of the page being looked at
+// and the places in them, the answer `person/Shared` names for the grid
+// it gave up — somebody's oldest list is the end of a feed. So it stands
+// on everybody's page, not only your own: a visitor is who scrolls a
+// stranger's 24 lists.
 //
 // ── spacing ──
 //
@@ -40,14 +40,14 @@ import { INK_GAP_END, RoundIconButton } from '../../components/ui';
 import { useI18n } from '../../lib/i18n';
 import { Bell } from './Bell';
 
-/** The search no one can use yet: dimmed, pressing nothing. */
-export function SearchSoon() {
+/** The way into searching this page — `person/Find`. */
+export function Search({ onPress }: { onPress: () => void }) {
   const { t } = useI18n();
   return (
     <RoundIconButton
       bare
-      disabled
       icon="search-outline"
+      onPress={onPress}
       label={t('Search', 'Tìm kiếm', '検索', '搜索', '搜尋')}
       testID="person-search"
     />
@@ -55,11 +55,11 @@ export function SearchSoon() {
 }
 
 /** Your own page's end of the header: search, the bell, the gear. */
-export function OwnTools({ onActivity, onAccount }: { onActivity: () => void; onAccount: () => void }) {
+export function OwnTools({ onSearch, onActivity, onAccount }: { onSearch: () => void; onActivity: () => void; onAccount: () => void }) {
   const { t } = useI18n();
   return (
     <View style={s.row} testID="person-own-tools">
-      <SearchSoon />
+      <Search onPress={onSearch} />
       <Bell onPress={onActivity} />
       <RoundIconButton
         bare

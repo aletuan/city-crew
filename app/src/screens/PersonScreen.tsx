@@ -136,7 +136,8 @@ import { useDuckOnScroll } from '../components/tabBarDuck';
 import { useProfile, useSession } from '../lib/auth';
 import Shared, { useReach } from './person/Shared';
 import { Requests } from './person/Requests';
-import { OwnTools, SearchSoon } from './person/Tools';
+import { FindField, usePageFind } from './person/Find';
+import { OwnTools, Search } from './person/Tools';
 import { OwnFace, useOwnPicture } from './person/OwnFace';
 import { Counts } from './profile/Counts';
 import { useCollections, usePlaces } from '../lib/catalog';
@@ -251,9 +252,13 @@ export default function PersonScreen({ navigation, route, home }: {
   // last tab's first page until 19 Nov 2026 and is a page under your own
   // now (docs/profile-home-plan.md), reached as `toProfileRoom` says. On
   // anybody else's, the search before the friend button and the ⋯.
+  //
+  // The search narrows this page's own feed in place — `person/Find`.
+  const find = usePageFind(lists, places.data);
+  const search = () => { scroll.current?.scrollTo?.({ y: 0, animated: false }); find.open(); };
   const tools = own
-    ? <OwnTools onActivity={() => toProfileRoom(navigation, 'Activity')} onAccount={() => toProfileRoom(navigation, 'Account')} />
-    : <View style={s.topRight}><SearchSoon />{topFriend}{menu.button}</View>;
+    ? <OwnTools onSearch={search} onActivity={() => toProfileRoom(navigation, 'Activity')} onAccount={() => toProfileRoom(navigation, 'Account')} />
+    : <View style={s.topRight}><Search onPress={search} />{topFriend}{menu.button}</View>;
   // The tab pressed again while this is its first page: back to the top,
   // as every tab's first page does (ExploreScreen's `tabPress` note). On
   // a pushed page React Navigation does nothing with it.
@@ -268,61 +273,20 @@ export default function PersonScreen({ navigation, route, home }: {
 
   const page = person ? (
     <>
-      <View style={s.coverCard} testID="person-cover">
-        {cover
-          ? <Image source={{ uri: cover }} style={s.coverPhoto} contentFit="cover" transition={160} />
-          : <View style={[s.coverPhoto, s.tint]} testID="person-cover-tint" />}
-      </View>
-      <View style={s.headRow}>
-        {/* Your own in the level's ring — `person/OwnFace`. */}
-        <Face own={own} url={person.avatar_url} ring={ring} />
-        {/* The name, beside the picture, and the handle right under it
-            — or the handle alone, for somebody who gave no name. The
-            name shrinks before it is cut: see `title`.
-
-            After whichever stands first, a local guide's star or an
-            editor's medal, with the sheet that says what it means —
-            `PersonRole`. On the picture's corner for a day; after the
-            name since 17 Nov 2026 (owner), for the reasons written
-            there. */}
-        <View style={s.names}>
-          <PersonRole me={me} personId={person.id} line={TITLE_LINE}>
-            {person.full_name
-              ? <Text style={s.title} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={TITLE_SHRINK} testID="person-name">{person.full_name}</Text>
-              : <Text style={s.title} numberOfLines={1} testID="person-handle">{atHandle(person.handle)}</Text>}
-          </PersonRole>
-          {person.full_name
-            ? <Text style={s.handle} numberOfLines={1} testID="person-handle">{atHandle(person.handle)}</Text>
-            : null}
-          {/* What they say about themselves, as a bubble from the picture
-              — `Bio`. */}
-          <Bio me={me} person={person} onAdd={() => navigation.navigate('EditProfile', { focus: 'bio' })} />
-        </View>
-      </View>
-      {/* What there is to do about this person, in a row of its own —
-          `Acts`. Not on your own page, nor signed out: no friend button,
-          no row. */}
-      {friend ? <Acts friend={friend} onLayout={top.onRowLayout} /> : null}
-      {/* What the two of you have in common — `InCommon`. It took the
-          "mutual saves" this line counted, for a friend only, until 16
-          Nov 2026. Hidden the same day, not removed: `IN_COMMON_ON`. */}
-      {IN_COMMON_ON ? <InCommon me={me} otherId={person.id} navigation={navigation} /> : null}
-      {/* What only you see on your own page, wherever it opens: your
-          counts (`profile/Counts`), then the requests waiting
-          (`person/Requests`). Their rooms through `toProfileRoom`. */}
-      {own ? (
-        <>
-          <Counts navigation={navigation} />
-          <Requests me={me} onOpen={() => toProfileRoom(navigation, 'Crew')} />
-        </>
-      ) : null}
+      {/* Searching, the box takes the head's place over the same feed,
+          narrowed — `person/Find`. */}
+      {find.on
+        ? <FindField find={find} name={own ? null : person.full_name || atHandle(person.handle)} />
+        : <Head me={me} person={person} own={own} cover={cover} ring={ring} friend={friend} onRowLayout={top.onRowLayout} navigation={navigation} />}
 
       {/* What they have shared: what they did, newest first, and every
           — `person/Shared`. */}
       <Shared
         me={me}
         person={person}
-        lists={lists}
+        lists={find.on ? find.found : lists}
+        reasonOf={find.on ? find.reasonOf : undefined}
+        missed={find.on && find.none}
         seenOf={seenOf}
         coverFor={coverFor}
         onOpen={(c) => navigation.navigate('CollectionDetail', { slug: c.slug })}
@@ -551,6 +515,76 @@ function useReloadOnReturn(navigation: Nav, on: boolean, reload: () => void) {
     });
     return () => { blur(); focus(); };
   }, [navigation]);
+}
+
+/**
+ * Everything over the feed: the cover, the picture and the names, what
+ * there is to do about this person, and what only you see on your own.
+ * Its own function since 20 Nov 2026, when searching the page
+ * (`person/Find`) put a box in its place.
+ */
+function Head({ me, person, own, cover, ring, friend, onRowLayout, navigation }: {
+  me: string | null;
+  person: FriendProfile;
+  own: boolean;
+  cover: string | undefined;
+  ring: { borderColor: string };
+  friend: React.ReactNode;
+  onRowLayout: (e: LayoutChangeEvent) => void;
+  navigation: Nav;
+}) {
+  return (
+    <>
+      <View style={s.coverCard} testID="person-cover">
+        {cover
+          ? <Image source={{ uri: cover }} style={s.coverPhoto} contentFit="cover" transition={160} />
+          : <View style={[s.coverPhoto, s.tint]} testID="person-cover-tint" />}
+      </View>
+      <View style={s.headRow}>
+        {/* Your own in the level's ring — `person/OwnFace`. */}
+        <Face own={own} url={person.avatar_url} ring={ring} />
+        {/* The name, beside the picture, and the handle right under it
+            — or the handle alone, for somebody who gave no name. The
+            name shrinks before it is cut: see `title`.
+
+            After whichever stands first, a local guide's star or an
+            editor's medal, with the sheet that says what it means —
+            `PersonRole`. On the picture's corner for a day; after the
+            name since 17 Nov 2026 (owner), for the reasons written
+            there. */}
+        <View style={s.names}>
+          <PersonRole me={me} personId={person.id} line={TITLE_LINE}>
+            {person.full_name
+              ? <Text style={s.title} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={TITLE_SHRINK} testID="person-name">{person.full_name}</Text>
+              : <Text style={s.title} numberOfLines={1} testID="person-handle">{atHandle(person.handle)}</Text>}
+          </PersonRole>
+          {person.full_name
+            ? <Text style={s.handle} numberOfLines={1} testID="person-handle">{atHandle(person.handle)}</Text>
+            : null}
+          {/* What they say about themselves, as a bubble from the picture
+              — `Bio`. */}
+          <Bio me={me} person={person} onAdd={() => navigation.navigate('EditProfile', { focus: 'bio' })} />
+        </View>
+      </View>
+      {/* What there is to do about this person, in a row of its own —
+          `Acts`. Not on your own page, nor signed out: no friend button,
+          no row. */}
+      {friend ? <Acts friend={friend} onLayout={onRowLayout} /> : null}
+      {/* What the two of you have in common — `InCommon`. It took the
+          "mutual saves" this line counted, for a friend only, until 16
+          Nov 2026. Hidden the same day, not removed: `IN_COMMON_ON`. */}
+      {IN_COMMON_ON ? <InCommon me={me} otherId={person.id} navigation={navigation} /> : null}
+      {/* What only you see on your own page, wherever it opens: your
+          counts (`profile/Counts`), then the requests waiting
+          (`person/Requests`). Their rooms through `toProfileRoom`. */}
+      {own && me ? (
+        <>
+          <Counts navigation={navigation} />
+          <Requests me={me} onOpen={() => toProfileRoom(navigation, 'Crew')} />
+        </>
+      ) : null}
+    </>
+  );
 }
 
 /**

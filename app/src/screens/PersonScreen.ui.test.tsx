@@ -1939,22 +1939,17 @@ describe('your own page', () => {
     }
   });
 
-  // Search is drawn before it is built (owner, 20 Nov 2026), on every
-  // page — `person/Tools` has why a visitor's too — dimmed and pressing
-  // nothing; before the ⋯ on somebody else's.
-  it('draws the search, disabled, on your page and on everybody else’s', async () => {
-    const navigation = await show('me', true, PROFILE_STACK);
+  // Search is on every page, yours and theirs — `person/Tools` has why a
+  // visitor's too: before the ⋯ on somebody else's.
+  it('has the search on your page and on everybody else’s', async () => {
+    await show('me', true, PROFILE_STACK);
     const mine = screen.getByTestId('person-search');
     expect(screen.getByTestId('person-own-tools').contains(mine)).toBe(true);
-    expect(mine.getAttribute('aria-disabled')).toBe('true');
     expect(mine.getAttribute('aria-label')).toBe('Search');
     expect(mine.querySelector('[data-icon="search-outline"]')).toBeTruthy();
-    fireEvent.click(mine);
-    expect(navigation.navigate).not.toHaveBeenCalled();
     cleanup();
     await show('lan', false, PROFILE_STACK);
     const theirs = screen.getByTestId('person-search');
-    expect(theirs.getAttribute('aria-disabled')).toBe('true');
     expect(theirs.compareDocumentPosition(screen.getByTestId('person-more')) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   });
 
@@ -2059,5 +2054,97 @@ describe('your own page', () => {
     state.fresh = 1;
     await show('me', true, PROFILE_STACK);
     for (const id of Object.values(places)) expect(screen.getByTestId(id), id).toBeTruthy();
+  });
+});
+
+// Searching a person page (owner, 20 Nov 2026 — `person/Find`): within
+// the lists this page shows this reader, by their words and by the
+// names of the places in them, the box in the head's place.
+describe('searching the page', () => {
+  const PLACE = (slug: string, name: string, city = 'hanoi') => ({ slug, name_en: name, name_vi: name, name_ja: null, city_id: city, place_photos: [] });
+  const titles = () => screen.queryAllByTestId('person-act').map((c) => within(c).getByTestId('activity-open').getAttribute('aria-label'));
+  const type = (words: string) => fireEvent.change(screen.getByTestId('person-find-input'), { target: { value: words } });
+
+  beforeEach(() => {
+    state.places = [PLACE('p0', 'Là Việt Coffee'), PLACE('p1', 'Phở Thìn'), PLACE('p2', 'Bún Chả Hương Liên')];
+    state.shelf = [
+      list('coffee', { title_en: 'Morning cups', title_vi: 'Cà phê sáng', collection_places: [{ sort_order: 0, places: { slug: 'p0' } }] as Collection['collection_places'] }),
+      list('noodles', { title_en: 'Noodles', title_vi: 'Bún phở', collection_places: [{ sort_order: 0, places: { slug: 'p1' } }, { sort_order: 1, places: { slug: 'p2' } }] as Collection['collection_places'] }),
+      list('hidden', { title_en: 'Secret coffee', is_public: false, collection_places: [{ sort_order: 0, places: { slug: 'p0' } }] as Collection['collection_places'] }),
+    ];
+  });
+
+  it('puts the box in the head’s place, over the same feed', async () => {
+    await show();
+    expect(titles()).toHaveLength(2);
+    fireEvent.click(screen.getByTestId('person-search'));
+    expect(screen.getByTestId('person-find-input')).toBeTruthy();
+    expect(screen.queryByTestId('person-cover')).toBeNull();
+    expect(screen.queryByTestId('person-name')).toBeNull();
+    // Whose lists, in the box.
+    expect(screen.getByTestId('person-find-input').getAttribute('placeholder')).toBe("Search Lan Phạm's collections");
+    // Nothing typed: every list still there.
+    expect(titles()).toHaveLength(2);
+  });
+
+  it('finds a list by the name of a place in it, and says which, marks or none', async () => {
+    await show();
+    fireEvent.click(screen.getByTestId('person-search'));
+    type('la viet');
+    await flush();
+    expect(titles()).toHaveLength(1);
+    expect(titles()[0]).toMatch(/^Morning cups/);
+    // Why it is there, where the count stood.
+    const card = screen.getAllByTestId('person-act')[0];
+    expect(within(card).getByText('Là Việt Coffee')).toBeTruthy();
+    expect(within(card).queryByText('1 place')).toBeNull();
+  });
+
+  it('finds a list by its own words, and says part of it when a place answered', async () => {
+    await show();
+    fireEvent.click(screen.getByTestId('person-search'));
+    type('noodles');
+    await flush();
+    expect(titles()).toHaveLength(1);
+    // Found by its title: the ordinary count.
+    expect(within(screen.getAllByTestId('person-act')[0]).getByText('2 places')).toBeTruthy();
+    type('hương liên');
+    await flush();
+    expect(within(screen.getAllByTestId('person-act')[0]).getByText('Bún Chả Hương Liên · 1 of 2 places')).toBeTruthy();
+  });
+
+  it('never finds what the feed would not show this reader', async () => {
+    await show();
+    fireEvent.click(screen.getByTestId('person-search'));
+    type('secret');
+    await flush();
+    expect(titles()).toHaveLength(0);
+    expect(screen.getByTestId('person-find-none')).toBeTruthy();
+    // Not the page's own empty card: they have lists, none answer.
+    expect(screen.queryByTestId('person-no-lists')).toBeNull();
+  });
+
+  it('puts the head back and the words away with ×', async () => {
+    await show();
+    fireEvent.click(screen.getByTestId('person-search'));
+    type('pho');
+    await flush();
+    fireEvent.click(screen.getByTestId('person-find-cancel'));
+    await flush();
+    expect(screen.getByTestId('person-cover')).toBeTruthy();
+    expect(titles()).toHaveLength(2);
+    fireEvent.click(screen.getByTestId('person-search'));
+    expect((screen.getByTestId('person-find-input') as HTMLInputElement).value).toBe('');
+  });
+
+  it('says it is your lists on your own page, in Vietnamese', async () => {
+    state.lang = 'vi';
+    state.people = { ...state.people, me: { id: 'me-id', handle: 'me', full_name: 'Me', avatar_url: '' } };
+    await show('me', true, ['ProfileHome', 'Account', 'Activity', 'Crew', 'Visited', 'Person']);
+    fireEvent.click(screen.getByTestId('person-search'));
+    expect(screen.getByTestId('person-find-input').getAttribute('placeholder')).toBe('Tìm trong bộ sưu tập của bạn');
+    type('xyz');
+    await flush();
+    expect(screen.getByText('Không tìm thấy')).toBeTruthy();
   });
 });
