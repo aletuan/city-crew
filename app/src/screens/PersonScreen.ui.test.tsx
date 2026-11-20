@@ -72,6 +72,7 @@ const state = vi.hoisted(() => ({
   lent: [] as unknown[],
   lentAsked: [] as (string | null | undefined)[],
   myShares: [] as { collection_id: string; user_id: string; created_at: string }[],
+  copyRows: [] as { slug: string; copies: number }[],
   sharesAsked: [] as (string | null | undefined)[],
 }));
 vi.mock('../lib/auth', () => ({
@@ -105,6 +106,8 @@ vi.mock('../lib/save', () => ({
 }));
 vi.mock('../lib/data', async (orig) => ({
   ...(await orig<Record<string, unknown>>()),
+  // How many people copied each public list, for the cards' copy button.
+  useCopyCountsQuery: () => ({ data: state.copyRows, loading: false, loaded: true, error: null, loadedAt: null, fromCache: false, reload: () => {} }),
   sendFriendRequest: data.sendFriendRequest,
   acceptFriendRequest: data.acceptFriendRequest,
   blockUser: data.blockUser,
@@ -213,6 +216,7 @@ beforeEach(() => {
   state.lookup = { loading: false, error: null, reload: vi.fn() };
   state.shelf = [];
   state.places = [];
+  state.copyRows = [];
   state.likes = {};
   state.myLikes = [];
   state.mine = [];
@@ -2155,5 +2159,63 @@ describe('searching the page', () => {
     type('xyz');
     await flush();
     expect(screen.getByText('Không tìm thấy')).toBeTruthy();
+  });
+});
+
+// The copy button on a card (owner, 20 Nov 2026 — `person/useCardCopy`):
+// how many people copied the list, and a copy made from the feed.
+describe('copying from a card', () => {
+  const copyOn = (i = 0) => within(screen.getAllByTestId('person-act')[i]).queryByTestId('activity-copy');
+  const SLUGS = [{ sort_order: 1, places: { slug: 'second' } }, { sort_order: 0, places: { slug: 'first' } }, { sort_order: 2, places: null }];
+
+  it('says how many copied it, and opens the form on a copy in the curator’s order', async () => {
+    state.shelf = [list('pho', { collection_places: SLUGS as Collection['collection_places'], desc_en: '  Broth.  ' })];
+    state.copyRows = [{ slug: 'pho', copies: 4 }];
+    const navigation = await show();
+    const btn = copyOn()!;
+    expect(within(btn).getByTestId('activity-copy-count').textContent).toBe('4');
+    expect(btn.getAttribute('aria-label')).toBe('Save a copy, 4');
+    fireEvent.click(btn);
+    expect(navigation.navigate).toHaveBeenCalledWith('CollectionForm', {
+      copyFrom: { sourceId: 'pho', cityId: 'hanoi', title: 'List pho', desc: 'Broth.', placeSlugs: ['first', 'second'] },
+    });
+  });
+
+  it('opens the copy the reader already has', async () => {
+    state.shelf = [list('pho')];
+    state.mine = [list('my-pho', { owner_id: 'me-id', copied_from: 'pho' })];
+    const navigation = await show();
+    const btn = copyOn()!;
+    expect(btn.querySelector('[data-icon="duplicate"]')).toBeTruthy();
+    expect(within(btn).queryByTestId('activity-copy-count')).toBeNull();
+    fireEvent.click(btn);
+    expect(navigation.navigate).toHaveBeenCalledWith('CollectionDetail', { slug: 'my-pho' });
+  });
+
+  it('has none for a list with no city, nor for a guest', async () => {
+    state.shelf = [list('pho', { city_id: null })];
+    await show();
+    expect(copyOn()).toBeNull();
+    cleanup();
+    state.shelf = [list('pho')];
+    state.me = null;
+    await show();
+    expect(screen.getAllByTestId('person-act')).toHaveLength(1);
+    expect(copyOn()).toBeNull();
+  });
+
+  it('on your own page, only once somebody copied it, and it opens who did', async () => {
+    state.people = { ...state.people, me: { ...LAN, id: 'me-id', handle: 'me' } };
+    state.mine = [list('mine', { owner_id: 'me-id' })];
+    state.shelf = [list('mine', { owner_id: 'me-id' })];
+    const stack = ['ProfileHome', 'Account', 'Activity', 'Crew', 'Visited', 'Person'];
+    await show('me', true, stack);
+    expect(copyOn()).toBeNull();
+    cleanup();
+    state.copyRows = [{ slug: 'mine', copies: 2 }];
+    const navigation = await show('me', true, stack);
+    expect(copyOn()!.getAttribute('aria-label')).toBe('Who saved a copy, 2');
+    fireEvent.click(copyOn()!);
+    expect(navigation.navigate).toHaveBeenCalledWith('CollectionActivity', { slug: 'mine' });
   });
 });

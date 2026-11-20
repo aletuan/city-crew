@@ -777,3 +777,11 @@ for f in "$ROOT"/supabase/migrations/*_lists_born_public.sql; do
   run "$DB" -f "$f" >/dev/null
 done
 run "$DB" -f "$HERE/lists_born_public_test.sql"
+
+# How many people copied each public list (20 Nov 2026), for the figure
+# beside the copy button. After the use counts, whose copy half it is.
+echo "→ collection copy counts"
+for f in "$ROOT"/supabase/migrations/*_collection_copy_counts.sql; do
+  run "$DB" -f "$f" >/dev/null
+done
+run "$DB" -f "$HERE/collection_copy_counts_test.sql"

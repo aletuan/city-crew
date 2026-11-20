@@ -138,6 +138,7 @@ import Shared, { useReach } from './person/Shared';
 import { Requests } from './person/Requests';
 import { FindField, usePageFind } from './person/Find';
 import { OwnTools, Search } from './person/Tools';
+import { useCardCopy } from './person/useCardCopy';
 import { OwnFace, useOwnPicture } from './person/OwnFace';
 import { Counts } from './profile/Counts';
 import { useCollections, usePlaces } from '../lib/catalog';
@@ -255,6 +256,8 @@ export default function PersonScreen({ navigation, route, home }: {
   //
   // The search narrows this page's own feed in place — `person/Find`.
   const find = usePageFind(lists, places.data);
+  // The copy button on each card — `person/useCardCopy`.
+  const copyOf = useCardCopy(navigation);
   const search = () => { scroll.current?.scrollTo?.({ y: 0, animated: false }); find.open(); };
   const tools = own
     ? <OwnTools onSearch={search} onActivity={() => toProfileRoom(navigation, 'Activity')} onAccount={() => toProfileRoom(navigation, 'Account')} />
@@ -287,6 +290,7 @@ export default function PersonScreen({ navigation, route, home }: {
         lists={find.on ? find.found : lists}
         reasonOf={find.on ? find.reasonOf : undefined}
         missed={find.on && find.none}
+        copyOf={copyOf}
         seenOf={seenOf}
         coverFor={coverFor}
         onOpen={(c) => navigation.navigate('CollectionDetail', { slug: c.slug })}

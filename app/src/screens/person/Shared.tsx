@@ -88,7 +88,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { type NativeScrollEvent, type NativeSyntheticEvent, StyleSheet, Text, View } from 'react-native';
 import { Image } from 'expo-image';
-import ActivityCard, { type ActivityMark } from '../../components/ActivityCard';
+import ActivityCard, { type ActivityMark, type CardCopy } from '../../components/ActivityCard';
 import { Card, fireHaptic, PressableScale } from '../../components/ui';
 import { agoLabel } from '../../lib/ago';
 import { useLikes } from '../../lib/catalog';
@@ -153,7 +153,7 @@ export function marks(seen: ListSeen, t: T): ActivityMark {
   return { icon: SEEN_GLYPH.friends, text: lent, label: lent };
 }
 
-export default function Shared({ me, person, lists, seenOf, coverFor, onOpen, onComments, reasonOf, missed, reach = 0 }: {
+export default function Shared({ me, person, lists, seenOf, coverFor, onOpen, onComments, copyOf, reasonOf, missed, reach = 0 }: {
   me: string | null;
   person: FriendProfile;
   /** The collections this reader may see here, newest first
@@ -165,6 +165,8 @@ export default function Shared({ me, person, lists, seenOf, coverFor, onOpen, on
   onOpen: (c: Collection) => void;
   /** Opens a collection's thread of comments — `useCardComments`. */
   onComments?: (c: Collection) => void;
+  /** A card's copy button (`useCardCopy`), or none. */
+  copyOf?: (c: Collection) => CardCopy | undefined;
   /** While the page is searched (`person/Find`): why a card is there,
    *  in its line's place — "Là Việt Coffee · 1 of 4 places" — or null
    *  for the count it always says. */
@@ -263,6 +265,7 @@ export default function Shared({ me, person, lists, seenOf, coverFor, onOpen, on
               onOpen={() => onOpen(c)}
               onHeart={c.id && seenOf(c).kind !== 'private' ? () => heart(c) : undefined}
               {...talkOf(c)}
+              copy={copyOf?.(c)}
             />
           ))}
           {lists.length > shown ? (
