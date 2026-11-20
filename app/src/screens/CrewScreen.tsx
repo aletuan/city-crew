@@ -23,7 +23,7 @@
 // what stands between two accounts, which suggestions are still open —
 // lives in lib/friends, under the gate.
 
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { ActivityIndicator, Alert, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { Glyph, ICON } from '../components/ui/glyph';
@@ -459,14 +459,6 @@ export default function CrewScreen({ navigation }: { navigation: Nav }) {
     ),
   );
 
-  /** The face, or the space one would take — every row here draws it, so
-   *  a missing avatar never changes a row's height. The circle itself is
-   *  `Avatar` now; what stays local is only the unwrapping of a profile
-   *  that may not have arrived yet, which is this screen's own problem. */
-  const Face = ({ p, size = 44 }: { p?: FriendProfile; size?: number }) => (
-    <Avatar url={p?.avatar_url} size={size} />
-  );
-
   const savesLine = (n?: number) => (n != null && n > 0
     ? (n === 1
       ? t('1 mutual save', '1 chỗ cùng lưu', '共通の保存1件', '1 个共同收藏', '1 個共同收藏')
@@ -690,15 +682,16 @@ export default function CrewScreen({ navigation }: { navigation: Nav }) {
                   return (
                     <Card key={r.requester} style={s.reqCard}>
                       <View style={s.reqTop}>
-                        <Face p={p} size={46} />
-                        <View style={{ flex: 1, gap: 2 }}>
-                          <Text style={s.reqTitle}>
-                            <Text style={{ fontWeight: font.bold }}>{nameOf(p)}</Text>
-                            {' '}
-                            {t('wants to join your crew', 'muốn kết bạn với bạn', 'がクルーに参加したがっています', '想加你为好友', '想加你為好友')}
-                          </Text>
-                          {p ? <Text style={s.meta}>{atHandle(p.handle)}</Text> : null}
-                        </View>
+                        <PersonDoor p={p} navigation={navigation} size={46} gap={12} testID={`crew-request-who-${i}`}>
+                          <View style={{ flex: 1, gap: 2 }}>
+                            <Text style={s.reqTitle}>
+                              <Text style={{ fontWeight: font.bold }}>{nameOf(p)}</Text>
+                              {' '}
+                              {t('wants to join your crew', 'muốn kết bạn với bạn', 'がクルーに参加したがっています', '想加你为好友', '想加你為好友')}
+                            </Text>
+                            {p ? <Text style={s.meta}>{atHandle(p.handle)}</Text> : null}
+                          </View>
+                        </PersonDoor>
                         <Options onPress={() => openRequestSheet(r.requester, p)} />
                       </View>
                       <View style={s.answers}>
@@ -744,13 +737,14 @@ export default function CrewScreen({ navigation }: { navigation: Nav }) {
                     const p = people[r.addressee];
                     return (
                       <View key={r.addressee} style={[s.row, i > 0 && s.rowDivider]} testID={`crew-sent-${i}`}>
-                        <Face p={p} />
                         {/* Who, and nothing after it. "waiting on their
                             answer" sat on every row, saying again what the
                             "Sent" heading above already says (owner, 26
                             Oct 2026). The sheet behind Cancel keeps it:
                             there is no heading there to say it. */}
-                        <Who p={p} />
+                        <PersonDoor p={p} navigation={navigation} gap={14} testID={`crew-sent-who-${i}`}>
+                          <Who p={p} />
+                        </PersonDoor>
                         <PressableScale contentStyle={s.quietBtn} hitSlop={CHIP_SLOP} onPress={() => openSentSheet(known(r.addressee))} accessibilityRole="button">
                           <Text style={s.quietText}>{t('Cancel', 'Huỷ', '取り消す', '取消', '取消')}</Text>
                         </PressableScale>
@@ -779,15 +773,16 @@ export default function CrewScreen({ navigation }: { navigation: Nav }) {
                     const why = reasonLine(sg, list ? t(list.title_en, list.title_vi, list.title_ja ?? undefined) : null, t);
                     return (
                       <View key={sg.other} style={[s.row, i > 0 && s.rowDivider]}>
-                        <Face p={p} />
-                        <View style={{ flex: 1, gap: 2 }}>
-                          <Text style={s.name} numberOfLines={1}>{nameOf(p)}</Text>
-                          {/* Two lines: the longest public title on 25 Oct
-                              2026 was 27 characters, and with the sentence
-                              around it that is about 45 — past what one
-                              line holds beside the two buttons. */}
-                          <Text style={s.reason} numberOfLines={2} testID={`crew-suggestion-reason-${sg.other}`}>{why}</Text>
-                        </View>
+                        <PersonDoor p={p} navigation={navigation} gap={14} testID={`crew-suggestion-who-${sg.other}`}>
+                          <View style={{ flex: 1, gap: 2 }}>
+                            <Text style={s.name} numberOfLines={1}>{nameOf(p)}</Text>
+                            {/* Two lines: the longest public title on 25 Oct
+                                2026 was 27 characters, and with the sentence
+                                around it that is about 45 — past what one
+                                line holds beside the two buttons. */}
+                            <Text style={s.reason} numberOfLines={2} testID={`crew-suggestion-reason-${sg.other}`}>{why}</Text>
+                          </View>
+                        </PersonDoor>
                         <PressableScale
                           onPress={() => askSuggested(sg.other)}
                           hitSlop={CHIP_SLOP}
@@ -1008,6 +1003,60 @@ function Options({ onPress }: { onPress: () => void }) {
  * Outside the screen's function: it reads nothing of the screen's, and
  * the function is over its ceiling already (`oversize.js`).
  */
+/** The face, or the space one would take — every row here draws it, so
+ *  a missing avatar never changes a row's height. The circle itself is
+ *  `Avatar`; what stays here is only the unwrapping of a profile that may
+ *  not have arrived yet, which is this screen's own problem. Out of the
+ *  screen's function since 20 Nov 2026, with `PersonDoor`, to keep that
+ *  function under its ceiling. */
+function Face({ p, size = 44 }: { p?: FriendProfile; size?: number }) {
+  return <Avatar url={p?.avatar_url} size={size} />;
+}
+
+/**
+ * A face and the words beside it, as one way to that person's page —
+ * on the Requests tab, where until 20 Nov 2026 nothing opened it.
+ *
+ * The Friends tab's rows had opened the page since 16 Nov; the rows on
+ * Requests are where a reader most needs it, and could not (owner, 20
+ * Nov 2026). A request asks you to decide about someone, and "who is
+ * this?" is answered by their lists, not by a name and a handle. A
+ * suggestion asks the same. A sent request matters less, and opens it
+ * all the same: one rule for a face on this screen.
+ *
+ * The face and the words, not the whole card or row: those hold Accept,
+ * Decline, Add, Hide, Cancel and ⋯, and a card that opened a page around
+ * them would turn every near-miss of a button into a trip away. The
+ * buttons sit outside this door, so a tap on one never reaches it.
+ *
+ * A stranger's page shows only what they made public, so nothing is
+ * shown here that the page would not show anyone. A profile that has not
+ * arrived opens nothing, as on the Friends tab.
+ */
+function PersonDoor({ p, navigation, size, gap, testID, children }: {
+  p?: FriendProfile;
+  navigation: Nav;
+  size?: number;
+  /** The gap of the row it stands in, so the face sits where it did. */
+  gap: number;
+  testID: string;
+  children: ReactNode;
+}) {
+  return (
+    <PressableScale
+      style={s.door}
+      contentStyle={[s.doorRow, { gap }]}
+      scaleTo={0.98}
+      onPress={p ? () => navigation.navigate('Person', { handle: p.handle }) : undefined}
+      accessibilityRole="button"
+      testID={testID}
+    >
+      <Face p={p} size={size} />
+      {children}
+    </PressableScale>
+  );
+}
+
 function Who({ p, extra = '' }: { p?: FriendProfile; extra?: string }) {
   const handle = p ? normalizeHandle(p.handle) : '';
   const under = [handle && p?.full_name, extra].filter(Boolean).join(' · ');
@@ -1033,6 +1082,9 @@ const s = StyleSheet.create({
 
   reqCard: { padding: space.cardPadding, gap: 14 },
   reqTop: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  // `PersonDoor`: the space the face and words had, and their row inside.
+  door: { flex: 1 },
+  doorRow: { flexDirection: 'row', alignItems: 'center' },
   reqTitle: { color: colors.text, fontSize: 16, lineHeight: 21 },
   answers: { flexDirection: 'row', gap: 10 },
   half: { flex: 1 },
