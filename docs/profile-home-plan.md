@@ -56,16 +56,21 @@ chấm thì vào chuông.
 | Trả lời, tag, bình luận trên bộ của bạn, tim trên bình luận của bạn | Mở Hoạt động |
 | Lượt thích và bản sao bộ sưu tập của bạn (gộp một dòng một bộ) | Mở Hoạt động |
 | Lời mời kết bạn của bạn được chấp nhận | Mở Hoạt động |
-| Lời mời kết bạn đang chờ (cũng là thẻ dưới bốn con số) | Chấp nhận hoặc từ chối hết |
+| Lời mời kết bạn đang chờ (một dòng, theo lời mời mới nhất) | Mở Hoạt động. Thẻ dưới bốn con số thì còn tới khi chấp nhận hoặc từ chối hết |
 
 Chuông mang **số**, đếm theo dòng của "Dành cho bạn", từ 10 trở lên là
 "9+"; tab chỉ mang chấm, như mọi chấm trên thanh tab. Không có nút "đánh
 dấu đã đọc": mở chuông đã là việc đó, vì không dòng nào có trạng thái đọc
 riêng. Hoạt động mở vào "Dành cho bạn" với **một dòng lời mời** ở đầu nếu có
-(cùng kiểu với các dòng khác, có chấm cho tới khi trả lời; bấm sang Bạn
+(cùng kiểu với các dòng khác, đứng đầu cho tới khi trả lời, có chấm như mọi dòng mới; bấm sang Bạn
 bè). Thẻ lời mời trên Trang cá nhân vẫn giữ: chủ dự án muốn người dùng
 thấy ngay khi có lời mời. Pill của tab "Dành cho bạn" đếm cả lời mời, để chuông, pill và chấm trên các dòng là
 một con số.
+
+**Mở chuông là xoá, không có ngoại lệ** (chủ dự án, tối 20/11). Vài giờ
+đầu lời mời kết bạn được đếm cho tới khi trả lời; chủ dự án mở chuông,
+thấy số 1 vẫn còn, và đọc đó là lỗi. Thứ giữ lời mời trong tầm mắt là
+thẻ trên Trang cá nhân, không phải chuông.
 
 **Huy hiệu không bật chấm nào nữa**, cả trên tab lẫn chip Lv. Banner đã
 báo lúc đạt được; trong bảng Thành tích, huy hiệu mới vẫn có chấm của nó

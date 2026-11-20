@@ -116,9 +116,10 @@ describe('the number', () => {
   });
 
   // A like and a copy of the reader's lists ring the bell too, gathered
-  // one row a list as Activity draws them; a friend request waiting is
-  // news until answered, whatever the mark; a request of yours accepted
-  // since the window opened is a row like any other.
+  // one row a list as Activity draws them; the friend requests waiting
+  // are one row, timed by the latest and new by the same mark (owner,
+  // 20 Nov 2026: the bell opened clears them too); a request of yours
+  // accepted since the window opened is a row like any other.
   it('counts likes and copies one row a list, requests waiting, and friendships begun', async () => {
     await AsyncStorage.setItem(markKey('me')!, TEN);
     const now = new Date().toISOString();
@@ -130,16 +131,29 @@ describe('the number', () => {
     world.copies = [{ collection_id: 'c1', copied_at: ELEVEN, copier_id: 'u4', copier_handle: 'an', copier_name: 'An' }];
     world.ships = [
       { requester: 'u5', addressee: 'me', status: 'pending', created_at: NINE, responded_at: null },
+      { requester: 'u8', addressee: 'me', status: 'pending', created_at: ELEVEN, responded_at: null },
       { requester: 'me', addressee: 'u6', status: 'accepted', created_at: NINE, responded_at: now },
       { requester: 'u7', addressee: 'me', status: 'accepted', created_at: NINE, responded_at: now },
     ];
     mount();
-    // c1's likes (one row), c1's copy, the request, the friendship you
-    // asked for — and not c2's like, older than the mark, nor the
-    // friendship you accepted, which you did.
+    // c1's likes (one row), c1's copy, the two requests (one row, the
+    // latest after the mark), the friendship you asked for — and not
+    // c2's like, older than the mark, nor the friendship you accepted,
+    // which you did.
     await waitFor(() => expect(text('fresh')).toBe('4'));
     expect(fetchApplause).toHaveBeenCalledTimes(1);
     expect(fetchCopies.mock.calls[0][0]).toBe(fetchApplause.mock.calls[0][0]);
+  });
+
+  // The bug the owner found: the bell opened, its 1 stayed, for a
+  // request already shown. Shown is seen, a request as much as a like.
+  it('does not count a request the mark has passed, though it waits', async () => {
+    await AsyncStorage.setItem(markKey('me')!, TEN);
+    world.ships = [{ requester: 'u5', addressee: 'me', status: 'pending', created_at: NINE, responded_at: null }];
+    mount();
+    await settled();
+    await waitFor(() => expect(fetchApplause).toHaveBeenCalled());
+    expect(text('fresh')).toBe('0');
   });
 
   it('counts only what is later than the mark the phone kept', async () => {

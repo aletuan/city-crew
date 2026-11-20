@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { activityGroups, bellFigure, commentNewsOf, freshCount, newerThan, newestAt, type CommentNews } from './commentNews';
+import { activityGroups, bellFigure, commentNewsOf, freshCount, latestRequest, newerThan, newestAt, type CommentNews } from './commentNews';
 import type { ActivityItem } from './friends';
 
 const wire = (over: Record<string, unknown> = {}) => ({
@@ -123,18 +123,25 @@ describe('what is new', () => {
   });
 
   // One bell (owner, 20 Nov 2026): every row for you later than the
-  // mark — a heart or a like as much as a reply — and each request
-  // waiting, which has no time and is news until answered.
-  it('counts every row later than the mark, and each request waiting', () => {
+  // mark — a heart or a like as much as a reply — and the friend
+  // requests as one row, timed by the latest, new by the same mark: the
+  // bell opened clears them too.
+  it('counts every row later than the mark, the requests as one row by the same mark', () => {
     const rows = [
       { at: '2026-11-18T12:00:00Z' }, { at: '2026-11-18T11:00:00Z' },
       { at: '2026-11-18T10:30:00Z' }, { at: '2026-11-18T09:00:00Z' },
     ];
-    expect(freshCount(rows, '2026-11-18T10:00:00Z', 0)).toBe(3);
-    expect(freshCount(rows, null, 0)).toBe(4);
-    expect(freshCount(rows, '2026-11-18T12:00:00Z', 0)).toBe(0);
-    expect(freshCount(rows, '2026-11-18T12:00:00Z', 2)).toBe(2);
-    expect(freshCount([], null, 1)).toBe(1);
+    expect(freshCount(rows, '2026-11-18T10:00:00Z', null)).toBe(3);
+    expect(freshCount(rows, null, null)).toBe(4);
+    expect(freshCount(rows, '2026-11-18T12:00:00Z', null)).toBe(0);
+    expect(freshCount(rows, '2026-11-18T12:00:00Z', '2026-11-18T13:00:00Z')).toBe(1);
+    expect(freshCount(rows, '2026-11-18T12:00:00Z', '2026-11-18T11:00:00Z')).toBe(0);
+    expect(freshCount([], null, '2026-11-18T11:00:00Z')).toBe(1);
+  });
+
+  it('times the requests by the latest sent, and none by nothing', () => {
+    expect(latestRequest([{ created_at: '2026-11-18T09:00:00Z' }, { created_at: '2026-11-18T11:00:00Z' }])).toBe('2026-11-18T11:00:00Z');
+    expect(latestRequest([])).toBeNull();
   });
 
   it('says a figure up to nine, and 9+ past it', () => {

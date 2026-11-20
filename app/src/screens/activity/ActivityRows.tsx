@@ -71,7 +71,7 @@ import { StyleSheet, Text, View } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { Avatar, Card, PressableScale, WordTabs } from '../../components/ui';
 import { Glyph, ICON } from '../../components/ui/glyph';
-import { type ActivityEntry, type CommentNews, newestAt } from '../../lib/commentNews';
+import { type ActivityEntry, type CommentNews, latestRequest, newestAt } from '../../lib/commentNews';
 import type { FriendProfile } from '../../lib/data';
 import { type ActivityItem, type FriendshipRow, splitFriendships } from '../../lib/friends';
 import { useCrew } from '../../lib/crew';
@@ -109,17 +109,20 @@ export function ActivityGroups({ groups, people, faces, collectionOf, ago, navig
   // The thread, at the comment: `useThreadFocus` scrolls to it and lights it.
   const onComment = (n: CommentNews) =>
     navigation.navigate('Comments', { subject: { kind: 'collection', id: n.list.id }, focus: n.comment_id });
-  const isNew = useSeenThrough(newestAt(groups.forYou));
   const { ships } = useCrew();
   const incoming = me ? splitFriendships(ships.data, me).incoming : [];
   const asking = incoming.length;
+  // The requests' row is a row of "For you" like any: opening the page
+  // moves the mark past it too, and it is new only until then.
+  const askedAt = latestRequest(incoming);
+  const isNew = useSeenThrough(newestAt([...groups.forYou, ...(askedAt ? [{ at: askedAt }] : [])]));
   const [tab, setTab] = useState<'forYou' | 'yours'>(() =>
     (groups.forYou.length === 0 && asking === 0 && groups.yours.length > 0 ? 'yours' : 'forYou'));
   const news = tab === 'forYou';
   const entries = news ? groups.forYou : groups.yours;
   // What the card draws, in order: the requests first when "For you" is
   // up — somebody is waiting on the reader — then the rows.
-  const asked = news && asking > 0 ? [requestRow(incoming, people, () => toProfileRoom(navigation, 'Crew'), t)] : [];
+  const asked = news && askedAt ? [requestRow(incoming, people, () => toProfileRoom(navigation, 'Crew'), isNew(askedAt), t)] : [];
   const shown = [
     ...asked,
     ...entries.map((e) => ({
@@ -137,7 +140,7 @@ export function ActivityGroups({ groups, people, faces, collectionOf, ago, navig
       <View style={s.tabs}>
         <WordTabs
           tabs={[
-            { key: 'forYou', label: t('For you', 'Dành cho bạn', 'あなたへ', '与你有关', '與你有關'), count: groups.forYou.filter((e) => isNew(e.at)).length + asking, testID: 'activity-tab-for-you' },
+            { key: 'forYou', label: t('For you', 'Dành cho bạn', 'あなたへ', '与你有关', '與你有關'), count: groups.forYou.filter((e) => isNew(e.at)).length + (askedAt && isNew(askedAt) ? 1 : 0), testID: 'activity-tab-for-you' },
             { key: 'yours', label: t('What you did', 'Việc bạn đã làm', 'あなたがしたこと', '你做过的', '你做過的'), testID: 'activity-tab-yours' },
           ]}
           active={tab}
@@ -210,12 +213,16 @@ export function ActivityGroups({ groups, people, faces, collectionOf, ago, navig
  * page, where a request is meant to be seen at once (owner).
  *
  * One row however many ask: the latest named, the rest counted, as the
- * likes of a list are. It opens Friends, where each is answered beside
- * the person. New until answered, so always dotted: a request has no
- * time to fall behind the mark.
+ * likes of a list are, at the latest one's time. It opens Friends, where
+ * each is answered beside the person.
+ *
+ * New by the mark, as every row is (owner, 20 Nov 2026): for a few hours
+ * it was new until answered, and the bell's 1 stayed after the bell was
+ * opened, which read as broken. It stays at the head of the list until
+ * answered; the card on your page is what keeps it in sight.
  */
 function requestRow(
-  rows: readonly FriendshipRow[], people: Record<string, FriendProfile>, open: () => void, t: Translate,
+  rows: readonly FriendshipRow[], people: Record<string, FriendProfile>, open: () => void, fresh: boolean, t: Translate,
 ): { row: Row; at: string; fresh: boolean; testID: string } {
   const latest = [...rows].sort((a, b) => (a.created_at < b.created_at ? 1 : -1))[0];
   const first = people[latest.requester];
@@ -228,7 +235,7 @@ function requestRow(
       : t(`${who} and ${k} other${k === 1 ? '' : 's'} want to be friends`, `${who} và ${k} người khác muốn kết bạn với bạn`, `${who}さんほか${k}人が友達になりたがっています`, `${who} 和另外 ${k} 人想加你为好友`, `${who} 和另外 ${k} 人想加你為好友`);
   return {
     row: { key: 'requests', face: first?.avatar_url || null, badge: 'person-add', line, open },
-    at: latest.created_at, fresh: true, testID: 'activity-requests',
+    at: latest.created_at, fresh, testID: 'activity-requests',
   };
 }
 
