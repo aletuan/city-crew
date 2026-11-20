@@ -392,6 +392,7 @@ export default function TripsScreen({ navigation, route }: { navigation: Nav; ro
       right={anything ? (
         <HeaderAdd
           label={t('New trip', 'Chuyến đi mới', '新しい旅程', '新建行程', '新增行程')}
+          onTitle
           onPress={() => navigation.getParent()?.navigate('Ideas')}
           testID="trips-new"
         />

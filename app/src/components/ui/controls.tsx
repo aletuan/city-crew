@@ -802,11 +802,11 @@ export const BACK_HANG = 18;
  * from the icon font rasterised at 21pt (12 Nov 2026; the gear read the
  * same way from the font's own outline on 20 Nov 2026, 12.8, the
  * ellipsis reading 13.4 by that method; the plus of `HeaderAdd` on
- * 20 Nov 2026, 15.1 at the 22 it is drawn at — its arms stop well short
+ * 20 Nov 2026, 13.6 at the 27 it is drawn at — its arms stop well short
  * of the glyph's square). Hung by this much, the ink ends on the margin
  * the content's right edge does.
  */
-export const INK_GAP_END = { 'person-add-outline': 12, 'ellipsis-horizontal': 13, 'settings-outline': 13, add: 15 } as const;
+export const INK_GAP_END = { 'person-add-outline': 12, 'ellipsis-horizontal': 13, 'settings-outline': 13, add: 14 } as const;
 
 /** In-page back control: the round glass button wearing a chevron —
  *  or, `bare`, the chevron alone, hung to the margin (`BACK_HANG`). */

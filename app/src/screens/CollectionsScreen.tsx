@@ -884,6 +884,7 @@ export default function CollectionsScreen({ navigation, route }: {
         right={session ? (
           <HeaderAdd
             label={t('New collection', 'Bộ sưu tập mới', '新しいコレクション', '新建合集', '新增合集')}
+            onTitle
             onPress={startNew}
             testID={floating ? 'collection-floating-new' : 'collection-new'}
           />

@@ -582,6 +582,13 @@ describe('CollectionsScreen — signed in', () => {
     expect(screen.getByTestId('collection-new')).toBeTruthy();
     fireEvent.click(screen.getByRole('tab', { name: /Yours/ }));
     expect(screen.getByRole('button', { name: 'New collection' })).toBeTruthy();
+    // The header's plus, at 27, lowered to the large title's capitals.
+    {
+      const plus = screen.getByRole('button', { name: 'New collection' });
+      expect(plus.querySelector('[data-icon="add"]')!.getAttribute('data-size')).toBe('27');
+      const box = [plus, plus.parentElement!].map((el) => getComputedStyle(el).marginBottom);
+      expect(box).toContain('-3px');
+    }
     expect(screen.getByText('Create your first collection')).toBeTruthy();
   });
 
