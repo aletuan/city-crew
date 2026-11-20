@@ -34,8 +34,7 @@ import { useNoteEvent } from '../lib/tasteProfile';
 import type { Place } from '../lib/types';
 import { goTo, type Nav, type RootRoute } from '../nav';
 import { CoverGrid } from './collectionForm/CoverGrid';
-import type { Visibility } from '../lib/shares';
-import { AudienceChoice, FieldRule, leaveForm, makingOwn, SaveHint, SeenLine } from './collectionForm/formParts';
+import { FieldRule, leaveForm, makingOwn, SaveHint, SeenLine, useAudience } from './collectionForm/formParts';
 
 /** Long enough for a real name, short enough to stay on one line in a row. */
 const MAX_TITLE = 60;
@@ -65,9 +64,6 @@ export default function CollectionFormScreen({ navigation, route }: {
   // What the form opened on, which `changed` measures against.
   const [start] = useState({ title, desc });
   const [busy, setBusy] = useState(false);
-  // Who sees a list being made, Public until changed (owner, 20 Nov
-  // 2026) — `AudienceChoice`. Read only when making one of your own.
-  const [audience, setAudience] = useState<Visibility>('public');
   const failText = useFailText();
   const [error, setError] = useState<string | null>(null);
   const note = useNoteEvent();
@@ -83,6 +79,8 @@ export default function CollectionFormScreen({ navigation, route }: {
   // this row existed.
   const { data: places } = usePlaces();
   const col = editing ? mine.data.find((c) => c.slug === editing) ?? null : null;
+  // Who sees it, kept for Save like the fields (`formParts`).
+  const aud = useAudience(col, uid, makingOwn(editing, copyFrom));
   // A copy's members come from the route's slugs resolved against the
   // catalog — the source list belongs to somebody else, so no query of
   // "mine" can know it. Everything downstream (choices, Auto) is the
@@ -154,7 +152,8 @@ export default function CollectionFormScreen({ navigation, route }: {
   // save that would write back exactly what was there. A new list and a
   // copy need only a name — the copy is born on submit, so submitting
   // its prefilled suggestion unchanged is the whole point of the button.
-  const changed = title.trim() !== start.title.trim() || desc.trim() !== start.desc.trim() || coverId !== startCover;
+  // Who sees it counts since 20 Nov 2026 (`useAudience`).
+  const changed = [title.trim() !== start.title.trim(), desc.trim() !== start.desc.trim(), coverId !== startCover, aud.moved].includes(true);
 
   // Leaving with changes asks first — header Back and iOS's swipe alike,
   // both of which go through `beforeRemove`. A form that has just saved
@@ -199,7 +198,7 @@ export default function CollectionFormScreen({ navigation, route }: {
     setBusy(true);
     setError(null);
     // The list this save made, if it made one: where `leaveForm` goes.
-    let made: { slug: string; audience: Visibility } | null = null;
+    let made: Parameters<typeof leaveForm>[2] = null;
     try {
       if (copyFrom) {
         // The copy is born here, not when the menu row was tapped — this
@@ -233,6 +232,7 @@ export default function CollectionFormScreen({ navigation, route }: {
       }
       if (editing) {
         await updateCollection(editing, { title: name, desc, coverPhotoId: coverId });
+        made = aud.handOn(editing);
         // A public list is drawn from the catalog's copy too — the
         // Community tab, Explore's shelf, Ideas — and that copy refreshes
         // only on a pull or a stale foreground. A new cover went unseen
@@ -242,7 +242,7 @@ export default function CollectionFormScreen({ navigation, route }: {
         // none either way; it is born private.
         if (col?.is_public) cols.reload();
       } else {
-        made = { slug: await createCollection({ ownerId: uid, cityId: city.id, title: name, desc, isPublic: audience === 'public' }), audience };
+        made = { slug: await createCollection({ ownerId: uid, cityId: city.id, title: name, desc, isPublic: aud.seen === 'public' }), audience: aud.seen };
         // Reached from a place's bookmark with nowhere to put it: the list
         // arrives holding the place that prompted it, rather than empty
         // with the save silently dropped on the way here.
@@ -332,9 +332,9 @@ export default function CollectionFormScreen({ navigation, route }: {
       />
       {/* Beside the Save that raised it, rather than under the cover grid. */}
       {error ? <FormError>{failText(error)}</FormError> : null}
-      {/* Who can see it, in a line (owner, 16 Nov 2026): `SeenLine`. A
-          list of your own being made asks instead, under its fields. */}
-      <SeenLine col={col} uid={uid} making={makingOwn(editing, copyFrom)} />
+      {/* Who can see it, in a line that opens the plane's sheet (owner,
+          16 and 20 Nov 2026): `SeenLine`. */}
+      <SeenLine aud={aud} making={makingOwn(editing, copyFrom)} />
       <SaveHint kind={copyFrom ? 'copy' : addPlaceSlug ? 'place' : null} />
       {/* The fields on the page itself, between hairlines, with no box and
           no glyph (owner, 16 Nov 2026) — see `collectionForm/formParts`. */}
@@ -369,7 +369,6 @@ export default function CollectionFormScreen({ navigation, route }: {
         returnKeyType="done"
       />
       <FieldRule />
-      <AudienceChoice making={makingOwn(editing, copyFrom)} value={audience} onChange={setAudience} />
       {/* No chips here (owner, 16 Nov 2026). The list's kinds were shown
           between the description and the cover from 15 Oct, each a toggle
           that hid it from the list's page; they are worked out from the

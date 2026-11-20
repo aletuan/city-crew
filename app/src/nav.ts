@@ -4,6 +4,7 @@ import { createNavigationContainerRef, type RouteProp } from '@react-navigation/
 import { normalizeHandle } from './lib/handle';
 import { returnTab, takeResume } from './lib/resume';
 import type { Subject } from './lib/comments';
+import type { Visibility } from './lib/shares';
 
 /**
  * What the wizard asked, in the shape the two screens after it need.
@@ -113,10 +114,11 @@ export type RootStackParamList = {
    *  Reached from Explore's footer and its scroll offer; Search asks
    *  Google in place now rather than sending anyone here. */
   AddPlace: undefined;
-  /** `share`: open "Share with friends" on arrival — a list just made
-   *  with Friends chosen, whose friends are chosen here (owner, 20 Nov
-   *  2026; `collectionForm/formParts`' `leaveForm`). */
-  CollectionDetail: { slug: string; share?: boolean };
+  /** `seen`: who the collection form was told should see the list, done
+   *  on arrival as the page's own sheet does it — Friends opens "Share
+   *  with friends", whose friends are chosen here (owner, 20 Nov 2026;
+   *  `collectionForm/formParts`' `leaveForm`). */
+  CollectionDetail: { slug: string; seen?: Visibility };
   /** Who liked and who copied one of your lists, all time — the card's
    *  "View activity ›". By slug, like the page it opens from: the row is
    *  already in memory among your own lists, so only the key travels. */
