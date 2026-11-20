@@ -42,7 +42,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Alert, ScrollView, Text, View } from 'react-native';
 import { useFocusEffect, useScrollToTop } from '@react-navigation/native';
 import { Glyph, ICON } from '../components/ui/glyph';
-import { AddPill } from '../components/add';
+import { HeaderAdd } from '../components/add';
 import {
   AmbientWarmth,
   Card,
@@ -233,14 +233,13 @@ export default function TripsScreen({ navigation, route }: { navigation: Nav; ro
       // the rule Collections keeps on its own section heading and this
       // screen shipped without.
       //
-      // `AddPill` rather than a pill of its own, so the word, the glyph and
-      // the height are the ones every other tab uses.
+      // The header's plus (`HeaderAdd`), the one every header that makes
+      // something wears.
       right={trips.data.length > 0 ? (
-        <AddPill
-          quiet
-          label={t('New', 'Tạo mới', '新規', '新建', '新增')}
+        <HeaderAdd
+          label={t('New trip', 'Chuyến đi mới', '新しい旅程', '新建行程', '新增行程')}
           onPress={() => navigation.getParent()?.navigate('Ideas')}
-          accessibilityLabel={t('New trip', 'Chuyến đi mới', '新しい旅程', '新建行程', '新增行程')}
+          testID="trips-new"
         />
       ) : undefined}
     >

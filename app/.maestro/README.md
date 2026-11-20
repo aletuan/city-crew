@@ -334,7 +334,7 @@ reaches the native view.
 | `PlaceDetailScreen` (check-in) | `detail-checkin` / `detail-checked-in` — one id per state; in the visit sheet `checkin-head`, `checkin-visit` (each row), `checkin-visit-remove` (each row's trash), `detail-checkin-again` |
 | `SaveSheet` | `save-place-<slug>`, `save-row-<index>`, `save-done` |
 | `CollectionFormScreen` | `collection-name`, `collection-submit`, `collection-form-seen` |
-| `CollectionsScreen` | `collection-card-<index>` (community; same index in grid and rows), `collections-yours` (the Yours tab, signed in), `collection-new` (the New pill in the header: on Yours once there is a list, on Community always when signed in) |
+| `CollectionsScreen` | `collection-card-<index>` (community; same index in grid and rows), `collections-yours` (the Yours tab, signed in), `collection-new` (the plus in the header: on Yours once there is a list, on Community always when signed in) |
 | `CollectionDetailScreen` | `collection-place-<index>` (List), `collection-tile-<index>` (Grid), `collection-menu-grid`, `collection-back`, `collection-more`, `collection-menu-edit`, `collection-menu-delete` |
 | `CrewScreen` | `crew-sent-<index>` (outgoing request), `crew-friend-<index>`, `crew-accept-<index>` |
 
