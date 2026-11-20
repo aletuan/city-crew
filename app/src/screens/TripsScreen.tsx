@@ -38,9 +38,9 @@
 // mock to avoid. The footer keeps the shape and fills it with what is
 // true — how many stops, what it costs.
 
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Alert, ScrollView, Text, View } from 'react-native';
-import { useFocusEffect, useScrollToTop } from '@react-navigation/native';
+import { useScrollToTop } from '@react-navigation/native';
 import { Glyph, ICON } from '../components/ui/glyph';
 import { HeaderAdd } from '../components/add';
 import {
@@ -64,6 +64,7 @@ import { LoadFailBanner, LoadFailEmpty } from '../components/loadFail';
 import { splitTrips } from '../lib/trips';
 import { useCrew } from '../lib/crew';
 import { useInvitations } from '../lib/invitations';
+import { useKeepCurrent } from '../lib/usePull';
 import { answerInvite } from '../lib/data';
 import { sortInvites, splitByStanding, type InviteRow } from '../lib/invites';
 import type { Trip } from '../lib/data';
@@ -252,22 +253,6 @@ export default function TripsScreen({ navigation, route }: { navigation: Nav; ro
   const trips = useMyTrips();
   const tripsFail = classifyLoadFail(trips.error);
 
-  // Saving happens in the Ideas stack, in another tab, so this list is
-  // always out of date by the time anyone looks at it. Every focus reloads
-  // — including the first. Skipping the first used to assume "just
-  // mounted" meant "fresh", but the provider's own fetch runs once, on
-  // app launch, on the Explore tab; the first time this tab is ever
-  // focused in a session is exactly the moment after saving the session's
-  // first trip, and skipping that focus left the new trip missing until a
-  // second visit. The redundant request the skip was for costs one round
-  // trip on an ordinary visit and is invisible — `reload` keeps showing
-  // the data already on screen while it runs.
-  useFocusEffect(useCallback(() => {
-    trips.reload();
-  // `trips.reload` is stable; `trips` is a new object on every load.
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [trips.reload]));
-
   // One `Date` for both halves of the question, because `todayISO()` and
   // `minutesOf()` read separately can straddle midnight and produce "the
   // 17th, at 00:00" for a clock that is already on the 18th.
@@ -285,6 +270,10 @@ export default function TripsScreen({ navigation, route }: { navigation: Nav; ro
   const me = session?.user?.id ?? null;
   const { people } = useCrew();
   const { invites } = useInvitations();
+  // Saving happens in the Ideas stack and an answer arrives from another
+  // phone, so both lists are re-read on every focus and on a pull —
+  // `lib/usePull` says why, and why the first focus is not skipped.
+  const refresh = useKeepCurrent([trips, invites], [trips, invites]);
   const [answering, setAnswering] = useState<string | null>(null);
 
   const myInvites = useMemo(
@@ -491,6 +480,7 @@ export default function TripsScreen({ navigation, route }: { navigation: Nav; ro
           ref={scrollRef}
           contentContainerStyle={{ paddingHorizontal: space.page, paddingTop: 4, paddingBottom: clearance }}
           showsVerticalScrollIndicator={false}
+          refreshControl={refresh}
           onScroll={duckScroll}
           scrollEventThrottle={16}
         >
