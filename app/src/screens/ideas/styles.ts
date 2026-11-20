@@ -65,6 +65,13 @@ export const s = StyleSheet.create({
   thumbEmpty: { alignItems: 'center', justifyContent: 'center', backgroundColor: colors.accentSoft },
   fromTitle: { color: colors.text, fontSize: 16, fontWeight: font.semibold },
   fromMeta: { color: colors.textTertiary, fontSize: 13 },
+  // The pin's gap to its figure on the shelf's cards.
+  fromCount: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  // On the page's margin, as the when-card above them is. The seed cards
+  // had only their vertical padding and ran to the screen's edges, so
+  // the two cards on this screen stood at two widths and the ticks sat
+  // under the phone's rounded corner (owner's screenshot, 21 Nov 2026).
+  seedCard: { marginHorizontal: space.page, paddingVertical: 4 },
   // Under the heading, in the rows' own meta voice: it is about the rows.
   // On the heading's own margin, since it is the heading's second line;
   // pulled up into the heading's gap so the two read as one block.
