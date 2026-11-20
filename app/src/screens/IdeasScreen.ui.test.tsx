@@ -24,7 +24,8 @@
 import React from 'react';
 import { Platform } from 'react-native';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { act, cleanup, fireEvent, render, screen, waitFor } from '../uitest/render';
+import { act, cleanup, fireEvent, render, screen, viewStyleOf, waitFor } from '../uitest/render';
+import { space } from '../theme';
 import { useScrollToTop } from '@react-navigation/native';
 import { addDays, toISO } from '../lib/day';
 import { dateline } from '../lib/format';
@@ -842,12 +843,18 @@ describe('start from what you love', () => {
     state.members = { pho: [here(), here()], lakes: [here('https://x/lake.jpg')], mixed: [away('https://x/sg.jpg'), here('https://x/mixed.jpg'), here(), away()] };
     const navigation = renderScreen();
     expect(screen.getByText('Start from what you love')).toBeTruthy();
-    expect(screen.getByText('1 place')).toBeTruthy();
+    // The pin and the figure, said in full (owner, 21 Nov 2026).
+    const counts = () => screen.getAllByTestId('ideas-seed-count');
+    expect(counts().map((c) => c.getAttribute('aria-label'))).toEqual(['2 places', '1 place', '2 places']);
+    expect(counts().map((c) => c.textContent)).toEqual(['2', '1', '2']);
+    expect(counts().every((c) => c.querySelector('[data-icon="location-outline"]'))).toBe(true);
+    expect(screen.queryByText(/places?$/)).toBeNull();
+    // On the page's margin, as the when-card is: never edge to edge.
+    expect(viewStyleOf(screen.getByTestId('ideas-seed-card')).marginHorizontal).toBe(space.page);
     // The count is the places in this city, in the same short line as
     // every other row: not "2 of 4", and never the four. So Phở run and
     // Mixed read the same.
-    expect(screen.getAllByText('2 places')).toHaveLength(2);
-    expect(screen.queryByText('4 places')).toBeNull();
+    expect(screen.queryByLabelText('4 places')).toBeNull();
     // The header's painting is an image too; the covers are the ones
     // under the collections — and a list without a chosen cover takes
     // its first place *here*, not its first place.
@@ -877,7 +884,7 @@ describe('start from what you love', () => {
     state.mine = [coll('saigon', 'Saigon weekend'), coll('empty', 'Empty'), coll('lakes', 'Lakes')];
     state.members = { saigon: [away(), away()], lakes: [here()] };
     renderScreen();
-    expect(screen.getAllByRole('checkbox').map((b) => b.textContent)).toEqual(['Lakes1 place']);
+    expect(screen.getAllByRole('checkbox').map((b) => b.textContent)).toEqual(['Lakes1']);
 
     cleanup();
     state.mine = [coll('saigon', 'Saigon weekend'), coll('empty', 'Empty')];
@@ -885,7 +892,7 @@ describe('start from what you love', () => {
     expect(screen.queryByText('Start from what you love')).toBeNull();
   });
 
-  const names = () => screen.getAllByRole('checkbox').map((b) => b.textContent!.replace(/\d+ places?$/, ''));
+  const names = () => screen.getAllByRole('checkbox').map((b) => b.textContent!.replace(/\d+$/, ''));
   const more = () => screen.queryByTestId('seeds-more');
 
   // Your own lists are what you came for; the community's are behind one
@@ -993,7 +1000,8 @@ describe('start from what you love', () => {
     state.mine = [coll('mixed', 'Mixed'), coll('empty', 'Empty')];
     state.members = { mixed: [away(), here(), away()] };
     renderScreen();
-    expect(screen.getAllByRole('checkbox').map((b) => b.textContent)).toEqual(['Mixed3 places']);
+    expect(screen.getAllByRole('checkbox').map((b) => b.textContent)).toEqual(['Mixed3']);
+    expect(screen.getByTestId('ideas-seed-count').getAttribute('aria-label')).toBe('3 places');
   });
 });
 

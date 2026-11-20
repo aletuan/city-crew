@@ -46,6 +46,7 @@ import { type Collection, coverUriOf, membersOf, type Place } from '../lib/data'
 import { clockOf, dateline } from '../lib/format';
 import { addDays, clampDay, fromISO, toISO } from '../lib/day';
 import { type Lang, useI18n } from '../lib/i18n';
+import { placesOf } from '../lib/collectionShelf';
 import { partGone, startMinFor, START_MIN } from '../lib/planner';
 import { useMyLists, useSaveActions } from '../lib/save';
 import { canPlan, COMPANY, EMPTY_DRAFT, startPoint, toggle, TripDraft } from '../lib/trip';
@@ -406,15 +407,21 @@ export default function IdeasScreen({ navigation, route }: {
                 yours, and a label identical on every row
                 says nothing. The count stays because it is
                 the one fact that picks seeds: eight places
-                feed a plan, one barely seasons it. */}
-            <Text style={s.fromMeta} numberOfLines={1}>
-              {t(
-                `${members.length} ${members.length === 1 ? 'place' : 'places'}`,
-                `${members.length} địa điểm`,
-                `${members.length}件`,
-                `${members.length} 个地点`, `${members.length} 個地點`,
-              )}
-            </Text>
+                feed a plan, one barely seasons it.
+
+                The pin and the figure, not "13 địa điểm"
+                (owner, 21 Nov 2026): the word stood on every
+                row of a list where every row counts the same
+                thing, and the Explore shelf, Collections'
+                tiles and a list's own card already say it with
+                the pin (owner, 2 Nov 2026). Spoken in full, so
+                VoiceOver still hears "13 places". In the row's
+                tertiary ink rather than the photo cards' — it
+                sits on paper, not a picture. */}
+            <View style={s.fromCount} accessible accessibilityLabel={placesOf(members.length, t)} testID="ideas-seed-count">
+              <Glyph name="location-outline" size={ICON.meta} color={colors.textTertiary} />
+              <Text style={s.fromMeta} numberOfLines={1}>{members.length}</Text>
+            </View>
           </View>
           <SelectTick on={on} />
         </PressableScale>
@@ -647,7 +654,7 @@ export default function IdeasScreen({ navigation, route }: {
                 {more && community.length > 0 && (
                   <Text style={s.groupLabel}>{t('Yours', 'Của bạn', '自分の', '我的', '我的')}</Text>
                 )}
-                <Card style={{ paddingVertical: 4 }}>{own.map(seedRow)}</Card>
+                <Card style={s.seedCard} testID="ideas-seed-card">{own.map(seedRow)}</Card>
               </>
             )}
             {community.length > 0 && (own.length > 0
@@ -655,7 +662,7 @@ export default function IdeasScreen({ navigation, route }: {
                 ? (
                   <>
                     <Text style={s.groupLabel}>{t('Community', 'Cộng đồng', 'みんなの', '社区', '社群')}</Text>
-                    <Card style={{ paddingVertical: 4 }}>{community.map(seedRow)}</Card>
+                    <Card style={s.seedCard} testID="ideas-seed-card">{community.map(seedRow)}</Card>
                   </>
                 )
                 : (
@@ -671,7 +678,7 @@ export default function IdeasScreen({ navigation, route }: {
                 ))
               : (
                 <>
-                  <Card style={{ paddingVertical: 4 }}>
+                  <Card style={s.seedCard} testID="ideas-seed-card">
                     {(more ? community : community.slice(0, COMMUNITY_FIRST)).map(seedRow)}
                   </Card>
                   {!more && community.length > COMMUNITY_FIRST && (
