@@ -5,7 +5,7 @@
 // `TripDetailScreen`'s test stands this row in with a stub, so the row
 // itself had never been rendered by a test: not the count, not the two
 // silences an invitee's count can be in, not the named list with a
-// status beside each name. The sorting and the counting are `lib/invites`
+// status beside each name — now a mark on each face. The sorting and the counting are `lib/invites`
 // and are held at 100% there; this is what the row makes of them.
 
 import React from 'react';
@@ -53,9 +53,8 @@ describe('your own trip', () => {
     const onInvite = vi.fn();
     const { container } = mine({ onInvite });
     expect(screen.getByText('Just you, for now')).toBeTruthy();
-    // One face — yours — and no list: nobody has been asked yet.
+    // One face — yours — and no marks: nobody has been asked yet.
     expect(faces(container)).toBe(1);
-    expect(screen.queryByText('Coming')).toBeNull();
 
     fireEvent.click(screen.getByRole('button', { name: 'Invite' }));
     expect(onInvite).toHaveBeenCalled();
@@ -93,32 +92,51 @@ describe('your own trip', () => {
   });
 
   // A refusal is a fact the planner has to act on — a table for four is
-  // wrong when one of them cannot come — so a declined row stays, named.
-  it('lists every person asked, with what each one said, accepted first', () => {
-    mine({ invites: [invite('hoa', 'declined', '2026-09-01'), invite('minh', 'pending', '2026-09-02'), invite('linh', 'accepted', '2026-09-03')] });
-    const said = screen.getAllByText(/^(Coming|Asked|Can’t make it)$/).map((el) => el.textContent);
+  // wrong when one of them cannot come — so a declined invitation stays on
+  // the row, with its own mark, and is never mistaken for a waiting one.
+  it('marks each face with what its owner said, accepted first', () => {
+    const { container } = mine({ invites: [invite('hoa', 'declined', '2026-09-01'), invite('minh', 'pending', '2026-09-02'), invite('linh', 'accepted', '2026-09-03')] });
+    const marks = (name: string) => container.querySelectorAll(`[data-icon="${name}"]`).length;
+    expect([marks('checkmark'), marks('time'), marks('close')]).toEqual([1, 1, 1]);
+    // Order is the crew's — yes, waiting, no — and the words are the ones
+    // the Maestro flows read by id.
+    const said = [0, 1, 2].map((n) => screen.getByTestId(`crew-said-${n}`).getAttribute('aria-label'));
     expect(said).toEqual(['Coming', 'Asked', 'Can’t make it']);
-    expect(screen.getByText('Linh')).toBeTruthy();
-    expect(screen.getByText('Minh')).toBeTruthy();
-    // No name on the profile: the handle, so the row still says who.
-    expect(screen.getByText('@hoa_')).toBeTruthy();
+    // The planner's own face carries no mark.
+    expect(screen.queryByTestId('crew-said--1')).toBeNull();
+  });
+
+  it('names each guest’s face for a screen reader, since the row draws no names', () => {
+    mine({ invites: [invite('hoa', 'declined', '2026-09-01'), invite('minh', 'pending', '2026-09-02'), invite('linh', 'accepted', '2026-09-03')] });
+    // No name on the profile: the handle, so the face still says who.
+    expect(['Linh', 'Minh', '@hoa_'].map((n) => screen.getByLabelText(n))).toHaveLength(3);
   });
 
   it('calls a person the crew copy has not heard of Someone', () => {
     mine({ invites: [invite('ghost', 'pending')], people: {} });
-    expect(screen.getByText('Someone')).toBeTruthy();
-    expect(screen.getByText('Asked')).toBeTruthy();
+    expect(screen.getByLabelText('Someone')).toBeTruthy();
+    expect(screen.getByTestId('crew-said-0').getAttribute('aria-label')).toBe('Asked');
   });
 
-  it('shows at most four faces, then counts instead', () => {
+  it('opens the invite sheet from the faces as well as from the button', () => {
+    const onInvite = vi.fn();
+    mine({ onInvite, invites: [invite('linh', 'accepted')] });
+    fireEvent.click(screen.getByTestId('trip-faces'));
+    expect(onInvite).toHaveBeenCalledTimes(1);
+  });
+
+  it('shows the planner and three guests, then counts the rest', () => {
     const many = ['a', 'b', 'c', 'd', 'e'].map((id) => invite(id, 'accepted'));
     const people = Object.fromEntries(many.map((i) => [i.invitee_id, person(i.invitee_id, i.invitee_id, i.invitee_id, `https://x/${i.invitee_id}.jpg`)]));
-    const { container } = mine({ invites: many, people });
-    // The faces row alone: the named list below carries a face per row,
-    // so count only what sits before the line.
+    mine({ invites: many, people });
     const row = screen.getByText('6 going').parentElement!.parentElement!;
     expect(row.querySelectorAll('img').length).toBe(4);
-    expect(faces(container)).toBeGreaterThan(4);
+    expect(screen.getByText('+2')).toBeTruthy();
+  });
+
+  it('draws no count when every guest fits', () => {
+    mine({ invites: [invite('linh', 'accepted'), invite('minh', 'pending')] });
+    expect(screen.queryByText(/^\+\d/)).toBeNull();
   });
 
   it('hides the invite button for a solo evening', () => {
@@ -150,7 +168,8 @@ describe('a trip you were asked onto', () => {
 
   it('never lists other people’s answers, even if rows were handed over', () => {
     theirs({ invites: [invite('linh', 'declined')], people: PEOPLE });
-    expect(screen.queryByText('Can’t make it')).toBeNull();
-    expect(screen.queryByText('Linh')).toBeNull();
+    // No faces beyond the two ends, no marks, no names.
+    expect(screen.queryByTestId('crew-said-0')).toBeNull();
+    expect(screen.queryByLabelText('Linh')).toBeNull();
   });
 });
