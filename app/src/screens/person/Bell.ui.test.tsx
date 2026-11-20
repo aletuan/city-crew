@@ -28,6 +28,9 @@ describe('Bell', () => {
   it('wears the dot, and says how many, when something is new', () => {
     news.fresh = 3;
     render(<Bell onPress={() => {}} />);
-    expect(screen.getByRole('button', { name: 'Activity, 3 new' }).contains(screen.getByTestId('person-bell-dot'))).toBe(true);
+    // Beside the press, over it, not inside: the dot takes no touch.
+    const bell = screen.getByRole('button', { name: 'Activity, 3 new' });
+    expect(bell.contains(screen.getByTestId('person-bell-dot'))).toBe(false);
+    expect(bell.parentElement!.contains(screen.getByTestId('person-bell-dot'))).toBe(true);
   });
 });
