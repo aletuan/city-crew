@@ -1519,7 +1519,7 @@ describe('sharing with friends', () => {
       state.ships = [];
       show();
       openPicker();
-      expect(screen.getByText(/Nobody in your crew yet/)).toBeTruthy();
+      expect(screen.getByText(/You have no friends here yet/)).toBeTruthy();
       fireEvent.click(screen.getByText('Find friends'));
       expect(spies.goTo).toHaveBeenCalledWith('Profile', { screen: 'Crew', initial: false });
       endModalFade();
