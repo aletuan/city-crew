@@ -61,3 +61,27 @@ export function viewStyleOf(el: Element): ViewStyle {
 export function fontSizeOf(el: HTMLElement): number | undefined {
   return textStyleOf(el)?.fontSize;
 }
+
+/**
+ * The props of the first node in the committed tree that `pick` says yes
+ * to. A gesture with no jsdom counterpart — a pull to refresh — is tested
+ * by calling the handler the screen gave `RefreshControl`, read from here.
+ */
+export function propsWhere(pick: (p: Record<string, unknown>) => boolean): Record<string, unknown> {
+  type Fiber = { child: Fiber | null; sibling: Fiber | null; memoizedProps: Record<string, unknown> | null };
+  const host = document.body.firstElementChild as unknown as Record<string, { stateNode: { current: Fiber } }>;
+  const key = Object.keys(host).find((k) => k.startsWith('__reactContainer'))!;
+  const stack: Fiber[] = [host[key].stateNode.current];
+  while (stack.length) {
+    const fb = stack.pop()!;
+    const p = fb.memoizedProps;
+    if (p && typeof p === 'object' && pick(p)) return p;
+    if (fb.sibling) stack.push(fb.sibling);
+    if (fb.child) stack.push(fb.child);
+  }
+  throw new Error('nothing matched');
+}
+
+/** The pull-to-refresh the screen on show has wired: its two props. */
+export const pullControl = () => propsWhere((p) => 'onRefresh' in p && 'refreshing' in p) as
+  { onRefresh: () => void; refreshing: boolean };

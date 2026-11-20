@@ -64,7 +64,7 @@ const OVERSIZE = {
   'src/screens/EditProfileScreen.tsx': { lines: 258, complexity: 27 },
   'src/screens/SketchingScreen.tsx': { lines: 255, complexity: 38 },
   'src/screens/VisitedScreen.tsx': { lines: 243, complexity: 27 },
-  'src/screens/TripsScreen.tsx': { lines: 232, complexity: 31 },
+  'src/screens/TripsScreen.tsx': { lines: 194, complexity: 31 },
   'src/lib/auth.tsx': { lines: 223 },
   'src/screens/CollectionActivityScreen.tsx': { lines: 162 },
   'src/screens/TripInvitationScreen.tsx': { lines: 218, complexity: 66 },
