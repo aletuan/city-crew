@@ -327,3 +327,14 @@ Lượt retry `20261120-105743` trên `f3fedc5e` bị gián đoạn, không có 
 **Kiểm chứng sau sửa:** `20261120-114433`, SHA `f3fedc5e`: 17 PASS 4m39s, 19 PASS 7m59s, 20 PASS 3m42s; JUnit 3/3, runner exit 0, cleanup thành công, không còn JSON ledger signup/trip hay trip lock. Các lần đăng xuất trong 19/20 đi tiếp được vào màn Sign in và nhập credential sau helper mới. Cú pháp helper và 122 kiểm tra testID đạt; 5 gate chạy lại sau reboot đều đạt (7460 test/318 file cho unit và timezone; coverage qua floors). Không gộp baseline và retry thành một lượt 22/22 trên revision cuối.
 
 **Chi phí suite:** baseline có tổng thời gian testcase 5064s (~84m24s), trip invite 1204s (~24%). Có thể ưu tiên đo phần setup/auth/cold start trước khi tối ưu; không diễn giải tổng thời gian driver thành độ trễ app. Cảnh báo Maestro “number of flows (0)” lúc đầu không phải kết quả discovery cuối: JUnit thực tế có đủ 22 tên flow.
+
+
+## Fixture collection phải chọn Private trước submit — 20/11/2026
+
+Base main `9fa2f60a`, branch `codex/maestro-private-fixtures`. Main đã đổi tạo collection sang Public mặc định và dùng audience sheet từ `collection-form-seen`; không dùng ID radio từ revision cũ. 06 (nhánh chưa có list) và 11 trước đây không chọn audience. 06 giữ list sau khi unsave, nên không được coi cleanup place là cleanup collection.
+
+**Bài học:** lựa chọn an toàn cho fixture phải được thiết lập trước mọi đường submit, kể cả `hideKeyboard`/Return. Helper mới chọn Private khi tên còn rỗng, mở lại sheet xác nhận selected. Sau tạo, mở sheet trên trang collection và assert Private đã selected trước khi tap; 11 kiểm lại sau rename. Không đổi mặc định Public của sản phẩm để phục vụ test.
+
+Rà soát bằng session đúng hai tài khoản Keychain trước test: tài khoản 1 có đúng một `Maestro smoke` (tạo 11/09/2026), `is_public=false`, 0 place; tài khoản 2 không có collection. Không có `Maestro CRUD`/`Maestro CRUD 2` tồn dư, không sửa/xóa dữ liệu cũ. Phạm vi rà soát chỉ hai tài khoản test này, không phải toàn DB. Bằng chứng local `.smoke-local/collection-audit-before.json`; không ghi credential vào Git. Probe dùng account mới không seed collection để nhánh tạo mới 06 thực sự chạy, sau đó 11; kết quả đang chờ.
+
+Probe `20261120-135941`: 06 PASS 2m51s trên tài khoản chưa có collection; 11 PASS 3m23s. Assertion selected Private đạt trước nhập tên, trên trang collection sau tạo và sau rename. Read-only backend oracle sau hai flow xác nhận đúng một `Maestro smoke`, `is_public=false`, 0 place, không còn CRUD; cleanup cặp tài khoản tạm thành công. Log `.smoke-local/private-create-probe.log`. 123 kiểm tra selector, cú pháp 06/11 và 5 gate đạt; unit 7481 test/318 file. Chờ baseline 22 flow trên commit cố định trước khi kết luận hoàn tất.
