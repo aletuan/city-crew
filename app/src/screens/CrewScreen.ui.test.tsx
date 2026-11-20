@@ -15,7 +15,7 @@ import React from 'react';
 import { StyleSheet, type StyleProp, type TextStyle } from 'react-native';
 import { colors, font } from '../theme';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { act, fireEvent, fontSizeOf, render, screen, textStyleOf, waitFor, within } from '../uitest/render';
+import { act, fireEvent, fontSizeOf, render, screen, textStyleOf, viewStyleOf, waitFor, within } from '../uitest/render';
 import type { Nav } from '../nav';
 import type { FriendProfile, ListTitle } from '../lib/data';
 import type { FriendshipRow, Suggestion } from '../lib/friends';
@@ -81,7 +81,7 @@ import CrewScreen from './CrewScreen';
 /** The flattened style a Text was committed with, by its words: jsdom does
  *  not resolve react-native-web's atomic font classes, so a weight is read
  *  off the props rather than the computed style. */
-const weightOf = (words: string): unknown => {
+const styleOf = (words: string | number): TextStyle | undefined => {
   type Fiber = { child: Fiber | null; sibling: Fiber | null; memoizedProps: Record<string, unknown> | null };
   const host = document.body.firstElementChild as unknown as Record<string, { stateNode: { current: Fiber } }>;
   const key = Object.keys(host).find((k) => k.startsWith('__reactContainer'))!;
@@ -90,13 +90,14 @@ const weightOf = (words: string): unknown => {
     const f = stack.pop()!;
     const p = f.memoizedProps;
     if (p && typeof p === 'object' && p.children === words && 'style' in p) {
-      return StyleSheet.flatten(p.style as StyleProp<TextStyle>)?.fontWeight;
+      return StyleSheet.flatten(p.style as StyleProp<TextStyle>) ?? undefined;
     }
     if (f.sibling) stack.push(f.sibling);
     if (f.child) stack.push(f.child);
   }
   throw new Error(`no text "${words}" in the committed tree`);
 };
+const weightOf = (words: string): unknown => styleOf(words)?.fontWeight;
 
 
 const nav = () => ({
@@ -203,11 +204,14 @@ describe('the frame', () => {
 });
 
 describe('which tab opens', () => {
-  it('opens on Your friends when nobody is waiting, with the tally in the name', () => {
+  it('opens on Your friends when nobody is waiting, with the tally beside the name', () => {
     crew.ships.data = [edge(ME, 'a', 'accepted'), edge('b', ME, 'accepted')];
     crew.people = { a: person('a', 'anh', 'Anh'), b: person('b', 'bao') };
     render(<CrewScreen navigation={nav()} />);
-    expect(tab(/Your friends/).textContent).toContain('Your friends (2)');
+    // The word, then the tally in its pill; the name read aloud carries
+    // it as the underline drew it.
+    expect(tab(/Your friends/).textContent).toBe('Your friends2');
+    expect(tab(/Your friends/).getAttribute('aria-label')).toBe('Your friends (2)');
     // Handle first (owner, 15 Nov 2026): the handle on top, bare, and the
     // name under it; a person with no name is the handle alone.
     const [anh, bao] = [screen.getByTestId('crew-friend-0'), screen.getByTestId('crew-friend-1')];
@@ -218,28 +222,31 @@ describe('which tab opens', () => {
     expect(within(bao).getByTestId('crew-who-handle').textContent).toBe('bao');
     expect(within(bao).queryByTestId('crew-who-name')).toBeNull();
     expect(anh.textContent).not.toContain('@');
-    expect(screen.queryByText('Pending')).toBeNull();
+    expect(screen.queryByText(/^Pending/)).toBeNull();
   });
 
-  it('opens on Requests when somebody is waiting, and badges nothing on the open tab', () => {
+  it('opens on Requests when somebody is waiting, with the count in a pill on the open tab', () => {
     crew.ships.data = [edge('r', ME, 'pending')];
     crew.people = { r: person('r', 'minh', 'Minh') };
     render(<CrewScreen navigation={nav()} />);
-    expect(screen.getByText('Pending')).toBeTruthy();
+    expect(screen.getByText(/^Pending · /)).toBeTruthy();
     expect(screen.getByText('Minh')).toBeTruthy();
     expect(screen.getByText('wants to join your crew')).toBeTruthy();
-    expect(tab(/Requests/).textContent).toContain('Requests (1)');
+    // A pill on the chosen tab too, since 20 Nov 2026 (`TabsLook`): the
+    // underline folds it into the name there; words alone do not.
+    expect(tab(/Requests/).textContent).toBe('Requests1');
+    expect(tab(/Requests/).getAttribute('aria-label')).toBe('Requests (1)');
   });
 
   it('waits for the edges to land before choosing, then never re-picks', () => {
     crew.ships.loadedAt = null;
     crew.ships.data = [edge('r', ME, 'pending')];
     const { rerender } = render(<CrewScreen navigation={nav()} />);
-    expect(screen.queryByText('Pending')).toBeNull();
+    expect(screen.queryByText(/^Pending/)).toBeNull();
 
     crew.ships.loadedAt = 2;
     rerender(<CrewScreen navigation={nav()} />);
-    expect(screen.getByText('Pending')).toBeTruthy();
+    expect(screen.getByText(/^Pending · /)).toBeTruthy();
 
     // The reader chooses Friends; a reload that brings another request
     // must not drag them back.
@@ -247,9 +254,70 @@ describe('which tab opens', () => {
     crew.ships.data = [...crew.ships.data, edge('s', ME, 'pending', '2026-02-01')];
     crew.ships.loadedAt = 3;
     rerender(<CrewScreen navigation={nav()} />);
-    expect(screen.queryByText('Pending')).toBeNull();
+    expect(screen.queryByText(/^Pending/)).toBeNull();
     // ...and the unchosen Requests tab rings with the count instead.
     expect(tab(/Requests/).textContent).toBe('Requests2');
+  });
+});
+
+// The tabs on this screen are words alone since 20 Nov 2026 — a trial
+// here before anywhere else (`TabsLook`). What makes it more than a look
+// is that the chosen tab still differs in something besides colour.
+describe('the tabs, drawn as words', () => {
+
+  it('draws no glyph and no rule, and tells the chosen one by weight as well as colour', () => {
+    crew.ships.data = [edge('r', ME, 'pending')];
+    crew.people = { r: person('r', 'minh', 'Minh') };
+    render(<CrewScreen navigation={nav()} />);
+    const on = tab(/Requests/);
+    const off = tab(/Your friends/);
+    expect(on.querySelector('[data-icon]')).toBeNull();
+    expect(off.querySelector('[data-icon]')).toBeNull();
+    expect(styleOf('Requests')).toEqual(expect.objectContaining({ color: colors.text, fontWeight: font.semibold, fontSize: 17 }));
+    expect(styleOf('Your friends')).toEqual(expect.objectContaining({ color: colors.textTertiary, fontWeight: font.regular, fontSize: 17 }));
+    // The rule is drawn on both and transparent on both, so the row is
+    // as tall as the underlined one and nothing moves between the looks.
+    const rule = (el: HTMLElement) => [el, ...el.querySelectorAll('div')]
+      .map((x) => viewStyleOf(x)).find((v) => v.borderBottomWidth != null);
+    expect(rule(on)).toEqual(expect.objectContaining({ borderBottomWidth: 2, borderBottomColor: 'transparent' }));
+    expect(rule(off)).toEqual(expect.objectContaining({ borderBottomWidth: 2, borderBottomColor: 'transparent' }));
+  });
+
+  // News and fact are told apart by the pill's ground: the count wears
+  // the badge, the tally the glass the screen's quiet "Add" stands on.
+  it('draws the count in the badge and the tally on the glass', () => {
+    crew.ships.data = [edge('r', ME, 'pending'), edge(ME, 'a', 'accepted'), edge('b', ME, 'accepted')];
+    crew.people = { r: person('r', 'minh', 'Minh'), a: person('a', 'anh', 'Anh'), b: person('b', 'bao') };
+    render(<CrewScreen navigation={nav()} />);
+    const pill = (name: RegExp, figure: string) => [...tab(name).querySelectorAll('div')]
+      .filter((el) => el.textContent === figure && el.children.length > 0)
+      .map((el) => viewStyleOf(el)).find((v) => v.backgroundColor != null);
+    expect(styleOf(1)).toEqual(expect.objectContaining({ color: colors.accentInk }));
+    expect(pill(/Requests/, '1')).toEqual(expect.objectContaining({ backgroundColor: colors.badgeSolid }));
+    expect(styleOf(2)).toEqual(expect.objectContaining({ color: colors.textSecondary }));
+    expect(pill(/Your friends/, '2')).toEqual(expect.objectContaining({ backgroundColor: colors.surfaceGlass }));
+  });
+
+  // The rest of the app keeps the underline until the owner has seen this
+  // on the phone.
+  it('leaves the underlined look the default', async () => {
+    const { UnderlineTabs } = await import('../components/ui');
+    render(<UnderlineTabs tabs={[{ key: 'a', icon: 'mail-outline', label: 'Alpha' }, { key: 'b', icon: 'people-outline', label: 'Beta' }]} active="a" onChange={() => {}} />);
+    expect(screen.getByRole('tab', { name: /Alpha/ }).querySelector('[data-icon]')).toBeTruthy();
+  });
+});
+
+// The figures on the headings (owner, 20 Nov 2026): Pending is the
+// tab's pill again, Sent is the other half of the tab, and nothing else
+// is counted.
+describe('the headings, counted', () => {
+  it('counts what waits on you under Pending and what you sent under Sent, and the tab counts the first alone', () => {
+    crew.ships.data = [edge('r', ME, 'pending'), edge(ME, 'x', 'pending'), edge(ME, 'y', 'pending', '2026-02-01')];
+    crew.people = { r: person('r', 'minh', 'Minh'), x: person('x', 'xuan'), y: person('y', 'yen') };
+    render(<CrewScreen navigation={nav()} />);
+    expect(screen.getByText('Pending · 1')).toBeTruthy();
+    expect(screen.getByText('Sent · 2')).toBeTruthy();
+    expect(tab(/Requests/).getAttribute('aria-label')).toBe('Requests (1)');
   });
 });
 
@@ -364,7 +432,7 @@ describe('a request you sent', () => {
 
   it('is listed under Sent by its handle and name alone, and Cancel withdraws it through the sheet', async () => {
     render(<CrewScreen navigation={nav()} />);
-    expect(screen.getByText('Sent')).toBeTruthy();
+    expect(screen.getByText(/^Sent · /)).toBeTruthy();
     const sent = screen.getByTestId('crew-sent-0');
     expect(within(sent).getByTestId('crew-who-handle').textContent).toBe('oanh');
     expect(within(sent).getByTestId('crew-who-name').textContent).toBe('Oanh');
@@ -550,8 +618,8 @@ describe('empty and loading', () => {
     render(<CrewScreen navigation={nav()} />);
     fireEvent.click(tab(/Requests/));
     expect(screen.getByTestId('crew-requests-empty')).toBeTruthy();
-    expect(screen.queryByText('Pending')).toBeNull();
-    expect(screen.queryByText('Sent')).toBeNull();
+    expect(screen.queryByText(/^Pending/)).toBeNull();
+    expect(screen.queryByText(/^Sent/)).toBeNull();
   });
 });
 
