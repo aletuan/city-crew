@@ -12,7 +12,7 @@
 import React from 'react';
 import * as Haptics from 'expo-haptics';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { fireEvent, render, screen, viewStyleOf } from '../uitest/render';
+import { fireEvent, render, screen } from '../uitest/render';
 
 vi.mock('../lib/i18n', () => ({
   useI18n: () => ({ lang: 'en', setLang: () => {}, t: (en: string) => en }),
@@ -126,9 +126,30 @@ describe('what the button promises', () => {
 });
 
 describe('an answered invitation', () => {
-  it('wears the answer instead of a checkbox', () => {
+  it('wears the answer under the name, ticked for a yes', () => {
     show({ invites: [inv({ invitee_id: 'lan', status: 'accepted' })] });
-    expect(screen.getByText('Answered')).toBeTruthy();
+    expect(screen.getByText('Accepted')).toBeTruthy();
+    expect(screen.getByTestId('invite-friend-0').querySelector('[data-testid="picker-on"]')).not.toBeNull();
+  });
+
+  // The sheet opened with her ticked and "Answered" under her, which read
+  // as a yes (owner, 20 Nov 2026). A refusal is neither ticked nor lit,
+  // and it is still locked: the invitation row exists.
+  it('says a refusal is a refusal: no tick, and still locked', () => {
+    show({ invites: [inv({ invitee_id: 'lan', status: 'declined' })] });
+    expect(screen.getByText('Can’t make it')).toBeTruthy();
+    const face = screen.getByTestId('invite-friend-0');
+    expect(face.querySelector('[data-testid="picker-on"]')).toBeNull();
+    expect(face.getAttribute('aria-checked')).toBe('false');
+    fireEvent.click(screen.getByText('Lan Phương'));
+    expect(screen.getByText('Send invites')).toBeTruthy();
+    expect(onSend).not.toHaveBeenCalled();
+  });
+
+  it('does not count a refusal as a guest in a couple’s evening', () => {
+    show({ company: 'couple', invites: [inv({ invitee_id: 'lan', status: 'declined' })] });
+    fireEvent.click(screen.getByText('Minh Đỗ'));
+    expect(screen.getByText('Send 1 invite')).toBeTruthy();
   });
 
   // Withdrawing only reaches unanswered rows, so a tick that sprang back
@@ -201,12 +222,13 @@ describe('a couple’s evening', () => {
     expect(felt).toHaveBeenCalledTimes(1);
   });
 
-  // On the strip a benched face is dimmed, and an answered one is not: the
-  // answered face is the one that says yes.
-  it('dims a benched face and leaves an answered one at full strength', () => {
+  // The dimming itself is `FriendPicker.ui.test.tsx`'s: read through a
+  // sheet that re-renders after opening, a face's style is the first
+  // render's, and this one would pass on the wrong state.
+  it('keeps the guest who said yes ticked while the rest are benched', () => {
     show({ company: 'couple', invites: [inv({ invitee_id: 'lan', status: 'accepted' })] });
-    expect(viewStyleOf(screen.getByTestId('invite-friend-0').firstElementChild!).opacity).toBeUndefined();
-    expect(viewStyleOf(screen.getByTestId('invite-friend-1').firstElementChild!)).toMatchObject({ opacity: 0.4 });
+    expect(screen.getByTestId('invite-friend-0').getAttribute('aria-checked')).toBe('true');
+    expect(screen.getByTestId('invite-friend-1').getAttribute('aria-checked')).toBe('false');
   });
 
   it('wakes the list back up when the tick comes off', () => {
@@ -224,7 +246,7 @@ describe('a couple’s evening', () => {
   it('is complete once the guest has answered, and the list stays down', () => {
     show({ company: 'couple', invites: [inv({ invitee_id: 'lan', status: 'accepted' })] });
     expect(screen.getByText(/A couple’s evening is complete — your guest has answered/)).toBeTruthy();
-    expect(screen.getByText('Answered')).toBeTruthy();
+    expect(screen.getByText('Accepted')).toBeTruthy();
 
     // Nobody else can be ticked in, and the answered seat cannot be
     // untapped: nothing moves, so the button has nothing to promise.
