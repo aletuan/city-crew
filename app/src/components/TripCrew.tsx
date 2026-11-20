@@ -18,6 +18,34 @@
 // An invitee sees none of that. Who else was asked is the owner's
 // business, and one of them may have said no; the count comes from
 // `trip_crew_counts`, which returns a number without the rows behind it.
+//
+// ── one row of faces, not a row per person (owner, 20 Nov 2026) ──
+//
+// The named list under the faces took a line a head — three invitations
+// were 150pt of a screen whose subject is the day, not the guest list —
+// so the answers moved onto the faces themselves, after the way the
+// profile's friends row marks a request: a disc on the corner. A yes is
+// a green tick, an unanswered invitation a clock on a faded face, a no
+// a cross on a fainter one. Order is `crewOf`'s: yes, waiting, no.
+//
+// What it costs: the names. They are one press away — the faces open the
+// same sheet as the button (`InviteSheet`), where each friend's face is
+// drawn with what they said, so there is one place to read answers and
+// not two. A screen reader still gets them: each face says its name and
+// each mark says its word, as separate things, which is also what the
+// Maestro flows read (`crew-said-N`, text "Asked" / "Coming" / "Can’t
+// make it" — the ids and the words the rows had).
+//
+// The faces are therefore not one accessible group. A group would hide
+// the marks from VoiceOver and from the simulator's accessibility tree,
+// and the button beside them already does what pressing the group does.
+//
+// Rejected: a dashed ring round a waiting face, as first drawn. React
+// Native paints a dashed border only on some platforms at a round
+// radius, and a state that depends on the platform is not a state.
+// Rejected: tinting the "can't make it" half of the line below red. It
+// is one string so it stays one string for a screen reader and a test;
+// the cross on the face is what carries the colour.
 
 import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
@@ -31,8 +59,11 @@ import { Avatar, CHIP_H, CHIP_SLOP, PressableScale } from './ui';
 
 /** How many faces before the row starts counting instead. Four fits at
  *  320pt beside the button; past that the overlap stops reading as people
- *  and starts reading as texture. */
+ *  and starts reading as texture. The planner's is one of them, so an
+ *  owner sees three guests and a count of the rest. */
 const FACES = 4;
+/** The disc on a face's corner, and the glyph inside it. */
+const BADGE = 16;
 
 export default function TripCrew({
   mine, invites, people, myAvatar, hostAvatar, headCount, canInvite, onInvite,
@@ -88,15 +119,27 @@ export default function TripCrew({
   // crowd; on a trip you were asked onto it is the friend who planned it,
   // then you — the two ends of the invitation, touching. Who else was
   // asked stays a number: that is the owner's business.
-  const faces: (string | null)[] = mine
-    ? [
-      myAvatar,
-      ...crew.accepted.slice(0, FACES - 1).map((i) => people[i.invitee_id]?.avatar_url ?? null),
-    ]
-    : [hostAvatar, myAvatar];
+  const nameOf = (id: string) => {
+    const p = people[id];
+    return p?.full_name || (p?.handle ? `@${p.handle}` : t('Someone', 'Ai đó', '誰か', '某人', '某人'));
+  };
+  const said = (st: InviteRow['status']) => (st === 'accepted'
+    ? t('Coming', 'Sẽ đi', '参加', '参加', '參加')
+    : st === 'declined'
+      ? t('Can’t make it', 'Không đi được', '不参加', '无法参加', '無法參加')
+      : t('Asked', 'Đã mời', '招待済み', '已邀请', '已邀請'));
   const waiting = crew.pending.length;
   const said_no = crew.declined.length;
 
+  const asked = [...crew.accepted, ...crew.pending, ...crew.declined];
+  const shown = asked.slice(0, FACES - 1);
+  const hidden = asked.length - shown.length;
+  const faces: { url: string | null; said?: InviteRow['status']; name?: string }[] = mine
+    ? [
+      { url: myAvatar },
+      ...shown.map((i) => ({ url: people[i.invitee_id]?.avatar_url ?? null, said: i.status, name: nameOf(i.invitee_id) })),
+    ]
+    : [{ url: hostAvatar }, { url: myAvatar }];
   // No line at all while the count is still on its way: the faces already
   // say people are on this, and a sentence that gets replaced by a
   // different sentence half a second later reads as the app changing its
@@ -117,13 +160,47 @@ export default function TripCrew({
   return (
     <View style={s.wrap}>
       <View style={s.row}>
-        <View style={s.faces}>
-          {faces.map((url, i) => (
+        <PressableScale
+          onPress={onInvite}
+          disabled={!canInvite}
+          accessible={false}
+          testID="trip-faces"
+          contentStyle={s.faces}
+        >
+          {faces.map((f, i) => (
             <View key={i} style={[s.face, ring, i > 0 && { marginLeft: -10 }]}>
-              <Avatar url={url} size={28} />
+              <View
+                accessible={f.name ? true : undefined}
+                accessibilityLabel={f.name}
+                style={f.said === 'pending' ? s.fadeWait : f.said === 'declined' ? s.fadeNo : null}
+              >
+                <Avatar url={f.url} size={28} />
+              </View>
+              {f.said ? (
+                <View
+                  accessible
+                  accessibilityLabel={said(f.said)}
+                  testID={`crew-said-${i - 1}`}
+                  style={[
+                    s.badge, ring,
+                    { backgroundColor: f.said === 'accepted' ? colors.ok : f.said === 'declined' ? colors.bad : colors.textTertiary },
+                  ]}
+                >
+                  <Glyph
+                    name={f.said === 'accepted' ? 'checkmark' : f.said === 'declined' ? 'close' : 'time'}
+                    size={ICON.tiny}
+                    color="#FFFFFF"
+                  />
+                </View>
+              ) : null}
             </View>
           ))}
-        </View>
+          {hidden > 0 ? (
+            <View style={[s.face, s.more, ring, { marginLeft: -10 }]}>
+              <Text style={s.moreText}>{`+${hidden}`}</Text>
+            </View>
+          ) : null}
+        </PressableScale>
 
         <View style={{ flex: 1, minWidth: 0 }}>
           {line ? <Text style={s.line} numberOfLines={1}>{line}</Text> : null}
@@ -156,41 +233,6 @@ export default function TripCrew({
           </PressableScale>
         ) : null}
       </View>
-
-      {/* The named list, owner only, and only once somebody has been asked.
-          A row per person rather than a summary, because the two things
-          the owner does here — chase an unanswered invitation, re-plan
-          around a refusal — both need the name. */}
-      {mine && invites.length > 0 ? (
-        <View style={s.list}>
-          {[...crew.accepted, ...crew.pending, ...crew.declined].map((i, n) => {
-            const p = people[i.invitee_id];
-            const said = i.status;
-            return (
-              <View key={i.invitee_id} style={s.person}>
-                <Avatar url={p?.avatar_url} size={26} />
-                <Text style={s.personName} numberOfLines={1}>
-                  {p?.full_name || (p?.handle ? `@${p.handle}` : t('Someone', 'Ai đó', '誰か', '某人', '某人'))}
-                </Text>
-                <Text
-                  testID={`crew-said-${n}`}
-                  style={[
-                    s.said,
-                    said === 'accepted' && { color: colors.ok },
-                    said === 'declined' && { color: colors.bad },
-                  ]}
-                >
-                  {said === 'accepted'
-                    ? t('Coming', 'Sẽ đi', '参加', '参加', '參加')
-                    : said === 'declined'
-                      ? t('Can’t make it', 'Không đi được', '不参加', '无法参加', '無法參加')
-                      : t('Asked', 'Đã mời', '招待済み', '已邀请', '已邀請')}
-                </Text>
-              </View>
-            );
-          })}
-        </View>
-      ) : null}
     </View>
   );
 }
@@ -215,12 +257,20 @@ const s = StyleSheet.create({
   },
   ghostText: { color: colors.textSecondary, fontSize: 14, fontWeight: font.medium },
 
-  list: {
-    marginTop: 12, gap: 2,
-    borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.borderGlassSoft,
-    paddingTop: 10,
+  // Sized against the 28pt face: the smallest disc that holds the scale's
+  // smallest glyph (`ICON.tiny`, 11) with the ring round it, which comes
+  // to a little over half the face. It hangs 4 off the corner so it covers
+  // the picture's edge and not its subject. The ring is the page's colour, as the faces' are.
+  badge: {
+    position: 'absolute', right: -4, bottom: -4,
+    width: BADGE, height: BADGE, borderRadius: BADGE / 2, borderWidth: 1.5,
+    alignItems: 'center', justifyContent: 'center',
   },
-  person: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 6 },
-  personName: { flex: 1, color: colors.text, fontSize: 15, fontWeight: font.medium },
-  said: { color: colors.textTertiary, fontSize: 13, fontWeight: font.medium },
+  // Faded, not recoloured: a waiting face is still the friend, a refused
+  // one is still on the list. The disc says which, so the fade need only
+  // say "not yet" (0.6) and "not coming" (0.4) apart at a glance.
+  fadeWait: { opacity: 0.6 },
+  fadeNo: { opacity: 0.4 },
+  more: { width: 32, height: 32, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.surfaceGlassStrong },
+  moreText: { color: colors.textSecondary, fontSize: 11, fontWeight: font.medium },
 });
