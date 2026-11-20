@@ -83,8 +83,11 @@ P1–P2 phần chỉ chủ trang thấy chỉ có ở gốc tab; đã bỏ giớ
 3. **Bốn con số:** Bộ sưu tập, Check-in, Bạn bè, Chuyến đi. Mỗi số là một
    cửa, như ở Tài khoản hôm nay (`StatTile`, cùng đích đến).
 4. **Thẻ lời mời kết bạn**, chỉ khi có lời mời.
-5. **Hoạt động** (các bộ sưu tập). "Tài khoản ›" bên phải tiêu đề (#1451,
-   19/11) đã bỏ ngày 20/11: lối vào Tài khoản là bánh răng ở đầu trang.
+5. **Hoạt động** (các bộ sưu tập), không có tiêu đề. "Tài khoản ›" bên
+   phải tiêu đề (#1451, 19/11) đã bỏ ngày 20/11 — lối vào Tài khoản là bánh
+   răng ở đầu trang — rồi cùng ngày bỏ luôn tiêu đề "Hoạt động" (chủ dự
+   án): mỗi thẻ đã tự nói "… đã tạo bộ sưu tập". Khi feed có hai loại để
+   chọn (bộ sưu tập, check-in) thì cân nhắc tab, không đưa tiêu đề lại.
 
 Nút "Sửa hồ sơ" **ở lại Tài khoản**, dưới tên (chủ dự án, 19/11). Trên
 Trang cá nhân, bấm vào tiểu sử (hoặc "Viết vài dòng về bạn") đã mở Sửa
@@ -217,5 +220,4 @@ trên tab; P3 sửa *lối vào* Hoạt động. Để hai bên không giẫm l�
    người, không chỉ trang của mình: người cần tìm trong 24 bộ sưu tập của
    một curator nhất là khách. `person/Shared` đã ghi đây là câu trả lời
    đầu tiên nên cân nhắc cho lưới đã bỏ.
-5. **Tiêu đề "Hoạt động"** còn cần không, khi bên phải không còn gì. Để
-   chủ dự án quyết.
+5. ~~Tiêu đề "Hoạt động" còn cần không?~~ Bỏ (chủ dự án, 20/11).

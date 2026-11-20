@@ -208,9 +208,6 @@ export default function Shared({ me, person, lists, seenOf, coverFor, onOpen, on
   const none = lists.length === 0;
   return (
     <>
-      <View style={s.heading}>
-        <Text style={s.label}>{t('Activity', 'Hoạt động', 'アクティビティ', '动态', '動態')}</Text>
-      </View>
       {none ? (
         <Card style={s.none} testID="person-no-lists">
           <Text style={s.noneTitle}>
@@ -264,22 +261,22 @@ export default function Shared({ me, person, lists, seenOf, coverFor, onOpen, on
   );
 }
 
+/** The section's distance from what stands above it: the heading's. */
+const TOP = 22;
+
 const s = StyleSheet.create({
-  // The section's heading: its label in the small capitals the place
-  // page heads a fact with. Your own page had the way to your account on
-  // its right until 20 Nov 2026; that is the header's gear now.
-  heading: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    marginTop: 22, marginBottom: 10,
-  },
-  label: {
-    color: colors.textTertiary, fontSize: 12, fontWeight: font.semibold,
-    textTransform: 'uppercase', letterSpacing: 1.2,
-  },
-  feed: { gap: space.cardGap },
+  // No heading over the feed since 20 Nov 2026 (owner). "Activity" stood
+  // here in the small capitals the place page heads a fact with, with a
+  // count and then "Account ›" on its right; once the gear took the
+  // latter (`person/Tools`) it was a word alone over cards that each say
+  // what was done ("… created a collection"). Should the feed ever hold
+  // two kinds to choose between — lists and check-ins — the answer to
+  // weigh is tabs, not the word back. The feed keeps the heading's 22
+  // from what stands above it.
+  feed: { gap: space.cardGap, marginTop: TOP },
   more: { alignItems: 'center', justifyContent: 'center', minHeight: 44 },
   moreText: { color: colors.accent, fontSize: 14, fontWeight: font.semibold },
-  none: { padding: space.cardPadding, gap: 6 },
+  none: { padding: space.cardPadding, gap: 6, marginTop: TOP },
   noneTitle: { color: colors.text, fontSize: 15, fontWeight: font.semibold },
   noneBody: { color: colors.textSecondary, ...type.meta },
 });
