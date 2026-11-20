@@ -133,7 +133,12 @@ export default function FriendPicker({
       >
         <View style={s.grabber} />
         <Text style={s.title}>{title}</Text>
-        <Text style={s.subtitle}>{subtitle}</Text>
+        {/* The subtitle says what picking does — who will see the list,
+            who joins the plan — so with nobody to pick it says it about
+            nothing, and the sheet is the empty line and the way to find
+            friends (owner, 20 Nov 2026, on the share sheet: "không cần
+            thiết"). The empty line sits its own 18 under the title. */}
+        {rows.length > 0 ? <Text style={s.subtitle}>{subtitle}</Text> : null}
 
         {rows.length === 0 ? (
           // Not an error, and not a dead end phrased as one: the reader
