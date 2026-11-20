@@ -66,6 +66,9 @@ minute or more per run; keep the suite short.
    the floating tab bar. **Do not** use `centerElement` there: a button
    at the end of the content can never be centred, and the scroll runs
    until the timeout. `centerElement` is for mid-page targets only.
+   The same applies near the top: GuestHub Sign in can be 100% visible
+   but unable to reach the centre. `ensure-signed-out.yaml` finds it,
+   swipes DOWN once to clear the status bar, then asserts visibility.
 10. **Wait on something, never sleep.** `extendedWaitUntil` with an
     explicit timeout. The first bundle load of a session can take a
     minute — hence 90 s on `tab-explore`.
