@@ -82,8 +82,32 @@ const HEART = ICON.action;
 /** The mark's glyph: 13, a cap's height beside the time's 13pt type. */
 const MARK = ICON.meta;
 
+/** The copy button's part on a card: how many people copied the list,
+ *  whether the reader has a copy, what VoiceOver says, and the press. */
+export type CardCopy = { n: number; have: boolean; label: string; onPress: () => void };
+
+/** The copy button in the foot, drawn as the comments are, filled in the
+ *  accent once the reader has a copy — a state they made, as the heart. */
+function CopyFoot({ copy }: { copy: CardCopy }) {
+  return (
+    <PressableScale
+      onPress={copy.onPress}
+      haptic="selection"
+      scaleTo={0.82}
+      contentStyle={s.heart}
+      hitSlop={{ top: 12, bottom: 12, left: 16, right: 16 }}
+      accessibilityRole="button"
+      accessibilityLabel={copy.label}
+      testID="activity-copy"
+    >
+      <Glyph name={copy.have ? 'duplicate' : 'duplicate-outline'} size={HEART} color={copy.have ? colors.accent : colors.textSecondary} />
+      {copy.n > 0 ? <Text style={s.count} testID="activity-copy-count">{copy.n}</Text> : null}
+    </PressableScale>
+  );
+}
+
 export default function ActivityCard({
-  face, who, did, when, mark, title, uri, meta, desc, liked, likes, onOpen, onHeart, comments, onComments, commentsOff, testID,
+  face, who, did, when, mark, title, uri, meta, desc, liked, likes, onOpen, onHeart, comments, onComments, commentsOff, copy, testID,
 }: {
   /** Whose face, as `Avatar` takes it. */
   face?: string | null;
@@ -121,6 +145,10 @@ export default function ActivityCard({
    *  dimmed and opens nothing — there is nothing to read and nothing may
    *  be written. (A closed thread with comments still opens.) */
   commentsOff?: boolean;
+  /** The copy button, after the comments (owner, 20 Nov 2026) —
+   *  `components/CopyCount`. Only beside `onHeart`, as the comments are:
+   *  a public collection's. */
+  copy?: CardCopy;
   testID?: string;
 }) {
   const { t } = useI18n();
@@ -199,6 +227,7 @@ export default function ActivityCard({
               {n > 0 ? <Text style={s.count} testID="activity-comments-count">{n}</Text> : null}
             </PressableScale>
           ) : null}
+          {copy ? <CopyFoot copy={copy} /> : null}
         </View>
       ) : likesWorthShowing(likes) ? (
         <View

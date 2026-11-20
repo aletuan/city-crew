@@ -170,7 +170,7 @@ export const PRIVACY: Doc = {
   id: 'privacy',
   file: 'privacy.html',
   title: { en: 'Privacy Policy', vi: 'Chính sách quyền riêng tư' },
-  effective: { en: 'Effective 19 November 2026', vi: 'Hiệu lực từ 19/11/2026' },
+  effective: { en: 'Effective 20 November 2026', vi: 'Hiệu lực từ 20/11/2026' },
   blocks: [
     { k: 'p',
       en: 'City Crew is a curated city guide. You can browse everything in it without an account. This policy describes what the app collects when you do sign in, what it deliberately does not collect, and how to erase everything.',
@@ -202,12 +202,12 @@ export const PRIVACY: Doc = {
     { k: 'ul',
       en: [
         '**We do not keep your location.** What the app does with it, and who else sees it, is set out under “Your location and the map” below.',
-        '**No advertising, no trackers, no third-party analytics.** The App Store build sends no diagnostics. What the app does count is set out here in full. Each time a collection is opened, one is added to that list’s count for the day — a number and nothing else, never who opened it, whether you are signed in or not. And a trip you save from collections remembers which ones, so each list’s author can see how many trips their list started, never whose. Both numbers are shown to anyone signed in who can open the list. The app also orders public collections by these totals, and by how many people liked a list or saved a copy of it — numbers only, never who.',
+        '**No advertising, no trackers, no third-party analytics.** The App Store build sends no diagnostics. What the app does count is set out here in full. Each time a collection is opened, one is added to that list’s count for the day — a number and nothing else, never who opened it, whether you are signed in or not. And a trip you save from collections remembers which ones, so each list’s author can see how many trips their list started, never whose. Both numbers are shown to anyone signed in who can open the list. The app also orders public collections by these totals, and by how many people liked a list or saved a copy of it — numbers only, never who. How many people saved a copy of a public collection is also shown beside it, to anyone, signed in or not.',
         '**No device identifiers.** We do not collect advertising IDs or fingerprint your device.',
       ],
       vi: [
         '**Chúng tôi không lưu vị trí của bạn.** App dùng vị trí vào việc gì, và ai khác nhìn thấy nó, được nêu ở mục “Vị trí của bạn và bản đồ” bên dưới.',
-        '**Không quảng cáo, không tracker, không analytics bên thứ ba.** Bản phát hành trên App Store không gửi dữ liệu chẩn đoán nào. Những gì app có đếm được nêu đủ ở đây. Mỗi lần một bộ sưu tập được mở, số lượt mở trong ngày của bộ sưu tập đó tăng thêm một — chỉ là một con số, không bao giờ ghi ai đã mở, dù bạn có đăng nhập hay không. Và chuyến đi bạn lưu từ các bộ sưu tập sẽ ghi nhớ đó là những bộ sưu tập nào, để người tạo mỗi bộ sưu tập thấy nó đã mở đầu bao nhiêu chuyến đi, không bao giờ thấy của ai. Cả hai con số hiện cho bất kỳ ai đã đăng nhập và mở được bộ sưu tập. App cũng xếp thứ tự các bộ sưu tập công khai theo những tổng số này, và theo số người đã thích hoặc lưu bản sao của một bộ sưu tập — chỉ là con số, không bao giờ là ai.',
+        '**Không quảng cáo, không tracker, không analytics bên thứ ba.** Bản phát hành trên App Store không gửi dữ liệu chẩn đoán nào. Những gì app có đếm được nêu đủ ở đây. Mỗi lần một bộ sưu tập được mở, số lượt mở trong ngày của bộ sưu tập đó tăng thêm một — chỉ là một con số, không bao giờ ghi ai đã mở, dù bạn có đăng nhập hay không. Và chuyến đi bạn lưu từ các bộ sưu tập sẽ ghi nhớ đó là những bộ sưu tập nào, để người tạo mỗi bộ sưu tập thấy nó đã mở đầu bao nhiêu chuyến đi, không bao giờ thấy của ai. Cả hai con số hiện cho bất kỳ ai đã đăng nhập và mở được bộ sưu tập. App cũng xếp thứ tự các bộ sưu tập công khai theo những tổng số này, và theo số người đã thích hoặc lưu bản sao của một bộ sưu tập — chỉ là con số, không bao giờ là ai. Số người đã lưu bản sao của một bộ sưu tập công khai cũng hiện cạnh bộ sưu tập đó, cho bất kỳ ai, dù có đăng nhập hay không.',
         '**Không định danh thiết bị.** Chúng tôi không thu thập advertising ID hay nhận dạng thiết bị của bạn.',
       ] },
     { k: 'h2',

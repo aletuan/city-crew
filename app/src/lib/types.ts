@@ -164,6 +164,10 @@ export type Collection = {
    * lists are yours; the city boundary is the catalog's problem.
    */
   members?: Place[];
+  /** The list this one is a copy of, on the reader's own lists only
+   *  (`fetchMyCollections`): what tells the copy button a list is one
+   *  the reader already copied (owner, 20 Nov 2026). */
+  copied_from?: string | null;
   /**
    * The row's own id, which the shelf needs and the screens do not.
    *
