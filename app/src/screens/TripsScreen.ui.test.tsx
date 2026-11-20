@@ -233,6 +233,34 @@ describe('nothing saved yet', () => {
     expect(n.parent.navigate).toHaveBeenCalledWith('Ideas');
   });
 
+  // Not a bare card on a bare page: the offers Activity makes on its own
+  // empty screen, each to the tab or room it names.
+  it('offers what a trip is made of under the card, each to where it says', () => {
+    const n = show([]);
+    expect(screen.getByText('You could try')).toBeTruthy();
+    expect(screen.getByTestId('trips-try')).toBeTruthy();
+    fireEvent.click(screen.getByTestId('trips-try-explore'));
+    expect(n.parent.navigate).toHaveBeenLastCalledWith('Explore');
+    fireEvent.click(screen.getByTestId('trips-try-save'));
+    expect(n.parent.navigate).toHaveBeenLastCalledWith('Collections', { screen: 'CollectionsHome', params: { tab: 'yours', at: expect.any(Number) } });
+    fireEvent.click(screen.getByTestId('trips-try-crew'));
+    expect(n.parent.navigate).toHaveBeenLastCalledWith('Profile', { screen: 'Crew', initial: false });
+  });
+
+  // The card is the shared one, inside the list's padding and not a
+  // second margin in from the title (owner's screenshot, 20 Nov 2026).
+  it('draws the shared empty card, with no margin of its own', () => {
+    show([]);
+    const card = viewStyleOf(screen.getByTestId('trips-empty'));
+    expect(card.marginHorizontal ?? 0).toBe(0);
+    expect(card.marginLeft ?? 0).toBe(0);
+  });
+
+  it('offers no other things to try once there is a list', () => {
+    show([trip()]);
+    expect(screen.queryByTestId('trips-try')).toBeNull();
+  });
+
   it('offers the header pill once there is a list, and it leads to Ideas too', () => {
     const n = show([trip()]);
     expect(screen.queryByText('No trips yet')).toBeNull();

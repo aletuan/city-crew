@@ -69,7 +69,8 @@ import { sortInvites, splitByStanding, type InviteRow } from '../lib/invites';
 import type { Trip } from '../lib/data';
 import InviteCard from '../components/InviteCard';
 import { colors, space } from '../theme';
-import type { Nav } from '../nav';
+import { toProfileRoom, type Nav } from '../nav';
+import { SettingRow } from './profile/rows';
 import { TripCard, FirstTrip } from './trips/parts';
 import { s } from './trips/styles';
 
@@ -182,6 +183,53 @@ function TabBody({ tab, rail, upcoming, past, people, answering, navigation, onA
           />
         </View>
       ))}
+    </>
+  );
+}
+
+/**
+ * What else the empty screen offers, under the card that offers a plan.
+ *
+ * The card alone left three quarters of the screen bare, and bare read
+ * as unfinished rather than as calm (owner, 20 Nov 2026). Activity solved
+ * the same emptiness with "You could try" and a card of rows, and this is
+ * that card, so an empty tab looks like the other empty tabs.
+ *
+ * The three rows are what a trip is made of, not a tour of the app: the
+ * places in it (Explore), the places you already like (your collections,
+ * which the planner draws on), and the people you go with — friends are
+ * who send the invitations this screen would otherwise be showing.
+ * Weighed and left out: sample trips to tap into. Nothing in the catalog
+ * holds a ready-made plan, and a hand-written one would date the first
+ * time a place in it closed.
+ */
+function TryNext({ navigation }: { navigation: Nav }) {
+  const { t } = useI18n();
+  const tabs = navigation.getParent();
+  return (
+    <>
+      <Text style={s.tryHead}>{t('You could try', 'Bạn có thể thử', 'こちらもどうぞ', '你可以试试', '你可以試試')}</Text>
+      <Card testID="trips-try">
+        <SettingRow
+          icon="compass-outline"
+          label={t('Explore places', 'Khám phá địa điểm', 'スポットを見る', '探索地点', '探索地點')}
+          onPress={() => tabs?.navigate('Explore')}
+          testID="trips-try-explore"
+        />
+        <SettingRow
+          icon="bookmark-outline"
+          label={t('Save places you love', 'Lưu địa điểm yêu thích', 'お気に入りのスポットを保存', '收藏喜欢的地点', '收藏喜歡的地點')}
+          onPress={() => tabs?.navigate('Collections', { screen: 'CollectionsHome', params: { tab: 'yours', at: Date.now() } })}
+          testID="trips-try-save"
+        />
+        <SettingRow
+          icon="people-outline"
+          label={t('Add friends to plan together', 'Thêm bạn để rủ nhau đi chung', '友達を追加して一緒に計画', '添加好友一起规划', '新增好友一起規劃')}
+          onPress={() => toProfileRoom(navigation, 'Crew')}
+          last
+          testID="trips-try-crew"
+        />
+      </Card>
     </>
   );
 }
@@ -450,7 +498,10 @@ export default function TripsScreen({ navigation, route }: { navigation: Nav; ro
               answer, and offering to plan a first one would be the app
               talking over an invitation it is already showing. */}
           {!anything && (
-            <FirstTrip onPress={() => navigation.getParent()?.navigate('Ideas')} />
+            <>
+              <FirstTrip onPress={() => navigation.getParent()?.navigate('Ideas')} />
+              <TryNext navigation={navigation} />
+            </>
           )}
 
           {anything && (
