@@ -73,13 +73,12 @@ import { Avatar, Card, PressableScale, WordTabs } from '../../components/ui';
 import { Glyph, ICON } from '../../components/ui/glyph';
 import { type ActivityEntry, type CommentNews, newestAt } from '../../lib/commentNews';
 import type { FriendProfile } from '../../lib/data';
-import { type ActivityItem, splitFriendships } from '../../lib/friends';
+import { type ActivityItem, type FriendshipRow, splitFriendships } from '../../lib/friends';
 import { useCrew } from '../../lib/crew';
 import { useSeenThrough } from '../../lib/freshNews';
 import { atHandle } from '../../lib/handle';
 import { useI18n } from '../../lib/i18n';
 import { type Nav, toPerson, toProfileRoom } from '../../nav';
-import { Requests } from '../person/Requests';
 import { colors, space, type } from '../../theme';
 
 type Translate = (en: string, vi: string, ja: string, zh?: string, hant?: string) => string;
@@ -99,9 +98,9 @@ export function ActivityGroups({ groups, people, faces, collectionOf, ago, navig
    *  third destination arrived and the page's function was at its
    *  ceiling. */
   navigation: Nav;
-  /** The reader. When friend requests wait on them "For you" opens on
-   *  your own page's card for them (`person/Requests`), counted in its
-   *  pill, as the bell counts it. */
+  /** The reader. When friend requests wait on them "For you" opens on a
+   *  row for them (`requestRow`), counted in its pill as the bell
+   *  counts it. */
   me?: string | null;
 }) {
   const { t } = useI18n();
@@ -112,11 +111,24 @@ export function ActivityGroups({ groups, people, faces, collectionOf, ago, navig
     navigation.navigate('Comments', { subject: { kind: 'collection', id: n.list.id }, focus: n.comment_id });
   const isNew = useSeenThrough(newestAt(groups.forYou));
   const { ships } = useCrew();
-  const asking = me ? splitFriendships(ships.data, me).incoming.length : 0;
+  const incoming = me ? splitFriendships(ships.data, me).incoming : [];
+  const asking = incoming.length;
   const [tab, setTab] = useState<'forYou' | 'yours'>(() =>
     (groups.forYou.length === 0 && asking === 0 && groups.yours.length > 0 ? 'yours' : 'forYou'));
   const news = tab === 'forYou';
   const entries = news ? groups.forYou : groups.yours;
+  // What the card draws, in order: the requests first when "For you" is
+  // up — somebody is waiting on the reader — then the rows.
+  const asked = news && asking > 0 ? [requestRow(incoming, people, () => toProfileRoom(navigation, 'Crew'), t)] : [];
+  const shown = [
+    ...asked,
+    ...entries.map((e) => ({
+      row: e.from === 'log' ? logRow(e.item, people, faces, collectionOf, onList, onPerson, t) : newsRow(e.news, onComment, t),
+      at: e.at,
+      fresh: news && isNew(e.at),
+      testID: e.from === 'comments' ? `news-${e.news.kind}` : undefined,
+    })),
+  ];
   return (
     // One element holds the tabs and what they show: what the page's
     // tests, and a reader of them, call the timeline.
@@ -132,8 +144,7 @@ export function ActivityGroups({ groups, people, faces, collectionOf, ago, navig
           onChange={setTab}
         />
       </View>
-      {news && me && asking > 0 ? <Requests me={me} onOpen={() => toProfileRoom(navigation, 'Crew')} /> : null}
-      {entries.length === 0 && !(news && asking > 0) ? (
+      {shown.length === 0 ? (
         <Text style={s.none} testID="activity-tab-empty">
           {news
             ? t('Nothing from anybody else in the last two weeks.', 'Hai tuần qua chưa có gì từ người khác.', 'この2週間、ほかの人からは何もありません。', '过去两周没有来自他人的动态。', '過去兩週沒有來自他人的動態。')
@@ -141,17 +152,14 @@ export function ActivityGroups({ groups, people, faces, collectionOf, ago, navig
         </Text>
       ) : (
         <Card testID={news ? 'activity-for-you' : 'activity-yours'}>
-          {entries.map((e, i) => {
-            const row = e.from === 'log'
-              ? logRow(e.item, people, faces, collectionOf, onList, onPerson, t)
-              : newsRow(e.news, onComment, t);
+          {shown.map(({ row, at, fresh, testID }, i) => {
             return (
               <PressableScale
                 key={row.key}
                 contentStyle={[s.row, i > 0 && s.rowDivider]}
                 onPress={row.open}
                 accessibilityRole={row.open ? 'button' : undefined}
-                testID={e.from === 'comments' ? `news-${e.news.kind}` : undefined}
+                testID={testID}
               >
                 {/* Who, then what: the actor's face leads the row, as
                     every social feed has it (Instagram, Threads), and the
@@ -168,12 +176,12 @@ export function ActivityGroups({ groups, people, faces, collectionOf, ago, navig
                 <View style={s.words}>
                   <Text style={s.line} numberOfLines={2}>{row.line}</Text>
                   {row.quote ? <Text style={s.quote} numberOfLines={1} testID="news-quote">{row.quote}</Text> : null}
-                  <Text style={s.meta}>{ago(e.at)}</Text>
+                  <Text style={s.meta}>{ago(at)}</Text>
                 </View>
                 {/* Only where there is somewhere to go: the same condition
                     as the role above, so what VoiceOver hears and what the
                     eye sees agree. */}
-                {news && isNew(e.at) ? (
+                {fresh ? (
                   <View
                     style={s.fresh}
                     accessible
@@ -189,6 +197,39 @@ export function ActivityGroups({ groups, people, faces, collectionOf, ago, navig
       )}
     </View>
   );
+}
+
+/**
+ * The friend requests waiting, as one row at the head of "For you"
+ * (owner, 20 Nov 2026). For a few hours they were your own page's card
+ * set above the rows (`person/Requests`), and on the phone the card read
+ * as something apart: the pill counted it and it wore no dot, and it
+ * named "Ha Do" over a row naming "@hado". A row of the list says it as
+ * the list says everything — the face, the mark of the kind on its
+ * corner, the handle, when — and wears the dot. The card stays on your
+ * page, where a request is meant to be seen at once (owner).
+ *
+ * One row however many ask: the latest named, the rest counted, as the
+ * likes of a list are. It opens Friends, where each is answered beside
+ * the person. New until answered, so always dotted: a request has no
+ * time to fall behind the mark.
+ */
+function requestRow(
+  rows: readonly FriendshipRow[], people: Record<string, FriendProfile>, open: () => void, t: Translate,
+): { row: Row; at: string; fresh: boolean; testID: string } {
+  const latest = [...rows].sort((a, b) => (a.created_at < b.created_at ? 1 : -1))[0];
+  const first = people[latest.requester];
+  const who = first?.handle ? atHandle(first.handle) : null;
+  const k = rows.length - 1;
+  const line = !who
+    ? t(`${rows.length} friend request${rows.length === 1 ? '' : 's'}`, `${rows.length} lời mời kết bạn`, `友達リクエスト${rows.length}件`, `${rows.length} 个好友请求`, `${rows.length} 個好友請求`)
+    : k === 0
+      ? t(`${who} wants to be friends`, `${who} muốn kết bạn với bạn`, `${who}さんが友達になりたがっています`, `${who} 想加你为好友`, `${who} 想加你為好友`)
+      : t(`${who} and ${k} other${k === 1 ? '' : 's'} want to be friends`, `${who} và ${k} người khác muốn kết bạn với bạn`, `${who}さんほか${k}人が友達になりたがっています`, `${who} 和另外 ${k} 人想加你为好友`, `${who} 和另外 ${k} 人想加你為好友`);
+  return {
+    row: { key: 'requests', face: first?.avatar_url || null, badge: 'person-add', line, open },
+    at: latest.created_at, fresh: true, testID: 'activity-requests',
+  };
 }
 
 /** What a row draws, whichever source it came from. */

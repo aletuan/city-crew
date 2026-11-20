@@ -15,14 +15,16 @@
 // Profile's count on the way in still counts only what others did — news
 // is the part worth a number.
 //
-// Friend requests waiting are here as a notice, not as an inbox. They
+// Friend requests waiting are here as a row, not as an inbox. They
 // lived here once, as a REQUESTS section above the timeline with the
 // same Accept and Decline as the Requests tab on Your crew — the same
 // list in two places — and the owner took them out on 20 Oct 2026; Crew
 // has been the inbox since #309. They came back on 20 Nov 2026 (owner:
 // one bell — every piece of news for you is in the bell, and a request
-// is in its figure) as the card your own page shows (`person/Requests`):
-// who is asking, and the way to Crew, where each is answered.
+// is in its figure): first a few hours as your own page's card, then
+// the same day as one row at the head of "For you" (`requestRow` in
+// `activity/ActivityRows`) — who is asking, and the way to Crew, where
+// each is answered.
 //
 // Your own plans are not here. An UPCOMING section carried the nearest
 // trip for a day (6–7 Oct 2026) and went: by then the same fact was on
