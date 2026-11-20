@@ -57,18 +57,37 @@ env:
       visible:
         id: "collection-name"
     commands:
+      - runFlow: common/choose-private-collection.yaml
       - tapOn:
           id: "collection-name"
       - inputText: "Maestro smoke"
       - hideKeyboard
-      - tapOn:
-          id: "collection-submit"
+      - runFlow:
+          when:
+            visible:
+              id: "collection-submit"
+          commands:
+            - tapOn:
+                id: "collection-submit"
       # The form lands on the Collections tab; the place is still open
       # on top of Explore's stack.
       - extendedWaitUntil:
           visible:
             id: "tab-explore"
           timeout: 15000
+      - tapOn:
+          id: "tab-collections"
+      - extendedWaitUntil:
+          visible:
+            id: "collections-yours"
+          timeout: 15000
+      - tapOn:
+          id: "collections-yours"
+      - tapOn:
+          text: "^Maestro smoke(,.*)?$"
+      - runFlow: common/assert-private-collection.yaml
+      - tapOn:
+          id: "collection-back"
       - tapOn:
           id: "tab-explore"
 - runFlow:

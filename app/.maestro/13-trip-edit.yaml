@@ -47,12 +47,7 @@ env:
 - scroll
 - tapOn:
     id: "ideas-sketch"
-- extendedWaitUntil:
-    visible:
-      id: "plan-card-best"
-    timeout: 90000
-- tapOn:
-    id: "plan-card-best"
+- runFlow: common/open-best-plan.yaml
 
 # The edit: the first stop's hour, then 15 minutes earlier.
 - scrollUntilVisible:

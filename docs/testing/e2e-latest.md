@@ -1,99 +1,91 @@
 # Bàn giao E2E iOS — 20/11/2026
 
-**Kết quả: toàn suite 19/22 PASS; sửa helper rồi chạy lại 3/3 PASS. Chưa có một lượt 22/22 trên revision cuối.** Giờ/run ID theo Việt Nam (UTC+7).
+**Baseline đã đạt: 22/22 PASS trong cùng lượt trên cùng SHA `d0c9cd07b033d3abf28fa5d94107697fbcc32421`.** Run `20261120-142328`, tổng thời gian testcase **1h16m45s**; runner exit 0, JUnit đủ 22 tên flow trong config, không failure/error/skip. Giờ/run ID theo Việt Nam (UTC+7).
 
-**Cập nhật trước merge PR #1484:** đã đồng bộ main `9c10c182` sau các lượt E2E nêu dưới. Main đổi nút Account sang `person-settings` và cập nhật helper tương ứng; giữ thay đổi đó. Kết quả E2E dưới đây là lịch sử trên SHA đã ghi, không chứng nhận bản tích hợp mới. Các gate được chạy lại trước push.
+## Revision và môi trường
 
-## Revision và phạm vi
+- Branch `codex/maestro-private-fixtures`, base main `9fa2f60a` (gồm PR #1484, #1486 audience sheet và #1487).
+- `ad7df999`: 06/11 chọn Private trước mọi đường submit, kiểm tra audience sau tạo/rename; README/GUIDELINES/REVIEW.
+- `d0c9cd07`: helper mở best plan chờ animation rồi xác nhận editor, dùng chung cho create-trip/13/20. Không thay source app hay mặc định Public của sản phẩm.
+- Commit tài liệu sau kết quả không thay executable code/YAML đã kiểm. Không tự coi kết quả này là kết quả cho main nếu main tiến thêm.
+- iPhone 17 Pro, iOS 26.5, UDID `2E5D58A8-A2A7-41F1-B6B0-A5477102C7E4`; Expo Go SDK 58, Maestro 2.10.0, Node 24.14.0.
+- Metro `exp://127.0.0.1:8085`, checkout `/Volumes/T7-Workspace/Projects/Claude/city-crew-e2e-stability/app`. Chạy flow gốc, không sao chép để thay URL; wrapper local thêm `--device` vì có Pro Max khác đang boot.
 
-- Branch: `codex/maestro-stable-baseline`, base main `0a1008d9` (đã có #1479/#1480/#1481).
-- `52946726`: 22 flow tôn trọng override EXPO_URL; thêm chờ RewardBanner trong 06; README/REVIEW.
-- `f3fedc5e`: sửa helper đăng xuất không ép Sign in vào giữa viewport. Không đổi source app/navigation.
-- Branch tham chiếu `claude/maestro-expo-url-reference` (`02fcd0d9`): chỉ lấy URL/banner, giữ helper Account và navigation đã merge. Không cherry-pick toàn commit.
-- Simulator: iPhone 17 Pro, iOS 26.5, UDID `2E5D58A8-A2A7-41F1-B6B0-A5477102C7E4`; Expo Go SDK 58, Maestro 2.10.0, Node 24.14.0.
-- Metro 8085 phục vụ `/Volumes/T7-Workspace/Projects/Claude/city-crew-e2e-stability/app`. URL thực tế đã kiểm qua `Maestro.openLink`.
+## Kết quả toàn suite
 
-## Kết quả và bằng chứng
-
-| Lượt | Revision/phạm vi | Kết quả |
-| --- | --- | --- |
-| `091655` / `.smoke-local/url-default-direct` | 00 với cổng mặc định; lần trực tiếp không truyền `-e` | PASS; fallback 8081 đúng |
-| `091943` | 00 qua runner override 8085 | PASS; openLink dùng 8085 |
-| `092035` / `092317` | Probe 06 với fixture mới, lần có banner thật rồi lần không có banner | PASS cả hai; screenshot First Find và assertion hiện banner trước helper |
-| `20261120-093151` | Toàn bộ 22 flow, `52946726` | **19 PASS, 3 FAIL: 17/19/20**, đủ JUnit; cleanup thành công |
-| `20261120-105743` | Retry trên `f3fedc5e` | Gián đoạn, không có kết luận/JUnit; máy reboot, khôi phục/cleanup sau đó |
-| `20261120-114411` | Khởi động sai đường dẫn CLI | Không chạy case nào; cleanup thành công |
-| `20261120-114433` | Retry 17/19/20, `f3fedc5e` | **3/3 PASS**, runner exit 0, JUnit và cleanup đạt |
-
-Bảng baseline `093151` (thời gian làm tròn):
-
-| Flow | Kết quả | Thời gian |
+| Flow | Kết quả | Thời gian làm tròn |
 | --- | --- | --- |
 | 00-launch | PASS | 0m 24s |
-| 01-explore | PASS | 0m 49s |
+| 01-explore | PASS | 0m 45s |
 | 02-place-detail | PASS | 0m 28s |
-| 03-search | PASS | 1m 09s |
-| 04-sign-in | PASS | 1m 55s |
-| 05-plan-trip | PASS | 2m 47s |
-| 06-save-place | PASS | 2m 23s |
+| 03-search | PASS | 1m 08s |
+| 04-sign-in | PASS | 1m 53s |
+| 05-plan-trip | PASS | 2m 34s |
+| 06-save-place | PASS | 2m 09s |
 | 07-sign-up-delete | PASS | 3m 28s |
 | 08-explore-filter | PASS | 0m 49s |
-| 09-collections-browse | PASS | 0m 52s |
+| 09-collections-browse | PASS | 0m 51s |
 | 10-check-in | PASS | 1m 38s |
-| 11-collection-crud | PASS | 3m 21s |
-| 13-trip-edit | PASS | 5m 02s |
-| 14-forgot-password | PASS | 0m 54s |
-| 15-theme | PASS | 7m 51s |
-| 16-trip-invite | PASS | 20m 04s |
-| 17-unfriend | FAIL — helper centering | 5m 06s |
-| 18-guest-save-resume | PASS | 7m 32s |
-| 19-collection-privacy | FAIL — helper centering | 1m 53s |
-| 20-guest-trip-resume | FAIL — helper centering | 4m 10s |
-| 21-tab-bar-responsive | PASS | 8m 47s |
-| 12-language | PASS | 3m 04s |
+| 11-collection-crud | PASS | 3m 26s |
+| 13-trip-edit | PASS | 4m 40s |
+| 14-forgot-password | PASS | 0m 53s |
+| 15-theme | PASS | 7m 12s |
+| 16-trip-invite | PASS | 18m 35s |
+| 17-unfriend | PASS | 4m 02s |
+| 18-guest-save-resume | PASS | 3m 16s |
+| 19-collection-privacy | PASS | 8m 09s |
+| 20-guest-trip-resume | PASS | 3m 54s |
+| 21-tab-bar-responsive | PASS | 4m 39s |
+| 12-language | PASS | 1m 53s |
 
-Retry `114433`: 17 **4m39s**, 19 **7m59s**, 20 **3m42s**. Không cộng PASS từ hai SHA thành chứng nhận 22/22 trên bản cuối.
+Thời gian gồm driver, auth, cold start và mạng; không dùng làm số đo latency app. Trip invite vẫn là flow tốn thời gian nhất.
 
-## Nguyên nhân và thay đổi
+## Bằng chứng bổ sung và lượt chưa đạt
 
-1. **URL Metro bị ghi đè trong flow:** env literal 8081 thắng `-e EXPO_URL`. Dùng `${EXPO_URL || 'exp://127.0.0.1:8081'}`; không cần sao chép flow để thay cổng.
-2. **RewardBanner che thao tác bỏ lưu:** 06 chờ `reward-banner` biến mất (timeout 8s) trước tap. Probe thực sự thấy banner, helper chờ khoảng 2,6s; probe không banner cũng đạt. Giới hạn: `notVisible` không bảo đảm bắt được mọi banner mạng tới trễ sau khi assertion đã qua; chưa có ca chủ động trì hoãn response.
-3. **17/19/20 fail vì centering:** log có Sign in y=232–290, visibility 1.0, screenshot xác nhận guest đã đăng xuất; `centerElement: true` vẫn cuộn tới timeout. 17 lỗi ở cleanup cuối, 19/20 bị chặn khi chuẩn bị. Sửa helper chờ visibility, swipe DOWN thêm một lần để tránh nút sát status bar, rồi assert visible. Không tăng timeout, không bỏ hậu điều kiện. Retry cả ba đạt.
-4. **Môi trường:** reboot lúc 11:33:59 khiến runner/Metro và log `/tmp` mất; chưa xác định nguyên nhân reboot. Thu hồi fixture từ ledger trước khi chạy lại. Sau reboot có thêm Pro Max booted; wrapper local chỉ thêm `--device` chọn đúng Pro của baseline.
+| Run | Phạm vi | Kết quả/giới hạn |
+| --- | --- | --- |
+| `20261120-135941` | 06 + 11, cặp tài khoản tạm mới không seed collection | 2/2 PASS (2m51s, 3m23s). Nhánh tạo mới của 06 thực sự chạy. Backend sau flow: đúng một Smoke Private/rỗng, không CRUD; xóa tài khoản thành công. Các YAML 06/11 giống bản baseline cuối. |
+| `20261120-140733` | Thử toàn suite trên `ad7df999` | 00–04 PASS; 05 FAIL vì vẫn ở PlanOptions sau tap, chưa vào editor. Dừng có kiểm soát để chẩn đoán; các FAIL nhanh sau SIGINT không phải lỗi chức năng độc lập. Cleanup thành công. Không gọi đây là baseline đầy đủ. |
+| `20261120-141628` | 05 giữ nguyên YAML | PASS 2m38s; lỗi tap không tái hiện. Cleanup thành công. |
+| `20261120-142003` | 05 với helper mở editor mới | PASS 2m40s, assertion editor đạt; cleanup thành công. |
+| `20261120-142328` | Toàn bộ 22 flow trên `d0c9cd07` | **22/22 PASS**, cleanup thành công. |
 
-Bài học và bằng chứng chi tiết: [REVIEW](../../app/.maestro/REVIEW.md). Quy tắc sửa/thêm flow: [GUIDELINES](../../app/.maestro/GUIDELINES.md).
+Các lượt cũ của PR #1484 (19/22 rồi 3/3 trên SHA khác) là lịch sử, không được cộng vào baseline này; diễn biến còn trong REVIEW và Git history.
 
-## Gate và cleanup
+## Thay đổi và bài học
 
-- Trước baseline: cú pháp 22 flow + helper banner đạt; URL/default/banner probes đạt; 5 gate đạt.
-- Sau sửa helper: cú pháp helper đạt; **122 test selector** đạt.
-- Chạy lại 5 gate sau reboot trên code `f3fedc5e`: typecheck, lint, unit, timezone, coverage **PASS**. Unit và timezone: **7460 test, 318 file**; coverage qua floors của repo.
-- Sau retry cuối: không còn JSON ledger trong `trip-accounts` (kể cả thư mục a/b) hoặc `signup-accounts`; không còn trip lock. Không ghi credential/ledger vào Git.
+1. **Fixture phải chọn Private trước submit:** form mới mặc định Public và chọn audience qua `collection-form-seen` → `sheet-action-private`. 06 nhánh tạo mới và 11 chọn Private khi tên còn rỗng, mở lại sheet xác nhận selected, rồi mới nhập tên. `hideKeyboard`/Return có thể submit; chọn sau bước đó là quá muộn.
+2. **Kiểm tra trạng thái đã lưu:** `assert-private-collection.yaml` assert Private selected trên trang collection trước khi tap. 11 kiểm lại sau rename. Probe backend xác nhận kết quả cuối; không chỉ dựa vào tap thành công.
+3. **Không nhầm thiếu Save với thiếu selector:** 05 có một lần tap card nhưng screenshot vẫn ở PlanOptions, các scroll sau đó tìm Save trên màn sai. Helper mới chờ animation và yêu cầu `plan-stop-name-0` của editor trước khi tìm Save. Không retry mù hoặc tăng timeout Save. Nguyên nhân cấp touch/driver của lần tap không mở màn chưa được chứng minh; animation là giả thuyết, không phải kết luận chắc chắn. Một lượt 22/22 chưa chứng minh hết flaky.
+4. **Phạm vi Public có chủ đích:** 19 vẫn chuyển Public/Private để kiểm quyền giữa hai tài khoản, trên fixture run-owned có cleanup. Không làm mất coverage publish chỉ để mọi fixture luôn Private.
 
-## Artifacts cho agent khác
+Chi tiết: [REVIEW](../../app/.maestro/REVIEW.md), [GUIDELINES](../../app/.maestro/GUIDELINES.md), [README](../../app/.maestro/README.md).
 
-Chỉ có trên máy đã chạy, không đi theo Git:
+## Gate và dữ liệu sau test
 
-- Root: `/Volumes/T7-Workspace/Projects/Claude/city-crew-e2e-stability`.
-- `.smoke-local/maestro/<run-id>/report.xml`, `console.log`, `<timestamp>/<flow>/{commands.json,screenshots,screen-hierarchy,logs}`.
-- 17 baseline: `20261120-093151/2026-11-20_093158/17-unfriend/screenshots/step-189-scrollUntilVisible-profile-sign-in.png`.
-- Probe banner: `20261120-092035/2026-11-20_092038/06-save-place/takeScreenshot/banner-visible.png`.
-- `.smoke-local/validation/{typecheck,lint,test,test-tz,coverage}.log`: gate sau reboot.
-- `.smoke-local/retry-final.log`, `.smoke-local/metro-recovery.log`; `.smoke-local/full-suite-metadata.json` ghi metadata baseline.
-- Artifacts cũ `035122/060554/065804` chuyển sang `.smoke-local/previous-runs/` và giữ symlink từ worktree cũ, đã kiểm SHA-256 trước khi xóa bản nguồn. Kết quả lịch sử và root cause #1479 còn trong REVIEW/Git history.
+- Cú pháp các flow/helper thay đổi đạt; **123 kiểm tra selector** đạt.
+- **Cả 5 gate PASS trên revision cuối:** typecheck, lint, unit, timezone và coverage. Log/status tại `.smoke-local/private-final-validation/`; đã đối chiếu `results.json` trước push.
+- Unit: **7481 test / 318 file PASS**; timezone cũng **7481 test / 318 file PASS**. Coverage qua floors repo.
+- Sau full suite: không còn JSON ledger trong `trip-accounts`, `signup-accounts`, `private-create-accounts` (kể cả thư mục con); không còn `trip-accounts.lock`.
+- Audit trước/sau bằng session đúng hai tài khoản Keychain: tài khoản 1 có đúng một `Maestro smoke` cũ từ 11/09/2026, `is_public=false`, 0 place; tài khoản 2 không có collection. Không có `Maestro CRUD`/`Maestro CRUD 2`. Không sửa/xóa list cũ. Đây là audit hai tài khoản test, không phải toàn DB.
 
-## Chạy tiếp
+## Artifacts và chạy tiếp
 
-1. Xác nhận branch/SHA, Metro đúng checkout, còn dung lượng và chỉ một runner trên simulator. Không chỉnh YAML/script trong lượt chạy.
-2. Chạy bằng flow gốc qua runner, không dùng bản sao đổi URL cũ:
+Root local: `/Volumes/T7-Workspace/Projects/Claude/city-crew-e2e-stability`. Artifacts không đi theo Git clone/push; không chép credential hoặc ledger JSON vào tài liệu.
+
+- `.smoke-local/maestro/20261120-142328/report.xml`, `console.log`, `<timestamp>/<flow>/{commands.json,screenshots,screen-hierarchy,logs}`.
+- `.smoke-local/private-full-final-metadata.json`, `private-full-final.log`.
+- `.smoke-local/private-create-probe.log`, `collection-audit-before.json`, `collection-audit-after.json`.
+- `.smoke-local/private-final-validation/{results.json,typecheck.log,lint.log,test.log,test-tz.log,coverage.log}`.
+- `.smoke-local/private-ids-final.log`; các run chẩn đoán theo ID ở bảng trên.
+
+Trước lượt sau: kiểm tra SHA, Metro đúng checkout, chỉ một runner trên simulator, dung lượng và ledger cũ. Nếu nhiều simulator booted, chọn UDID tường minh cho Maestro. Giữ máy thức bằng `caffeinate -i`, chạy foreground, không sửa YAML/script giữa lượt.
 
 ```sh
 cd /Volumes/T7-Workspace/Projects/Claude/city-crew-e2e-stability/app
 EXPO_URL=exp://127.0.0.1:8085 caffeinate -i bash .maestro/smoke.sh
 ```
 
-Nếu nhiều simulator đang boot, chọn UDID tường minh cho Maestro (lượt retry dùng wrapper local `.smoke-local/device-bin/maestro` thêm `--device`); không để auto-select sang thiết bị khác. Đảm bảo Node/Maestro có trong PATH.
+Đảm bảo Node/Maestro trong PATH; lượt này dùng wrapper `.smoke-local/device-bin/maestro` thêm `--device` cho iPhone 17 Pro. Probe nhánh tạo mới 06 phải dùng tài khoản tạm rỗng và có cleanup; không xóa list của tài khoản cố định chỉ để ép nhánh chạy.
 
-3. Muốn chứng nhận baseline xanh hoàn toàn, chạy lại **22/22 cùng revision cuối** và xác nhận JUnit + cleanup. Kết quả hiện tại chỉ xác nhận toàn suite trên `52946726` và hồi quy 3 case trên `f3fedc5e`.
-4. Tiếp theo P1: flow Profile/Account và ScreenBoundary/router thật; chưa triển khai trong nhánh này. P2: quan hệ bạn bè/avatar bằng fixture riêng. P3: comments cần preflight flag, quota và cleanup đúng dữ liệu run.
-5. Tối ưu suite: testcase baseline tổng ~84m24s; trip invite ~20m04s (~24%), tab bar ~8m47s, theme ~7m51s. Đo chi phí setup/auth trước khi giảm cold start; giữ kiểm tra đúng identity và dữ liệu sau reload. Đây không phải số đo latency app.
+**Tiếp theo:** đã có baseline xanh để bắt đầu P1 Profile/Account và ScreenBoundary/router thật. Chưa triển khai các flow mới trong nhánh này. Nếu main đổi UI/behavior liên quan sau SHA này, rà soát tác động và chạy lại phạm vi cần thiết; không kế thừa chứng nhận 22/22 cho revision khác.

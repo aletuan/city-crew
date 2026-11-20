@@ -57,6 +57,16 @@ minute or more per run; keep the suite short.
 7. **Need no manual setup.** If the account lacks something, the flow
    makes it (`06` creates its "Maestro smoke" list the first time).
 
+**Fixture visibility**
+
+New collection forms default to Public. Flows that do not test publishing
+must choose Private before typing a title: `hideKeyboard`/Return can submit.
+Use `common/choose-private-collection.yaml`, then verify the saved collection
+with `common/assert-private-collection.yaml`. A successful tap alone does
+not prove the saved audience. For 06, exercise the no-collection branch with
+a disposable account; an existing list skips that branch. Keep deliberate
+Public/Private transitions in 19 on its run-owned fixture and clean it up.
+
 **Moving around the screen**
 
 8. **The tab bar ducks when a page scrolls down.** After scrolling, scroll
