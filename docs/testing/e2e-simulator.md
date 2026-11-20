@@ -8,7 +8,7 @@ File này không lặp lại hai file đó; nó là bản đồ và lộ trình.
 
 ## Kết quả mới nhất và bàn giao
 
-Xem [bàn giao ngày 20/11/2026](e2e-latest.md): revision đã push, kết quả từng lượt, unit/integration test, artifacts local, cleanup và việc còn mở. Sau rebase, toàn config **23/23 PASS** trong lượt `20261120-222643`, SHA `34a7121e59b657929a2b6fdb302226208433267b`. Bàn giao giữ riêng các lượt chẩn đoán, chạy đích danh và lịch sử trước rebase.
+Xem [bàn giao ngày 20/11/2026](e2e-latest.md): revision đã push, kết quả từng lượt, unit/integration test, artifacts local, cleanup và việc còn mở. Sau rebase, toàn config **23/23 PASS** trong lượt `20261121-003748`, SHA `8be85a2e757aeeb659868dd4a7d4ee43d950869b`. Bàn giao giữ riêng các lượt chẩn đoán, chạy đích danh và lịch sử trước rebase.
 
 Các số liệu tháng 9–10 và kế hoạch dưới đây là lịch sử, không phải release gate hiện tại. Danh sách flow thực thi lấy từ `app/.maestro/config.yaml`; signup/delete (07), guest resume (18/20), privacy (19) và tab responsive (21) đã có flow tự động.
 
@@ -243,7 +243,7 @@ sách toàn suite < 30 phút (xem mục 2).
 
 | Flow | Tài khoản / dữ liệu | Phạm vi | Bằng chứng |
 | --- | --- | --- | --- |
-| `22-profile-account` ✅ | TEST_EMAIL (@maestro), bộ Private `Maestro smoke` có sẵn; không tạo dữ liệu mới | PA-1…PA-6, gồm hai lối Activity và search/cancel | Hai lượt `20261120-181004`, `20261120-181405`; suite 22/22 `20261120-192724`, cùng `54bdd563`; đăng ký config sau nghiệm thu; sau rebase full 23/23 `20261120-222643` trên `34a7121e` |
+| `22-profile-account` ✅ | TEST_EMAIL (@maestro), bộ Private `Maestro smoke` có sẵn; không tạo dữ liệu mới | PA-1…PA-6, gồm hai lối Activity và search/cancel | Hai lượt `20261120-181004`, `20261120-181405`; suite 22/22 `20261120-192724`, cùng `54bdd563`; đăng ký config sau nghiệm thu; sau rebase full 23/23 `20261121-003748` trên `8be85a2e` |
 
 Kế hoạch còn lại giữ tại [e2e-plan.md](e2e-plan.md). P2/P3 chưa triển khai.
 

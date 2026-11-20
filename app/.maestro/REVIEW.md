@@ -375,3 +375,11 @@ Helper mới: `20261120-142003` 05 PASS 2m40s, `open-best-plan.yaml` hoàn tất
 - Unit sau rebase: một lần timeout 3s ở CollectionFormScreen (Save audience) khi chạy mặc định song song simulator. File 74 test chạy riêng qua; toàn bộ unit/timezone/coverage với 2 worker đều 7531/319 PASS, không thay test hoặc timeout. Chưa coi là đã sửa được flaky; CI vẫn phải qua trước merge.
 
 - CI mặc định trên `34a7121e` đã PASS (Actions `44769675558`), gồm app/unit/timezone/coverage. Không xoá bằng chứng timeout local; nguyên nhân flaky vẫn chưa được chứng minh.
+
+### CI xanh chưa đủ nếu head chậm main
+
+- Head `91e0b2e0843e914e1d4746bfbff6d27c2c4e23ef` đã có E2E 23/23 trên source tương ứng và CI xanh (`44777238440`), nhưng `gh pr merge --squash --match-head-commit` bị từ chối vì main thêm #1510. `gh pr view` báo `BEHIND`.
+- Endpoint branch protection trả "Branch not protected" không chứng minh không có điều kiện merge khác (ví dụ ruleset). Tin kết quả merge/mergeStateStatus, không dùng `--admin` để bỏ qua.
+- Rebase thêm #1510 thành `8be85a2e757aeeb659868dd4a7d4ee43d950869b`, range-diff giữ nguyên bốn commit của PR. Các gate local lại PASS; chạy lại 22, nhóm Trips và full trên SHA mới. Kết quả native chỉ ghi sau khi hoàn tất, không mang 23/23 cũ sang SHA này.
+
+- Nghiệm thu sau rebase lần hai: `20261121-000339` **5/5** (22/05/13/16/20), `20261121-003748` **23/23** toàn config, cùng `8be85a2e`. Runner exit 0, JUnit không failure/error/skip; signup/trip ledgers rỗng, A chỉ còn bộ Private cũ, B không có bộ. CI `44780565125` PASS.

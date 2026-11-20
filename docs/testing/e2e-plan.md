@@ -21,6 +21,9 @@ Tài khoản A = `TEST_EMAIL` (`@maestro`).
 Sau rebase: full **23/23** `20261120-222643` trên
 `34a7121e59b657929a2b6fdb302226208433267b`; 22 cũng đạt lượt riêng
 `20261120-213702` trên `4fb26f05`.
+Tích hợp thêm #1510: nhóm 22/05/13/16/20 **5/5** `20261121-000339`,
+full **23/23** `20261121-003748`, cùng SHA
+`8be85a2e757aeeb659868dd4a7d4ee43d950869b`.
 Chi tiết lỗi phát hiện, bản sửa và giới hạn: [e2e-latest.md](e2e-latest.md).
 
 | Ca | Bước và assertion | Bảo vệ điều gì |

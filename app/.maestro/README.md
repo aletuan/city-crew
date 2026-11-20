@@ -20,7 +20,7 @@ scripted from a Linux job). See "Why not CI" at the end.
 
 ## Latest verified results / bàn giao cho agent
 
-Xem [kết quả và bàn giao ngày 20/11/2026](../../docs/testing/e2e-latest.md) trước khi tiếp tục: revision, kết quả từng run, artifacts và các giới hạn. Sau rebase, toàn config **23/23 PASS** trong lượt `20261120-222643` trên `34a7121e`; các lượt riêng và lịch sử P1 có trong file bàn giao. [REVIEW.md](REVIEW.md) giữ nguyên nhân và bài học của từng đợt.
+Xem [kết quả và bàn giao ngày 20/11/2026](../../docs/testing/e2e-latest.md) trước khi tiếp tục: revision, kết quả từng run, artifacts và các giới hạn. Sau rebase, toàn config **23/23 PASS** trong lượt `20261121-003748` trên `8be85a2e`; các lượt riêng và lịch sử P1 có trong file bàn giao. [REVIEW.md](REVIEW.md) giữ nguyên nhân và bài học của từng đợt.
 
 ## What runs
 
