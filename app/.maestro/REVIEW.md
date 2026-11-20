@@ -1,5 +1,7 @@
 # Review lỗi thường gặp khi chạy Maestro trên iOS
 
+Bản bàn giao hiện tại cho agent: [kết quả test, revision và artifacts](../../docs/testing/e2e-latest.md). Các mục phía dưới giữ lịch sử chẩn đoán, không cộng dồn thành một lượt PASS.
+
 Cập nhật: 20/11/2026. Dùng để chẩn đoán nhanh các lỗi E2E của City Crew trên simulator iOS, đặc biệt khi giao diện vẫn hoạt động nhưng Maestro không tìm thấy phần tử.
 
 Đợt kiểm tra này dùng Maestro 2.10.0, iPhone 17 Pro / iOS 26.5 và Expo Go. Các bản sửa thay đổi test/tài liệu và thêm testID cho hàng SENT và trạng thái danh sách Trips trong app; không đổi logic nghiệp vụ. Kết quả PASS của từng ca không thay thế việc chạy lại toàn bộ suite.
