@@ -299,3 +299,14 @@ Cleanup tài khoản fixture thành công, không còn JSON ledger/lock của l�
 Lượt `20261120-060554`: 05 PASS **3m01s**, 06 PASS **2m20s**, 13 PASS **4m51s**, 16 PASS **20m14s**. 20 bị `Unknown error` tại tap `tab-trips` trong chuẩn bị, screenshot đã hiển thị Trips rỗng; cleanup đồng thời báo `fetch failed`. Chưa xác định chính xác nguyên nhân gián đoạn; không coi đây là assertion lỗi Account hoặc lỗi nghiệp vụ resume. Ledger được giữ lại và cleanup chạy lại thành công khi mạng phản hồi.
 
 Chạy riêng 20, giữ máy thức trong lúc runner hoạt động: `20261120-065804` **PASS 4m06s**, runner exit 0, cleanup tài khoản fixture thành công. Tổng cộng **5/5 ca mục tiêu đã PASS qua hai lượt**, không phải một lượt 5/5 hay toàn bộ 22 flow. Cả hai lượt đều có JUnit; kiểm tra cú pháp helper và diff whitespace đạt. Chạy trên Metro 8084 bằng bản sao flow chỉ thay URL như lượt trước, source helper mới giống hệt bản được kiểm chứng.
+
+
+## Ổn định URL Metro và RewardBanner — 20/11/2026
+
+Base `0a1008d9`, branch `codex/maestro-stable-baseline`. Lấy riêng phần URL/banner từ branch tham chiếu `claude/maestro-expo-url-reference` (`02fcd0d9`); không lấy lại thay đổi Profile/MeScreen/SessionNavSync hoặc chép đè helper Account đã merge.
+
+- **Flow env thắng tham số CLI:** 22 flow nay giữ `EXPO_URL` được truyền vào bằng `${EXPO_URL || 'exp://127.0.0.1:8081'}`. `00` PASS qua runner mặc định ở `20261120-091655` (27s), trực tiếp không truyền biến ở `.smoke-local/url-default-direct` (26s), và runner override 8085 ở `20261120-091943` (25s). Log `Maestro.openLink` xác nhận đúng URL cho cả hai cổng, không dùng bản sao flow để đổi URL.
+- **Không chỉ kiểm nhánh không có banner:** fixture account mới + collection private rỗng, UI lần đầu lưu có `reward-banner` First Find thật. Probe dùng cùng helper và thêm assertion/screenshot để chứng minh banner tồn tại trước khi chờ; helper đợi khoảng 2,6 giây tới khi banner mất rồi mới bấm Saved. `20261120-092035` PASS 2m29s; lưu lại với cùng account đã nhận badge, probe xác nhận banner không có, `20261120-092317` PASS 2m27s. Sau probe, cleanup cặp account thành công.
+- Helper là chờ điều kiện `notVisible`, không phải sleep. Nó không chứng minh mọi trường hợp banner có thể đến muộn sau khi assertion đã kết thúc; không coi probe có banner là chứng minh mọi độ trễ mạng. Nếu tái hiện race đó, ghi timestamp từ sự kiện lưu đến notice trước khi tăng timeout.
+- Kiểm tra cú pháp 22 flow + helper mới đạt; `maestroIds.test.ts` 122 test đạt. Full-suite sẽ được ghi riêng sau khi kết thúc trên SHA đã chốt.
+- Worktree/artifacts đặt trên T7 để tránh hết ổ trong: `/Volumes/T7-Workspace/Projects/Claude/city-crew-e2e-stability`. Chỉ một runner foreground, giữ máy thức bằng `caffeinate -i`; không dùng launchd tự khởi động lại.

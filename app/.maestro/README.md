@@ -225,6 +225,19 @@ with `latest` pointing at the newest:
 (`exp://127.0.0.1:8081` — the simulator is on this Mac, so loopback always
 reaches Metro — and the Keychain entry).
 
+Every top-level flow preserves the supplied URL with
+`EXPO_URL: ${EXPO_URL || 'exp://127.0.0.1:8081'}`. A literal URL in a flow's
+`env` overrides the runner's `-e`, silently selecting the wrong Metro.
+For another port, start Metro from the intended checkout and run, for example,
+`EXPO_URL=exp://127.0.0.1:8085 npm run smoke:ios -- .maestro/00-launch.yaml`.
+Read the actual `Maestro.openLink` URL in the run log before interpreting a failure.
+No copied/rewritten flow directory is needed.
+
+Run one foreground Maestro process per simulator; do not use a restartable
+`launchctl submit` job for the suite. For long runs, use `caffeinate -i bash .maestro/smoke.sh` from `app/`. Check disk space before starting and keep the
+run's SHA and Metro checkout with its report. Fixture locks are local to a
+checkout and do not exclude a runner in another worktree.
+
 Open the app in Expo Go once by hand before the first run (press `i` in the
 `expo start` terminal). Each flow then kills Expo Go (`launchApp` with
 `stopApp: true`) and reopens the bundle through `openLink`, so it starts on
