@@ -23,8 +23,8 @@ import {
   Skeleton,
   TABS_ROW_GAP,
   UnderlineChoice,
-  UnderlineTabs,
   useTabBarClearance,
+  WordTabs,
 } from '../components/ui';
 import SearchField from '../components/SearchField';
 import { useDuckOnScroll, useTabBarDucked } from '../components/tabBarDuck';
@@ -740,8 +740,10 @@ export default function CollectionsScreen({ navigation, route }: {
   // opens the panel as a tap on it does.
   const findFromDock = () => { toTop(); openSearch(); };
 
-  // The tab bar's own glyph for your shelf; the globe every public row
-  // already wears for everyone else's. Guests have no library, so they
+  // Words alone since 20 Nov 2026, as Crew's and Activity's are
+  // (`WordTabs`); the bookmark and the globe that marked the two went.
+  // The view toggle at the row's end keeps its glyphs: they are the two
+  // views, not names. Guests have no library, so they
   // get the one half with no switch in front of it. Drawn twice: in the
   // list, where it is measured (`tabsY`), and as the pinned copy once
   // the list has carried it to the top — see `pinned`. The copy has no
@@ -768,10 +770,10 @@ export default function CollectionsScreen({ navigation, route }: {
   // first. That is the cost of taking the order without the default, and
   // the tab bar's own pill is the same sight every day.
   const tabsRow = (floating: boolean) => (session ? (
-      <UnderlineTabs
+      <WordTabs
         tabs={[
-          { key: 'community', testID: floating ? undefined : 'collections-community', icon: 'globe-outline', label: t('Community', 'Cộng đồng', 'みんなの', '社区', '社群') },
-          { key: 'yours', icon: 'bookmark-outline', label: t('Yours', 'Của bạn', '自分の', '我的', '我的'), testID: floating ? undefined : 'collections-yours' },
+          { key: 'community', testID: floating ? undefined : 'collections-community', label: t('Community', 'Cộng đồng', 'みんなの', '社区', '社群') },
+          { key: 'yours', label: t('Yours', 'Của bạn', '自分の', '我的', '我的'), testID: floating ? undefined : 'collections-yours' },
         ]}
         active={tab}
         onChange={pickTab}

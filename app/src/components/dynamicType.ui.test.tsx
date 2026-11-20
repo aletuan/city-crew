@@ -57,7 +57,7 @@ vi.mock('../lib/invitations', () => ({ useInvitations: () => ({ waiting: 0 }) })
 vi.mock('../lib/theme', () => ({ useScheme: () => ({ scheme: 'dark' }) }));
 
 import { labelScaleCap } from '../theme';
-import { UnderlineTabs } from './ui';
+import { WordTabs } from './ui';
 import PlaceCard from './PlaceCard';
 import FloatingTabBar from './FloatingTabBar';
 import { TabBarDuckProvider } from './tabBarDuck';
@@ -100,19 +100,20 @@ describe('the three boxes that cannot grow', () => {
 
   it('caps the number in a tab’s count badge, and not the tab’s name', () => {
     render(
-      <UnderlineTabs
+      <WordTabs
         tabs={[
-          { key: 'a', icon: 'people-outline', label: 'Crew', count: 3 },
-          { key: 'b', icon: 'mail-outline', label: 'Requests', count: 7 },
+          { key: 'a', label: 'Crew', count: 3 },
+          { key: 'b', label: 'Requests', count: 7 },
         ]}
         active="a"
         onChange={() => {}}
       />,
     );
-    // The chosen tab folds its count into its name; the other wears the disc.
+    // Both wear the pill, chosen or not (`WordTabs`), and both are capped.
     expect(caps.get('7')).toBe(labelScaleCap);
+    expect(caps.get('3')).toBe(labelScaleCap);
     expect(caps.get('Requests')).toBeUndefined();
-    expect(caps.get('Crew (3)')).toBeUndefined();
+    expect(caps.get('Crew')).toBeUndefined();
   });
 });
 

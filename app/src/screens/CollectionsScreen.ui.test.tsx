@@ -439,13 +439,16 @@ describe('CollectionsScreen — signed in', () => {
     expect(screen.getByLabelText('1 place').textContent).toBe('1');
     expect(screen.queryByText(/places?$/)).toBeNull();
     // Only the exception is marked (owner, 2 Nov 2026): the private tile
-    // wears a padlock in its top corner, the public one nothing — the only
-    // globe left is the Community tab's own.
+    // wears a padlock in its top corner, the public one nothing. The
+    // Community tab's globe went too, with the tabs' glyphs (20 Nov
+    // 2026), so there is no globe on the page at all.
     expect(screen.getAllByTestId('collection-tile-lock')).toHaveLength(1);
     // In outline, as the list's own page draws it (13 Nov 2026).
     expect(icons('lock-closed-outline')).toBe(1);
     expect(icons('lock-closed')).toBe(0);
-    expect(icons('globe-outline')).toBe(1);
+    expect(icons('globe-outline')).toBe(0);
+    // Words alone on the tabs.
+    expect(screen.getAllByRole('tab').every((x) => !x.querySelector('[data-icon]'))).toBe(true);
     // Signed in, the guest card is gone.
     expect(screen.queryByText('Start a collection')).toBeNull();
   });
@@ -1346,6 +1349,11 @@ describe('scrolled', () => {
     expect(within(pinned).queryByText('New')).toBeNull();
     expect(pinned.textContent).toContain('Yours');
     expect(pinned.textContent).toContain('Community');
+    // The pinned copy is the same words-alone row (20 Nov 2026): no
+    // glyph on either tab, the chosen one in the heavier weight.
+    const pinnedTabs = within(pinned).getAllByRole('tab');
+    expect(pinnedTabs.map((x) => x.getAttribute('aria-label'))).toEqual(['Community', 'Yours']);
+    expect(pinnedTabs.every((x) => !x.querySelector('[data-icon]'))).toBe(true);
     expect(screen.getByTestId('collections-top').getAttribute('aria-hidden')).toBe('true');
     scrollTo(400);
     scrollTo(395); // Thumb wobble does not reveal the header.
