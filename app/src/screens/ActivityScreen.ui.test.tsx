@@ -12,7 +12,7 @@
 import React from 'react';
 import { RefreshControl } from 'react-native';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { act, fireEvent, fontSizeOf, render, screen, viewStyleOf } from '../uitest/render';
+import { act, cleanup, fireEvent, fontSizeOf, render, screen, viewStyleOf, within } from '../uitest/render';
 import type { Nav } from '../nav';
 import type { Applause, Copy, FriendshipRow } from '../lib/friends';
 import type { FriendProfile, MyActs } from '../lib/data';
@@ -708,20 +708,48 @@ describe('a friendship that began', () => {
     await renderScreen();
     expect(screen.queryByText(/chi/)).toBeNull();
     // A request still only asked is no friendship row; since one bell
-    // (20 Nov 2026) it is the notice above the rows, and only that.
-    const rows = screen.queryByTestId('activity-for-you');
-    expect(rows?.textContent ?? '').not.toMatch(/em/);
-    expect(screen.getByTestId('person-requests').textContent).toBe('1 friend request@em wants to be friends');
+    // (20 Nov 2026) it is the requests' own row, and only that.
+    expect(screen.getAllByText(/em/)).toHaveLength(1);
+    expect(screen.getByTestId('activity-requests').textContent).toMatch(/^@em wants to be friends/);
   });
 
-  // One bell: the bell counts a request, so "For you" opens on it — the
-  // card your page shows, the way to Crew — and its pill counts it.
-  it('opens For you on the requests waiting, counted in its pill, and goes to Crew', async () => {
+  // One row however many ask, the latest named and the rest counted, at
+  // the head of the list above newer news; with no profile in yet, the
+  // count alone.
+  it('says the requests in one row at the head, the latest named', async () => {
+    crew.ships.data = [ask('u-e', '2026-10-01T09:00:00'), ask('u-g', '2026-10-02T09:00:00'), made(ME, 'u-c', '2026-10-02T11:00:00')];
+    crew.people = { 'u-e': person('u-e', 'em'), 'u-g': person('u-g', 'giang', '', 'https://faces/g.jpg'), 'u-c': person('u-c', 'chi') };
+    await renderScreen();
+    const rows = screen.getByTestId('activity-for-you').children;
+    expect(rows[0].getAttribute('data-testid')).toBe('activity-requests');
+    expect(rows[0].textContent).toMatch(/^@giang and 1 other want to be friends/);
+    expect(screen.getAllByTestId('activity-requests')).toHaveLength(1);
+    expect(screen.getByTestId('activity-tab-for-you').textContent).toMatch(/^For you/);
+    cleanup();
+    crew.ships.data = [ask('u-x'), ask('u-y')];
+    crew.people = {};
+    await renderScreen();
+    expect(screen.getByTestId('activity-requests').textContent).toMatch(/^2 friend requests/);
+  });
+
+  // One bell: the bell counts a request, so "For you" opens on it — a
+  // row of the list (owner, 20 Nov 2026), first, dotted until answered,
+  // the way to Crew — and its pill counts it.
+  it('opens For you on a row for the requests waiting, counted in its pill, and goes to Crew', async () => {
     crew.ships.data = [ask('u-e')];
     crew.people = { 'u-e': person('u-e', 'em') };
     const navigation = await renderScreen();
     expect(screen.getByTestId('activity-tab-for-you').textContent).toBe('For you1');
-    fireEvent.click(screen.getByTestId('person-requests'));
+    const row = screen.getByTestId('activity-requests');
+    expect(screen.getByTestId('activity-for-you').contains(row)).toBe(true);
+    expect(row.querySelector('[data-icon="person-add"]')).toBeTruthy();
+    expect(within(row).getByTestId('row-new')).toBeTruthy();
+    expect(screen.queryByTestId('person-requests')).toBeNull();
+    // Not news on the other tab: what you did is yours.
+    fireEvent.click(screen.getByTestId('activity-tab-yours'));
+    expect(screen.queryByTestId('activity-requests')).toBeNull();
+    fireEvent.click(screen.getByTestId('activity-tab-for-you'));
+    fireEvent.click(screen.getByTestId('activity-requests'));
     // From the last tab's stack, through the tabs: `toProfileRoom`.
     expect(tabs.navigate).toHaveBeenCalledWith('Profile', { screen: 'Crew', initial: false });
     expect(navigation.navigate).not.toHaveBeenCalled();

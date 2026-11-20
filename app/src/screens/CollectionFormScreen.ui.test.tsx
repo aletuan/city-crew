@@ -507,7 +507,9 @@ describe('what stops a submit before it writes', () => {
     render(<CollectionFormScreen navigation={nav()} route={routeWith()} />);
     expect(leave()).toBe(false);
     await pick('private');
-    expect(leave()).toBe(true);
+    // The guard is registered again by an effect, which may land a beat
+    // after the line has redrawn: under CI's load it once had not (#1496).
+    await waitFor(() => expect(leave()).toBe(true));
   });
 
   // The fields on the page itself (owner, 16 Nov 2026): small labels, no
