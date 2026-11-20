@@ -46,6 +46,7 @@ import {
 import { useCrew } from '../lib/crew';
 import { useMyTrips } from '../lib/mytrips';
 import { useInvitations } from '../lib/invitations';
+import { useKeepCurrent } from '../lib/usePull';
 import { splitFriendships } from '../lib/friends';
 import InviteSheet from '../components/InviteSheet';
 import StopGallery from '../components/StopGallery';
@@ -98,6 +99,9 @@ export default function TripDetailScreen({ navigation, route }: {
   // only sometimes runs throws on the render where the branch flips.
   const { ships, people } = useCrew();
   const { invites, crewCounts } = useInvitations();
+  // Whether a friend has said yes is the one thing here another person
+  // changes, so it is re-read on every focus and on a pull (`lib/usePull`).
+  const refresh = useKeepCurrent([invites], [trips, invites]);
   const [sheetOpen, setSheetOpen] = useState(false);
   const [sending, setSending] = useState(false);
   const tripId = route.params.id;
@@ -322,7 +326,7 @@ export default function TripDetailScreen({ navigation, route }: {
       <AmbientWarmth />
       <ScrollView
         contentContainerStyle={{ paddingHorizontal: space.page, paddingBottom: clearance }}
-        showsVerticalScrollIndicator={false}
+        showsVerticalScrollIndicator={false} refreshControl={refresh}
       >
         {/* Who is coming, before what the day is — the answer to "is this
             still on" is the one thing a reader opens a saved trip for that

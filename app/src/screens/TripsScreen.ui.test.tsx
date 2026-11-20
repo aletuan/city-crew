@@ -26,7 +26,7 @@ import { dropResume, takeResume } from '../lib/resume';
 beforeEach(() => { dropResume(); });
 import { Alert } from 'react-native';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { act, cleanup, fireEvent, render, screen, textStyleOf, viewStyleOf, waitFor } from '../uitest/render';
+import { act, cleanup, fireEvent, pullControl, render, screen, textStyleOf, viewStyleOf, waitFor } from '../uitest/render';
 import { useScrollToTop } from '@react-navigation/native';
 import { addDays, fromISO, todayISO } from '../lib/day';
 import { dateline } from '../lib/format';
@@ -210,10 +210,29 @@ describe('the first focus', () => {
     expect(spies.tripsReload).toHaveBeenCalled();
   });
 
+  // Whether a friend has said yes is the one thing another person changes
+  // (owner, 21 Nov 2026): it used to wait for the phone to come back from
+  // the background.
+  it('reads the invitations again on focus, since a friend may have answered', () => {
+    show([trip()]);
+    expect(spies.invitesReload).toHaveBeenCalled();
+  });
+
   it('holds skeletons, not the list, until the read has settled', () => {
     show([trip()], { loaded: false });
     expect(screen.queryByText('Old Quarter crawl')).toBeNull();
     expect(screen.queryByText('No trips yet')).toBeNull();
+  });
+});
+
+describe('pulling the list down', () => {
+  it('reads the trips and the invitations again', () => {
+    show([trip()]);
+    spies.tripsReload.mockClear();
+    spies.invitesReload.mockClear();
+    act(() => { pullControl().onRefresh(); });
+    expect(spies.tripsReload).toHaveBeenCalledTimes(1);
+    expect(spies.invitesReload).toHaveBeenCalledTimes(1);
   });
 });
 
@@ -285,7 +304,9 @@ describe('arriving from Profile', () => {
     state.trips = { loaded: true, error: null, data: [trip({ day: SOON })] };
     const n = nav();
     const { rerender } = render(<TripsScreen navigation={n} />);
-    const scroller = [...document.querySelectorAll('div')].find((d) => getComputedStyle(d).overflowY === 'auto' || d.className.includes('overflowY'))!;
+    // The innermost one: with a pull wired, the list sits in a wrapper that
+    // also carries the scroller's class, and it is the inner node that scrolls.
+    const scroller = [...document.querySelectorAll('div')].filter((d) => getComputedStyle(d).overflowY === 'auto' || d.className.includes('overflowY')).at(-1)!;
     scroller.scrollTop = 300;
     rerender(<TripsScreen navigation={n} route={{ params: {} }} />);
     expect(scroller.scrollTop).toBe(300);
@@ -566,9 +587,12 @@ describe('invitations', () => {
   it('answers through the write, then reloads both lists', async () => {
     state.invites = [invite()];
     show([asked()]);
+    // Past the focus reload, which is not the answer's.
+    spies.tripsReload.mockClear();
+    spies.invitesReload.mockClear();
     fireEvent.click(screen.getByRole('button', { name: 'accept asked-1' }));
     await waitFor(() => expect(spies.answerInvite).toHaveBeenCalledWith('asked-1', 'accepted'));
-    await waitFor(() => expect(spies.tripsReload).toHaveBeenCalledTimes(2));
+    await waitFor(() => expect(spies.tripsReload).toHaveBeenCalledTimes(1));
     expect(spies.invitesReload).toHaveBeenCalledTimes(1);
   });
 
@@ -589,6 +613,7 @@ describe('invitations', () => {
     spies.answerInvite.mockRejectedValueOnce(new Error('the evening is full'));
     state.invites = [invite()];
     show([asked()]);
+    spies.invitesReload.mockClear();
     fireEvent.click(screen.getByRole('button', { name: 'accept asked-1' }));
     await waitFor(() => expect(alert).toHaveBeenCalled());
     expect(alert.mock.calls[0][0]).toBe('Could not answer');
