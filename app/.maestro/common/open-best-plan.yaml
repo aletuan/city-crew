@@ -1,0 +1,16 @@
+# Plan cards animate into place. Their accessibility ids can precede a
+# settled touch target; verify the editor before any Save-related scroll.
+appId: host.exp.Exponent
+---
+- extendedWaitUntil:
+    visible:
+      id: "plan-card-best"
+    timeout: 90000
+- waitForAnimationToEnd:
+    timeout: 5000
+- tapOn:
+    id: "plan-card-best"
+- extendedWaitUntil:
+    visible:
+      id: "plan-stop-name-0"
+    timeout: 15000

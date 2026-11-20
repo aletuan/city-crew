@@ -1,0 +1,23 @@
+# Set the audience while the name is still empty: hideKeyboard may submit.
+# Verify the draft choice by reopening the sheet before filling the name.
+appId: host.exp.Exponent
+---
+- tapOn:
+    id: "collection-form-seen"
+- tapOn:
+    id: "sheet-action-private"
+- extendedWaitUntil:
+    notVisible:
+      id: "sheet-action-private"
+    timeout: 10000
+- tapOn:
+    id: "collection-form-seen"
+- assertVisible:
+    id: "sheet-action-private"
+    selected: true
+- tapOn:
+    id: "sheet-action-private"
+- extendedWaitUntil:
+    notVisible:
+      id: "sheet-action-private"
+    timeout: 10000

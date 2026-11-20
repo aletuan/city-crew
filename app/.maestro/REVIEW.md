@@ -327,3 +327,24 @@ Lượt retry `20261120-105743` trên `f3fedc5e` bị gián đoạn, không có 
 **Kiểm chứng sau sửa:** `20261120-114433`, SHA `f3fedc5e`: 17 PASS 4m39s, 19 PASS 7m59s, 20 PASS 3m42s; JUnit 3/3, runner exit 0, cleanup thành công, không còn JSON ledger signup/trip hay trip lock. Các lần đăng xuất trong 19/20 đi tiếp được vào màn Sign in và nhập credential sau helper mới. Cú pháp helper và 122 kiểm tra testID đạt; 5 gate chạy lại sau reboot đều đạt (7460 test/318 file cho unit và timezone; coverage qua floors). Không gộp baseline và retry thành một lượt 22/22 trên revision cuối.
 
 **Chi phí suite:** baseline có tổng thời gian testcase 5064s (~84m24s), trip invite 1204s (~24%). Có thể ưu tiên đo phần setup/auth/cold start trước khi tối ưu; không diễn giải tổng thời gian driver thành độ trễ app. Cảnh báo Maestro “number of flows (0)” lúc đầu không phải kết quả discovery cuối: JUnit thực tế có đủ 22 tên flow.
+
+
+## Fixture collection phải chọn Private trước submit — 20/11/2026
+
+Base main `9fa2f60a`, branch `codex/maestro-private-fixtures`. Main đã đổi tạo collection sang Public mặc định và dùng audience sheet từ `collection-form-seen`; không dùng ID radio từ revision cũ. 06 (nhánh chưa có list) và 11 trước đây không chọn audience. 06 giữ list sau khi unsave, nên không được coi cleanup place là cleanup collection.
+
+**Bài học:** lựa chọn an toàn cho fixture phải được thiết lập trước mọi đường submit, kể cả `hideKeyboard`/Return. Helper mới chọn Private khi tên còn rỗng, mở lại sheet xác nhận selected. Sau tạo, mở sheet trên trang collection và assert Private đã selected trước khi tap; 11 kiểm lại sau rename. Không đổi mặc định Public của sản phẩm để phục vụ test.
+
+Rà soát bằng session đúng hai tài khoản Keychain trước test: tài khoản 1 có đúng một `Maestro smoke` (tạo 11/09/2026), `is_public=false`, 0 place; tài khoản 2 không có collection. Không có `Maestro CRUD`/`Maestro CRUD 2` tồn dư, không sửa/xóa dữ liệu cũ. Phạm vi rà soát chỉ hai tài khoản test này, không phải toàn DB. Bằng chứng local `.smoke-local/collection-audit-before.json`; không ghi credential vào Git. Probe dùng account mới không seed collection để nhánh tạo mới 06 thực sự chạy, sau đó 11; kết quả đang chờ.
+
+Probe `20261120-135941`: 06 PASS 2m51s trên tài khoản chưa có collection; 11 PASS 3m23s. Assertion selected Private đạt trước nhập tên, trên trang collection sau tạo và sau rename. Read-only backend oracle sau hai flow xác nhận đúng một `Maestro smoke`, `is_public=false`, 0 place, không còn CRUD; cleanup cặp tài khoản tạm thành công. Log `.smoke-local/private-create-probe.log`. 123 kiểm tra selector, cú pháp 06/11 và 5 gate đạt; unit 7481 test/318 file. Chờ baseline 22 flow trên commit cố định trước khi kết luận hoàn tất.
+
+### Baseline dừng sớm: tap plan card chưa mở editor
+
+Lượt `20261120-140733` trên `ad7df999`: 00–04 PASS, 05 FAIL tại chờ `plan-save`. Screenshot lỗi vẫn là PlanOptions (card Low-key và Regenerate), không phải PlanEdit. Log tap `plan-card-best` hoàn tất nhưng không có assertion xác nhận editor trước khi scroll; helper tiếp tục cuộn trên màn sai. Source card có animation arrival, nhưng chưa đủ bằng chứng quy nguyên nhân cho animation hay app. Không tăng timeout Save. Dừng lượt sớm để chẩn đoán thay vì coi là baseline đầy đủ; runner cleanup signup/trip thành công. Không sửa YAML trong lượt đang chạy.
+
+Chạy riêng 05 giữ nguyên YAML trên `ad7df999`: `20261120-141628` PASS 2m38s, cleanup thành công. Lỗi chưa tái hiện; không kết luận animation là root cause đã chứng minh. Cải thiện test: helper `open-best-plan.yaml` chờ animation kết thúc sau khi card xuất hiện, tap một lần, rồi yêu cầu `plan-stop-name-0` của editor hiện trước khi tìm Save. Dùng chung cho create-trip, 13 và 20. Không retry mù/tăng timeout Save; nếu không chuyển màn, fail ngay tại hậu điều kiện editor. Chờ kiểm chứng helper mới.
+
+Helper mới: `20261120-142003` 05 PASS 2m40s, `open-best-plan.yaml` hoàn tất bằng assertion editor trước scroll Save; cleanup thành công. 123 selector tests và cú pháp đạt. Những dòng FAIL nhanh của 06 trở đi trong lượt `140733` xuất hiện khi SIGINT dừng runner, không phân loại là lỗi assertion độc lập hay kết quả kiểm chức năng; chỉ 05 có lỗi quan sát trước khi hủy. Root cause cấp touch/driver của tap bị mất vẫn chưa chứng minh, không gọi một lần PASS là đã loại bỏ mọi flake.
+
+**Baseline xanh được xác nhận:** run `20261120-142328`, SHA `d0c9cd07b033d3abf28fa5d94107697fbcc32421`, 22/22 PASS trong 1h16m45s; JUnit khớp đủ 22 flow config, không failures/errors/skips, runner exit 0. 05/13/16/20 dùng helper mở editor mới đều đạt trong cùng lượt. Không sửa executable files giữa lượt. Cleanup không còn JSON ledger signup/trip/probe hoặc trip lock. Audit hai tài khoản Keychain sau test bằng backend app: không đổi so với trước — đúng một Smoke cũ Private/rỗng, không CRUD tồn dư, tài khoản 2 không collection. Chi tiết artifacts và giới hạn root cause của lần tap mất ở `docs/testing/e2e-latest.md`.

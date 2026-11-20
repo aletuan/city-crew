@@ -77,6 +77,7 @@ env:
     visible:
       id: "collection-name"
     timeout: 10000
+- runFlow: common/choose-private-collection.yaml
 - tapOn:
     id: "collection-name"
 - inputText: "Maestro CRUD"
@@ -100,6 +101,8 @@ env:
     timeout: 15000
 - tapOn:
     text: "^Maestro CRUD(,.*)?$"
+
+- runFlow: common/assert-private-collection.yaml
 
 # Rename, from the collection's own menu. The form comes back filled in.
 - extendedWaitUntil:
@@ -132,6 +135,7 @@ env:
     visible:
       text: "Maestro CRUD 2"
     timeout: 15000
+- runFlow: common/assert-private-collection.yaml
 # Back to the list first: a tab keeps its stack, and the Collections tab
 # must reopen on the list, not on this page, when the flow returns to it.
 - tapOn:
