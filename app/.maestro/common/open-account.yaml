@@ -3,7 +3,7 @@
 # signed out.
 #
 # Since 19 Nov 2026 the tab opens your own person page, with Account a
-# page over it ("Account ›" beside the activity heading;
+# page over it (the gear at the header's right end since 20 Nov 2026;
 # docs/profile-home-plan.md). A guest has no page of their own, so the
 # tab still opens the hub, which is the page these flows want.
 appId: host.exp.Exponent
@@ -14,15 +14,15 @@ appId: host.exp.Exponent
 # The person page is found by handle and shows a spinner first.
 - extendedWaitUntil:
     visible:
-      id: "person-account|account-back|profile-sign-in"
+      id: "person-settings|account-back|profile-sign-in"
     timeout: 15000
 - runFlow:
     when:
       visible:
-        id: "person-account"
+        id: "person-settings"
     commands:
       - tapOn:
-          id: "person-account"
+          id: "person-settings"
 # All entry states must end on Account or the guest hub.
 - extendedWaitUntil:
     visible:

@@ -136,7 +136,7 @@ import { useDuckOnScroll } from '../components/tabBarDuck';
 import { useProfile, useSession } from '../lib/auth';
 import Shared, { useReach } from './person/Shared';
 import { Requests } from './person/Requests';
-import { Bell } from './person/Bell';
+import { OwnTools, SearchSoon } from './person/Tools';
 import { OwnFace, useOwnPicture } from './person/OwnFace';
 import { Counts } from './profile/Counts';
 import { useCollections, usePlaces } from '../lib/catalog';
@@ -246,11 +246,14 @@ export default function PersonScreen({ navigation, route, home }: {
   // The feed's next cards, drawn before the reader reaches them —
   // `useReach`.
   const end = useReach();
-  // From your own page to the Account page — `Shared`'s `onAccount` has
-  // why it is that page and that word. Account was the last tab's first
-  // page until 19 Nov 2026; it is a page under your own now
-  // (docs/profile-home-plan.md), reached as `toProfileRoom` says.
-  const toAccount = () => toProfileRoom(navigation, 'Account');
+  // The header's right end — `person/Tools`. On your own page the
+  // search, the bell (Activity) and the gear (Account); Account was the
+  // last tab's first page until 19 Nov 2026 and is a page under your own
+  // now (docs/profile-home-plan.md), reached as `toProfileRoom` says. On
+  // anybody else's, the search before the friend button and the ⋯.
+  const tools = own
+    ? <OwnTools onActivity={() => toProfileRoom(navigation, 'Activity')} onAccount={() => toProfileRoom(navigation, 'Account')} />
+    : <View style={s.topRight}><SearchSoon />{topFriend}{menu.button}</View>;
   // The tab pressed again while this is its first page: back to the top,
   // as every tab's first page does (ExploreScreen's `tabPress` note). On
   // a pushed page React Navigation does nothing with it.
@@ -269,8 +272,6 @@ export default function PersonScreen({ navigation, route, home }: {
         {cover
           ? <Image source={{ uri: cover }} style={s.coverPhoto} contentFit="cover" transition={160} />
           : <View style={[s.coverPhoto, s.tint]} testID="person-cover-tint" />}
-        {/* Your way to Activity, on your own page — `person/Bell`. */}
-        {own ? <Bell onPress={() => toProfileRoom(navigation, 'Activity')} /> : null}
       </View>
       <View style={s.headRow}>
         {/* Your own in the level's ring — `person/OwnFace`. */}
@@ -326,7 +327,6 @@ export default function PersonScreen({ navigation, route, home }: {
         coverFor={coverFor}
         onOpen={(c) => navigation.navigate('CollectionDetail', { slug: c.slug })}
         onComments={(c) => navigation.navigate('Comments', { subject: { kind: 'collection', id: c.id as string } })}
-        onAccount={own ? toAccount : undefined}
         reach={end.reach}
       />
     </>
@@ -363,14 +363,20 @@ export default function PersonScreen({ navigation, route, home }: {
       backTestID="person-back"
       backBare
       compactTitle
-      right={<View style={s.topRight}>{topFriend}{menu.button}</View>}
+      right={tools}
     >
+      {/* The tab's first page has no header (`titleScrolls`), so the
+          tools stand in a row of their own at the header's place and
+          height: the same glyphs in the same spot whichever way the page
+          was opened. Held 44 tall before the page has loaded, so the
+          cover does not drop when they arrive. */}
+      {home ? <View style={s.homeTools} testID="person-home-tools">{person ? tools : null}</View> : null}
       <ScrollView
         ref={scroll}
         testID="person-scroll"
         onScroll={(e) => { top.onScroll(e); end.onScroll(e); }}
         scrollEventThrottle={16}
-        contentContainerStyle={[s.content, home && s.contentHome, { paddingBottom: tabClearance }]}
+        contentContainerStyle={[s.content, { paddingBottom: tabClearance }]}
         showsVerticalScrollIndicator={false}
       >
         {page}
@@ -657,9 +663,15 @@ function Acts({ friend, onLayout }: { friend: React.ReactNode; onLayout: (e: Lay
 
 const s = StyleSheet.create({
   content: { paddingHorizontal: space.page },
-  // With no title over it, the cover starts where a title's band would:
-  // the 8 a large title stands under the safe area (`Screen`'s header).
-  contentHome: { paddingTop: 8 },
+  // The tools' row on the tab's first page: `Screen`'s inline header
+  // (`headerInline`) without its way back or title — 6 over, 14 under,
+  // the page's margins — so the cover starts where it does on a pushed
+  // page. It replaced the 8 the cover stood under the safe area while
+  // the page had nothing over it.
+  homeTools: {
+    flexDirection: 'row', justifyContent: 'flex-end', minHeight: 44,
+    paddingHorizontal: space.page, paddingTop: 6, paddingBottom: 14,
+  },
   spinner: { marginTop: 20 },
   // The accent's tint: a cover with no photograph to wear.
   tint: { backgroundColor: colors.accentSoft },

@@ -70,19 +70,21 @@ khác thì có tiêu đề và nút quay lại, vì có trang phía dưới đ�
 P1–P2 phần chỉ chủ trang thấy chỉ có ở gốc tab; đã bỏ giới hạn đó.
 
 1. **Đầu trang:** không có tiêu đề (chủ dự án bỏ ngày 19/11: tab đã nói
-   đây là trang của ai) và không có nút quay lại. **Chuông** (Hoạt động)
-   nổi ở góc trên bên phải ảnh bìa, cách A trong hai cách vẽ cho chủ dự án
-   ngày 19/11 (cách B là cạnh "Tài khoản ›"). Chuông có chấm khi có trả
-   lời, tag hoặc bình luận chưa xem (C7c).
+   đây là trang của ai) và không có nút quay lại. Bên phải là một hàng ba
+   nút (chủ dự án, 20/11, theo ảnh mẫu của anh; `person/Tools`):
+   **Tìm kiếm** (đang tắt, mục 9), **Chuông** (Hoạt động) và **Bánh răng**
+   (Tài khoản). Chuông có chấm khi có trả lời, tag hoặc bình luận chưa xem
+   (C7c). Từ 19/11 chuông nổi ở góc ảnh bìa (cách A; cách B là cạnh "Tài
+   khoản ›"); lên đầu trang thì vẫn thấy ngay khi mở mà không nằm đè lên
+   ảnh. Mở từ tab khác thì hàng nút nằm cạnh nút quay lại, ở cùng chỗ.
 2. **Ảnh bìa, ảnh đại diện, tên, handle, tiểu sử** như hôm nay. Ảnh đại
    diện có vòng cấp độ, và nhãn "Lv" **ngay dưới ảnh, ở giữa** (chủ dự án,
    19/11), bấm mở Thành tích. Chỉ chủ trang thấy.
 3. **Bốn con số:** Bộ sưu tập, Check-in, Bạn bè, Chuyến đi. Mỗi số là một
    cửa, như ở Tài khoản hôm nay (`StatTile`, cùng đích đến).
 4. **Thẻ lời mời kết bạn**, chỉ khi có lời mời.
-5. **Hoạt động** (các bộ sưu tập), với **"Tài khoản ›"** bên phải tiêu đề.
-   Đây là lối vào Tài khoản: #1451 đã đặt nó ở đó ngày 19/11, trước khi kế
-   hoạch này viết xong, nên câu hỏi "bánh răng hay ⋯" không còn.
+5. **Hoạt động** (các bộ sưu tập). "Tài khoản ›" bên phải tiêu đề (#1451,
+   19/11) đã bỏ ngày 20/11: lối vào Tài khoản là bánh răng ở đầu trang.
 
 Nút "Sửa hồ sơ" **ở lại Tài khoản**, dưới tên (chủ dự án, 19/11). Trên
 Trang cá nhân, bấm vào tiểu sử (hoặc "Viết vài dòng về bạn") đã mở Sửa
@@ -126,7 +128,7 @@ nhưng ở trang khác, nên giữ. Xem lại ở P4.
   `Account`, nếu không người dùng đổi giao diện xong thì rơi về Trang cá
   nhân và bảng mở trên trang sai.
 - **Trang của mình trong tab khác** (Khám phá, Bộ sưu tập) có đủ bốn con
-  số, thẻ lời mời và "Tài khoản ›". `Account`, `Crew`, `Visited` chỉ có ở
+  số, thẻ lời mời, chuông và bánh răng. `Account`, `Crew`, `Visited` chỉ có ở
   `ProfileStack`, nên các cửa đó đi qua `toProfileRoom` (`nav.ts`): trong
   stack đó thì đẩy trang lên; ở tab khác thì chuyển sang tab cuối, mở
   phòng đó đè lên trang của mình (`initial: false`).
@@ -200,9 +202,20 @@ trên tab; P3 sửa *lối vào* Hoạt động. Để hai bên không giẫm l�
 
 ## 9. Còn mở
 
-1. ~~Lối vào Tài khoản: bánh răng hay ⋯?~~ Đã có: "Tài khoản ›" (#1451).
+1. ~~Lối vào Tài khoản: bánh răng hay ⋯?~~ "Tài khoản ›" (#1451), rồi
+   bánh răng ở đầu trang từ 20/11.
 2. **Vòng cấp độ và "Lv": chỉ chủ trang thấy, hay ai cũng thấy?** Cấp độ
    tính từ số địa điểm đã lưu, tức là nói ra mức hoạt động. Đề xuất: chỉ
    chủ trang, cho tới khi có lý do khác.
 3. **Về tôi và Sở thích** có nên lên Trang cá nhân không. Tiểu sử đã ở
    đó; email và ngày tham gia là của riêng tài khoản. Để sau P4.
+4. **Tìm kiếm trên Trang cá nhân** (nút có từ 20/11, đang tắt). Đề xuất:
+   tìm trong nội dung của chính trang đang xem — bộ sưu tập (tên, mô tả)
+   và địa điểm trong các bộ sưu tập đó, theo đúng quyền người xem được
+   thấy — không phải tìm toàn app (người, địa điểm toàn thành phố đã có
+   chỗ ở Khám phá và Kết nối bạn bè). Vì vậy nút hiện trên trang của mọi
+   người, không chỉ trang của mình: người cần tìm trong 24 bộ sưu tập của
+   một curator nhất là khách. `person/Shared` đã ghi đây là câu trả lời
+   đầu tiên nên cân nhắc cho lưới đã bỏ.
+5. **Tiêu đề "Hoạt động"** còn cần không, khi bên phải không còn gì. Để
+   chủ dự án quyết.
