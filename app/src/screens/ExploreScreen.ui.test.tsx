@@ -2327,9 +2327,10 @@ describe('signup highlight tour', () => {
     await screen.findByTestId('explore-list');
     expect(screen.queryByTestId('places-map')).toBeNull();
   });
-  // Five steps since 21 Nov 2026: search, save, then three tabs. No
-  // filter step, so nothing scrolls the filter button into view.
-  it('keeps search in view, opens a real place for save, then rings the tabs from home', () => {
+  // Five steps since 21 Nov 2026, Explore driving the pages: search here,
+  // a real place for save, Collections on Community, nothing for the
+  // profile tab, and the planner last.
+  it('keeps search in view, opens a real place, then Collections on Community, then the planner', () => {
     state.places.data = [place('p1')];
     const navigation = nav();
     const view = render(<ExploreScreen navigation={navigation} />);
@@ -2341,15 +2342,15 @@ describe('signup highlight tour', () => {
     expect(scroll).toHaveBeenLastCalledWith({ y: 0, animated: false });
     tourState.step = 1; view.rerender(<ExploreScreen navigation={navigation} />);
     expect(navigation.navigate).toHaveBeenCalledWith('PlaceDetail', { slug: 'p1' });
-    expect(scroll).toHaveBeenCalledTimes(1);
     tourState.step = 2; view.rerender(<ExploreScreen navigation={navigation} />);
-    expect(spies.goTo).toHaveBeenCalledWith('Explore', { screen: 'ExploreHome' });
-    expect(scroll).toHaveBeenLastCalledWith({ y: 0, animated: false });
+    expect(navigation.popToTop).toHaveBeenCalledOnce();
+    expect(spies.goTo).toHaveBeenLastCalledWith('Collections', { screen: 'CollectionsHome', params: { tab: 'community', at: expect.any(Number) } });
     spies.goTo.mockClear();
     tourState.step = 3; view.rerender(<ExploreScreen navigation={navigation} />);
-    tourState.step = 4; view.rerender(<ExploreScreen navigation={navigation} />);
-    // Once home, the later tabs need no second trip there.
     expect(spies.goTo).not.toHaveBeenCalled();
+    tourState.step = 4; view.rerender(<ExploreScreen navigation={navigation} />);
+    expect(spies.goTo).toHaveBeenCalledExactlyOnceWith('Ideas', { screen: 'IdeasHome' });
+    expect(scroll).toHaveBeenCalledTimes(1);
     expect(navigation.navigate).toHaveBeenCalledTimes(1);
     tourState.step = -1; view.rerender(<ExploreScreen navigation={navigation} />);
   });

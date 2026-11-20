@@ -54,6 +54,19 @@ const state = vi.hoisted(() => ({
 const picker = vi.hoisted(() => ({ props: null as null | Record<string, unknown> }));
 const sheet = vi.hoisted(() => ({ props: null as null | Record<string, unknown> }));
 
+// The sign-up guide's anchors, recorded: which control each is on.
+const tourAnchors = vi.hoisted(() => new Map<string, { ref: { current: unknown }; press: () => void }>());
+vi.mock('../components/SignupTour', async (orig) => {
+  const real = await orig<typeof import('../components/SignupTour')>();
+  return {
+    ...real,
+    useTourAnchor: (...args: Parameters<typeof real.useTourAnchor>) => {
+      const ref = real.useTourAnchor(...args);
+      tourAnchors.set(args[0], { ref, press: args[1] });
+      return ref;
+    },
+  };
+});
 vi.mock('../lib/i18n', () => ({
   useI18n: () => ({
     lang: state.lang,
@@ -206,6 +219,24 @@ describe('the questions', () => {
     state.places = [];
     renderScreen();
     expect(screen.queryByText('Cafés')).toBeNull();
+    expect(cta().getAttribute('aria-disabled')).toBe('true');
+  });
+});
+
+// The sign-up guide's last step rings the first question (owner, 21 Nov
+// 2026): always in sight when the tab opens, where "Plan a trip" is
+// below the fold and dimmed until two are answered.
+describe('the guide’s ring', () => {
+  it('is on the first question, "Going with…", and nothing else', () => {
+    renderScreen();
+    const held = tourAnchors.get('plan')!;
+    const box = held.ref.current as HTMLElement;
+    expect(box.contains(screen.getByText('Going with…'))).toBe(true);
+    expect(box.contains(screen.getByText('Couple'))).toBe(true);
+    expect(box.contains(screen.getByText('In the mood for…'))).toBe(false);
+    expect(box.contains(cta())).toBe(false);
+    // A press on the ring only closes the guide: nothing is chosen.
+    held.press();
     expect(cta().getAttribute('aria-disabled')).toBe('true');
   });
 });

@@ -52,7 +52,7 @@ import { canPlan, COMPANY, EMPTY_DRAFT, startPoint, toggle, TripDraft } from '..
 import { cityAround, standsIn } from '../lib/geo';
 import type { Nav } from '../nav';
 import { colors, space } from '../theme';
-import { MoreRow, Section } from './ideas/parts';
+import { GuidedSection, MoreRow, Section } from './ideas/parts';
 import { SEG_SLOP, s } from './ideas/styles';
 
 /** The last instant of a calendar day, for a picker bound. `fromISO` gives
@@ -471,7 +471,7 @@ export default function IdeasScreen({ navigation, route }: {
             ("Who's coming?"), which read as a form to fill in; a copy
             edit here should keep them as openers the chip labels can
             complete, ellipsis and all. */}
-        <Section title={t('Going with…', 'Bạn muốn đi cùng…', '一緒に行くのは…', '和谁一起…', '和誰一起…')} cols={4}>
+        <GuidedSection title={t('Going with…', 'Bạn muốn đi cùng…', '一緒に行くのは…', '和谁一起…', '和誰一起…')} cols={4}>
           {COMPANY.map((c) => (
             <Tile
               key={c.key}
@@ -482,7 +482,7 @@ export default function IdeasScreen({ navigation, route }: {
               onPress={() => set('company', draft.company === c.key ? null : c.key)}
             />
           ))}
-        </Section>
+        </GuidedSection>
 
         {/* No cap on this group and there must not be one: `planner.ts`
             sizes the outing from how many were named, so a limit here

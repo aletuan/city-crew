@@ -719,13 +719,11 @@ describe('the duck', () => {
   });
 });
 
-// The guide's ring on the collections tab is the pill's own shape (owner,
-// 22 Oct 2026): the cell's width, and in from the island's rim by the
-// pill's inset, so it is the selected tab's mark and never stands out past
-// the bar. Ringed as other controls are, it was 82×70 against a 75×56 pill.
-describe('the guide’s ring on the collections tab', () => {
-  // Three tabs are rung since 21 Nov 2026: collections, your page, and the
-  // planner. Each the pill's shape, each handing the press back as its tab.
+// The guide's ring on the profile tab (step 4) is the pill's own shape
+// (owner, 22 Oct 2026, of the collections tab it rang then): the cell's
+// width, and in from the island's rim by the pill's inset, so it is the
+// selected tab's mark and never stands out past the bar.
+describe('the guide’s ring on the profile tab', () => {
   const rung = () => {
     anchorCalls.length = 0;
     const out = propsFor(0);
@@ -735,32 +733,26 @@ describe('the guide’s ring on the collections tab', () => {
     return { seen, navigation: out.navigation };
   };
 
-  it('is the pill’s size: the cell’s width, the pill’s height', () => {
+  it('rings the profile tab alone, the pill’s size: the cell’s width, the pill’s height', () => {
     const { seen } = rung();
-    expect([...seen.keys()].sort()).toEqual(['collections', 'ideas', 'profile']);
-    for (const [, , , outset] of seen.values()) {
-      expect(outset.x).toBe(0);
-      expect(TAB_BAR_HEIGHT + outset.y * 2).toBe(parseFloat(getComputedStyle(pill()).height));
-    }
+    expect([...seen.keys()]).toEqual(['profile']);
+    const [, , , outset] = seen.get('profile')!;
+    expect(outset.x).toBe(0);
+    expect(TAB_BAR_HEIGHT + outset.y * 2).toBe(parseFloat(getComputedStyle(pill()).height));
   });
 
-  // Each ring stands on its own tab's cell, not a neighbour's.
-  it('is fixed to the tab it names', () => {
+  // On its own tab's cell, not a neighbour's.
+  it('is fixed to the profile tab', () => {
     rung();
-    for (const [id, name] of [['collections', 'Collections'], ['profile', 'Profile'], ['ideas', 'Ideas']]) {
-      const cell = anchorRefs.get(id)!.current as HTMLElement;
-      expect(cell.contains(tab(name)) || tab(name).contains(cell), id).toBe(true);
-    }
+    const cell = anchorRefs.get('profile')!.current as HTMLElement;
+    expect(cell.contains(tab('Profile')) || tab('Profile').contains(cell)).toBe(true);
+    expect(cell.contains(tab('Collections'))).toBe(false);
   });
 
   // Tapping the ring is tapping the tab: the guide hands the press back.
-  it('opens the tab it rings when the guide hands the press back', () => {
+  it('opens Profile when the guide hands the press back', () => {
     const { seen, navigation } = rung();
-    seen.get('collections')![1]();
-    expect(navigation.navigate).toHaveBeenLastCalledWith('Collections');
     seen.get('profile')![1]();
-    expect(navigation.navigate).toHaveBeenLastCalledWith('Profile');
-    seen.get('ideas')![1]();
-    expect(navigation.navigate).toHaveBeenLastCalledWith('Ideas');
+    expect(navigation.navigate).toHaveBeenCalledWith('Profile');
   });
 });

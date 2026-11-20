@@ -689,10 +689,14 @@ export default function ExploreScreen({ navigation }: { navigation: Nav }) {
       // A real catalog entry, never a fabricated tutorial place or a write.
       if (shown[0]) navigation.navigate('PlaceDetail', { slug: shown[0].slug });
       else tour.next();
-    } else {
-      // The tabs' steps ring the bar back on Explore, from the top.
-      if (tour.step === 2) goTo('Explore', { screen: 'ExploreHome' });
+    } else if (tour.step === 0) {
       listRef.current?.getScrollResponder()?.scrollTo({ y: 0, animated: false });
+    } else if (tour.step === 2) {
+      // Collections on Community, from the place's page, which is let go.
+      navigation.popToTop();
+      goTo('Collections', { screen: 'CollectionsHome', params: { tab: 'community', at: Date.now() } });
+    } else if (tour.step === 4) {
+      goTo('Ideas', { screen: 'IdeasHome' });
     }
   }, [tour, holding, headerH, shown, navigation, mapMode, pickView, insets.top]);
   // The floating bar's own measured height, in map mode: there the bar

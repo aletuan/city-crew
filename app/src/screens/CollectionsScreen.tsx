@@ -11,6 +11,7 @@ import { useFocusEffect, useScrollToTop } from '@react-navigation/native';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Glyph, ICON } from '../components/ui/glyph';
+import { useTourAnchor } from '../components/SignupTour';
 import {
   AmbientWarmth,
   Avatar,
@@ -377,10 +378,9 @@ export default function CollectionsScreen({ navigation, route }: {
     startedFromCommunity.current = null;
     setTab('yours');
   }, [mine.data.length]);
-  const pickTab = (next: 'yours' | 'community') => {
-    startedFromCommunity.current = null;
-    setTab(next);
-  };
+  const pickTab = (next: 'yours' | 'community') => { startedFromCommunity.current = null; setTab(next); };
+  // The sign-up guide's third step rings Community (`SignupTour`).
+  const communityRef = useTourAnchor('community', () => pickTab('community'));
   const startNew = () => {
     startedFromCommunity.current = onYours ? null : mine.data.length;
     navigation.navigate('CollectionForm');
@@ -794,7 +794,7 @@ export default function CollectionsScreen({ navigation, route }: {
   const tabsRow = (floating: boolean) => (session ? (
       <WordTabs
         tabs={[
-          { key: 'community', testID: floating ? undefined : 'collections-community', label: t('Community', 'Cộng đồng', 'みんなの', '社区', '社群'), tally: tallyOnceIn([!holding], community.length) },
+          { key: 'community', testID: floating ? undefined : 'collections-community', anchorRef: floating ? undefined : communityRef, label: t('Community', 'Cộng đồng', 'みんなの', '社区', '社群'), tally: tallyOnceIn([!holding], community.length) },
           { key: 'yours', label: t('Yours', 'Của bạn', '自分の', '我的', '我的'), testID: floating ? undefined : 'collections-yours', tally: tallyOnceIn([mine.loaded, shared.loaded], mine.data.length + shared.data.length) },
         ]}
         active={tab}

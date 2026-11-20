@@ -124,6 +124,19 @@ vi.mock('../lib/data', async (orig) => ({
     return { data: state.myShares, loaded: true, loading: false, reload: spies.mySharesReload };
   },
 }));
+// The sign-up guide's anchors, recorded: which control each is on.
+const tourAnchors = vi.hoisted(() => new Map<string, { ref: { current: unknown }; press: () => void }>());
+vi.mock('../components/SignupTour', async (orig) => {
+  const real = await orig<typeof import('../components/SignupTour')>();
+  return {
+    ...real,
+    useTourAnchor: (...args: Parameters<typeof real.useTourAnchor>) => {
+      const ref = real.useTourAnchor(...args);
+      tourAnchors.set(args[0], { ref, press: args[1] });
+      return ref;
+    },
+  };
+});
 vi.mock('../components/tabBarDuck', () => ({ useDuckOnScroll: () => undefined, useTabBarDucked: () => state.ducked }));
 // The dock's settle gate is the dock's own business (DockSlot's tests);
 // here it offers the moment the screen says it may, so a test can open
@@ -413,6 +426,23 @@ describe('CollectionsScreen — as a guest', () => {
 
 describe('CollectionsScreen — signed in', () => {
   beforeEach(() => { state.uid = 'u1'; });
+
+  // The sign-up guide's third step rings Community (owner, 21 Nov 2026),
+  // and a press on the ring is a press on the tab.
+  it('lends the guide the Community tab, which opens Community when pressed', () => {
+    state.cols.data = [col('p1', ['a'])];
+    state.mine.data = [col('m1', ['a'], { owner_id: 'u1' })];
+    show();
+    // The tab's own sentence says which tab is on screen.
+    const scope = () => screen.getByTestId('collections-scope').textContent;
+    expect(scope()).toBe('Your own favourite places.');
+    const held = tourAnchors.get('community')!;
+    const box = held.ref.current as HTMLElement;
+    const tabEl = screen.getByTestId('collections-community');
+    expect(box === tabEl || box.contains(tabEl) || tabEl.contains(box)).toBe(true);
+    act(() => { held.press(); });
+    expect(scope()).toBe('Good corners, through the community’s eyes.');
+  });
 
   // Each tab's pill is how many lists it holds, counted from what it
   // draws (owner, 20 Nov 2026) — `tallyOnceIn` has why not the server's.
