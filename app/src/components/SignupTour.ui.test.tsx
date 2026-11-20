@@ -21,11 +21,11 @@ vi.mock('../lib/i18n', () => ({ useI18n: () => ({ t: (_en: string, vi: string) =
 vi.mock('react-native', async orig => ({ ...(await orig<Record<string, unknown>>()), useWindowDimensions: () => ({ width: 390, height: 844, scale: 1, fontScale: 1 }) }));
 const pressed = vi.fn();
 const getRoute = () => state.route;
-function Anchor({ id }: { id: 'search' | 'filter' | 'save' | 'collections' }) {
+function Anchor({ id }: { id: 'search' | 'save' | 'collections' | 'profile' | 'ideas' }) {
   // The collections tab rings as the tab bar asks: in from its box above
   // and below, out by nothing at the sides.
   const ref = useTourAnchor(id, pressed, id === 'search' ? () => state.focused : undefined,
-    id === 'collections' ? { x: 0, y: -4 } : undefined);
+    ['collections', 'profile', 'ideas'].includes(id) ? { x: 0, y: -4 } : undefined);
   useEffect(() => {
     ref.current = { measureInWindow: (cb: (x: number, y: number, w: number, h: number) => void) => cb(state.x, state.offscreen ? -50 : state.readings.shift() ?? state.y, state.w, state.h) } as unknown as React.ComponentRef<typeof View>;
   }, [ref]);
@@ -36,44 +36,53 @@ function Controls() {
   return <><button onClick={() => tour.start(state.uid)}>Start</button>
     <button onClick={() => tour.setEnabled(true)}>Enable</button><button onClick={() => tour.setEnabled(false)}>Disable</button>
     <button onClick={tour.replay}>Replay</button><span data-testid="enabled">{String(tour.enabled)}</span><span data-testid="notice-top">{String(tour.noticeTop)}</span>
-    {state.anchors && <><Anchor id="search" /><Anchor id="filter" /><Anchor id="save" /><Anchor id="collections" />{state.duplicate && <Anchor id="search" />}</>}</>;
+    {state.anchors && <><Anchor id="search" /><Anchor id="save" /><Anchor id="collections" /><Anchor id="profile" /><Anchor id="ideas" />{state.duplicate && <Anchor id="search" />}</>}</>;
 }
 const onReplay = vi.fn();
 const tree = () => <SignupTourProvider onReplay={onReplay} getRoute={getRoute}><Controls /></SignupTourProvider>;
 beforeEach(async () => { for (const id of ['new', 'recreated', 'guest']) await AsyncStorage.removeItem(`highlight.v1:${id}`); onReplay.mockClear(); state.uid = 'new'; state.route = 'ExploreHome'; state.offscreen = false; state.y = 60; state.anchors = true; state.x = 40; state.w = 40; state.h = 40; state.duplicate = false; state.focused = true; state.bottom = 0; state.readings = []; pressed.mockClear(); });
-const start = async () => { fireEvent.click(screen.getByText('Start')); await screen.findByText('1/4'); };
-it('does not start on sign-in; runs four steps and finishes without a skip on the last step', async () => {
+const start = async () => { fireEvent.click(screen.getByText('Start')); await screen.findByText('1/5'); };
+it('does not start on sign-in; runs five steps and finishes without a skip on the last step', async () => {
   render(tree()); expect(screen.queryByTestId('signup-tour')).toBeNull();
   await start();
-  expect(screen.getByText('Tìm hoặc bổ sung địa điểm bạn thích')).toBeTruthy();
+  expect(screen.getByText('Tìm theo tên quán, món ăn hay khu phố.')).toBeTruthy();
+  // Step 2 is the save button on a place's page: it waits for that page.
   fireEvent.click(screen.getByText('Tiếp theo'));
-  await screen.findByText('2/4');
+  await waitFor(() => expect(screen.queryByTestId('signup-tour')).toBeNull());
   state.route = 'PlaceDetail';
+  await screen.findByText('2/5');
+  expect(screen.getByText('Lưu nơi bạn thích')).toBeTruthy();
+  // Steps 3 to 5 ring tabs in the floating bar, there on the place's page
+  // too: Next must not need a way back to Explore.
   fireEvent.click(screen.getByText('Tiếp theo'));
-  await screen.findByText('3/4');
-  // Step 4's target is the collections tab in the floating bar, there on
-  // the place's page too: Next must not need a way back to Explore.
+  await screen.findByText('3/5');
+  expect(screen.getByText('Bộ sưu tập của bạn')).toBeTruthy();
   fireEvent.click(screen.getByText('Tiếp theo'));
-  await screen.findByText('4/4');
+  await screen.findByText('4/5');
+  expect(screen.getByText('Kết bạn, và xem ai đã thích hay bình luận bộ sưu tập của bạn.')).toBeTruthy();
+  expect(screen.getByText('Bỏ qua hướng dẫn')).toBeTruthy();
+  fireEvent.click(screen.getByText('Tiếp theo'));
+  await screen.findByText('5/5');
+  expect(screen.getByText('Lên kế hoạch')).toBeTruthy();
+  expect(screen.getByText('Để City Crew gợi ý một buổi đi chơi từ những nơi bạn đã lưu, rồi rủ bạn bè cùng đi.')).toBeTruthy();
   expect(screen.queryByText('Bỏ qua hướng dẫn')).toBeNull();
   fireEvent.click(screen.getByText('Hoàn tất'));
   await waitFor(() => expect(screen.queryByTestId('signup-tour')).toBeNull());
   fireEvent.click(screen.getByText('Start'));
   expect(screen.queryByTestId('signup-tour')).toBeNull();
   expect(pressed).not.toHaveBeenCalled();
-  await waitFor(async () => expect(JSON.parse((await AsyncStorage.getItem('highlight.v1:new'))!)).toMatchObject({ enabled: true, progress: 4 }));
+  await waitFor(async () => expect(JSON.parse((await AsyncStorage.getItem('highlight.v1:new'))!)).toMatchObject({ enabled: true, progress: 5 }));
 });
 // The floating bar sits partly inside the home indicator's inset, so its
 // tab must count as on screen there; a bar ducked below the edge must not.
 it('rings the collections tab inside the bottom inset, but not once it has slid away', async () => {
   state.bottom = 34;
   render(tree()); await start();
-  fireEvent.click(screen.getByText('Tiếp theo')); await screen.findByText('2/4');
   state.route = 'PlaceDetail';
-  fireEvent.click(screen.getByText('Tiếp theo')); await screen.findByText('3/4');
+  fireEvent.click(screen.getByText('Tiếp theo')); await screen.findByText('2/5');
   state.y = 844 - 16 - 40; // foot at 828, inside the 810 the inset leaves
   fireEvent.click(screen.getByText('Tiếp theo'));
-  await screen.findByText('4/4');
+  await screen.findByText('3/5');
   state.y = 850; // ducked: below the screen's edge
   await waitFor(() => expect(screen.queryByTestId('signup-tour')).toBeNull());
 });
@@ -81,7 +90,7 @@ it('rings the collections tab inside the bottom inset, but not once it has slid 
 // no × row, and a light scrim so the ring and the card lead.
 it('keeps the count beside the title, with no close button of its own, over a light scrim', async () => {
   render(tree()); await start();
-  expect(screen.getByText('1/4').parentElement).toBe(screen.getByText('Tìm nơi bạn muốn đến').parentElement);
+  expect(screen.getByText('1/5').parentElement).toBe(screen.getByText('Tìm nơi bạn muốn đến').parentElement);
   expect(screen.queryByText('×')).toBeNull();
   expect(screen.getAllByLabelText('Đóng hướng dẫn')).toHaveLength(1);
   expect(screen.getByTestId('signup-tour-scrim').getAttribute('fill')).toBe('rgba(6,5,8,0.25)');
@@ -98,10 +107,9 @@ it('cuts the ring’s shape out of the scrim, and follows it from step to step',
     'M0 0H390V844H0Z'
     + 'M60 56H60A24 24 0 0 1 84 80V80A24 24 0 0 1 60 104H60A24 24 0 0 1 36 80V80A24 24 0 0 1 60 56Z',
   );
-  fireEvent.click(screen.getByText('Tiếp theo')); await screen.findByText('2/4');
   state.route = 'PlaceDetail';
-  fireEvent.click(screen.getByText('Tiếp theo')); await screen.findByText('3/4');
-  fireEvent.click(screen.getByText('Tiếp theo')); await screen.findByText('4/4');
+  fireEvent.click(screen.getByText('Tiếp theo')); await screen.findByText('2/5');
+  fireEvent.click(screen.getByText('Tiếp theo')); await screen.findByText('3/5');
   expect(scrim().getAttribute('d')).toBe(
     'M0 0H390V844H0Z'
     + 'M56 64H64A16 16 0 0 1 80 80V80A16 16 0 0 1 64 96H56A16 16 0 0 1 40 80V80A16 16 0 0 1 56 64Z',
@@ -183,7 +191,7 @@ it('waits for a target instead of pointing at a missing control', async () => {
   const view = render(tree()); fireEvent.click(screen.getByText('Start'));
   expect(screen.queryByTestId('signup-tour')).toBeNull();
   state.anchors = true; view.rerender(tree());
-  await screen.findByText('1/4');
+  await screen.findByText('1/5');
 });
 it('is inert outside its provider', () => {
   function Outside() { useTourAnchor('search', pressed); const tour = useSignupTour(); return <button onClick={() => { tour.start('new'); tour.next(); tour.finish(); }}>Outside</button>; }
@@ -198,7 +206,7 @@ it('is inert outside its provider', () => {
 it('waits for a target to hold still before drawing the step', async () => {
   state.readings = [500, 300];
   render(tree()); fireEvent.click(screen.getByText('Start'));
-  await screen.findByText('1/4');
+  await screen.findByText('1/5');
   expect(screen.getByTestId('signup-tour-target').style.top).toBe('56px');
   expect(state.readings).toEqual([]);
 });
@@ -218,7 +226,7 @@ it('ignores controls retained in an unfocused native stack', async () => {
   render(tree()); fireEvent.click(screen.getByText('Start'));
   expect(screen.queryByTestId('signup-tour')).toBeNull();
   state.focused = true;
-  await screen.findByText('1/4');
+  await screen.findByText('1/5');
 });
 
 const saved = async (uid = 'new') => JSON.parse((await AsyncStorage.getItem(`highlight.v1:${uid}`))!);
@@ -233,7 +241,7 @@ it('persists skipping across remounts, enables without navigating, and explicitl
   fireEvent.click(screen.getByText('Enable'));
   expect(onReplay).not.toHaveBeenCalled();
   fireEvent.click(screen.getByText('Bắt đầu'));
-  await screen.findByText('1/4'); expect(onReplay).toHaveBeenCalledOnce();
+  await screen.findByText('1/5'); expect(onReplay).toHaveBeenCalledOnce();
   fireEvent.click(screen.getByText('Disable'));
   expect(screen.queryByTestId('signup-tour')).toBeNull();
   await waitFor(async () => expect((await saved()).enabled).toBe(false));
@@ -242,7 +250,7 @@ it('keeps enabled after acting on a real control and allows replay', async () =>
   render(tree()); await start();
   fireEvent.click(screen.getByTestId('signup-tour-target'));
   await waitFor(async () => expect(await saved()).toMatchObject({ enabled: true, progress: 1 }));
-  fireEvent.click(screen.getByText('Replay')); await screen.findByText('1/4');
+  fireEvent.click(screen.getByText('Replay')); await screen.findByText('1/5');
 });
 it('starts onboarding afresh for a recreated account, even on the same device', async () => {
   const view = render(tree()); await start();
@@ -260,7 +268,7 @@ it('reads completed progress without automatically starting again', async () => 
   render(tree());
   await waitFor(() => expect(screen.getByTestId('enabled').textContent).toBe('true'));
   expect(screen.queryByTestId('signup-tour')).toBeNull();
-  fireEvent.click(screen.getByText('Replay')); await screen.findByText('1/4');
+  fireEvent.click(screen.getByText('Replay')); await screen.findByText('1/5');
 });
 it('handles malformed or unavailable storage without starting guidance', async () => {
   await AsyncStorage.setItem('highlight.v1:new', '{broken');
@@ -360,11 +368,15 @@ it('draws the ring where the control asks, and keeps the card as clear of it', a
   // Search: 4 clear of its 40×40 box at (40, 60), the card 12 below that.
   expect([target().style.left, target().style.top, target().style.width, target().style.height]).toEqual(['36px', '56px', '48px', '48px']);
   expect(card().style.top).toBe('116px');
-  fireEvent.click(screen.getByText('Tiếp theo')); await screen.findByText('2/4');
   state.route = 'PlaceDetail';
-  fireEvent.click(screen.getByText('Tiếp theo')); await screen.findByText('3/4');
-  fireEvent.click(screen.getByText('Tiếp theo')); await screen.findByText('4/4');
+  fireEvent.click(screen.getByText('Tiếp theo')); await screen.findByText('2/5');
+  fireEvent.click(screen.getByText('Tiếp theo')); await screen.findByText('3/5');
   // Collections: the box's width, 4 in from its top and foot.
   expect([target().style.left, target().style.top, target().style.width, target().style.height]).toEqual(['40px', '64px', '40px', '32px']);
   expect(card().style.top).toBe('108px');
+  // Your page and the planner: tabs, ringed as the collections tab is.
+  for (const n of ['4/5', '5/5']) {
+    fireEvent.click(screen.getByText('Tiếp theo')); await screen.findByText(n);
+    expect([target().style.left, target().style.top, target().style.width, target().style.height]).toEqual(['40px', '64px', '40px', '32px']);
+  }
 });
