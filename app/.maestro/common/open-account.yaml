@@ -10,11 +10,11 @@ appId: host.exp.Exponent
 ---
 - tapOn:
     id: "tab-profile"
-# Either page, once it has loaded: the person page is found by handle and
-# shows a spinner first.
+# Switching tabs retains the nested stack: Account may already be open.
+# The person page is found by handle and shows a spinner first.
 - extendedWaitUntil:
     visible:
-      id: "person-account|profile-sign-in"
+      id: "person-account|account-back|profile-sign-in"
     timeout: 15000
 - runFlow:
     when:
@@ -23,7 +23,8 @@ appId: host.exp.Exponent
     commands:
       - tapOn:
           id: "person-account"
-      - extendedWaitUntil:
-          visible:
-            id: "account-back"
-          timeout: 10000
+# All entry states must end on Account or the guest hub.
+- extendedWaitUntil:
+    visible:
+      id: "account-back|profile-sign-in"
+    timeout: 10000

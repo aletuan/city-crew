@@ -449,6 +449,66 @@ describe('a request you sent', () => {
   });
 });
 
+// A face and the words beside it open that person's page on the Requests
+// tab too (owner, 20 Nov 2026): a request or a suggestion asks you to
+// decide about someone, and their page is how you see who they are. The
+// buttons beside the face do their own thing and never open the page.
+describe('a face on the Requests tab', () => {
+  beforeEach(() => {
+    crew.ships.data = [edge('r', ME, 'pending'), edge(ME, 'o', 'pending')];
+    crew.people = { r: person('r', 'binh', 'Binh'), o: person('o', 'oanh', 'Oanh') };
+  });
+
+  it('opens the page of whoever asked, and of whoever you asked, by their handle', () => {
+    const navigation = nav();
+    render(<CrewScreen navigation={navigation} />);
+    fireEvent.click(screen.getByTestId('crew-request-who-0'));
+    expect(navigation.navigate).toHaveBeenLastCalledWith('Person', { handle: 'binh' });
+    fireEvent.click(screen.getByTestId('crew-sent-who-0'));
+    expect(navigation.navigate).toHaveBeenLastCalledWith('Person', { handle: 'oanh' });
+    expect(navigation.navigate).toHaveBeenCalledTimes(2);
+  });
+
+  // The door holds the face and the words, not the card: Accept, Decline,
+  // Cancel and ⋯ answer for themselves.
+  it('leaves the buttons beside it to their own work', () => {
+    const navigation = nav();
+    render(<CrewScreen navigation={navigation} />);
+    const who = screen.getByTestId('crew-request-who-0');
+    expect(who.textContent).toBe('Binh wants to join your crew@binh');
+    expect(who.contains(screen.getByTestId('crew-accept-0'))).toBe(false);
+    expect(screen.getByTestId('crew-sent-who-0').textContent).not.toContain('Cancel');
+    fireEvent.click(screen.getByTestId('crew-accept-0'));
+    fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
+    expect(navigation.navigate).not.toHaveBeenCalled();
+  });
+
+  it('opens nothing for someone whose profile has not arrived', () => {
+    crew.people = {};
+    const navigation = nav();
+    render(<CrewScreen navigation={navigation} />);
+    fireEvent.click(screen.getByTestId('crew-request-who-0'));
+    fireEvent.click(screen.getByTestId('crew-sent-who-0'));
+    expect(navigation.navigate).not.toHaveBeenCalled();
+  });
+
+  it('opens a suggested person’s page, and Add and Hide stay outside it', async () => {
+    crew.ships.data = [];
+    const sg = person('s', 'son', 'Son');
+    data.fetchSuggestedFriends.mockImplementation(async () => [sug('s', 'saves', null, 2)]);
+    data.fetchProfilesById.mockImplementation(async () => [sg]);
+    crew.people = { s: sg };
+    const navigation = nav();
+    render(<CrewScreen navigation={navigation} />);
+    fireEvent.click(tab(/Requests/));
+    const who = await screen.findByTestId('crew-suggestion-who-s');
+    expect(who.contains(screen.getByTestId('crew-suggestion-add-s'))).toBe(false);
+    expect(who.contains(screen.getByTestId('crew-suggestion-dismiss-s'))).toBe(false);
+    fireEvent.click(who);
+    expect(navigation.navigate).toHaveBeenCalledExactlyOnceWith('Person', { handle: 'son' });
+  });
+});
+
 describe('your friends', () => {
   beforeEach(() => {
     crew.ships.data = [edge(ME, 'a', 'accepted')];

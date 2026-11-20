@@ -68,15 +68,16 @@ export default function ProfileScreen({ navigation }: { navigation: Nav }) {
   const scrollBy = useCallback((dy: number) => scrollRef.current?.scrollTo({ y: y.current + dy, animated: true }), []);
   // Pushed: the account's page over your own (19 Nov 2026,
   // docs/profile-home-plan.md). Not pushed: the guest's, which is still
-  // the tab's first page. Read once — a page does not move in its stack.
-  const [pushed] = useState(() => navigation.canGoBack());
+  // the tab's first page. Parent tab history can make canGoBack() true
+  // at the stack root, so inspect this stack's index instead.
+  const [pushed] = useState(() => navigation.getState().index > 0);
   const stack = useMemo(() => (pushed ? ['ProfileHome', 'Account'] : undefined), [pushed]);
   const returning = useMemo(() => ({ sheet, spendSheet, y, scrollBy, stack }), [sheet, spendSheet, scrollBy, stack]);
   // Signed out from here — the last rows of this page — there is no
   // account for it to be the page of: back to the tab's first page, which
   // is the guest's now.
   useEffect(() => {
-    if (pushed && ready && !session) navigation.popToTop();
+    if (pushed && ready && !session && navigation.getState().index > 0) navigation.popToTop();
   }, [pushed, ready, session, navigation]);
 
   return (

@@ -21,11 +21,29 @@
 import type { Pref } from '../lib/look';
 import React from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { CommonActions, StackRouter } from '@react-navigation/routers';
+import { BaseNavigationContainer, createNavigationContainerRef, createNavigatorFactory, useNavigationBuilder } from '@react-navigation/core';
+import { CommonActions, StackRouter, TabRouter } from '@react-navigation/routers';
 import { act, cleanup, fireEvent, render, screen, textStyleOf, viewStyleOf, waitFor, within } from '../uitest/render';
 import { CATEGORIES } from '../lib/categories';
 import { useScrollToTop } from '@react-navigation/native';
-import type { Nav } from '../nav';
+import { navRef, type Nav } from '../nav';
+import { SessionNavSync } from '../lib/sessionNavSync';
+import MeScreen from './MeScreen';
+import DeleteAccountScreen from './DeleteAccountScreen';
+
+type NavigationAuth = {
+  session: { user: { id: string } } | null;
+  signOut: () => Promise<void>;
+  deleteAccount: () => Promise<void>;
+};
+const NavigationSession = React.createContext<NavigationAuth | undefined>(undefined);
+vi.mock('../lib/takeout', () => ({ useTakeout: () => ({ busy: false, error: null, run: vi.fn() }) }));
+// The person's presentation is outside these navigation tests. Keep its
+// Account entry, while MeScreen chooses between this page and the guest hub.
+vi.mock('./PersonScreen', () => ({
+  default: ({ navigation }: { navigation: Nav }) =>
+    <button onClick={() => navigation.navigate('Account')}>Open account</button>,
+}));
 
 const guide = vi.hoisted(() => ({ enabled: false, setEnabled: vi.fn(), replay: vi.fn(), notice: null as 'ready' | 'off' | null, noticeTop: null as number | null }));
 vi.mock('../components/SignupTour', () => ({ useSignupTour: () => guide }));
@@ -50,6 +68,7 @@ const goTo = vi.hoisted(() => vi.fn());
 vi.mock('../nav', async (orig) => ({
   ...(await orig<Record<string, unknown>>()),
   goTo,
+  navRef: (await import('@react-navigation/core')).createNavigationContainerRef(),
 }));
 
 const state = vi.hoisted(() => ({
@@ -110,14 +129,20 @@ vi.mock('../lib/useGuideGrant', () => ({
 }));
 vi.mock('../lib/auth', () => {
   const m = {
-    useAuth: () => ({
-      ready: state.ready,
-      session: state.session,
-      email: state.email,
-      profile: state.profile,
-      memberSince: state.memberSince,
-      signOut: spies.signOut,
-    }),
+    useAuth: () => {
+      const context = React.useContext(NavigationSession);
+      const session = context ? context.session : state.session;
+      return {
+        ready: state.ready,
+        session,
+        userId: session?.user.id ?? null,
+        email: state.email,
+        profile: state.profile,
+        memberSince: state.memberSince,
+        signOut: context?.signOut ?? spies.signOut,
+        deleteAccount: context?.deleteAccount,
+      };
+    },
   };
   const all = () => (m as { useAuth: () => object }).useAuth();
   return { ...m, useSession: all, useProfile: all, useAuthActions: all, useAuthEvent: () => {} };
@@ -231,7 +256,7 @@ const nav = (pushed = false) => {
   const n = {
     navigate: vi.fn(), goBack: vi.fn(), getParent: vi.fn(() => parent), canGoBack: vi.fn(() => pushed), popToTop: vi.fn(),
     // The last tab's stack, where Account and its rooms are.
-    getState: vi.fn(() => ({ routeNames: ['ProfileHome', 'Account', 'Crew', 'Visited', 'Activity', 'Person'] })),
+    getState: vi.fn(() => ({ index: pushed ? 1 : 0, routeNames: ['ProfileHome', 'Account', 'Crew', 'Visited', 'Activity', 'Person'] })),
   };
   return { n: n as unknown as Nav, raw: n, parent };
 };
@@ -864,7 +889,7 @@ describe('the four doors', () => {
   // with the room over the tab's first page.
   it('opens the check-ins and the crew through the last tab from another tab', () => {
     const r = nav();
-    r.raw.getState.mockReturnValue({ routeNames: ['CollectionsHome', 'CollectionDetail', 'Person'] });
+    r.raw.getState.mockReturnValue({ index: 0, routeNames: ['CollectionsHome', 'CollectionDetail', 'Person'] });
     render(<Counts navigation={r.n} />);
     fireEvent.click(screen.getByRole('button', { name: '0 Check-ins' }));
     expect(r.parent.navigate).toHaveBeenLastCalledWith('Profile', { screen: 'Visited', initial: false });
@@ -1696,3 +1721,136 @@ describe('the badges', () => {
     expect(screen.queryAllByTestId('count-badge')).toHaveLength(0);
   });
 });
+
+// Real routers preserve the difference between a root stack and tab history.
+function ProfileTestStack({ children }: { children: React.ReactNode }) {
+  const { state, descriptors, NavigationContent } = useNavigationBuilder(StackRouter, { children });
+  return <NavigationContent>{descriptors[state.routes[state.index].key].render()}</NavigationContent>;
+}
+function ProfileTestTabs({ children }: { children: React.ReactNode }) {
+  const { state, descriptors, NavigationContent } = useNavigationBuilder(TabRouter, { children });
+  return <NavigationContent>{state.routes.map((route, index) => (
+    <section key={route.key} hidden={index !== state.index}>{descriptors[route.key].render()}</section>
+  ))}</NavigationContent>;
+}
+const ProfileStack = createNavigatorFactory(ProfileTestStack)();
+const ProfileTabs = createNavigatorFactory(ProfileTestTabs)();
+
+it('keeps the guest hub at the stack root when the parent tab can go back', () => {
+  state.session = null;
+  const ref = createNavigationContainerRef<{ Explore: undefined; Profile: undefined }>();
+  const unhandled = vi.fn();
+  let profileNavigation: Nav;
+  function Guest({ navigation }: { navigation: Nav }) {
+    React.useEffect(() => { profileNavigation = navigation; }, [navigation]);
+    return <ProfileScreen navigation={navigation} />;
+  }
+  function Profile() {
+    return <ProfileStack.Navigator><ProfileStack.Screen name="ProfileHome" component={Guest} /></ProfileStack.Navigator>;
+  }
+  const Explore = () => <div>Explore home</div>;
+  render(<BaseNavigationContainer ref={ref} onUnhandledAction={unhandled}>
+    <ProfileTabs.Navigator>
+      <ProfileTabs.Screen name="Explore" component={Explore} />
+      <ProfileTabs.Screen name="Profile" component={Profile} />
+    </ProfileTabs.Navigator>
+  </BaseNavigationContainer>);
+  act(() => ref.navigate('Profile'));
+  expect(profileNavigation!.canGoBack()).toBe(true);
+  expect(profileNavigation!.getState().index).toBe(0);
+  expect(screen.getByTestId('profile-sign-in')).toBeTruthy();
+  expect(unhandled).not.toHaveBeenCalled();
+  expect(screen.queryByTestId('account-back')).toBeNull();
+  expect(ref.getCurrentRoute()?.name).toBe('ProfileHome');
+});
+
+it('does not pop again when session navigation has already reset the stack', () => {
+  state.session = null;
+  const r = nav();
+  r.raw.getState.mockReturnValueOnce({ ...r.raw.getState(), index: 1 });
+  render(<ProfileScreen navigation={r.n} />);
+  expect(r.raw.popToTop).not.toHaveBeenCalled();
+});
+
+function AccountTestRoutes() {
+  return <ProfileStack.Navigator>
+    <ProfileStack.Screen name="ProfileHome" component={MeScreen} />
+    <ProfileStack.Screen name="Account" component={ProfileScreen} />
+    <ProfileStack.Screen name="DeleteAccount" component={DeleteAccountScreen} />
+  </ProfileStack.Navigator>;
+}
+const ExploreTestHome = () => <h1>Explore home</h1>;
+const ExploreTestDetail = () => <h1>Place detail</h1>;
+function ExploreTestRoutes() {
+  return <ProfileStack.Navigator>
+    <ProfileStack.Screen name="ExploreHome" component={ExploreTestHome} />
+    <ProfileStack.Screen name="PlaceDetail" component={ExploreTestDetail} />
+  </ProfileStack.Navigator>;
+}
+function mountAccountNavigation() {
+  const unhandled = vi.fn();
+  const api = { signOut: vi.fn(async () => {}), deleteAccount: vi.fn(async () => {}) };
+  state.profile = { handle: 'reader', full_name: 'Reader' };
+  function Harness() {
+    const [session, setSession] = React.useState<NavigationAuth['session']>({ user: { id: 'me' } });
+    const endSession = async (operation: () => Promise<void>) => {
+      await operation();
+      setSession(null);
+    };
+    return <NavigationSession.Provider value={{
+      session,
+      signOut: () => endSession(api.signOut),
+      deleteAccount: () => endSession(api.deleteAccount),
+    }}>
+      <BaseNavigationContainer ref={navRef} onUnhandledAction={unhandled}>
+        <SessionNavSync />
+        <ProfileTabs.Navigator>
+          <ProfileTabs.Screen name="Explore" component={ExploreTestRoutes} />
+          <ProfileTabs.Screen name="Profile" component={AccountTestRoutes} />
+        </ProfileTabs.Navigator>
+      </BaseNavigationContainer>
+    </NavigationSession.Provider>;
+  }
+  render(<Harness />);
+  act(() => navRef.dispatch(CommonActions.navigate('Explore', { screen: 'PlaceDetail', params: { slug: 'coffee' } })));
+  expect(screen.getByRole('heading', { name: 'Place detail' })).toBeTruthy();
+  act(() => navRef.dispatch(CommonActions.navigate('Profile')));
+  fireEvent.click(screen.getByRole('button', { name: 'Open account' }));
+  expect(navRef.getCurrentRoute()?.name).toBe('Account');
+  return { api, unhandled };
+}
+
+it.each(['sign out', 'delete account'] as const)(
+  'returns to the guest root after %s and clears the retained stacks',
+  async action => {
+    const { api, unhandled } = mountAccountNavigation();
+    // A tab round trip retains Account, so a local stack push and a parent
+    // back history are both present when the session ends.
+    act(() => navRef.dispatch(CommonActions.navigate('Explore')));
+    expect(screen.getByRole('heading', { name: 'Place detail' })).toBeTruthy();
+    act(() => navRef.dispatch(CommonActions.navigate('Profile')));
+    expect(navRef.getCurrentRoute()?.name).toBe('Account');
+    if (action === 'sign out') {
+      fireEvent.click(screen.getByTestId('profile-sign-out'));
+    } else {
+      fireEvent.click(screen.getByTestId('profile-delete-account'));
+      expect(navRef.getCurrentRoute()?.name).toBe('DeleteAccount');
+      fireEvent.click(screen.getByTestId('delete-account-confirm'));
+    }
+    await screen.findByTestId('profile-sign-in');
+    await waitFor(() => expect(navRef.getCurrentRoute()?.name).toBe('ProfileHome'));
+    expect(screen.queryByTestId('account-back')).toBeNull();
+    expect(api.signOut).toHaveBeenCalledTimes(action === 'sign out' ? 1 : 0);
+    expect(api.deleteAccount).toHaveBeenCalledTimes(action === 'delete account' ? 1 : 0);
+    // Two round trips after ending the session must keep the guest at root.
+    for (let visit = 0; visit < 2; visit += 1) {
+      act(() => navRef.dispatch(CommonActions.navigate('Explore')));
+      expect(screen.getByRole('heading', { name: 'Explore home' })).toBeTruthy();
+      act(() => navRef.dispatch(CommonActions.navigate('Profile')));
+      expect(screen.getByTestId('profile-sign-in')).toBeTruthy();
+      expect(screen.queryByTestId('account-back')).toBeNull();
+      expect(navRef.getCurrentRoute()?.name).toBe('ProfileHome');
+    }
+    expect(unhandled).not.toHaveBeenCalled();
+  },
+);
