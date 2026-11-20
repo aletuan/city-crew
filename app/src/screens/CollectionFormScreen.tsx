@@ -34,7 +34,8 @@ import { useNoteEvent } from '../lib/tasteProfile';
 import type { Place } from '../lib/types';
 import { goTo, type Nav, type RootRoute } from '../nav';
 import { CoverGrid } from './collectionForm/CoverGrid';
-import { FieldRule, SaveHint, SeenLine } from './collectionForm/formParts';
+import type { Visibility } from '../lib/shares';
+import { AudienceChoice, FieldRule, leaveForm, makingOwn, SaveHint, SeenLine } from './collectionForm/formParts';
 
 /** Long enough for a real name, short enough to stay on one line in a row. */
 const MAX_TITLE = 60;
@@ -64,6 +65,9 @@ export default function CollectionFormScreen({ navigation, route }: {
   // What the form opened on, which `changed` measures against.
   const [start] = useState({ title, desc });
   const [busy, setBusy] = useState(false);
+  // Who sees a list being made, Public until changed (owner, 20 Nov
+  // 2026) — `AudienceChoice`. Read only when making one of your own.
+  const [audience, setAudience] = useState<Visibility>('public');
   const failText = useFailText();
   const [error, setError] = useState<string | null>(null);
   const note = useNoteEvent();
@@ -194,6 +198,8 @@ export default function CollectionFormScreen({ navigation, route }: {
     }
     setBusy(true);
     setError(null);
+    // The list this save made, if it made one: where `leaveForm` goes.
+    let made: { slug: string; audience: Visibility } | null = null;
     try {
       if (copyFrom) {
         // The copy is born here, not when the menu row was tapped — this
@@ -236,12 +242,12 @@ export default function CollectionFormScreen({ navigation, route }: {
         // none either way; it is born private.
         if (col?.is_public) cols.reload();
       } else {
-        const slug = await createCollection({ ownerId: uid, cityId: city.id, title: name, desc });
+        made = { slug: await createCollection({ ownerId: uid, cityId: city.id, title: name, desc, isPublic: audience === 'public' }), audience };
         // Reached from a place's bookmark with nowhere to put it: the list
         // arrives holding the place that prompted it, rather than empty
         // with the save silently dropped on the way here.
         if (addPlaceSlug) {
-          await addPlaceToCollection(slug, addPlaceSlug, 0);
+          await addPlaceToCollection(made.slug, addPlaceSlug, 0);
           // The first save an account ever makes comes through here — the
           // save sheet routes to this form precisely when there is no
           // list yet — and it went unrecorded while every later save was
@@ -256,9 +262,9 @@ export default function CollectionFormScreen({ navigation, route }: {
       // here never appears as somewhere to save to.
       mine.reload();
       // Back to the list, where the collection is now the first row of your
-      // own section. Opening a new one instead would land on an empty screen.
-      saved.current = true;
-      navigation.goBack();
+      // own section. Opening a new one instead would land on an empty screen
+      // — unless Friends was chosen, when it opens to choose them.
+      leaveForm(navigation, saved, made, cols.reload);
     } catch (e) {
       // The daily cap — twenty lists, three hundred saves — is the one
       // refusal that is nobody's fault and nothing to fix; it gets its
@@ -327,8 +333,8 @@ export default function CollectionFormScreen({ navigation, route }: {
       {/* Beside the Save that raised it, rather than under the cover grid. */}
       {error ? <FormError>{failText(error)}</FormError> : null}
       {/* Who can see it, in a line (owner, 16 Nov 2026): `SeenLine`. A
-          list not yet made has no row to read, and is private. */}
-      <SeenLine col={col} uid={uid} />
+          list of your own being made asks instead, under its fields. */}
+      <SeenLine col={col} uid={uid} making={makingOwn(editing, copyFrom)} />
       <SaveHint kind={copyFrom ? 'copy' : addPlaceSlug ? 'place' : null} />
       {/* The fields on the page itself, between hairlines, with no box and
           no glyph (owner, 16 Nov 2026) — see `collectionForm/formParts`. */}
@@ -363,6 +369,7 @@ export default function CollectionFormScreen({ navigation, route }: {
         returnKeyType="done"
       />
       <FieldRule />
+      <AudienceChoice making={makingOwn(editing, copyFrom)} value={audience} onChange={setAudience} />
       {/* No chips here (owner, 16 Nov 2026). The list's kinds were shown
           between the description and the cover from 15 Oct, each a toggle
           that hid it from the list's page; they are worked out from the

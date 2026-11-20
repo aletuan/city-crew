@@ -303,12 +303,12 @@ const nav = () => {
   return { n: n as unknown as Nav, parent, raw: n };
 };
 
-const show = (slug = 'old-quarter') => {
+const show = (slug = 'old-quarter', share?: boolean) => {
   const navigation = nav();
   render(
     <CollectionDetailScreen
       navigation={navigation.n}
-      route={{ params: { slug } } as RootRoute<'CollectionDetail'>}
+      route={{ params: { slug, share } } as RootRoute<'CollectionDetail'>}
     />,
   );
   return navigation;
@@ -1366,6 +1366,16 @@ describe('sharing with friends', () => {
       show();
       fireEvent.click(screen.getByTestId('collection-share'));
       expect(screen.getByTestId('sheet-action-friends').textContent).toBe('FriendsSomeone');
+    });
+
+    // A list just made with Friends chosen arrives with the picker up
+    // (owner, 20 Nov 2026; the form's `leaveForm`), and only then.
+    it('opens the picker on arrival when the form says so, and not otherwise', () => {
+      show('old-quarter', true);
+      expect(screen.getByText('Share with friends')).toBeTruthy();
+      cleanup();
+      show();
+      expect(screen.queryByText('Share with friends')).toBeNull();
     });
 
     it('opens the picker in its place: who has it first and ticked, then the crew in its order', () => {

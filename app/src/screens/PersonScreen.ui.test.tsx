@@ -167,21 +167,24 @@ import { spokenTab } from '../components/FloatingTabBar';
 
 const LAN: Who = { id: 'lan-id', handle: 'lan', full_name: 'Lan Phạm', avatar_url: 'https://faces/lan.jpg', bio: 'Coffee first, then the rest.' };
 
+const members = (n: number) => Array.from({ length: n }, (_, i) => ({ sort_order: i, places: { slug: `p${i}` } }));
+
 const list = (slug: string, over: Partial<Collection> = {}): Collection => ({
   id: slug, slug, title_en: `List ${slug}`, title_vi: `Bộ ${slug}`, title_ja: null,
   desc_en: null, desc_vi: null, desc_ja: null, curator_handle: '@lan', cover: null,
-  owner_id: 'lan-id', is_public: true, city_id: 'hanoi', collection_places: [],
+  // One place by default: somebody else's public list with none is not on
+  // their page since 20 Nov 2026 (`person.listsOn`), and a list with one
+  // is the ordinary case. A test about an empty list says so.
+  owner_id: 'lan-id', is_public: true, city_id: 'hanoi', collection_places: members(1) as Collection['collection_places'],
   ...over,
 } as Collection);
-
-const members = (n: number) => Array.from({ length: n }, (_, i) => ({ sort_order: i, places: { slug: `p${i}` } }));
 
 const flush = async () => { await act(async () => {}); };
 /** The feed's cards. The page had a grid of tiles too, a press of the
  *  heading's count away, from 17 to 19 Nov 2026; the cards are all there
  *  is now, so what was asked of a tile is asked of a card. */
 const cards = (): HTMLElement[] => screen.queryAllByTestId('person-act');
-/** What each card says it opens: "List one, 0 places". */
+/** What each card says it opens: "List one, 1 place". */
 const opens = (): (string | null)[] => cards().map((c) => within(c).getByTestId('activity-open').getAttribute('aria-label'));
 /** What the page listens for on the navigator, so a test can say the
  *  page was left and come back to. */
@@ -376,9 +379,10 @@ describe('the bio, and the way to write one', () => {
     // shows the world; "Hồ sơ" until 17 Nov 2026.
     expect(screen.getByText('Trang cá nhân')).toBeTruthy();
     expect(screen.queryByText('Hồ sơ')).toBeNull();
-    // The way out on the heading wears the tab's own word. It read "Hồ
-    // sơ" for an hour on 19 Nov 2026, which this line is here to notice.
-    expect(screen.getByTestId('person-account').textContent).toBe('Tài khoản');
+    // The gear is named with the Account page's own word. The way there
+    // read "Hồ sơ" for an hour on 19 Nov 2026, which this line is here to
+    // notice.
+    expect(screen.getByTestId('person-settings').getAttribute('aria-label')).toBe('Tài khoản');
   });
 
   it('draws your bio and no invitation once you have one', async () => {
@@ -725,7 +729,7 @@ describe('what they did', () => {
     expect(screen.queryByText('Collections')).toBeNull();
     expect(screen.queryByText(/^\d+ collections?$/)).toBeNull();
     // Nor the way to an account that is not the reader's.
-    expect(screen.queryByTestId('person-account')).toBeNull();
+    expect(screen.queryByTestId('person-settings')).toBeNull();
     expect(acts()).toHaveLength(3);
   });
 
@@ -879,7 +883,7 @@ describe('their lists', () => {
       list('old'),
     ];
     await show();
-    expect(opens()).toEqual(['List new, 17 places', 'List old, 0 places']);
+    expect(opens()).toEqual(['List new, 17 places', 'List old, 1 place']);
     expect(screen.queryByTestId('person-no-lists')).toBeNull();
   });
 
@@ -888,7 +892,7 @@ describe('their lists', () => {
   it('never shows a private list', async () => {
     state.shelf = [list('secret', { is_public: false }), list('open')];
     await show();
-    expect(opens()).toEqual(['List open, 0 places']);
+    expect(opens()).toEqual(['List open, 1 place']);
   });
 
   it('says one of each in the singular, and titles a list in the reader’s language', async () => {
@@ -942,7 +946,7 @@ describe('lists that are not for everybody', () => {
     it('holds every list you made, the shared and the private with the public', async () => {
       await show('me');
       expect(acts().map((c) => within(c).getByTestId('activity-open').getAttribute('aria-label')))
-        .toEqual(['List noodles, 0 places', 'List secret, 0 places', 'List open, 0 places']);
+        .toEqual(['List noodles, 1 place', 'List secret, 1 place', 'List open, 1 place']);
       // Nobody else's, though the shelf holds one.
       expect(screen.queryByText('List lan-open')).toBeNull();
     });
@@ -1041,23 +1045,25 @@ describe('lists that are not for everybody', () => {
       expect(acts().map((c) => markIn(c)?.getAttribute('aria-label') ?? null)).toEqual(['Bạn bè, 2', 'Riêng tư', 'Công khai']);
     });
 
-    // On the heading's right, where a count turned the section into a
-    // grid until the same morning (owner, 19 Nov 2026): the page had no
-    // way to what only you can do about it. To the Account tab's page —
-    // not the form the profile is edited in, which it opened for an hour.
-    // Account is a page over your own since 19 Nov 2026: from a page that
-    // is not the tab's first, the tab, with Account over its first page.
-    it('has the way to your account on the heading: the last tab, with Account over its first page', async () => {
+    // The way to your account: "Account ›" on the activity heading from
+    // 19 Nov 2026, the gear at the header's end since the next day
+    // (owner, `person/Tools`) — and nothing on the heading any more. To
+    // the Account page, not the form the profile is edited in. From a
+    // page that is not the tab's first, the tab, with Account over its
+    // first page.
+    it('has the way to your account in the header, not on the heading: the last tab, with Account over its first page', async () => {
       const navigation = await show('me');
-      const link = screen.getByTestId('person-account');
-      expect(link.textContent).toBe('Account');
-      fireEvent.click(link);
+      expect(screen.queryByTestId('person-account')).toBeNull();
+      const gear = screen.getByTestId('person-settings');
+      expect(gear.getAttribute('aria-label')).toBe('Account');
+      expect(gear.querySelector('[data-icon="settings-outline"]')).toBeTruthy();
+      expect(screen.getByTestId('person-own-tools').contains(gear)).toBe(true);
+      fireEvent.click(gear);
       expect(out.tabs!.navigate).toHaveBeenCalledExactlyOnceWith('Profile', { screen: 'Account', initial: false });
       // Not a page pushed on this stack, and not the container's way
       // while there is a navigator to ask.
       expect(navigation.navigate).not.toHaveBeenCalled();
       expect(out.goTo).not.toHaveBeenCalled();
-      // A way out of the page, not a turn of it: the feed is still here.
       expect(acts()).toHaveLength(3);
     });
 
@@ -1070,7 +1076,7 @@ describe('lists that are not for everybody', () => {
       state.shelf = [];
       await show('me');
       expect(screen.getByTestId('person-no-lists')).toBeTruthy();
-      expect(screen.getByTestId('person-account')).toBeTruthy();
+      expect(screen.getByTestId('person-settings')).toBeTruthy();
     });
 
     // A cover off a private list would be a head only its owner sees.
@@ -1112,7 +1118,7 @@ describe('lists that are not for everybody', () => {
     it('holds the list they shared with you beside their public ones, and nobody else’s', async () => {
       await show();
       expect(acts().map((c) => within(c).getByTestId('activity-open').getAttribute('aria-label')))
-        .toEqual(['List for-me, 0 places', 'List open, 0 places']);
+        .toEqual(['List for-me, 1 place', 'List open, 1 place']);
     });
 
     it('says "Shared with you" on it, in words, and offers its heart to the friend it was shared with', async () => {
@@ -1127,9 +1133,8 @@ describe('lists that are not for everybody', () => {
       expect(markIn(open)!.getAttribute('aria-label')).toBe('Public');
       expect(markIn(open)!.querySelector('[data-icon]')!.getAttribute('data-icon')).toBe('globe-outline');
       expect(within(open).getByTestId('activity-heart')).toBeTruthy();
-      // Somebody else's page: no way to an account that is not yours,
-      // and since the grid went nothing else on the heading.
-      expect(screen.queryByTestId('person-account')).toBeNull();
+      // Somebody else's page: no way to an account that is not yours.
+      expect(screen.queryByTestId('person-settings')).toBeNull();
     });
 
     it('says it in Vietnamese', async () => {
@@ -1153,7 +1158,7 @@ describe('lists that are not for everybody', () => {
     it('shows a guest the public lists alone, and asks for nothing as nobody', async () => {
       state.me = null;
       await show();
-      expect(acts().map((c) => within(c).getByTestId('activity-open').getAttribute('aria-label'))).toEqual(['List open, 0 places']);
+      expect(acts().map((c) => within(c).getByTestId('activity-open').getAttribute('aria-label'))).toEqual(['List open, 1 place']);
       expect(state.lentAsked.at(-1)).toBeNull();
       expect(state.sharesAsked.at(-1)).toBeNull();
     });
@@ -1888,7 +1893,9 @@ describe('your own page', () => {
     expect(screen.queryByTestId('person-back')).toBeNull();
     // The tab says whose page it is (owner, 19 Nov 2026).
     expect(screen.queryByText('Profile')).toBeNull();
-    fireEvent.click(screen.getByTestId('person-account'));
+    // With no header, the tools stand in a row of their own.
+    expect(screen.getByTestId('person-home-tools').contains(screen.getByTestId('person-own-tools'))).toBe(true);
+    fireEvent.click(screen.getByTestId('person-settings'));
     expect(navigation.navigate).toHaveBeenCalledExactlyOnceWith('Account');
     expect(out.tabs!.navigate).not.toHaveBeenCalled();
     expect(out.goTo).not.toHaveBeenCalled();
@@ -1898,8 +1905,9 @@ describe('your own page', () => {
   // you see, then what you did.
   it('draws your counts, then the requests waiting, between your head and your activity', async () => {
     await show('me', true, PROFILE_STACK);
-    const [name, counts, requests, account] = ['person-name', 'owner-counts', 'owner-requests', 'person-account'].map((id) => screen.getByTestId(id));
-    for (const [a, b] of [[name, counts], [counts, requests], [requests, account]]) {
+    const [tools, name, counts, requests] = ['person-own-tools', 'person-name', 'owner-counts', 'owner-requests'].map((id) => screen.getByTestId(id));
+    const activity = screen.getByText('Activity');
+    for (const [a, b] of [[tools, name], [name, counts], [counts, requests], [requests, activity]]) {
       expect(a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     }
   });
@@ -1914,24 +1922,47 @@ describe('your own page', () => {
     expect(screen.getByTestId('owner-counts')).toBeTruthy();
     fireEvent.click(screen.getByTestId('owner-requests'));
     expect(out.tabs!.navigate).toHaveBeenLastCalledWith('Profile', { screen: 'Crew', initial: false });
-    fireEvent.click(screen.getByTestId('person-account'));
+    fireEvent.click(screen.getByTestId('person-settings'));
     expect(out.tabs!.navigate).toHaveBeenLastCalledWith('Profile', { screen: 'Account', initial: false });
     expect(navigation.navigate).not.toHaveBeenCalled();
+    // In the header, beside the way back: no row of its own off the tab.
+    expect(screen.queryByTestId('person-home-tools')).toBeNull();
   });
 
   it('shows none of it on somebody else’s page', async () => {
     await show('lan', false, PROFILE_STACK);
-    for (const id of ['owner-counts', 'owner-requests', 'person-bell', 'person-own-face']) {
+    for (const id of ['owner-counts', 'owner-requests', 'person-bell', 'person-settings', 'person-own-tools', 'person-own-face']) {
       expect(screen.queryByTestId(id), id).toBeNull();
     }
   });
 
-  // P3 (owner, 19 Nov 2026): Activity's way in is a bell over the cover's
-  // corner, A of the two drawn; Account's row for it is gone.
-  it('has the bell over the cover, opening Activity in the last tab', async () => {
+  // Search is drawn before it is built (owner, 20 Nov 2026), on every
+  // page — `person/Tools` has why a visitor's too — dimmed and pressing
+  // nothing; before the ⋯ on somebody else's.
+  it('draws the search, disabled, on your page and on everybody else’s', async () => {
+    const navigation = await show('me', true, PROFILE_STACK);
+    const mine = screen.getByTestId('person-search');
+    expect(screen.getByTestId('person-own-tools').contains(mine)).toBe(true);
+    expect(mine.getAttribute('aria-disabled')).toBe('true');
+    expect(mine.getAttribute('aria-label')).toBe('Search');
+    expect(mine.querySelector('[data-icon="search-outline"]')).toBeTruthy();
+    fireEvent.click(mine);
+    expect(navigation.navigate).not.toHaveBeenCalled();
+    cleanup();
+    await show('lan', false, PROFILE_STACK);
+    const theirs = screen.getByTestId('person-search');
+    expect(theirs.getAttribute('aria-disabled')).toBe('true');
+    expect(theirs.compareDocumentPosition(screen.getByTestId('person-more')) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+
+  // P3 (owner, 19 Nov 2026): Activity's way in is a bell, over the
+  // cover's corner at first; in the header between the search and the
+  // gear since 20 Nov 2026 (owner) — off the photograph.
+  it('has the bell in the header, opening Activity in the last tab', async () => {
     const navigation = await show('me', true, PROFILE_STACK);
     const bell = screen.getByTestId('person-bell');
-    expect(screen.getByTestId('person-cover').contains(bell)).toBe(true);
+    expect(screen.getByTestId('person-cover').contains(bell)).toBe(false);
+    expect(screen.getByTestId('person-own-tools').contains(bell)).toBe(true);
     expect(bell.getAttribute('aria-label')).toBe('Activity');
     fireEvent.click(bell);
     expect(navigation.navigate).toHaveBeenCalledExactlyOnceWith('Activity');
@@ -1941,7 +1972,7 @@ describe('your own page', () => {
     cleanup();
     state.fresh = 2;
     await show('me', true, PROFILE_STACK);
-    expect(screen.getByTestId('person-bell').contains(screen.getByTestId('person-bell-dot'))).toBe(true);
+    expect(screen.getByTestId('person-bell').parentElement!.contains(screen.getByTestId('person-bell-dot'))).toBe(true);
     expect(screen.getByTestId('person-bell').getAttribute('aria-label')).toBe('Activity, 2 new');
     cleanup();
     state.fresh = 0;
