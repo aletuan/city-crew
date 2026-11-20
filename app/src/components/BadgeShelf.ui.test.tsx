@@ -111,11 +111,14 @@ describe('the grid', () => {
     expect(screen.getByRole('button', { name: 'Curator, not yet earned' })).toBe(cell('curator'));
   });
 
-  it('counts how many are held, of nine', () => {
+  // The grid shows how many are held; the sheet has its heading
+  // (owner, 20 Nov 2026).
+  it('draws no heading and no count over the grid', () => {
     state.facts = { ...NO_FACTS, saved: 1, trips: 2, copies: 1 };
     render(<BadgeShelf />);
-    expect(screen.getByTestId('badge-count').textContent).toBe('3 / 9');
-    expect(screen.getByRole('heading', { name: 'Badges' })).toBeTruthy();
+    expect(screen.queryByRole('heading')).toBeNull();
+    expect(screen.queryByText('3 / 9')).toBeNull();
+    expect(screen.queryByText('Badges')).toBeNull();
   });
 
   it('marks the ones earned since the sheet was last closed, and no others', () => {
@@ -133,28 +136,27 @@ describe('the line under the grid', () => {
     // Two of three cities: further along than anything else not held.
     state.facts = { ...NO_FACTS, saved: 4, checkins: 3, cities: 2 };
     render(<BadgeShelf />);
-    expect(about().textContent).toBe('Traveller2 / 3Check in across 3 cities.');
-    // How far along is quiet; "Earned" is said in the colour for done.
-    expect(textStyleOf(screen.getByTestId('badge-steps'))?.color).toBe(colors.textTertiary);
+    // The sentence alone, centred: the tinted cell names it, and no
+    // "2 / 3" (owner, 20 Nov 2026).
+    expect(about().textContent).toBe('Check in across 3 cities.');
+    expect(textStyleOf(about())?.textAlign).toBe('center');
     expect(pressOf('traveller').picked).toBe(true);
     expect(pressOf('firstFind').picked).toBe(false);
   });
 
   it('points a new account at keeping a place, with no "0 / 1" beside it', () => {
     render(<BadgeShelf />);
-    expect(about().textContent).toBe('First FindSave your first place.');
-    expect(screen.queryByTestId('badge-steps')).toBeNull();
+    expect(about().textContent).toBe('Save your first place.');
   });
 
   it('turns to the badge that is pressed, held or not', () => {
     state.facts = { ...NO_FACTS, saved: 1 };
     render(<BadgeShelf />);
     fireEvent.click(cell('firstFind'));
-    expect(about().textContent).toBe('First FindEarnedSave your first place.');
-    expect(textStyleOf(screen.getByTestId('badge-steps'))?.color).toBe(colors.ok);
+    expect(about().textContent).toBe('Save your first place.');
     expect(pressOf('firstFind').picked).toBe(true);
     fireEvent.click(cell('wellLiked'));
-    expect(about().textContent).toBe('Well Liked0 / 5Get 5 likes on your collections.');
+    expect(about().textContent).toBe('Get 5 likes on your collections.');
     expect(pressOf('firstFind').picked).toBe(false);
   });
 
@@ -173,21 +175,19 @@ describe('the line under the grid', () => {
     state.facts = { saved: 1, publicLists: 1, checkins: 3, cities: 3, friends: 1, trips: 1, submitted: 1, likes: 5, copies: 1 };
     expect(earnedBadges(state.facts)).toHaveLength(9);
     render(<BadgeShelf />);
-    expect(screen.getByTestId('badge-count').textContent).toBe('9 / 9');
     expect(screen.queryByTestId('badge-about')).toBeNull();
     fireEvent.click(cell('traveller'));
-    expect(about().textContent).toBe('TravellerEarnedCheck in across 3 cities.');
+    expect(about().textContent).toBe('Check in across 3 cities.');
   });
 
   it('says it in Vietnamese', () => {
     state.lang = 'vi';
     state.facts = { ...NO_FACTS, saved: 1, cities: 1 };
     render(<BadgeShelf />);
-    expect(screen.getByRole('heading', { name: 'Huy hiệu' })).toBeTruthy();
-    expect(about().textContent).toBe('Lữ khách1 / 3Check-in ở 3 thành phố.');
+    expect(about().textContent).toBe('Check-in ở 3 thành phố.');
     expect(screen.getByRole('button', { name: 'Khởi đầu, đã đạt' })).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Lữ khách, chưa đạt' })).toBeTruthy();
     fireEvent.click(cell('firstFind'));
-    expect(about().textContent).toBe('Khởi đầuĐã đạtLưu địa điểm đầu tiên.');
+    expect(about().textContent).toBe('Lưu địa điểm đầu tiên.');
   });
 });
