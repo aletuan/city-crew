@@ -635,8 +635,8 @@ describe('the ⋯ in the card', () => {
     expect(screen.queryByTestId('collection-desc-copy')).toBeNull();
     // The copy's glyph on the card is the activity row's button since
     // 20 Nov 2026, not a control in the corner.
-    expect(card().querySelectorAll('[data-icon="duplicate-outline"]')).toHaveLength(1);
-    expect(screen.getByTestId('collection-copy').querySelector('[data-icon="duplicate-outline"]')).toBeTruthy();
+    expect(card().querySelectorAll('[data-icon="copy-outline"]')).toHaveLength(1);
+    expect(screen.getByTestId('collection-copy').querySelector('[data-icon="copy-outline"]')).toBeTruthy();
   });
 });
 
@@ -1025,7 +1025,7 @@ describe('Share, at the card’s foot', () => {
     state.cols = [collection({ is_public: true, owner_id: 'curator', curator_handle: '@maydidaudo' })];
     show();
     expect(screen.queryByTestId('collection-share')).toBeNull();
-    expect(iconsOf(footer())).toEqual(['heart-outline', 'duplicate-outline', 'chevron-forward']);
+    expect(iconsOf(footer())).toEqual(['heart-outline', 'copy-outline', 'chevron-forward']);
   });
 });
 
@@ -2277,7 +2277,7 @@ describe("somebody else's list", () => {
     openMenu();
     // The promise, on the row, before the tap.
     expect(menuRow('Save a copy').textContent).toBe('Save a copy');
-    expect(menuRow('Save a copy').querySelector('[data-icon="duplicate-outline"]')).toBeTruthy();
+    expect(menuRow('Save a copy').querySelector('[data-icon="copy-outline"]')).toBeTruthy();
     pick('Save a copy');
     expect(raw.navigate).toHaveBeenCalledWith('CollectionForm', {
       copyFrom: {
@@ -2980,7 +2980,7 @@ describe('the introduction card', () => {
     const foot = screen.getByTestId('collection-activity').firstElementChild as HTMLElement;
     // The copy between them since 20 Nov 2026 (`CopyDoor`).
     expect([...foot.querySelectorAll('[data-icon]')].map((i) => i.getAttribute('data-icon')))
-      .toEqual(['heart-outline', 'duplicate-outline', 'chevron-forward']);
+      .toEqual(['heart-outline', 'copy-outline', 'chevron-forward']);
     // In that order on screen too, from the start of the row.
     expect(getComputedStyle(foot).flexDirection).toBe('row');
     expect(getComputedStyle(foot).justifyContent).not.toBe('space-between');
@@ -3793,7 +3793,7 @@ describe('the actions and the dock', () => {
     expect(screen.queryByTestId('collection-dock-add')).toBeNull();
     const pill = screen.getByTestId('collection-dock-copy');
     // The ⋯ menu's copy glyph, not a plus.
-    expect(pill.querySelector('[data-icon="duplicate-outline"]')).toBeTruthy();
+    expect(pill.querySelector('[data-icon="copy-outline"]')).toBeTruthy();
     expect(pill.querySelector('[data-icon="add"]')).toBeNull();
     // The same copy the ⋯ menu makes: the form, waiting, nothing written.
     fireEvent.click(pill);
@@ -4399,7 +4399,7 @@ describe('the copy button', () => {
     state.mine = [collection({ id: 'mine-1', slug: 'my-old-quarter', copied_from: 'c1' })];
     const { raw } = show();
     await act(async () => {});
-    expect(copyBtn()!.querySelector('[data-icon="duplicate"]')).toBeTruthy();
+    expect(copyBtn()!.querySelector('[data-icon="copy"]')).toBeTruthy();
     expect(copyBtn()!.getAttribute('aria-label')).toBe('Open your copy, 11');
     fireEvent.click(copyBtn()!);
     expect(raw.push).toHaveBeenCalledWith('CollectionDetail', { slug: 'my-old-quarter' });

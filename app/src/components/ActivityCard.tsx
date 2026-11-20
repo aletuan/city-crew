@@ -100,7 +100,7 @@ function CopyFoot({ copy }: { copy: CardCopy }) {
       accessibilityLabel={copy.label}
       testID="activity-copy"
     >
-      <Glyph name={copy.have ? 'duplicate' : 'duplicate-outline'} size={HEART} color={copy.have ? colors.accent : colors.textSecondary} />
+      <Glyph name={copy.have ? 'copy' : 'copy-outline'} size={HEART} color={copy.have ? colors.accent : colors.textSecondary} />
       {copy.n > 0 ? <Text style={s.count} testID="activity-copy-count">{copy.n}</Text> : null}
     </PressableScale>
   );

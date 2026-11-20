@@ -359,7 +359,7 @@ export default function CollectionActivityScreen({ navigation, route }: {
         <Avatar url={item.avatar} size={ROW_FACE} />
         <View style={[s.badge, ring, item.kind === 'like' ? s.badgeLike : s.badgeCopy]} testID={`activity-badge-${item.kind}`}>
           <Glyph
-            name={item.kind === 'like' ? 'heart' : 'duplicate'}
+            name={item.kind === 'like' ? 'heart' : 'copy'}
             size={BADGE_GLYPH}
             color={item.kind === 'like' ? LIKE_INK : colors.accentInk}
           />

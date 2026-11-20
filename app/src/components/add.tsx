@@ -14,7 +14,8 @@
 // happen to be the collections screen's — the older of the two, and the
 // one that had to line up with real cards directly above it.
 //
-// Three shapes, because there are three jobs:
+// Three shapes, because there are three jobs (and a fourth, the
+// header's plus, which is a round button more than any of them):
 //
 //   AddSlot — a space where a thing would go, at the end of a list. The
 //     dashed outline is the whole argument: it says "not a thing, a place
@@ -22,8 +23,7 @@
 //
 //   AddPill — the solid action, beside a heading or inside a floating
 //     bar. Filled, because it is a thing you do rather than a space you
-//     fill; `quiet` in a screen's header, where it is the round buttons'
-//     neighbour and not the screen's first thing.
+//     fill. In a screen's header it is a plus alone, `HeaderAdd`.
 //
 //   AddCell — the space for one more in a list of your own, the shape of
 //     the thing it adds: a tile among tiles, a row the cards' width above
@@ -46,7 +46,7 @@ import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { Glyph, ICON } from './ui/glyph';
-import { PressableScale, SECONDARY_CONTROL_H } from './ui';
+import { INK_GAP_END, PressableScale, RoundIconButton, SECONDARY_CONTROL_H } from './ui';
 import { useScheme } from '../lib/theme';
 import { colors, font, gradAI, radius, space, textTertiaryHex, type } from '../theme';
 
@@ -275,48 +275,15 @@ export function AddCell({ label, onPress, size, testID }: {
  *
  * ── how loud ──
  *
- * Filled in the floating docks, where it is the bar's one action and
- * sits over photographs that a lighter pill would vanish into. `quiet`
- * in a screen's header (owner, 26 Oct 2026): filled there, it outweighed
- * the title beside it and every round button in the same row. Quiet is
- * the round buttons' own glass ground (`surfaceGlass`), the word in the
- * body's ink and the plus in the accent. Not the accent on `accentSoft`,
- * the tint the first proposal had: measured across every look that pair
- * reads 4.14:1 on standard's paper, 4.26 on blush and 4.35 on duck, under
- * the 4.5 a 16pt word needs. The body's ink on glass is 14.67 there and
- * nowhere under 6.7. Not an outline either: outlined pills here are the
- * reversals — Cancel, Unblock — and a way to make something is not one.
- *
- * Lighter still (owner, 3 Nov 2026): the word in medium, not semibold,
- * and 12/16 of side padding, not 14/18. Beside a display title the
- * semibold word was a second heading asking to be read, and the 18pt
- * plus — a thin glyph — looked weaker than the word after it; at medium
- * the two weigh the same. The pill is 4pt narrower and as tall: the 44
- * is the button scale's. The ground stays the round buttons' glass,
- * which a proposal in the same round would have made fainter: it is 5%
- * ink on paper already, a fainter one loses the pill's edge on the page,
- * and it would stop being the ground of the round buttons in the same
- * row. The filled pill in the docks keeps its semibold and its 14/18.
- *
- * On nothing, since 14 Nov 2026 (owner): the glass came off with the
- * round buttons' discs, which this ground was kept to match — the way
- * back is now a bare chevron on every page-ground screen, and a glass
- * pill at the other end of the same row was the one block left in it.
- * Bare, the word goes to the accent with its plus, as a link-weight
- * action wears it (the accent is 4.5 or better on the page on every
- * look, `theme.test`); in the body's ink with no ground it read as the
- * header's second title. The 44pt box stays, hung past the margin by its
- * right padding so the word's end, not an empty box, meets the line the
- * content's right edge stands on — the bare chevron's `BACK_HANG`, at the
- * other end. Three headers wear it: Trips, Collections, a gallery.
- * Rejected with it, from the same proposal's other option: keeping the
- * glass here alone, a ground no other header control had any more.
+ * Filled, in the floating docks, where it is the bar's one action and
+ * sits over photographs that a lighter pill would vanish into. A
+ * screen's header had a quiet one, the word and the plus in the accent
+ * on nothing, from 26 Oct 2026 until 20 Nov 2026, when it gave way to the
+ * plus alone (`HeaderAdd`, which says why).
  */
-export function AddPill({ label, onPress, quiet, busy, icon = 'add', accessibilityLabel, testID }: {
+export function AddPill({ label, onPress, busy, icon = 'add', accessibilityLabel, testID }: {
   label: string;
   onPress: () => void;
-  /** The header's weight: the bare word, not the gradient. See "how loud". */
-  quiet?: boolean;
   /** The glyph before the word. A plus everywhere it adds; the collection
    *  dock's visitor pill copies, and wears the ⋯ menu's copy glyph so one
    *  act has one mark (owner, 17 Oct 2026). */
@@ -336,8 +303,8 @@ export function AddPill({ label, onPress, quiet, busy, icon = 'add', accessibili
   testID?: string;
 }) {
   const glyph = ICON.action;
-  const mark = quiet ? colors.accent : colors.accentInk;
-  const face = [s.pill, quiet && s.pillQuiet, busy && s.pillBusy];
+  const mark = colors.accentInk;
+  const face = [s.pill, busy && s.pillBusy];
   const inside = (
     <>
       {/* The spinner takes the plus's own box, so the word does not move
@@ -345,7 +312,7 @@ export function AddPill({ label, onPress, quiet, busy, icon = 'add', accessibili
       {busy
         ? <View style={{ width: glyph, height: glyph, alignItems: 'center', justifyContent: 'center' }}><ActivityIndicator size="small" color={mark} /></View>
         : <Glyph name={icon} size={glyph} color={mark} />}
-      <Text style={[s.pillText, quiet && s.pillTextQuiet]}>{label}</Text>
+      <Text style={s.pillText}>{label}</Text>
     </>
   );
   return (
@@ -359,13 +326,70 @@ export function AddPill({ label, onPress, quiet, busy, icon = 'add', accessibili
       aria-disabled={busy}
       aria-busy={busy}
       testID={testID}
-      style={quiet ? s.pillQuietHang : undefined}
     >
-      {quiet
-        ? <View style={face}>{inside}</View>
-        : <LinearGradient {...gradAI} style={face}>{inside}</LinearGradient>}
+      <LinearGradient {...gradAI} style={face}>{inside}</LinearGradient>
     </PressableScale>
   );
+}
+
+/**
+ * The way to make one more, at the right end of a screen's header: a
+ * plus, alone (owner, 20 Nov 2026). Trips, Collections and a place's
+ * gallery wear it.
+ *
+ * It was the quiet `AddPill`, "+ New" in the accent. The owner brought a
+ * reference with a filled round button and the question of the word;
+ * weighed with him:
+ *
+ *   - the word goes. On a screen titled "Trips" a plus says "a trip";
+ *     VoiceOver still hears the whole phrase (`label`). The header's
+ *     controls elsewhere are glyphs — the back chevron, the ⋯, the
+ *     friends screen's add-a-friend — and the word was the one thing in
+ *     the row to read.
+ *   - not the reference's filled disc. Filled, this header's button
+ *     outweighed the title once already (26 Oct 2026); the round
+ *     buttons' discs came off on 14 Nov; and a filled round button is a
+ *     floating one's shape, on screens whose whole job is making — which
+ *     this tab is not: a trip is made from Ideas. A disc of `accentSoft`
+ *     under an accent plus was the middle way, and went with the next
+ *     point.
+ *   - the body's ink, not the accent: a round button wears colour only
+ *     when its colour is information (`RoundIconButton`), and with no
+ *     word beside it the plus cannot be read as a second title — which
+ *     is what the accent was for. Ink is the look's own, chosen in
+ *     Profile, and the strongest contrast on the page.
+ *   - not heavier. Ionicons draws one plus, at the stroke every glyph in
+ *     the app has; a bolder one would be from another set beside the
+ *     chevron. Heavier is bigger: 27, the next step, if the 22 reads
+ *     faint on a phone. Not seen on one yet.
+ *
+ * `busy`: a spinner in the plus's place, the same box, and no press — a
+ * gallery's photo on its way.
+ */
+export function HeaderAdd({ label, onPress, busy, testID }: {
+  /** The whole phrase, for VoiceOver: "New trip", "Add a photo". */
+  label: string;
+  onPress: () => void;
+  busy?: boolean;
+  testID?: string;
+}) {
+  const hang = { marginRight: -INK_GAP_END.add };
+  if (busy) {
+    return (
+      <View
+        style={[s.headerBusy, hang]}
+        accessible
+        accessibilityRole="button"
+        accessibilityLabel={label}
+        accessibilityState={{ busy: true, disabled: true }}
+        aria-busy
+        testID={testID}
+      >
+        <ActivityIndicator size="small" color={colors.text} />
+      </View>
+    );
+  }
+  return <RoundIconButton bare icon="add" label={label} onPress={onPress} style={hang} testID={testID} />;
 }
 
 const s = StyleSheet.create({
@@ -425,8 +449,7 @@ const s = StyleSheet.create({
   // carries a spinner saying so.
   pillBusy: { opacity: 0.7 },
   pillText: { color: colors.accentInk, fontSize: 16, fontWeight: font.semibold },
-  pillQuiet: { paddingLeft: 12, paddingRight: 16 },
-  // The box's right padding, given back past the margin: see "how loud".
-  pillQuietHang: { marginRight: -16 },
-  pillTextQuiet: { color: colors.accent, fontWeight: font.medium },
+  // The round button's own 44 box, so the spinner stands where the plus
+  // did and the header does not move.
+  headerBusy: { width: SECONDARY_CONTROL_H, height: SECONDARY_CONTROL_H, alignItems: 'center', justifyContent: 'center' },
 });

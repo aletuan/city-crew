@@ -10,7 +10,7 @@ import React from 'react';
 import { StyleSheet, type StyleProp, type TextStyle, type ViewStyle } from 'react-native';
 import { describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen } from '../uitest/render';
-import { AddCell, AddPill, AddSlot } from './add';
+import { AddCell, AddPill, AddSlot, HeaderAdd } from './add';
 import { colors, font, PALETTES, space, textTertiaryHex } from '../theme';
 import { SECONDARY_CONTROL_H } from './ui';
 
@@ -170,93 +170,59 @@ describe('AddPill', () => {
   const pill = () => StyleSheet.flatten(propsWhere((p) => 'colors' in p).style as StyleProp<ViewStyle>) ?? {};
   const word = () => StyleSheet.flatten(propsWhere((p) => p.children === 'Add' && 'style' in p).style as StyleProp<TextStyle>) ?? {};
 
-  it('stands at the secondary 44, filled or quiet', () => {
-    const { rerender } = render(<AddPill label="Add" onPress={() => {}} />);
+  it('stands at the secondary 44', () => {
+    render(<AddPill label="Add" onPress={() => {}} />);
     expect(pill().minHeight).toBe(SECONDARY_CONTROL_H);
     expect(SECONDARY_CONTROL_H).toBe(44);
-    rerender(<AddPill label="Add" onPress={() => {}} quiet />);
-    expect(bare().minHeight).toBe(44);
   });
 
-  // The header's weight (owner, 26 Oct 2026), bare since 14 Nov 2026: no
-  // ground and no gradient, the word and the plus in the accent.
-  const bare = () => StyleSheet.flatten(propsWhere((p) => {
-    const st = StyleSheet.flatten(p.style as StyleProp<ViewStyle>);
-    return !!st && st.minHeight === 44 && st.paddingLeft === 12;
-  }).style as StyleProp<ViewStyle>) ?? {};
-
-  it('is bare, not glass and not the gradient, when quiet — at the same height and size', () => {
-    const { rerender } = render(<AddPill label="Add" onPress={() => {}} />);
+  it('is the gradient, the word in semibold on 14/18 and the plus in the accent\'s ink', () => {
+    render(<AddPill label="Add" onPress={() => {}} />);
     expect(document.querySelector('[data-stub="LinearGradient"]')).toBeTruthy();
-    expect(word().color).toBe(colors.accentInk);
-    expect(document.querySelector('[data-icon="add"]')!.getAttribute('data-color')).toBe(colors.accentInk);
-    rerender(<AddPill label="Add" onPress={() => {}} quiet />);
-    expect(document.querySelector('[data-stub="LinearGradient"]')).toBeNull();
-    expect(bare().minHeight).toBe(44);
-    expect(bare().backgroundColor).toBeUndefined();
-    expect(word().color).toBe(colors.accent);
-    expect(word().fontSize).toBe(16);
-    const plus = document.querySelector('[data-icon="add"]')!;
-    expect(plus.getAttribute('data-color')).toBe(colors.accent);
-    expect(plus.getAttribute('data-size')).toBe('18');
-  });
-
-  it('keeps the quiet pill quiet while busy, its spinner in the accent', () => {
-    render(<AddPill label="Add" onPress={() => {}} quiet busy />);
-    expect(document.querySelector('[data-stub="LinearGradient"]')).toBeNull();
-    expect(screen.getByText('Add')).toBeTruthy();
-    expect(propsWhere((p) => 'animating' in p || ('size' in p && p.size === 'small')).color).toBe(colors.accent);
-  });
-
-  // Lighter beside a title (owner, 3 Nov 2026): the quiet word in medium
-  // and 12/16 of side padding; the filled pill in the docks keeps its
-  // semibold and its 14/18.
-  it('sets the quiet word in medium on narrower sides, and leaves the filled pill as it was', () => {
-    const { rerender } = render(<AddPill label="Add" onPress={() => {}} />);
-    expect(word().fontWeight).toBe(font.semibold);
+    expect([word().color, word().fontWeight]).toEqual([colors.accentInk, font.semibold]);
     expect([pill().paddingLeft, pill().paddingRight]).toEqual([14, 18]);
-    rerender(<AddPill label="Add" onPress={() => {}} quiet />);
-    expect(word().fontWeight).toBe(font.medium);
-    expect([bare().paddingLeft, bare().paddingRight, bare().minHeight]).toEqual([12, 16, 44]);
-  });
-
-  // With no ground, the box's right padding is given back past the margin
-  // so the word's end meets the content's right edge, as the bare chevron
-  // hangs at the other end. Only the quiet pill: a filled one's edge is
-  // its own line.
-  it('hangs the quiet pill by its right padding, and only the quiet one', () => {
-    const { rerender } = render(<AddPill label="Add" onPress={() => {}} quiet />);
-    const hung = () => propsWhere((p) => 'onPress' in p && 'accessibilityRole' in p);
-    expect(StyleSheet.flatten(hung().style as StyleProp<ViewStyle>)?.marginRight).toBe(-16);
-    rerender(<AddPill label="Add" onPress={() => {}} />);
-    expect(StyleSheet.flatten(hung().style as StyleProp<ViewStyle>)?.marginRight).toBeUndefined();
-  });
-
-  // Every look's own page and accent — the pill has no colour of its own,
-  // so it changes with the look chosen in Profile. Worked out on each
-  // look's page, which is what it now stands on: the word owes 4.5:1 at
-  // 16pt medium, and the plus is the same ink.
-  it('keeps the quiet word and plus readable on the page, in every look', () => {
-    const lin = (c: number) => { const v = c / 255; return v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4; };
-    const rgba = (h: string): number[] => h.startsWith('#')
-      ? [...[1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16)), 1]
-      : [.../\(([^)]+)\)/.exec(h)![1].split(',').map(Number), 1].slice(0, 4);
-    const over = (top: number[], under: number[]) => under.slice(0, 3).map((c, i) => c * (1 - top[3]) + top[i] * top[3]);
-    const lum = ([r, g, b]: number[]) => 0.2126 * lin(r) + 0.7152 * lin(g) + 0.0722 * lin(b);
-    const ratio = (a: number[], b: number[]) => { const [hi, lo] = [lum(a), lum(b)].sort((x, y) => y - x); return (hi + 0.05) / (lo + 0.05); };
-    for (const [name, p] of Object.entries(PALETTES)) {
-      const ground = over([0, 0, 0, 0], rgba(p.bg));
-      expect([name, 'word', ratio(rgba(p.accent), ground) >= 4.5]).toEqual([name, 'word', true]);
-    }
-    // And it draws those tokens, not a colour of its own.
-    render(<AddPill label="Add" onPress={() => {}} quiet />);
-    expect(bare().backgroundColor).toBeUndefined();
-    expect(word().color).toBe(colors.accent);
+    expect(document.querySelector('[data-icon="add"]')!.getAttribute('data-color')).toBe(colors.accentInk);
   });
 
   it('draws the 16pt word and the 18pt plus', () => {
     render(<AddPill label="Add" onPress={() => {}} />);
     expect(word().fontSize).toBe(16);
     expect(document.querySelector('[data-icon="add"]')!.getAttribute('data-size')).toBe('18');
+  });
+});
+
+// The header's plus (owner, 20 Nov 2026): no word, no disc, the body's ink.
+describe('HeaderAdd', () => {
+  it('is a plus alone at 22 in the body\'s ink, a button named with the whole phrase', () => {
+    const go = vi.fn();
+    render(<HeaderAdd label="New trip" onPress={go} testID="new" />);
+    const plus = document.querySelector('[data-icon="add"]')!;
+    expect([plus.getAttribute('data-size'), plus.getAttribute('data-color')]).toEqual(['22', String(colors.text)]);
+    expect(screen.queryByText('New')).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'New trip' }));
+    expect(go).toHaveBeenCalledTimes(1);
+    expect(document.querySelector('[data-stub="LinearGradient"]')).toBeNull();
+  });
+
+  // The plus's arms stop 15 short of its 44 box's right edge: hung by as
+  // much, its ink ends where the content's right edge does.
+  it('hangs past the margin by the plus\'s own empty edge', () => {
+    render(<HeaderAdd label="New trip" onPress={() => {}} testID="new" />);
+    const hung = propsWhere((p) => p.onPress !== undefined && 'style' in p && !!StyleSheet.flatten(p.style as StyleProp<ViewStyle>)?.marginRight);
+    expect(StyleSheet.flatten(hung.style as StyleProp<ViewStyle>)?.marginRight).toBe(-15);
+  });
+
+  it('holds a spinner in the plus\'s box while busy, and takes no press', () => {
+    const go = vi.fn();
+    render(<HeaderAdd label="Add a photo" onPress={go} busy testID="new" />);
+    expect(document.querySelector('[data-icon="add"]')).toBeNull();
+    const box = screen.getByTestId('new');
+    expect(box.getAttribute('aria-busy')).toBe('true');
+    expect(box.getAttribute('aria-label')).toBe('Add a photo');
+    expect(StyleSheet.flatten(propsWhere((p) => p.testID === 'new' && 'style' in p).style as StyleProp<ViewStyle>))
+      .toMatchObject({ width: 44, height: 44, marginRight: -15 });
+    expect(propsWhere((p) => 'size' in p && p.size === 'small').color).toBe(colors.text);
+    fireEvent.click(box);
+    expect(go).not.toHaveBeenCalled();
   });
 });
