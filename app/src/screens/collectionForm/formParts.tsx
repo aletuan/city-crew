@@ -26,12 +26,12 @@ import React, { useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import ActionSheet, { SheetRows } from '../../components/ActionSheet';
 import { Lede } from '../../components/authUi';
-import { PressableScale } from '../../components/ui';
+import { CHIP_H, CHIP_SLOP, PressableScale } from '../../components/ui';
 import { Glyph, ICON } from '../../components/ui/glyph';
 import { useMyListShares } from '../../lib/data';
 import { useI18n } from '../../lib/i18n';
 import { SEEN_GLYPH, seenGloss, seenName, sharesByList, visibilityOf, type Visibility } from '../../lib/shares';
-import { colors, type } from '../../theme';
+import { colors, font, radius, type } from '../../theme';
 import { sendRows, ShareHead, whoHint, whoSeesRows } from '../collectionDetail/Share';
 import type { Collection } from '../../lib/types';
 import { goTo, type Nav } from '../../nav';
@@ -63,8 +63,9 @@ export function useAudience(col: Pick<Collection, 'id' | 'is_public'> | null, ui
 }
 
 /**
- * Who can see the list, under the form's title: a glyph, the answer's
- * name and what it means. "Public · Everyone can see it".
+ * Who can see the list, under the form's title: a pill with the answer's
+ * glyph and name and a chevron, "🌐 Public ⌄"; for a copy, which has no
+ * say, the glyph, the name and what it means in a line of words.
  *
  * It replaced a sentence that had come to be wrong twice over ("Only you
  * can see this list until you make it public from its menu"), and it
@@ -84,10 +85,20 @@ export function useAudience(col: Pick<Collection, 'id' | 'is_public'> | null, ui
  * list from a form whose ✓ has not been pressed would be the one edit
  * here that did not wait for it. What Save does with it is `leaveForm`'s.
  *
- * A chevron after the words, which the mark under the handle on the page
- * does not have: there the glyph sits in a byline, here it is the whole
- * line, and a line of grey words with nothing to say it can be pressed
- * would not be pressed. A copy's line stays words alone.
+ * A pill, not a line (owner, 20 Nov 2026, the same afternoon). The first
+ * cut was the line of words with a chevron at the far end of the row,
+ * and on the phone the chevron sat a width of grey away from the words
+ * it belonged to: read as two things, neither of them a control. Weighed
+ * for him beside it: the chevron moved up against the words (still grey
+ * words, only now with a mark), and a settings row, "Who can see it ·
+ * Public ›" (a second label over a form that has two already). He took
+ * the pill. It is the app's chip — `CHIP_H` tall, its rim, its slop to
+ * 44 — in the chosen state's fill, so it reads as a thing that holds a
+ * value and can be changed, as a "Share" chip does on a shared document.
+ *
+ * The answer's name alone in it: what each answer means is in the sheet
+ * one press away, and the pill is a value, not a sentence. VoiceOver
+ * still hears both.
  *
  * Making a list, Friends says when the friends are chosen — once it is
  * made, on its page — and the sheet has no "Send a link": there is no
@@ -99,29 +110,32 @@ export function SeenLine({ aud, making }: {
 }) {
   const { t } = useI18n();
   const [open, setOpen] = useState(false);
-  const words = (
-    <>
-      <Glyph name={SEEN_GLYPH[aud.seen]} size={ICON.text} color={colors.textTertiary} />
-      <Text style={s.seenText} numberOfLines={1}>{`${seenName(aud.seen, t)} · ${seenGloss(aud.seen, t)}`}</Text>
-    </>
-  );
-  if (!aud.open) return <View style={s.seen} testID="collection-form-seen">{words}</View>;
+  if (!aud.open) {
+    return (
+      <View style={s.seen} testID="collection-form-seen">
+        <Glyph name={SEEN_GLYPH[aud.seen]} size={ICON.text} color={colors.textTertiary} />
+        <Text style={s.seenText} numberOfLines={1}>{`${seenName(aud.seen, t)} · ${seenGloss(aud.seen, t)}`}</Text>
+      </View>
+    );
+  }
   const close = () => setOpen(false);
   return (
     <>
       <PressableScale
-        contentStyle={s.seen}
-        scaleTo={0.98}
+        style={s.pillAt}
+        contentStyle={s.pill}
+        scaleTo={0.96}
         haptic="selection"
-        hitSlop={{ top: 12, bottom: 12 }}
+        hitSlop={CHIP_SLOP}
         onPress={() => setOpen(true)}
         accessibilityRole="button"
         accessibilityLabel={`${seenName(aud.seen, t)}, ${seenGloss(aud.seen, t)}`}
         accessibilityHint={whoHint(t)}
         testID="collection-form-seen"
       >
-        {words}
-        <Glyph name="chevron-down" size={ICON.text} color={colors.textTertiary} />
+        <Glyph name={SEEN_GLYPH[aud.seen]} size={ICON.text} color={colors.text} />
+        <Text style={s.pillText} numberOfLines={1}>{seenName(aud.seen, t)}</Text>
+        <Glyph name="chevron-down" size={ICON.text} color={colors.textSecondary} />
       </PressableScale>
       <ActionSheet visible={open} onClose={close} header={<ShareHead />}>
         <SheetRows
@@ -225,5 +239,14 @@ const s = StyleSheet.create({
   // they are the only line between the title and the fields.
   seen: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   seenText: { flex: 1, color: colors.textSecondary, ...type.meta },
+  // The app's chip in its chosen state (`ui/controls`' `chip`, `chipOn`),
+  // at the left: a pill as wide as its answer, not the row.
+  pillAt: { alignSelf: 'flex-start' },
+  pill: {
+    flexDirection: 'row', alignItems: 'center', gap: 6,
+    minHeight: CHIP_H, paddingHorizontal: 12, borderRadius: radius.pill,
+    borderWidth: 1, borderColor: colors.borderGlass, backgroundColor: colors.surfaceGlass,
+  },
+  pillText: { color: colors.text, fontSize: 14, fontWeight: font.semibold },
   rule: { height: StyleSheet.hairlineWidth, backgroundColor: colors.borderGlassSoft },
 });
