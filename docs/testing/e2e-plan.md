@@ -87,7 +87,7 @@ Không đưa vào Maestro (đã có unit test, hoặc kiểm tay): ánh sáng 1,
 ## Thứ tự
 
 1. **P1:** PA-1, PA-2, PA-5, PA-6 trong một flow; rồi PA-3, PA-4.
-2. **P3, một tài khoản:** CM-1 tới CM-6 và CM-10 — `23-comments-own.yaml` (đã viết 21/11/2026, **chưa chạy trên simulator**; đánh dấu đạt khi có hai lượt xanh liền ghi trong `e2e-latest.md`).
+2. **P3, một tài khoản:** CM-1 tới CM-6 và CM-10 — `23-comments-own.yaml` ✅ hai lượt xanh liền 21/11/2026 (`20261121-045850`, `20261121-050415`), xem `e2e-latest.md`.
 3. **P3, hai tài khoản:** CM-7 tới CM-9, sau khi CM-1…6 đạt hai lượt liền.
 4. **P2:** PA-7, PA-8, sau khi chốt cách giữ trạng thái kết bạn của cặp A–B.
 5. CM-10 đã nằm trong `23`; CM-11 làm cùng CM-7…9 (cần hai tài khoản). Chặn không làm (điều kiện 6).
