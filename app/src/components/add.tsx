@@ -363,17 +363,33 @@ export function AddPill({ label, onPress, busy, icon = 'add', accessibilityLabel
  *     chevron. Heavier is bigger: 27, the next step, if the 22 reads
  *     faint on a phone. Not seen on one yet.
  *
+ * ── 27, and level with the capitals (owner's phone, 20 Nov 2026) ──
+ *
+ * At 22 it read small, high and hard to make out beside the 30pt title.
+ * Small, because Ionicons' plus is 320 of its 512 units: its arms were
+ * 13.75pt, the size of a word's capital in body type. At 27 they are
+ * 16.9, and the stroke thickens with them. High, because the title row
+ * (`ScreenTitle`) stands its right slot on the title's foot: the plus's
+ * ink is centred 22.0 above the foot of its 44 box, and the capitals of
+ * the title's face (Space Grotesk Bold: cap 700, descent 292 of 1000, at
+ * 30) are centred 19.3 above the foot of the title's line — 2.7 short,
+ * read from the two fonts with fontTools. `onTitle` lowers it by 3.
+ * Not on the compact header (a gallery's): there the row stands its
+ * controls on their tops, and the plus is level with the back chevron.
+ *
  * `busy`: a spinner in the plus's place, the same box, and no press — a
  * gallery's photo on its way.
  */
-export function HeaderAdd({ label, onPress, busy, testID }: {
+export function HeaderAdd({ label, onPress, busy, onTitle, testID }: {
   /** The whole phrase, for VoiceOver: "New trip", "Add a photo". */
   label: string;
   onPress: () => void;
   busy?: boolean;
+  /** Beside a tab's large title (`ScreenTitle`): lowered to its capitals. */
+  onTitle?: boolean;
   testID?: string;
 }) {
-  const hang = { marginRight: -INK_GAP_END.add };
+  const hang = { marginRight: -INK_GAP_END.add, marginBottom: onTitle ? -3 : 0 };
   if (busy) {
     return (
       <View
@@ -389,7 +405,7 @@ export function HeaderAdd({ label, onPress, busy, testID }: {
       </View>
     );
   }
-  return <RoundIconButton bare icon="add" label={label} onPress={onPress} style={hang} testID={testID} />;
+  return <RoundIconButton bare icon="add" size={ICON.feature} label={label} onPress={onPress} style={hang} testID={testID} />;
 }
 
 const s = StyleSheet.create({
