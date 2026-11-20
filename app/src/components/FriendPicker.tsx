@@ -15,32 +15,38 @@
 // rules (`lib/invites`, `lib/shares`) and hands this the outcome, so the
 // rules stay where a Node process can test them.
 //
-// ── across, for a list (owner, 19 Nov 2026) ──
+// ── a strip of faces, for both sheets (owner, 19 and 20 Nov 2026) ──
 //
-// The list's sheet draws its friends as a strip of faces to scroll
-// sideways (`across`), after a reference the owner brought: a face with
-// the name under it, pressed to tick, the tick a disc on the face's
-// corner. What it buys is height — the rows took 300pt of the sheet and
-// the strip takes about 120, so the list being shared stays in sight
-// behind it — and a press on a face rather than on a line.
+// The friends are drawn as a strip of faces to scroll sideways, after a
+// reference the owner brought: a face with the name under it, pressed to
+// tick, the tick a disc on the face's corner. It began on the list's
+// sheet (19 Nov) and the trip's took it the next day, so there is one
+// way to pick friends and no rows left.
+//
+// What it buys is height — the rows took 300pt of the sheet and the strip
+// takes about 120, so what is being shared stays in sight behind it — and
+// a press on a face rather than on a line.
 //
 // What it costs, said to the owner and accepted:
 //
 //   - the handle is not drawn. There is room for a name under a face
 //     and no more; VoiceOver still says both. Two friends of one name
 //     are told apart by their pictures.
+//   - the trip's "places saved in common" is not drawn either (owner,
+//     20 Nov: "không cần hiển thị số lượng").
 //   - four and a half to a screen. The half is on purpose (`PER_SCREEN`):
 //     a face cut by the sheet's edge is what says there are more. A crew
 //     of twelve is three swipes, and who is ticked beyond the edge is
-//     not in sight — which is why the caller puts who has the list
-//     first (`lib/shares.shareRows`) and the button counts them.
+//     not in sight — which is why a caller may put who is ticked first
+//     (`lib/shares.shareRows`) and the button counts them.
 //
 // One way at every size (owner): no falling back to rows past some
 // number of friends, which would be two sheets to learn.
 //
-// The trip's sheet keeps its rows. A row there carries what a face has
-// no room for — the places saved in common, and "Answered" in place of
-// a tick — so `extra` and `badge` are the rows' alone.
+// A face that cannot be moved says so on the strip too. An answered
+// invitation keeps its tick and wears the word under the name
+// (`badge`), where the rows put it in place of the tick; a seat the
+// evening has no room for (`off`) is dimmed and silent under the thumb.
 //
 // ── no search field ──
 //
@@ -72,14 +78,13 @@ export type PickRow = {
    *  disabled — a checkbox that ignores the tap is worse than one that
    *  stands down. */
   off?: boolean;
-  /** A word worn in place of the tick — an answered invitation's
-   *  "Answered". A tick that cannot be untapped should not look like one
-   *  that can. */
+  /** A word worn under the name — an answered invitation's "Answered".
+   *  A tick that cannot be untapped should not look like one that can. */
   badge?: string;
 };
 
 export default function FriendPicker({
-  open, title, subtitle, rows, people, extra, none, note, across, cta, rowTestID, onToggle, onClose,
+  open, title, subtitle, rows, people, none, note, cta, rowTestID, onToggle, onClose,
 }: {
   open: boolean;
   title: string;
@@ -87,9 +92,6 @@ export default function FriendPicker({
   subtitle: string;
   rows: readonly PickRow[];
   people: Record<string, FriendProfile>;
-  /** More for a row's second line, after the handle: the trip's shared
-   *  saves. Starts with its own separator, or is empty. */
-  extra?: (id: string) => string;
   /** What an empty crew is told in place of the list. */
   none: string;
   /** The boxed line between the list and the button: what happens
@@ -97,10 +99,6 @@ export default function FriendPicker({
    *  since 19 Nov 2026 (`ShareSheet`); the button then keeps the space
    *  the box's two margins gave it (`gap`). */
   note?: { icon: Icon; text: string };
-  /** Faces in a strip to scroll sideways, in place of rows — see the
-   *  header. `extra`, and a row's `badge` and `off`, are the rows'
-   *  alone: a face is always one that can be ticked. */
-  across?: boolean;
   cta: { icon: Icon; label: string; testID: string; disabled: boolean; onPress: () => void };
   /** Each row's id, by its index. A function rather than a prefix so
    *  that the template is written at the call site, where the Maestro id
@@ -144,49 +142,8 @@ export default function FriendPicker({
           // Not an error, and not a dead end phrased as one: the reader
           // has simply not added anybody yet.
           <Text style={s.none}>{none}</Text>
-        ) : across ? (
-          <Strip rows={rows} people={people} rowTestID={rowTestID} onToggle={onToggle} />
         ) : (
-          <ScrollView style={s.list} contentContainerStyle={{ paddingVertical: 4 }} showsVerticalScrollIndicator={false}>
-            {rows.map((r, row) => {
-              const p = people[r.id];
-              return (
-                <PressableScale
-                  key={r.id}
-                  onPress={() => { if (!r.off) onToggle(r.id); }}
-                  haptic={r.off ? 'none' : 'selection'}
-                  accessibilityRole="checkbox"
-                  testID={rowTestID(row)}
-                  accessibilityState={{ checked: r.on, disabled: !!r.off }}
-                  // And as `aria-checked`, which react-native-web keeps
-                  // where it drops `accessibilityState` — see `Chip` in
-                  // `ui`. Without it the web build's checkboxes were
-                  // silent about being ticked.
-                  aria-checked={r.on}
-                  style={{ alignSelf: 'stretch' }}
-                  contentStyle={[s.row, r.off && s.rowOff]}
-                >
-                  <Avatar url={p?.avatar_url} size={44} />
-                  <View style={{ flex: 1, minWidth: 0 }}>
-                    <Text style={s.name} numberOfLines={1}>
-                      {p?.full_name || p?.handle || t('Someone', 'Ai đó', '誰か', '某人', '某人')}
-                    </Text>
-                    <Text style={s.meta} numberOfLines={1}>
-                      {p?.handle ? `@${p.handle}` : ''}
-                      {extra?.(r.id) ?? ''}
-                    </Text>
-                  </View>
-                  {r.badge ? (
-                    <Text style={s.badge}>{r.badge}</Text>
-                  ) : (
-                    <View style={[s.tick, r.on && s.tickOn]}>
-                      {r.on ? <Glyph name="checkmark" size={ICON.text} color={colors.accentInk} /> : null}
-                    </View>
-                  )}
-                </PressableScale>
-              );
-            })}
-          </ScrollView>
+          <Strip rows={rows} people={people} rowTestID={rowTestID} onToggle={onToggle} />
         )}
 
         {note ? (
@@ -251,16 +208,18 @@ function Strip({ rows, people, rowTestID, onToggle }: {
         return (
           <PressableScale
             key={r.id}
-            onPress={() => onToggle(r.id)}
-            haptic="selection"
+            onPress={() => { if (!r.off) onToggle(r.id); }}
+            haptic={r.off ? 'none' : 'selection'}
             accessibilityRole="checkbox"
             // The handle is said though it is not drawn: it is what
             // tells two friends of one name apart.
             accessibilityLabel={p?.handle && p.handle !== name ? `${name}, @${p.handle}` : name}
-            accessibilityState={{ checked: r.on }}
+            accessibilityState={{ checked: r.on, disabled: !!r.off }}
             aria-checked={r.on}
             testID={rowTestID(i)}
-            contentStyle={[s.cell, { width: cell }]}
+            // Dimmed only when there is no seat. An answered face keeps
+            // its tick at full strength: it is the one that says yes.
+            contentStyle={[s.cell, { width: cell }, r.off && !r.badge && s.cellOff]}
           >
             <View style={[s.halo, r.on && s.haloOn]}>
               <Avatar url={p?.avatar_url} size={FACE} />
@@ -275,6 +234,7 @@ function Strip({ rows, people, rowTestID, onToggle }: {
               ) : null}
             </View>
             <Text style={s.cellName} numberOfLines={2}>{name}</Text>
+            {r.badge ? <Text style={s.cellBadge}>{r.badge}</Text> : null}
           </PressableScale>
         );
       })}
@@ -299,25 +259,14 @@ const s = StyleSheet.create({
   subtitle: { color: colors.textTertiary, fontSize: 14, marginTop: 3, marginBottom: 10 },
   none: { color: colors.textTertiary, fontSize: 15, lineHeight: 21, paddingVertical: 18 },
 
-  list: { maxHeight: 300 },
-  row: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 10 },
-  rowOff: { opacity: 0.62 },
-  name: { color: colors.text, fontSize: 16, fontWeight: font.medium },
-  meta: { color: colors.textTertiary, fontSize: 13, marginTop: 1 },
-  tick: {
-    width: 26, height: 26, borderRadius: 8,
-    alignItems: 'center', justifyContent: 'center',
-    borderWidth: 1.5, borderColor: colors.borderGlass,
-  },
-  tickOn: { backgroundColor: colors.accentFill, borderColor: colors.accentFill },
-  badge: { color: colors.textTertiary, fontSize: 13, fontWeight: font.medium },
-
   // Out to the sheet's edges and back in by the page's margin, less the
   // slack each cell has beside its face, so the first face — not the
   // first cell — stands on the margin the title stands on.
   strip: { marginHorizontal: -space.page, flexGrow: 0 },
   stripIn: { paddingHorizontal: space.page - 7, paddingTop: 8, paddingBottom: 2 },
   cell: { alignItems: 'center', gap: 6 },
+  cellOff: { opacity: 0.4 },
+  cellBadge: { color: colors.textTertiary, fontSize: 11, lineHeight: 14, marginTop: -4 },
   halo: { width: HALO, height: HALO, borderRadius: HALO / 2, alignItems: 'center', justifyContent: 'center' },
   haloOn: { backgroundColor: colors.accentSoft },
   onRim: {

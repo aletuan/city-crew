@@ -24,10 +24,12 @@
 //
 // ── the sheet is `FriendPicker` ──
 //
-// Since 13 Nov 2026 the sheet itself — the rows, the ticks, the button and
-// "Not now" — is `FriendPicker`, shared with the list's `ShareSheet`. What
+// Since 13 Nov 2026 the sheet itself — the friends, the ticks, the button
+// and "Not now" — is `FriendPicker`, shared with the list's `ShareSheet`;
+// since 20 Nov 2026 its friends are a strip of faces to scroll sideways,
+// as the list's are (owner), and no longer rows with a shared-saves count. What
 // stays here is everything that makes it the trip's: the seats, the
-// answered rows, the shared-saves count, and what the button says.
+// answered faces, and what the button says.
 
 import React, { useEffect, useMemo, useState } from 'react';
 import type { FriendProfile } from '../lib/data';
@@ -38,7 +40,7 @@ import {
 import FriendPicker from './FriendPicker';
 
 export default function InviteSheet({
-  open, company, friendIds, people, mutual, invites, sending, onClose, onSend,
+  open, company, friendIds, people, invites, sending, onClose, onSend,
 }: {
   open: boolean;
   /** The sentence under the title, and the seat rule: a couple's evening
@@ -48,8 +50,6 @@ export default function InviteSheet({
   /** Accepted friends, in the order the crew list holds them. */
   friendIds: readonly string[];
   people: Record<string, FriendProfile>;
-  /** Shared-taste counts, the number each row wears. */
-  mutual: Record<string, number>;
   /** Every invitation already on this trip. */
   invites: readonly InviteRow[];
   sending: boolean;
@@ -155,15 +155,6 @@ export default function InviteSheet({
         };
       })}
       people={people}
-      extra={(id) => {
-        const n = mutual[id] ?? 0;
-        return n > 0 ? ` · ${t(
-          `${n} mutual save${n === 1 ? '' : 's'}`,
-          `${n} nơi cùng lưu`,
-          `共通の保存 ${n}`,
-          `${n} 个共同收藏`, `${n} 個共同收藏`,
-        )}` : '';
-      }}
       // The Crew screen is where that happens — and no link to it from
       // here: a link out of a sheet mid-plan is a way to lose the plan.
       // In the share sheet's words (owner, 20 Nov 2026): "friends", not
