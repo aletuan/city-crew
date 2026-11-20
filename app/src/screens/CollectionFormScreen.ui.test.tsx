@@ -9,7 +9,7 @@
 import React from 'react';
 import { Alert } from 'react-native';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { cleanup, fireEvent, render, screen, waitFor } from '../uitest/render';
+import { cleanup, fireEvent, render, screen, viewStyleOf, waitFor } from '../uitest/render';
 import type { Nav, RootRoute } from '../nav';
 import type { Collection, Place } from '../lib/types';
 import { DAILY_LIMIT } from '../lib/quota';
@@ -88,6 +88,7 @@ vi.mock('../nav', async (orig) => ({
 
 import CollectionFormScreen from './CollectionFormScreen';
 import { colors } from '../theme';
+import { CHIP_SLOP } from '../components/ui';
 
 type BeforeRemove = (e: { preventDefault: () => void; data: { action: unknown } }) => void;
 /** A navigator that, like the real one, asks every `beforeRemove`
@@ -115,6 +116,23 @@ const routeWith = (params?: object) => ({ params }) as RootRoute<'CollectionForm
 /** The line at the form's head, pressed, and an answer in the sheet it
  *  opens. The sheet's row runs its press after the sheet has gone
  *  (`SheetRows`), hence the wait. */
+/** The props React committed for the first element `pick` accepts —
+ *  for a press's reach, which react-native-web does not draw. */
+const propsWhere = (match: (p: Record<string, unknown>) => boolean): Record<string, unknown> => {
+  type Fiber = { child: Fiber | null; sibling: Fiber | null; memoizedProps: Record<string, unknown> | null };
+  const host = document.body.firstElementChild as unknown as Record<string, { stateNode: { current: Fiber } }>;
+  const key = Object.keys(host).find((k) => k.startsWith('__reactContainer'))!;
+  const stack: Fiber[] = [host[key].stateNode.current];
+  while (stack.length) {
+    const f = stack.pop()!;
+    const p = f.memoizedProps;
+    if (p && typeof p === 'object' && match(p)) return p;
+    if (f.sibling) stack.push(f.sibling);
+    if (f.child) stack.push(f.child);
+  }
+  throw new Error('no matching element in the committed tree');
+};
+
 const pick = async (v: 'public' | 'friends' | 'private') => {
   fireEvent.click(screen.getByTestId('collection-form-seen'));
   fireEvent.click(screen.getByTestId(`sheet-action-${v}`));
@@ -454,7 +472,16 @@ describe('what stops a submit before it writes', () => {
     render(<CollectionFormScreen navigation={nav()} route={routeWith()} />);
     const line = screen.getByRole('button', { name: 'Public, Everyone can see it' });
     expect(line.getAttribute('data-testid')).toBe('collection-form-seen');
-    expect(line.querySelector('[data-icon="chevron-down"]')).toBeTruthy();
+    // A pill (owner, 20 Nov 2026): the answer's name alone, the chevron
+    // against it rather than at the row's far end, in the chip's shape,
+    // as wide as its answer.
+    expect(line.textContent).toBe('Public');
+    const face = line.firstElementChild!;
+    expect([...face.children].map((c) => c.getAttribute('data-icon') ?? c.textContent)).toEqual(['globe-outline', 'Public', 'chevron-down']);
+    expect(viewStyleOf(face)).toMatchObject({ borderRadius: 999, minHeight: 32, backgroundColor: colors.surfaceGlass });
+    expect(viewStyleOf(line).alignSelf).toBe('flex-start');
+    // 32 drawn, 44 to the thumb, as every chip.
+    expect(propsWhere((p) => p.testID === 'collection-form-seen' && 'hitSlop' in p).hitSlop).toEqual(CHIP_SLOP);
     expect(screen.queryByText('Who can see your list?')).toBeNull();
     fireEvent.click(line);
     expect(screen.getByText('Who can see your list?')).toBeTruthy();
@@ -469,7 +496,7 @@ describe('what stops a submit before it writes', () => {
   it('moves the line to the answer chosen, and the sheet’s tick with it', async () => {
     render(<CollectionFormScreen navigation={nav()} route={routeWith()} />);
     await pick('friends');
-    expect(screen.getByTestId('collection-form-seen').textContent).toBe('Friends · Only the friends you choose');
+    expect(screen.getByTestId('collection-form-seen').textContent).toBe('Friends');
     expect(screen.getByTestId('collection-form-seen').querySelector('[data-icon="people-outline"]')).toBeTruthy();
     fireEvent.click(screen.getByTestId('collection-form-seen'));
     expect(screen.getByTestId('sheet-action-friends').getAttribute('aria-selected')).toBe('true');
@@ -601,7 +628,7 @@ describe('renaming a list', () => {
 
     it('says a public list is public, to everyone', () => {
       const line = seenAs({ is_public: true });
-      expect(line.textContent).toBe('Public · Everyone can see it');
+      expect(line.textContent).toBe('Public');
       expect(line.querySelector('[data-icon="globe-outline"]')).toBeTruthy();
       expect(screen.queryByText(/will show to everyone/)).toBeNull();
       // The owner's shares, asked for by the owner's id.
@@ -610,30 +637,30 @@ describe('renaming a list', () => {
 
     it('says a private list is private', () => {
       const line = seenAs({ is_public: false });
-      expect(line.textContent).toBe('Private · Only you can see it');
+      expect(line.textContent).toBe('Private');
       expect(line.querySelector('[data-icon="lock-closed-outline"]')).toBeTruthy();
     });
 
     it('says a list shared with friends is the friends’', () => {
       shares.data = shared('c1');
       const line = seenAs({ is_public: false });
-      expect(line.textContent).toBe('Friends · Only the friends you choose');
+      expect(line.textContent).toBe('Friends');
       expect(line.querySelector('[data-icon="people-outline"]')).toBeTruthy();
     });
 
     // Public wins over the shares, as on the page: the policies read it so.
     it('says public of a public list that is also shared, and private of one whose shares are another list’s', () => {
       shares.data = shared('c1');
-      expect(seenAs({ is_public: true }).textContent).toBe('Public · Everyone can see it');
+      expect(seenAs({ is_public: true }).textContent).toBe('Public');
       cleanup();
       shares.data = shared('some-other-list');
-      expect(seenAs({ is_public: false }).textContent).toBe('Private · Only you can see it');
+      expect(seenAs({ is_public: false }).textContent).toBe('Private');
     });
 
     it('speaks the reader’s language', () => {
       lang.now = 'vi';
       try {
-        expect(seenAs({ is_public: true }).textContent).toBe('Công khai · Mọi người có thể xem');
+        expect(seenAs({ is_public: true }).textContent).toBe('Công khai');
       } finally {
         lang.now = 'en';
       }
