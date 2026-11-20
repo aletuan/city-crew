@@ -61,8 +61,10 @@ chấm thì vào chuông.
 Chuông mang **số**, đếm theo dòng của "Dành cho bạn", từ 10 trở lên là
 "9+"; tab chỉ mang chấm, như mọi chấm trên thanh tab. Không có nút "đánh
 dấu đã đọc": mở chuông đã là việc đó, vì không dòng nào có trạng thái đọc
-riêng. Hoạt động mở vào "Dành cho bạn" với thẻ lời mời ở đầu nếu có, và
-pill của tab đó đếm cả lời mời, để chuông, pill và chấm trên các dòng là
+riêng. Hoạt động mở vào "Dành cho bạn" với **một dòng lời mời** ở đầu nếu có
+(cùng kiểu với các dòng khác, có chấm cho tới khi trả lời; bấm sang Bạn
+bè). Thẻ lời mời trên Trang cá nhân vẫn giữ: chủ dự án muốn người dùng
+thấy ngay khi có lời mời. Pill của tab "Dành cho bạn" đếm cả lời mời, để chuông, pill và chấm trên các dòng là
 một con số.
 
 **Huy hiệu không bật chấm nào nữa**, cả trên tab lẫn chip Lv. Banner đã
