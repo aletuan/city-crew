@@ -159,6 +159,45 @@ describe('creating a collection from a bookmark', () => {
     expect(note).not.toHaveBeenCalled();
   });
 
+  // Public unless changed, and the catalog's copy is asked again so the
+  // list reaches Community once it has a place (owner, 20 Nov 2026).
+  it('makes a new list public by default, and refreshes the catalog for it', async () => {
+    const navigation = nav();
+    render(<CollectionFormScreen navigation={navigation} route={routeWith({ addPlaceSlug: 'pho-10' })} />);
+    create('Weekend list');
+    await waitFor(() => expect(navigation.goBack).toHaveBeenCalled());
+    expect(createCollection).toHaveBeenCalledWith(expect.objectContaining({ title: 'Weekend list', isPublic: true }));
+    expect(colsReload).toHaveBeenCalled();
+    expect(goTo).not.toHaveBeenCalled();
+  });
+
+  it('makes a list private when told, with no catalog refresh and nowhere else to go', async () => {
+    const navigation = nav();
+    render(<CollectionFormScreen navigation={navigation} route={routeWith()} />);
+    fireEvent.click(screen.getByTestId('collection-form-audience-private'));
+    create('Mine alone');
+    await waitFor(() => expect(navigation.goBack).toHaveBeenCalled());
+    expect(createCollection).toHaveBeenCalledWith(expect.objectContaining({ isPublic: false }));
+    expect(colsReload).not.toHaveBeenCalled();
+    expect(goTo).not.toHaveBeenCalled();
+  });
+
+  // Friends is choosing which: the list is made private, and opens with
+  // the picker up — it becomes Friends when somebody is ticked there.
+  it('makes a list for friends private and opens it to choose them', async () => {
+    const navigation = nav();
+    render(<CollectionFormScreen navigation={navigation} route={routeWith({ addPlaceSlug: 'pho-10' })} />);
+    fireEvent.click(screen.getByTestId('collection-form-audience-friends'));
+    create('For the crew');
+    await waitFor(() => expect(goTo).toHaveBeenCalled());
+    expect(createCollection).toHaveBeenCalledWith(expect.objectContaining({ isPublic: false }));
+    expect(navigation.goBack).toHaveBeenCalled();
+    expect(goTo).toHaveBeenCalledWith('Collections', { screen: 'CollectionDetail', initial: false, params: { slug: 'new-list', share: true } });
+    // Into the list it just made, the place it was made for included.
+    expect(addPlaceToCollection).toHaveBeenCalledWith('new-list', 'pho-10', 0);
+    expect(colsReload).not.toHaveBeenCalled();
+  });
+
   it('records no save for a plain new collection', async () => {
     const navigation = nav();
     render(<CollectionFormScreen navigation={navigation} route={routeWith()} />);
@@ -393,20 +432,32 @@ describe('what stops a submit before it writes', () => {
     expect(screen.queryByText(/Private until you say so/)).toBeNull();
   });
 
-  // Who can see the list, in a line under the title (owner, 16 Nov 2026).
-  // It was a sentence: "Only you can see this list until you make it
-  // public from its menu", which the menu had stopped offering on 13 Nov.
-  it('says a new list is private, in a line with its glyph, and asks for nobody’s shares', () => {
+  // A list of your own being made asks who sees it, Public chosen, where
+  // it used to say "Private" in a line (owner, 20 Nov 2026).
+  it('asks a new list who sees it, Public first and chosen, and draws no line over the fields', () => {
     render(<CollectionFormScreen navigation={nav()} route={routeWith()} />);
-    const line = screen.getByTestId('collection-form-seen');
-    expect(line.textContent).toBe('Private · Only you can see it');
-    expect(line.querySelector('[data-icon="lock-closed-outline"]')).toBeTruthy();
-    expect(screen.queryByText(/until you make it public/)).toBeNull();
-    // Read, not pressed: who can see a list is changed on its page.
-    expect(line.getAttribute('role')).not.toBe('button');
-    expect(line.closest('[role="button"]')).toBeNull();
+    expect(screen.queryByTestId('collection-form-seen')).toBeNull();
+    const radios = screen.getAllByRole('radio');
+    expect(radios.map((r) => r.getAttribute('aria-label'))).toEqual([
+      'Public, Everyone can see it', 'Friends, Only the friends you choose', 'Private, Only you can see it',
+    ]);
+    expect(radios.map((r) => r.getAttribute('aria-checked'))).toEqual(['true', 'false', 'false']);
+    expect(screen.getByTestId('collection-form-audience-next').textContent).toMatch(/once it has a place/);
+    // Under the fields, as drawn for the owner: the last rule comes first.
+    const rules = screen.getAllByTestId('collection-form-rule');
+    const choice = screen.getByTestId('collection-form-audience');
+    expect(rules.at(-1)!.compareDocumentPosition(choice) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     // A list not yet made has no shares to read.
     expect(shares.asked.at(-1)).toBeNull();
+  });
+
+  it('moves the choice and what it says next on a press', () => {
+    render(<CollectionFormScreen navigation={nav()} route={routeWith()} />);
+    fireEvent.click(screen.getByTestId('collection-form-audience-friends'));
+    expect(screen.getAllByRole('radio').map((r) => r.getAttribute('aria-checked'))).toEqual(['false', 'true', 'false']);
+    expect(screen.getByTestId('collection-form-audience-next').textContent).toBe('Once it is made, you choose who.');
+    fireEvent.click(screen.getByTestId('collection-form-audience-private'));
+    expect(screen.getByTestId('collection-form-audience-next').textContent).toMatch(/any time on the collection’s page/);
   });
 
   // The fields on the page itself (owner, 16 Nov 2026): small labels, no
@@ -418,12 +469,12 @@ describe('what stops a submit before it writes', () => {
     for (const icon of ['bookmark-outline', 'text-outline']) expect(document.querySelector(`[data-icon="${icon}"]`)).toBeNull();
     const rules = screen.getAllByTestId('collection-form-rule');
     expect(rules).toHaveLength(3);
-    // In order down the page: who sees it, a rule, the name, a rule, the
-    // description, a rule.
+    // In order down the page: a rule, the name, a rule, the description,
+    // a rule, and who sees it (a new list's choice since 20 Nov 2026).
     const before = (a: Element, b: Element) => !!(a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING);
     const name = screen.getByPlaceholderText('Weekend coffee');
     const words = screen.getByPlaceholderText('What ties these together?');
-    const order = [screen.getByTestId('collection-form-seen'), rules[0], name, rules[1], words, rules[2]];
+    const order = [rules[0], name, rules[1], words, rules[2], screen.getByTestId('collection-form-audience')];
     order.slice(1).forEach((el, i) => expect([i, before(order[i], el)]).toEqual([i, true]));
     // No box: the row has no padding of its own, and no border.
     const row = name.parentElement!.parentElement as HTMLElement;
@@ -449,7 +500,9 @@ describe('what stops a submit before it writes', () => {
     expect(screen.queryByText(/goes in first/)).toBeNull();
     unmount();
     render(<CollectionFormScreen navigation={nav()} route={routeWith({ addPlaceSlug: 'heim' })} />);
-    expect(screen.getByTestId('collection-form-seen').textContent).toBe('Private · Only you can see it');
+    // A list made from a place's save is one of your own: it asks.
+    expect(screen.queryByTestId('collection-form-seen')).toBeNull();
+    expect(screen.getByTestId('collection-form-audience')).toBeTruthy();
     expect(screen.getByText('Name it, and the place you just saved goes in first.')).toBeTruthy();
     expect(screen.queryByText(/nothing is copied until/)).toBeNull();
   });
@@ -809,6 +862,14 @@ describe('saving a copy of somebody else’s list', () => {
     return navigation;
   };
   const save = () => fireEvent.click(screen.getByRole('button', { name: 'Save the copy' }));
+
+  // A copy is made private and does not ask (owner, 20 Nov 2026): somebody
+  // else's choices under your name should not be one press away.
+  it('offers no choice of who sees a copy, and says it is private', () => {
+    openCopy();
+    expect(screen.queryByTestId('collection-form-audience')).toBeNull();
+    expect(screen.getByTestId('collection-form-seen').textContent).toBe('Private · Only you can see it');
+  });
 
   // Edited and saved, the copy leaves without a discard question: the
   // changes went with it.

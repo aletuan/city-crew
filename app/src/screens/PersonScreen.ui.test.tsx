@@ -167,21 +167,24 @@ import { spokenTab } from '../components/FloatingTabBar';
 
 const LAN: Who = { id: 'lan-id', handle: 'lan', full_name: 'Lan Phạm', avatar_url: 'https://faces/lan.jpg', bio: 'Coffee first, then the rest.' };
 
+const members = (n: number) => Array.from({ length: n }, (_, i) => ({ sort_order: i, places: { slug: `p${i}` } }));
+
 const list = (slug: string, over: Partial<Collection> = {}): Collection => ({
   id: slug, slug, title_en: `List ${slug}`, title_vi: `Bộ ${slug}`, title_ja: null,
   desc_en: null, desc_vi: null, desc_ja: null, curator_handle: '@lan', cover: null,
-  owner_id: 'lan-id', is_public: true, city_id: 'hanoi', collection_places: [],
+  // One place by default: somebody else's public list with none is not on
+  // their page since 20 Nov 2026 (`person.listsOn`), and a list with one
+  // is the ordinary case. A test about an empty list says so.
+  owner_id: 'lan-id', is_public: true, city_id: 'hanoi', collection_places: members(1) as Collection['collection_places'],
   ...over,
 } as Collection);
-
-const members = (n: number) => Array.from({ length: n }, (_, i) => ({ sort_order: i, places: { slug: `p${i}` } }));
 
 const flush = async () => { await act(async () => {}); };
 /** The feed's cards. The page had a grid of tiles too, a press of the
  *  heading's count away, from 17 to 19 Nov 2026; the cards are all there
  *  is now, so what was asked of a tile is asked of a card. */
 const cards = (): HTMLElement[] => screen.queryAllByTestId('person-act');
-/** What each card says it opens: "List one, 0 places". */
+/** What each card says it opens: "List one, 1 place". */
 const opens = (): (string | null)[] => cards().map((c) => within(c).getByTestId('activity-open').getAttribute('aria-label'));
 /** What the page listens for on the navigator, so a test can say the
  *  page was left and come back to. */
@@ -879,7 +882,7 @@ describe('their lists', () => {
       list('old'),
     ];
     await show();
-    expect(opens()).toEqual(['List new, 17 places', 'List old, 0 places']);
+    expect(opens()).toEqual(['List new, 17 places', 'List old, 1 place']);
     expect(screen.queryByTestId('person-no-lists')).toBeNull();
   });
 
@@ -888,7 +891,7 @@ describe('their lists', () => {
   it('never shows a private list', async () => {
     state.shelf = [list('secret', { is_public: false }), list('open')];
     await show();
-    expect(opens()).toEqual(['List open, 0 places']);
+    expect(opens()).toEqual(['List open, 1 place']);
   });
 
   it('says one of each in the singular, and titles a list in the reader’s language', async () => {
@@ -942,7 +945,7 @@ describe('lists that are not for everybody', () => {
     it('holds every list you made, the shared and the private with the public', async () => {
       await show('me');
       expect(acts().map((c) => within(c).getByTestId('activity-open').getAttribute('aria-label')))
-        .toEqual(['List noodles, 0 places', 'List secret, 0 places', 'List open, 0 places']);
+        .toEqual(['List noodles, 1 place', 'List secret, 1 place', 'List open, 1 place']);
       // Nobody else's, though the shelf holds one.
       expect(screen.queryByText('List lan-open')).toBeNull();
     });
@@ -1112,7 +1115,7 @@ describe('lists that are not for everybody', () => {
     it('holds the list they shared with you beside their public ones, and nobody else’s', async () => {
       await show();
       expect(acts().map((c) => within(c).getByTestId('activity-open').getAttribute('aria-label')))
-        .toEqual(['List for-me, 0 places', 'List open, 0 places']);
+        .toEqual(['List for-me, 1 place', 'List open, 1 place']);
     });
 
     it('says "Shared with you" on it, in words, and offers its heart to the friend it was shared with', async () => {
@@ -1153,7 +1156,7 @@ describe('lists that are not for everybody', () => {
     it('shows a guest the public lists alone, and asks for nothing as nobody', async () => {
       state.me = null;
       await show();
-      expect(acts().map((c) => within(c).getByTestId('activity-open').getAttribute('aria-label'))).toEqual(['List open, 0 places']);
+      expect(acts().map((c) => within(c).getByTestId('activity-open').getAttribute('aria-label'))).toEqual(['List open, 1 place']);
       expect(state.lentAsked.at(-1)).toBeNull();
       expect(state.sharesAsked.at(-1)).toBeNull();
     });

@@ -104,6 +104,14 @@ const madeAt = (c: Collection): number => Date.parse(c.created_at ?? '') || 0;
  * `mine` is asked whose it is although the library is the reader's own:
  * a library still in memory from the account signed in before must not
  * put its private lists on this one's page.
+ *
+ * Somebody else's public list with no place in it yet is not on their
+ * page (owner, 20 Nov 2026). Since that day a list can be made public
+ * from the start, so one is public for the minutes between "Create" and
+ * its first place; drawn, it is a card saying "0 places" over nothing.
+ * The Community tab has always drawn only lists with a place; this is
+ * that rule on the other door to the same lists. Your own page keeps
+ * them: it is where you go to fill one.
  */
 export function listsOn(
   ownerId: string | null | undefined,
@@ -115,7 +123,7 @@ export function listsOn(
   const open = listsBy(ownerId, from.shelf);
   const [first, second] = ownerId === reader
     ? [from.mine.filter(theirs), open]
-    : [open, from.shared.filter(theirs)];
+    : [open.filter((c) => c.collection_places.length > 0), from.shared.filter(theirs)];
   const have = new Set(first.map((c) => c.slug));
   const rest = second.filter((c) => !have.has(c.slug));
   if (!rest.length) return first;

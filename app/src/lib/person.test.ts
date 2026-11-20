@@ -2,10 +2,14 @@ import { describe, expect, it } from 'vitest';
 import { coverAmong, listsBy, listsOn, seenOn } from './person';
 import type { Collection } from './types';
 
+const one = [{ sort_order: 0, places: { slug: 'p0' } }] as unknown as Collection['collection_places'];
 const list = (slug: string, over: Partial<Collection> = {}): Collection => ({
   slug, title_en: slug, title_vi: slug, title_ja: null, desc_en: null, desc_vi: null, desc_ja: null,
-  curator_handle: null, cover: null, collection_places: [], owner_id: 'lan', is_public: true, ...over,
+  // One place by default, the ordinary list: an empty public one is kept
+  // off somebody else's page (`listsOn`), and the tests of that say so.
+  curator_handle: null, cover: null, collection_places: one, owner_id: 'lan', is_public: true, ...over,
 } as Collection);
+const none_: Collection['collection_places'] = [];
 
 describe('listsBy', () => {
   it('keeps a person’s public lists, in the shelf’s order', () => {
@@ -52,6 +56,18 @@ describe('coverAmong', () => {
 
 describe('listsOn', () => {
   const none = { shelf: [], mine: [], shared: [] };
+
+  // From 20 Nov 2026 a list can be public before it holds anything; on
+  // another's page it waits for its first place, as on Community.
+  it('leaves somebody else’s public list off their page until it has a place, and keeps your own', () => {
+    const shelf = [list('empty', { collection_places: none_ }), list('full')];
+    expect(listsOn('lan', 'minh', { ...none, shelf }).map((c) => c.slug)).toEqual(['full']);
+    expect(listsOn('lan', null, { ...none, shelf }).map((c) => c.slug)).toEqual(['full']);
+    expect(listsOn('lan', 'lan', { ...none, shelf, mine: shelf }).map((c) => c.slug)).toEqual(['empty', 'full']);
+    // A list they shared with you is theirs to have lent empty.
+    const lent = [list('lent', { is_public: false, collection_places: none_ })];
+    expect(listsOn('lan', 'minh', { ...none, shared: lent }).map((c) => c.slug)).toEqual(['lent']);
+  });
 
   it('is every list of your own on your own page, the private and the shared with the public', () => {
     const mine = [list('secret', { is_public: false }), list('open')];
