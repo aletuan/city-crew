@@ -21,11 +21,11 @@ vi.mock('../lib/i18n', () => ({ useI18n: () => ({ t: (_en: string, vi: string) =
 vi.mock('react-native', async orig => ({ ...(await orig<Record<string, unknown>>()), useWindowDimensions: () => ({ width: 390, height: 844, scale: 1, fontScale: 1 }) }));
 const pressed = vi.fn();
 const getRoute = () => state.route;
-function Anchor({ id }: { id: 'search' | 'save' | 'collections' | 'profile' | 'ideas' }) {
+function Anchor({ id }: { id: 'search' | 'save' | 'community' | 'profile' | 'plan' }) {
   // The collections tab rings as the tab bar asks: in from its box above
   // and below, out by nothing at the sides.
   const ref = useTourAnchor(id, pressed, id === 'search' ? () => state.focused : undefined,
-    ['collections', 'profile', 'ideas'].includes(id) ? { x: 0, y: -4 } : undefined);
+    id === 'profile' ? { x: 0, y: -4 } : undefined);
   useEffect(() => {
     ref.current = { measureInWindow: (cb: (x: number, y: number, w: number, h: number) => void) => cb(state.x, state.offscreen ? -50 : state.readings.shift() ?? state.y, state.w, state.h) } as unknown as React.ComponentRef<typeof View>;
   }, [ref]);
@@ -36,7 +36,7 @@ function Controls() {
   return <><button onClick={() => tour.start(state.uid)}>Start</button>
     <button onClick={() => tour.setEnabled(true)}>Enable</button><button onClick={() => tour.setEnabled(false)}>Disable</button>
     <button onClick={tour.replay}>Replay</button><span data-testid="enabled">{String(tour.enabled)}</span><span data-testid="notice-top">{String(tour.noticeTop)}</span>
-    {state.anchors && <><Anchor id="search" /><Anchor id="save" /><Anchor id="collections" /><Anchor id="profile" /><Anchor id="ideas" />{state.duplicate && <Anchor id="search" />}</>}</>;
+    {state.anchors && <><Anchor id="search" /><Anchor id="save" /><Anchor id="community" /><Anchor id="profile" /><Anchor id="plan" />{state.duplicate && <Anchor id="search" />}</>}</>;
 }
 const onReplay = vi.fn();
 const tree = () => <SignupTourProvider onReplay={onReplay} getRoute={getRoute}><Controls /></SignupTourProvider>;
@@ -52,19 +52,31 @@ it('does not start on sign-in; runs five steps and finishes without a skip on th
   state.route = 'PlaceDetail';
   await screen.findByText('2/5');
   expect(screen.getByText('Lưu nơi bạn thích')).toBeTruthy();
-  // Steps 3 to 5 ring tabs in the floating bar, there on the place's page
-  // too: Next must not need a way back to Explore.
+  // Step 3 waits for Collections, where it rings Community.
   fireEvent.click(screen.getByText('Tiếp theo'));
+  await waitFor(() => expect(screen.queryByTestId('signup-tour')).toBeNull());
+  // Not on the place's page, where the Community tab is not.
+  await act(async () => { await new Promise(resolve => setTimeout(resolve, 300)); });
+  expect(screen.queryByTestId('signup-tour')).toBeNull();
+  state.route = 'CollectionsHome';
   await screen.findByText('3/5');
-  expect(screen.getByText('Bộ sưu tập của bạn')).toBeTruthy();
+  expect(screen.getByText('Bộ sưu tập của mọi người ở mục Cộng đồng. Những nơi bạn lưu nằm ở mục Của bạn.')).toBeTruthy();
+  // Step 4 is the profile tab in the floating bar, there on any page.
   fireEvent.click(screen.getByText('Tiếp theo'));
+  state.route = 'ExploreHome';
   await screen.findByText('4/5');
   expect(screen.getByText('Kết bạn, và xem ai đã thích hay bình luận bộ sưu tập của bạn.')).toBeTruthy();
   expect(screen.getByText('Bỏ qua hướng dẫn')).toBeTruthy();
+  // Step 5 waits for the planner.
   fireEvent.click(screen.getByText('Tiếp theo'));
+  await waitFor(() => expect(screen.queryByTestId('signup-tour')).toBeNull());
+  // Not on Collections either: the planner's question is on the planner.
+  await act(async () => { await new Promise(resolve => setTimeout(resolve, 300)); });
+  expect(screen.queryByTestId('signup-tour')).toBeNull();
+  state.route = 'IdeasHome';
   await screen.findByText('5/5');
   expect(screen.getByText('Lên kế hoạch')).toBeTruthy();
-  expect(screen.getByText('Để City Crew gợi ý một buổi đi chơi từ những nơi bạn đã lưu, rồi rủ bạn bè cùng đi.')).toBeTruthy();
+  expect(screen.getByText('Chọn đi cùng ai và bạn thích gì, City Crew sẽ gợi ý một buổi đi chơi để rủ bạn bè cùng đi.')).toBeTruthy();
   expect(screen.queryByText('Bỏ qua hướng dẫn')).toBeNull();
   fireEvent.click(screen.getByText('Hoàn tất'));
   await waitFor(() => expect(screen.queryByTestId('signup-tour')).toBeNull());
@@ -75,14 +87,16 @@ it('does not start on sign-in; runs five steps and finishes without a skip on th
 });
 // The floating bar sits partly inside the home indicator's inset, so its
 // tab must count as on screen there; a bar ducked below the edge must not.
-it('rings the collections tab inside the bottom inset, but not once it has slid away', async () => {
+it('rings the profile tab inside the bottom inset, but not once it has slid away', async () => {
   state.bottom = 34;
   render(tree()); await start();
   state.route = 'PlaceDetail';
   fireEvent.click(screen.getByText('Tiếp theo')); await screen.findByText('2/5');
+  state.route = 'CollectionsHome';
+  fireEvent.click(screen.getByText('Tiếp theo')); await screen.findByText('3/5');
   state.y = 844 - 16 - 40; // foot at 828, inside the 810 the inset leaves
   fireEvent.click(screen.getByText('Tiếp theo'));
-  await screen.findByText('3/5');
+  await screen.findByText('4/5');
   state.y = 850; // ducked: below the screen's edge
   await waitFor(() => expect(screen.queryByTestId('signup-tour')).toBeNull());
 });
@@ -109,7 +123,9 @@ it('cuts the ring’s shape out of the scrim, and follows it from step to step',
   );
   state.route = 'PlaceDetail';
   fireEvent.click(screen.getByText('Tiếp theo')); await screen.findByText('2/5');
+  state.route = 'CollectionsHome';
   fireEvent.click(screen.getByText('Tiếp theo')); await screen.findByText('3/5');
+  fireEvent.click(screen.getByText('Tiếp theo')); await screen.findByText('4/5');
   expect(scrim().getAttribute('d')).toBe(
     'M0 0H390V844H0Z'
     + 'M56 64H64A16 16 0 0 1 80 80V80A16 16 0 0 1 64 96H56A16 16 0 0 1 40 80V80A16 16 0 0 1 56 64Z',
@@ -370,13 +386,16 @@ it('draws the ring where the control asks, and keeps the card as clear of it', a
   expect(card().style.top).toBe('116px');
   state.route = 'PlaceDetail';
   fireEvent.click(screen.getByText('Tiếp theo')); await screen.findByText('2/5');
+  state.route = 'CollectionsHome';
   fireEvent.click(screen.getByText('Tiếp theo')); await screen.findByText('3/5');
-  // Collections: the box's width, 4 in from its top and foot.
+  // Community's tab, a control on its page: 4 clear all round, as search.
+  expect([target().style.left, target().style.top, target().style.width, target().style.height]).toEqual(['36px', '56px', '48px', '48px']);
+  fireEvent.click(screen.getByText('Tiếp theo')); await screen.findByText('4/5');
+  // The profile tab: the box's width, 4 in from its top and foot.
   expect([target().style.left, target().style.top, target().style.width, target().style.height]).toEqual(['40px', '64px', '40px', '32px']);
   expect(card().style.top).toBe('108px');
-  // Your page and the planner: tabs, ringed as the collections tab is.
-  for (const n of ['4/5', '5/5']) {
-    fireEvent.click(screen.getByText('Tiếp theo')); await screen.findByText(n);
-    expect([target().style.left, target().style.top, target().style.width, target().style.height]).toEqual(['40px', '64px', '40px', '32px']);
-  }
+  // The planner's first question: a control on its page again.
+  state.route = 'IdeasHome';
+  fireEvent.click(screen.getByText('Tiếp theo')); await screen.findByText('5/5');
+  expect([target().style.left, target().style.top, target().style.width, target().style.height]).toEqual(['36px', '56px', '48px', '48px']);
 });

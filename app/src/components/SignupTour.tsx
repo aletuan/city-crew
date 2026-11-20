@@ -28,15 +28,23 @@ import { AttentionPulse, attentionRing } from './Attention';
 //     friends, who liked or commented on a list — since a new account's
 //     page is empty.
 //
-// Steps 3 to 5 all ring a tab in the floating bar, which stands on every
-// screen: the ring moves along the bar with no page to wait for.
-type Target = 'search' | 'save' | 'collections' | 'profile' | 'ideas';
+// Where each is shown (owner, the same morning): step 3 opens Collections
+// on Community and rings that tab — sixty-odd real lists, where a new
+// reader's own tab is empty, and a demo of one was weighed and refused:
+// made-up lists, friends or hearts on a page are made-up news, and would
+// be gone the moment the guide closed. Step 4 rings the profile tab and
+// does not open it: an empty page teaches nothing. Step 5 opens the
+// planner and rings its first question (`GuidedSection`), so the guide
+// ends where a reader can carry on.
+type Target = 'search' | 'save' | 'community' | 'profile' | 'plan';
 /** How far the ring stands out from the control it marks, each side;
  *  negative draws it inside. */
 type Outset = { x: number; y: number };
 type Anchor = { ref: React.RefObject<React.ComponentRef<typeof View> | null>; press: () => void; focused: () => boolean; outset: Outset };
 type Rect = { x: number; y: number; width: number; height: number };
-const targets: Target[] = ['search', 'save', 'collections', 'profile', 'ideas'];
+const targets: Target[] = ['search', 'save', 'community', 'profile', 'plan'];
+/** Where each step's target lives; null: wherever the reader is. */
+const PAGES = ['ExploreHome', 'PlaceDetail', 'CollectionsHome', null, 'IdeasHome'];
 const LAST = targets.length - 1;
 const noop = () => {};
 const always = () => true;
@@ -103,14 +111,14 @@ export function useTourAnchor(id: Target, press: () => void, focused: () => bool
 function words(t: ReturnType<typeof useI18n>['t']) {
   const titles = [t('Find a place', 'Tìm nơi bạn muốn đến', '行きたい場所を探す', '寻找地点', '尋找地點'),
     t('Save places you love', 'Lưu nơi bạn thích', '好きな場所を保存', '保存喜欢的地点', '儲存喜歡的地點'),
-    t('Your collections', 'Bộ sưu tập của bạn', 'あなたのコレクション', '你的合集', '你的合集'),
+    t('Collections', 'Bộ sưu tập', 'コレクション', '合集', '合集'),
     t('Your page', 'Trang của bạn', 'あなたのページ', '你的主页', '你的主頁'),
     t('Plan an outing', 'Lên kế hoạch', 'お出かけを計画', '规划出行', '規劃出行')];
   const descriptions = [t('Search by place, dish or neighbourhood.', 'Tìm theo tên quán, món ăn hay khu phố.', '店名、料理、エリアで探せます。', '按店名、菜品或街区搜索。', '按店名、菜品或街區搜尋。'),
     t('Add a place to a collection to find it again easily.', 'Thêm địa điểm vào bộ sưu tập để dễ tìm lại.', '場所をコレクションに保存して、あとで簡単に見つけましょう。', '把地点加入合集，之后就能轻松找到。', '把地點加入合集，之後就能輕鬆找到。'),
-    t('Find your saved places here.', 'Những địa điểm bạn đã lưu nằm ở đây.', '保存した場所はこちらにあります。', '你保存的地点都在这里。', '你儲存的地點都在這裡。'),
+    t('Lists from everyone are under Community. The places you save are under Yours.', 'Bộ sưu tập của mọi người ở mục Cộng đồng. Những nơi bạn lưu nằm ở mục Của bạn.', 'みんなのコレクションは「みんなの」に、保存した場所は「自分の」にあります。', '大家的合集在“社区”里，你保存的地点在“我的”里。', '大家的合集在「社群」裡，你儲存的地點在「我的」裡。'),
     t('Add friends, and see who liked or commented on your collections.', 'Kết bạn, và xem ai đã thích hay bình luận bộ sưu tập của bạn.', '友だちを追加し、コレクションへのいいねやコメントを確認できます。', '添加好友，看看谁赞了或评论了你的合集。', '新增好友，看看誰讚了或評論了你的合集。'),
-    t('Let City Crew suggest an outing from the places you saved, then invite friends along.', 'Để City Crew gợi ý một buổi đi chơi từ những nơi bạn đã lưu, rồi rủ bạn bè cùng đi.', '保存した場所から City Crew がお出かけプランを提案。友だちも誘えます。', '让 City Crew 根据你保存的地点推荐一次出行，再约上好友一起去。', '讓 City Crew 根據你儲存的地點推薦一次出行，再約上好友一起去。')];
+    t('Pick who is coming and what you are in the mood for, and City Crew suggests an outing to invite friends along.', 'Chọn đi cùng ai và bạn thích gì, City Crew sẽ gợi ý một buổi đi chơi để rủ bạn bè cùng đi.', '誰と行くか、どんな気分かを選ぶと、City Crew がお出かけを提案。友だちも誘えます。', '选好和谁去、想去哪类地方，City Crew 会推荐一次出行，约上好友一起去。', '選好和誰去、想去哪類地方，City Crew 會推薦一次出行，約上好友一起去。')];
   return { titles, descriptions };
 }
 
@@ -202,7 +210,7 @@ export function SignupTourProvider({ children, getRoute, onReplay = noop }: { ch
     let alive = true;
     // A step appears only once its target holds still: two readings
     // SETTLE_MS apart that agree. Step 2's save button slides in with the
-    // place's page, and step 3's tab is ringed as that page slides away; the first reading caught the old place, the card was drawn
+    // place's page, and steps 3 and 5 arrive with a tab being opened; the first reading caught the old place, the card was drawn
     // there and jumped 250ms later (owner, 19 Oct 2026). Once shown, a
     // move is followed at once: that is the reader scrolling.
     let settling: Rect | null = null;
@@ -210,12 +218,13 @@ export function SignupTourProvider({ children, getRoute, onReplay = noop }: { ch
     // Re-measure while visible: scrolling, rotation, font size and the floating
     // tab bar can move the actual target. Never leave a ring at an old position.
     const measure = () => {
-      // Search lives on Explore, save on a place's page. The tabs live in
+      // Each target on its own page (`PAGES`); the profile tab lives in
       // the floating bar, which is on every screen the guide passes
-      // through, so steps 3 to 5 follow wherever the reader is; asking for
-      // Explore there showed nothing (owner, 19 Oct 2026).
+      // through, so step 4 follows wherever the reader is — asking for a
+      // page there showed nothing (owner, 19 Oct 2026, of the old
+      // collections step).
       const route = getRoute();
-      const expected = step === 1 ? 'PlaceDetail' : step >= 2 ? route : 'ExploreHome';
+      const expected = PAGES[step] ?? route;
       if (route !== expected) { settling = null; setRect(null); return; }
       const entries = [...(anchors.current.get(targets[step]) ?? [])].filter(a => a.ref.current && a.focused());
       let remaining = entries.length;

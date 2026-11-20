@@ -348,7 +348,8 @@ export const TABS_ROW_GAP = 14;
  * reads is written out.
  */
 export function WordTabs<K extends string>({ tabs, active, onChange, right }: {
-  tabs: { key: K; label: string; count?: number; tally?: number; testID?: string }[];
+  /** `anchorRef`: where the sign-up guide rings this tab (`SignupTour`). */
+  tabs: { key: K; label: string; count?: number; tally?: number; testID?: string; anchorRef?: React.Ref<React.ComponentRef<typeof View>> }[];
   active: K;
   onChange: (k: K) => void;
   /** The row's far end — a small control about the list the tabs switch
@@ -365,7 +366,7 @@ export function WordTabs<K extends string>({ tabs, active, onChange, right }: {
   const narrow = useNarrowWindow();
   return (
     <View style={[s.tabsRow, narrow && s.tabsRowNarrow]}>
-      {tabs.map(({ key, label, count, tally, testID }) => {
+      {tabs.map(({ key, label, count, tally, testID, anchorRef }) => {
         const on = active === key;
         const figure = tally || count || 0;
         return (
@@ -377,6 +378,7 @@ export function WordTabs<K extends string>({ tabs, active, onChange, right }: {
             hitSlop={{ top: 8, bottom: 8, left: 6, right: 6 }}
             onPress={() => onChange(key)}
             testID={testID}
+            anchorRef={anchorRef}
             accessibilityRole="tab"
             accessibilityState={{ selected: on }}
             accessibilityLabel={figure ? `${label} (${figure})` : label}
