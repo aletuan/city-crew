@@ -110,13 +110,29 @@ env:
     commands:
       - tapOn:
           id: "collection-submit"
+- extendedWaitUntil:
+    notVisible:
+      id: "collection-name"
+    timeout: 15000
 - scrollUntilVisible:
     element:
       text: "^Maestro Comments(,.*)?$"
     direction: UP
     timeout: 15000
-- tapOn:
-    text: "^Maestro Comments(,.*)?$"
+- waitForAnimationToEnd:
+    timeout: 5000
+# Seen on 21 November: the first tap on the new card completed and the page
+# did not open — the card had just been inserted at the head of the grid.
+# The tap is repeated until the page is there.
+- retry:
+    maxRetries: 2
+    commands:
+      - tapOn:
+          text: "^Maestro Comments(,.*)?$"
+      - extendedWaitUntil:
+          visible:
+            id: "collection-more"
+          timeout: 10000
 # The saved audience, read before anything depends on it.
 - extendedWaitUntil:
     visible:
