@@ -98,8 +98,11 @@ const leave = () => {
   for (const fn of [...listeners]) fn({ preventDefault: () => { held = true; }, data: { action: { type: 'GO_BACK' } } });
   return held;
 };
+// Opened over the list's page, as a rename always is: `leaveForm` hands
+// the page what the sheet was told by the route under the form.
 const nav = () => ({
   navigate: vi.fn(), goBack: vi.fn(), replace: vi.fn(), popToTop: vi.fn(), dispatch: vi.fn(),
+  getState: vi.fn(() => ({ index: 1, routes: [{ name: 'CollectionDetail', key: 'page-1' }, { name: 'CollectionForm', key: 'form-1' }] })),
   addListener: vi.fn((name: string, fn: BeforeRemove) => {
     if (name !== 'beforeRemove') return () => {};
     listeners.add(fn);
@@ -108,6 +111,16 @@ const nav = () => ({
 }) as unknown as Nav;
 
 const routeWith = (params?: object) => ({ params }) as RootRoute<'CollectionForm'>;
+
+/** The line at the form's head, pressed, and an answer in the sheet it
+ *  opens. The sheet's row runs its press after the sheet has gone
+ *  (`SheetRows`), hence the wait. */
+const pick = async (v: 'public' | 'friends' | 'private') => {
+  fireEvent.click(screen.getByTestId('collection-form-seen'));
+  fireEvent.click(screen.getByTestId(`sheet-action-${v}`));
+  const word = { public: 'Public', friends: 'Friends', private: 'Private' }[v];
+  await waitFor(() => expect(screen.getByTestId('collection-form-seen').textContent!.startsWith(word)).toBe(true), { timeout: 3000 });
+};
 
 const create = (title: string) => {
   fireEvent.change(screen.getByPlaceholderText('Weekend coffee'), { target: { value: title } });
@@ -174,7 +187,7 @@ describe('creating a collection from a bookmark', () => {
   it('makes a list private when told, with no catalog refresh and nowhere else to go', async () => {
     const navigation = nav();
     render(<CollectionFormScreen navigation={navigation} route={routeWith()} />);
-    fireEvent.click(screen.getByTestId('collection-form-audience-private'));
+    await pick('private');
     create('Mine alone');
     await waitFor(() => expect(navigation.goBack).toHaveBeenCalled());
     expect(createCollection).toHaveBeenCalledWith(expect.objectContaining({ isPublic: false }));
@@ -187,12 +200,14 @@ describe('creating a collection from a bookmark', () => {
   it('makes a list for friends private and opens it to choose them', async () => {
     const navigation = nav();
     render(<CollectionFormScreen navigation={navigation} route={routeWith({ addPlaceSlug: 'pho-10' })} />);
-    fireEvent.click(screen.getByTestId('collection-form-audience-friends'));
+    await pick('friends');
     create('For the crew');
     await waitFor(() => expect(goTo).toHaveBeenCalled());
     expect(createCollection).toHaveBeenCalledWith(expect.objectContaining({ isPublic: false }));
     expect(navigation.goBack).toHaveBeenCalled();
-    expect(goTo).toHaveBeenCalledWith('Collections', { screen: 'CollectionDetail', initial: false, params: { slug: 'new-list', share: true } });
+    expect(goTo).toHaveBeenCalledWith('Collections', { screen: 'CollectionDetail', initial: false, params: { slug: 'new-list', seen: 'friends' } });
+    // A list just made is no rename: nothing is set on the route under.
+    expect(navigation.dispatch).not.toHaveBeenCalled();
     // Into the list it just made, the place it was made for included.
     expect(addPlaceToCollection).toHaveBeenCalledWith('new-list', 'pho-10', 0);
     expect(colsReload).not.toHaveBeenCalled();
@@ -432,32 +447,40 @@ describe('what stops a submit before it writes', () => {
     expect(screen.queryByText(/Private until you say so/)).toBeNull();
   });
 
-  // A list of your own being made asks who sees it, Public chosen, where
-  // it used to say "Private" in a line (owner, 20 Nov 2026).
-  it('asks a new list who sees it, Public first and chosen, and draws no line over the fields', () => {
+  // A list of your own being made starts Public, and says so in the line
+  // at the form's head, which opens the plane's sheet (owner, 20 Nov
+  // 2026). No "Send a link": there is no list to send yet.
+  it('starts a new list Public, in a line that opens the Share sheet', () => {
     render(<CollectionFormScreen navigation={nav()} route={routeWith()} />);
-    expect(screen.queryByTestId('collection-form-seen')).toBeNull();
-    const radios = screen.getAllByRole('radio');
-    expect(radios.map((r) => r.getAttribute('aria-label'))).toEqual([
-      'Public, Everyone can see it', 'Friends, Only the friends you choose', 'Private, Only you can see it',
-    ]);
-    expect(radios.map((r) => r.getAttribute('aria-checked'))).toEqual(['true', 'false', 'false']);
-    expect(screen.getByTestId('collection-form-audience-next').textContent).toMatch(/once it has a place/);
-    // Under the fields, as drawn for the owner: the last rule comes first.
-    const rules = screen.getAllByTestId('collection-form-rule');
-    const choice = screen.getByTestId('collection-form-audience');
-    expect(rules.at(-1)!.compareDocumentPosition(choice) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    const line = screen.getByRole('button', { name: 'Public, Everyone can see it' });
+    expect(line.getAttribute('data-testid')).toBe('collection-form-seen');
+    expect(line.querySelector('[data-icon="chevron-down"]')).toBeTruthy();
+    expect(screen.queryByText('Who can see your list?')).toBeNull();
+    fireEvent.click(line);
+    expect(screen.getByText('Who can see your list?')).toBeTruthy();
+    expect(['public', 'friends', 'private'].map((k) => screen.getByTestId(`sheet-action-${k}`).getAttribute('aria-selected'))).toEqual(['true', 'false', 'false']);
+    expect(screen.getByTestId('sheet-action-friends').textContent).toBe('FriendsOnce it is made, you choose who');
+    expect(screen.getByTestId('sheet-action-public').textContent).toBe('PublicShown in Explore and in search');
+    expect(screen.queryByTestId('collection-send-link')).toBeNull();
     // A list not yet made has no shares to read.
     expect(shares.asked.at(-1)).toBeNull();
   });
 
-  it('moves the choice and what it says next on a press', () => {
+  it('moves the line to the answer chosen, and the sheet’s tick with it', async () => {
     render(<CollectionFormScreen navigation={nav()} route={routeWith()} />);
-    fireEvent.click(screen.getByTestId('collection-form-audience-friends'));
-    expect(screen.getAllByRole('radio').map((r) => r.getAttribute('aria-checked'))).toEqual(['false', 'true', 'false']);
-    expect(screen.getByTestId('collection-form-audience-next').textContent).toBe('Once it is made, you choose who.');
-    fireEvent.click(screen.getByTestId('collection-form-audience-private'));
-    expect(screen.getByTestId('collection-form-audience-next').textContent).toMatch(/any time on the collection’s page/);
+    await pick('friends');
+    expect(screen.getByTestId('collection-form-seen').textContent).toBe('Friends · Only the friends you choose');
+    expect(screen.getByTestId('collection-form-seen').querySelector('[data-icon="people-outline"]')).toBeTruthy();
+    fireEvent.click(screen.getByTestId('collection-form-seen'));
+    expect(screen.getByTestId('sheet-action-friends').getAttribute('aria-selected')).toBe('true');
+  });
+
+  // Chosen and not saved, it is a change like a name: leaving asks.
+  it('asks before a new list’s answer is thrown away', async () => {
+    render(<CollectionFormScreen navigation={nav()} route={routeWith()} />);
+    expect(leave()).toBe(false);
+    await pick('private');
+    expect(leave()).toBe(true);
   });
 
   // The fields on the page itself (owner, 16 Nov 2026): small labels, no
@@ -469,12 +492,12 @@ describe('what stops a submit before it writes', () => {
     for (const icon of ['bookmark-outline', 'text-outline']) expect(document.querySelector(`[data-icon="${icon}"]`)).toBeNull();
     const rules = screen.getAllByTestId('collection-form-rule');
     expect(rules).toHaveLength(3);
-    // In order down the page: a rule, the name, a rule, the description,
-    // a rule, and who sees it (a new list's choice since 20 Nov 2026).
+    // In order down the page: who sees it, a rule, the name, a rule, the
+    // description, a rule.
     const before = (a: Element, b: Element) => !!(a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING);
     const name = screen.getByPlaceholderText('Weekend coffee');
     const words = screen.getByPlaceholderText('What ties these together?');
-    const order = [rules[0], name, rules[1], words, rules[2], screen.getByTestId('collection-form-audience')];
+    const order = [screen.getByTestId('collection-form-seen'), rules[0], name, rules[1], words, rules[2]];
     order.slice(1).forEach((el, i) => expect([i, before(order[i], el)]).toEqual([i, true]));
     // No box: the row has no padding of its own, and no border.
     const row = name.parentElement!.parentElement as HTMLElement;
@@ -500,9 +523,9 @@ describe('what stops a submit before it writes', () => {
     expect(screen.queryByText(/goes in first/)).toBeNull();
     unmount();
     render(<CollectionFormScreen navigation={nav()} route={routeWith({ addPlaceSlug: 'heim' })} />);
-    // A list made from a place's save is one of your own: it asks.
-    expect(screen.queryByTestId('collection-form-seen')).toBeNull();
-    expect(screen.getByTestId('collection-form-audience')).toBeTruthy();
+    // A list made from a place's save is one of your own: Public, and
+    // the line can be pressed.
+    expect(screen.getByRole('button', { name: 'Public, Everyone can see it' })).toBeTruthy();
     expect(screen.getByText('Name it, and the place you just saved goes in first.')).toBeTruthy();
     expect(screen.queryByText(/nothing is copied until/)).toBeNull();
   });
@@ -620,6 +643,65 @@ describe('renaming a list', () => {
       seenAs({ is_public: true });
       expect(screen.queryByText(/nothing is copied until/)).toBeNull();
       expect(screen.queryByText(/goes in first/)).toBeNull();
+    });
+
+    // Pressed, the line opens the plane's sheet, as on the list's page —
+    // "Send a link" included (owner, 20 Nov 2026).
+    it('opens the Share sheet from the line, ticked where the list stands', () => {
+      fireEvent.click(seenAs({ is_public: false }));
+      expect(screen.getByText('Who can see your list?')).toBeTruthy();
+      expect(['public', 'friends', 'private'].map((k) => screen.getByTestId(`sheet-action-${k}`).getAttribute('aria-selected'))).toEqual(['false', 'false', 'true']);
+      expect(screen.getByTestId('sheet-action-friends').textContent).toBe('FriendsOnly the friends you choose');
+      expect(screen.getByTestId('collection-send-link')).toBeTruthy();
+    });
+
+    const renameOver = (isPublic: boolean) => {
+      const navigation = nav();
+      catalog.data = [HEIM];
+      saved.data = [{ ...(listOf([HEIM]) as object), is_public: isPublic }];
+      render(<CollectionFormScreen navigation={navigation} route={routeWith({ slug: 'night-bar', title: 'Night bar' })} />);
+      return navigation;
+    };
+    const saveButton = () => screen.getByRole('button', { name: 'Save changes' });
+
+    // Kept for Save like the name: the ✓ lights for it, and Save hands
+    // it to the page under the form, which does it by its own sheet's
+    // hands (`CollectionDetail`'s `seen`).
+    it('keeps the answer for Save, then hands it to the list’s page', async () => {
+      const navigation = renameOver(false);
+      expect(saveButton().getAttribute('aria-disabled')).toBe('true');
+      await pick('public');
+      expect(saveButton().getAttribute('aria-disabled')).not.toBe('true');
+      fireEvent.click(saveButton());
+      await waitFor(() => expect(navigation.goBack).toHaveBeenCalled());
+      expect(navigation.dispatch).toHaveBeenCalledWith(expect.objectContaining({
+        type: 'SET_PARAMS', payload: { params: { seen: 'public' } }, source: 'page-1',
+      }));
+      // Set before the page is uncovered, so it arrives already told.
+      expect(vi.mocked(navigation.dispatch).mock.invocationCallOrder[0])
+        .toBeLessThan(vi.mocked(navigation.goBack).mock.invocationCallOrder[0]);
+      expect(goTo).not.toHaveBeenCalled();
+    });
+
+    it('hands the page nothing when the answer is where it was', async () => {
+      const navigation = renameOver(true);
+      await pick('private');
+      await pick('public');
+      expect(saveButton().getAttribute('aria-disabled')).toBe('true');
+      fireEvent.change(screen.getByPlaceholderText('Weekend coffee'), { target: { value: 'Night bars' } });
+      fireEvent.click(saveButton());
+      await waitFor(() => expect(navigation.goBack).toHaveBeenCalled());
+      expect(navigation.dispatch).not.toHaveBeenCalled();
+    });
+
+    // Friends on a rename is the page's picker, as on a new list.
+    it('hands Friends to the page under it, which opens the picker', async () => {
+      const navigation = renameOver(false);
+      await pick('friends');
+      fireEvent.click(saveButton());
+      await waitFor(() => expect(navigation.goBack).toHaveBeenCalled());
+      expect(navigation.dispatch).toHaveBeenCalledWith(expect.objectContaining({ payload: { params: { seen: 'friends' } } }));
+      expect(goTo).not.toHaveBeenCalled();
     });
   });
 
@@ -867,8 +949,12 @@ describe('saving a copy of somebody else’s list', () => {
   // else's choices under your name should not be one press away.
   it('offers no choice of who sees a copy, and says it is private', () => {
     openCopy();
-    expect(screen.queryByTestId('collection-form-audience')).toBeNull();
-    expect(screen.getByTestId('collection-form-seen').textContent).toBe('Private · Only you can see it');
+    const line = screen.getByTestId('collection-form-seen');
+    expect(line.textContent).toBe('Private · Only you can see it');
+    expect(line.getAttribute('role')).toBeNull();
+    expect(line.querySelector('[data-icon="chevron-down"]')).toBeNull();
+    fireEvent.click(line);
+    expect(screen.queryByText('Who can see your list?')).toBeNull();
   });
 
   // Edited and saved, the copy leaves without a discard question: the

@@ -92,7 +92,7 @@ import { type SheetAction } from '../../components/ActionSheet';
 import { PressableScale } from '../../components/ui';
 import { Glyph, ICON } from '../../components/ui/glyph';
 import { useI18n } from '../../lib/i18n';
-import { type ReaderMark, SEEN_GLYPH, seenName } from '../../lib/shares';
+import { type ReaderMark, SEEN_GLYPH, seenName, type Visibility } from '../../lib/shares';
 import { colors } from '../../theme';
 import { ACT_GLYPH, s } from './styles';
 
@@ -169,6 +169,56 @@ export function ReaderSeen({ kind }: { kind: ReaderMark }) {
       <Glyph name={SEEN_GLYPH.public} size={ICON.text} color={colors.textTertiary} />
     </View>
   );
+}
+
+/**
+ * The three answers to "Who can see your list?", each with what it means
+ * where the reader will meet it: what the sheet under Share holds, and
+ * since 20 Nov 2026 the one the collection form opens from its line (the
+ * owner: the line at the form's head opens the plane's sheet, and a list
+ * being made chooses there too). One builder, so the two doors cannot
+ * come to say different things.
+ *
+ * The answer true now carries the tick. What a press does is the
+ * caller's: the list's page does it on the spot, the form keeps it for
+ * Save (`formParts`' `useAudience`).
+ *
+ * A row's sentence is the caller's to replace where it knows more: the
+ * page names who has the list and how many places wait under Public; the
+ * form, making a list, says when Friends will be chosen.
+ */
+export function whoSeesRows(t: T, { seen, publicDesc, friendsDesc, onChoose }: {
+  seen: Visibility;
+  publicDesc?: string;
+  friendsDesc?: string;
+  onChoose: (v: Visibility) => void;
+}): SheetAction[] {
+  return [
+    {
+      key: 'public',
+      icon: 'globe-outline',
+      title: t('Public', 'Công khai', '公開', '公开', '公開'),
+      desc: publicDesc ?? t('Shown in Explore and in search', 'Hiện trên Khám phá và trong tìm kiếm', '「探索する」と検索に表示されます', '会显示在探索和搜索中', '會顯示在探索和搜尋中'),
+      selected: seen === 'public',
+      onPress: () => onChoose('public'),
+    },
+    {
+      key: 'friends',
+      icon: SEEN_GLYPH.friends,
+      title: seenName('friends', t),
+      desc: friendsDesc ?? t('Only the friends you choose', 'Chỉ những bạn bè bạn chọn', '選んだ友だちだけが見られます', '仅你选择的好友可见', '僅你選擇的好友可見'),
+      selected: seen === 'friends',
+      onPress: () => onChoose('friends'),
+    },
+    {
+      key: 'private',
+      icon: 'lock-closed-outline',
+      title: t('Private', 'Riêng tư', '非公開', '私密', '私密'),
+      desc: t('Only you can see it', 'Chỉ mình bạn thấy', '自分だけが見られます', '仅你可见', '僅你可見'),
+      selected: seen === 'private',
+      onPress: () => onChoose('private'),
+    },
+  ];
 }
 
 export function ShareHead() {
