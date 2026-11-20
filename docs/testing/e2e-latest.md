@@ -1,56 +1,56 @@
-# Bàn giao E2E iOS — P1 Profile/Account — 20/11/2026
+# Bàn giao E2E iOS — P1 sau rebase — 20/11/2026
 
-**P1 đạt hai lượt liên tiếp và suite hiện có đạt 22/22 trên cùng SHA `54bdd56398509aa36e80f5de359dcb84a0950e3f`.** Sau khi đạt mới đăng ký `22-profile-account` vào config. Config hiện có **23 flow**; bằng chứng bên dưới là **22 flow trong một lượt + P1 hai lượt riêng**, không gọi là một lượt 23/23. Giờ/run ID theo Việt Nam (UTC+7).
+**Toàn suite 23/23 PASS trong một lượt trên `34a7121e59b657929a2b6fdb302226208433267b`.** Run `20261120-222643`, runner exit 0; JUnit đủ 23 tên đúng thứ tự config, không failure/error/skip. Giờ/run ID theo Việt Nam (UTC+7). Tổng thời gian testcase khoảng 81m13s; không phải latency app.
 
 ## Revision và môi trường
 
-- Branch `codex/maestro-profile-account`, tạo từ main `7737fe91` (#1494), gồm main `18589b5` (#1492) và layout/search Profile mới. Đã fetch và đọc plan trước khi làm.
-- `54bdd563`: flow PA-1…PA-6, helper kiểm hai tab Activity, sửa Back ở trang khách và regression unit test. Source/YAML giữ nguyên trong hai lượt P1 và cả hai lượt toàn suite.
-- Commit sau nghiệm thu chỉ đăng ký config và cập nhật tài liệu; không đổi app hay flow đã chạy. Không tự áp kết quả này cho main mới hơn.
-- **Main đã tiến trong lúc chạy:** tại lúc mở PR, `origin/main` là `a9c9a4b2`, thêm 10 commit sau base (gồm Trips #1502/#1505, Activity #1496/#1503 và quyết định P3 #1497/#1498). Merge thử không conflict, nhưng **không phải validation của nội dung sau merge**. Cần rà các flow bị tác động và chạy lại trên SHA tích hợp trước khi coi main có baseline mới. Không rebase âm thầm rồi gắn bằng chứng cũ cho SHA mới.
+- PR #1508, branch `codex/maestro-profile-account`, đã rebase lên main tại lúc bắt đầu: `8d2c98ab17b03fed292612f682505e999c2942f1` (đã gồm Trips #1502/#1505 và Activity #1496/#1503).
+- SHA ngay sau rebase: `4fb26f05b5e2a673a98961d3c59196c0b6075879`. Sau khi full phát hiện budget cuộn ở 03 quá ngắn, sửa tại `34a7121e59b657929a2b6fdb302226208433267b`; toàn bộ executable giữ nguyên trong full xanh cuối.
+- Commit báo cáo sau nghiệm thu chỉ sửa Markdown. Không gán kết quả native cho revision chưa chạy.
+- Trong lúc chạy, main thêm `ec2b10756ab6c379c1cb7c92faca9c2d55b6b269` (#1510: nền tròn/nét dấu cộng header). Đã rà diff: không đổi selector hoặc logic Trips/Activity. **Full native này không chứa #1510**; CI của PR kiểm tích hợp, và P3 sẽ bắt đầu từ main sau merge.
 - iPhone 17 Pro / iOS 26.5, UDID `2E5D58A8-A2A7-41F1-B6B0-A5477102C7E4`; Expo Go SDK 58, Maestro 2.10.0, Node 24.14.0.
-- Metro `exp://127.0.0.1:8085`, cwd đã xác nhận: `/Volumes/T7-Workspace/Projects/Claude/city-crew-e2e-stability/app`.
-- Chỉ một runner; wrapper local chọn UDID tường minh vì Pro Max khác cũng boot. Foreground với `caffeinate -i`, không dùng launchctl. Khởi động lại riêng simulator test giữa hai lượt full suite; không sửa code/timeout.
+- Metro `exp://127.0.0.1:8085`, cwd `/Volumes/T7-Workspace/Projects/Claude/city-crew-e2e-stability/app`, đã xác nhận. Một runner, wrapper chọn UDID tường minh, foreground `caffeinate -i`, không launchctl.
 
-## Các lượt nghiệm thu
+## Các lượt sau rebase
 
 | Run ID | SHA | Phạm vi | Kết quả |
 | --- | --- | --- | --- |
-| `20261120-181004` | `54bdd563` | 22-profile-account, PA-1…PA-6 | PASS 3m11s, lượt đầu |
-| `20261120-181405` | `54bdd563` | 22-profile-account, PA-1…PA-6 | PASS 3m02s, liên tiếp lần hai |
-| `20261120-181739` | `54bdd563` | Toàn suite 22 flow theo config lúc đó | **20/22**, 16/17 fail; runner exit 1; cleanup thành công |
-| `20261120-192724` | `54bdd563` | Chạy lại toàn bộ 22 flow, không đổi mã | **22/22 PASS**, 78m39s, runner exit 0; cleanup thành công |
+| `20261120-213702` | `4fb26f05` | 22, PA-1…PA-6 | PASS 3m07s |
+| `20261120-214100` | `4fb26f05` | 05, 13, 16, 20 | 4/4 PASS, 30m09s; cleanup sạch |
+| `20261120-221219` | `4fb26f05` | Full attempt | 00–02 PASS, 03 FAIL; dừng có kiểm soát exit 130; không phải lượt hoàn tất |
+| `20261120-222307` | working tree trước `34a7121e` | 03, probe budget 60s | PASS; cuộn 30,67s |
+| `20261120-222450` | `34a7121e` | 03, xác nhận commit | PASS 1m14s |
+| `20261120-222643` | `34a7121e` | **Toàn bộ 23 flow**, gồm 22/05/13/16/20 | **23/23 PASS**, exit 0, cleanup sạch |
 
-Đã đối chiếu JUnit lượt cuối: đủ 22 tên flow đúng thứ tự config trước đăng ký, không failure/error/skip. Không cộng kết quả từng flow từ hai lượt full thành một lượt xanh.
+Không cộng các lượt riêng thành một lượt suite xanh. 22 và nhóm Trips đã chạy riêng trước full; sau sửa 03, tất cả được kiểm lại trong cùng lượt full cuối.
 
 ## Kết quả toàn suite cuối
 
 | Flow | Kết quả | Thời gian làm tròn |
 | --- | --- | --- |
-| 00-launch | PASS | 0m 25s |
-| 01-explore | PASS | 0m 48s |
-| 02-place-detail | PASS | 0m 30s |
-| 03-search | PASS | 1m 08s |
-| 04-sign-in | PASS | 1m 56s |
-| 05-plan-trip | PASS | 2m 36s |
-| 06-save-place | PASS | 2m 11s |
-| 07-sign-up-delete | PASS | 3m 28s |
-| 08-explore-filter | PASS | 0m 49s |
-| 09-collections-browse | PASS | 0m 54s |
-| 10-check-in | PASS | 1m 41s |
-| 11-collection-crud | PASS | 3m 30s |
-| 13-trip-edit | PASS | 4m 33s |
-| 14-forgot-password | PASS | 0m 54s |
-| 15-theme | PASS | 7m 22s |
-| 16-trip-invite | PASS | 19m 35s |
-| 17-unfriend | PASS | 4m 06s |
-| 18-guest-save-resume | PASS | 3m 29s |
-| 19-collection-privacy | PASS | 8m 26s |
-| 20-guest-trip-resume | PASS | 3m 45s |
-| 21-tab-bar-responsive | PASS | 4m 40s |
-| 12-language | PASS | 1m 54s |
-
-Thời gian gồm driver, cold start, auth và mạng; không phải số đo latency app. `16-trip-invite` vẫn dài nhất (19m35s).
+| 00-launch | PASS | 25s |
+| 01-explore | PASS | 57s |
+| 02-place-detail | PASS | 37s |
+| 03-search | PASS | 72s |
+| 04-sign-in | PASS | 118s |
+| 05-plan-trip | PASS | 166s |
+| 06-save-place | PASS | 134s |
+| 07-sign-up-delete | PASS | 208s |
+| 08-explore-filter | PASS | 48s |
+| 09-collections-browse | PASS | 52s |
+| 10-check-in | PASS | 99s |
+| 11-collection-crud | PASS | 207s |
+| 13-trip-edit | PASS | 286s |
+| 14-forgot-password | PASS | 54s |
+| 15-theme | PASS | 437s |
+| 16-trip-invite | PASS | 1121s |
+| 17-unfriend | PASS | 238s |
+| 18-guest-save-resume | PASS | 204s |
+| 19-collection-privacy | PASS | 498s |
+| 20-guest-trip-resume | PASS | 235s |
+| 21-tab-bar-responsive | PASS | 283s |
+| 22-profile-account | PASS | 179s |
+| 12-language | PASS | 115s |
 
 ## P1 đã kiểm tra và bản sửa
 
@@ -60,43 +60,42 @@ Thời gian gồm driver, cold start, auth và mạng; không phải số đo la
 - **PA-5/6:** trang khách có Sign in/Sign up, không có account-back; đăng xuất không có POP_TO_TOP. Flow kết thúc signed out.
 - **Lỗi app đã sửa:** khi logout, MeScreen có thể mount ProfileScreen trước khi stack loại Account. Giá trị `pushed` chụp active index lúc mount bị giữ true dù đây là root. MeScreen nay truyền `home`; root không suy ra vị trí của chính mình từ active index của cả navigator. Regression test tái hiện đỏ trước sửa, xanh sau sửa; 130 test ProfileScreen/MeScreen qua, rồi P1 qua hai lượt native.
 
-## Findings và giới hạn còn mở
+## Findings và giới hạn
 
-| Finding | Bằng chứng / kết luận | Trạng thái |
-| --- | --- | --- |
-| Back còn trên trang khách sau logout | Probe `20261120-180318`, screenshot `step-055-assertCondition-account-back.png`; unit tái hiện timing stack trước reset | **Đã sửa**, xác nhận hai lượt P1 và full suite cuối |
-| Chạm Cancel khi đang nhập chỉ đóng bàn phím | Probe `20261120-175938`, `step-111-assertCondition-person-find-input.png`; Person ScrollView chưa đặt keyboardShouldPersistTaps | **UX còn mở**. Test đóng bàn phím rõ trước Cancel; không sửa UX hoặc bỏ assertion đóng search trong PR này |
-| 16 chờ Profile quá hạn 15s | Full `20261120-181739`, `step-363-assertCondition-person-settingsaccount-b.png`; hierarchy có person-loading và tab Profile selected | Không tái hiện ở full retry. Chưa chứng minh nguyên nhân request cụ thể; không kết luận chắc do mạng, không tăng timeout |
-| 17 không nhận bạn sau Accept | Cùng full run, `step-166-assertCondition-crew-friend-0.png`: alert “fetch failed: The network connection was lost” | Lỗi mạng có bằng chứng; full retry nguyên mã PASS, kết bạn lại thành công |
-| CLI báo số flow 0 khi khởi tạo retry | Run `20261120-192724` có cảnh báo shard 0 flows, nhưng driver thực thi và JUnit đủ 22 | Không nhận exit 0 đơn độc là bằng chứng; luôn đối chiếu tên/số testcase |
+- **03-search:** query `cafe` có nhiều collection khớp; `buildSearchRows` đặt toàn bộ chúng trước Places. Lệnh cuộn 30s hết hạn ngay trước khi thấy `search-result-0`. Tăng budget hữu hạn lên 60s; giữ keyword, selector, visibility 100% và toàn bộ assertion detail/Back/clear/Cancel. Probe đo cuộn 30,67s; full cuối PASS. Không kết luận đây là latency backend.
+- Probe nguyên bản `20261120-221734` FAIL; thử visibility 80%/center `20261120-221911` không giúp; probe không cuộn `20261120-222105` chỉ có Collections trong viewport. Đã bỏ các thử nghiệm này; không phải đổi tab hay clipping. Chi tiết ở REVIEW.md.
+- **Unit có một timeout:** mặc định worker, CollectionFormScreen Save audience quá 3s khi simulator đang chạy. File chạy riêng 74/74 PASS; toàn bộ unit/timezone/coverage giới hạn 2 worker PASS. Không đổi test/timeout, chưa chứng minh root cause; CI mặc định trên `34a7121e` cũng PASS.
+- **UX còn mở:** Cancel trên tìm kiếm trang cá nhân khi bàn phím đang mở chỉ đóng bàn phím ở lần chạm đầu. P1 đóng bàn phím rõ trước Cancel; không sửa UX trong PR này.
+- Lỗi 16/17 của full cũ `20261120-181739` (Profile còn loading / alert network connection lost) không tái hiện trong các lượt sau rebase; không coi một lượt xanh là hết flaky.
 
-Probe chẩn đoán `20261120-180542` đã bỏ assertion Back để kiểm tiếp PA-3/4: **không tính nghiệm thu**, không commit probe. Các probe chạy working tree trên base `7737fe91` trước commit `54bdd563`.
+## Gate, CI và cleanup
 
-Một lượt full xanh không chứng minh đã hết flaky. Không đổi flow 16/17 trong PR P1. P2/P3 chưa làm. Các quyết định P3 lấy từ phiên bản [e2e-plan.md](e2e-plan.md) trên main; báo cáo này không thay thế plan (main đã cập nhật một số quyết định trong khi chạy P1).
+- Typecheck, lint PASS; unit, timezone, coverage **7.531 test / 319 file PASS** (2 worker local). Coverage floors đạt; tổng statements/lines 99,93%, branches 98,43%, functions 98,02%.
+- Cú pháp 03 PASS; **135 kiểm tra selector PASS**. Không thay source app sau khi chạy gate.
+- CI trên `34a7121e`: app, bundle, dashboard, data, migrations và GitGuardian đều PASS, [Actions run 44769675558](https://github.com/aletuan/city-crew/actions/runs/44769675558). Sau commit Markdown, kiểm CI của head mới trước merge; kết quả cũ không thay cho check mới.
+- Signup/trip fixture cleanup thành công sau mọi lượt runner; full cuối không còn JSON ledger, không còn trip lock.
+- Audit sau full: A có đúng một `Maestro smoke` Private, 0 place, tạo 11/09; B có 0 collection. Không còn Maestro CRUD. Phạm vi audit là hai tài khoản test, không phải toàn DB.
+- 17 đã kết bạn lại và logout. Không sửa data bằng API để làm xanh assertion.
+- Disk nội bộ từng còn 2,1GB. Chuyển cache DerivedData CityCrew không có process sử dụng sang `.smoke-local/build-cache-backup/`, không xoá source. Sau chuyển có 5,9GB trống; cuối suite còn khoảng 5GB. Cache có thể đưa lại vị trí cũ nếu cần.
 
-## Gate và cleanup
+## Bằng chứng P1 ban đầu (trước rebase)
 
-- Cú pháp flow P1 PASS; **135 kiểm tra selector** PASS. Config sau đăng ký parse được và có 23 tên không trùng, hai danh sách/thứ tự khớp nhau.
-- Cả năm gate trên source/flow `54bdd563` PASS: typecheck, lint, unit, timezone, coverage.
-- Unit và timezone: **7.503 test / 318 file**; coverage qua floors (toàn repo: statements/lines 99,92%, branches 98,44%, functions 98,01%). Không dùng số tổng thay cho floors từng file.
-- Sau mỗi full run: signup fixture không đăng nhập được, disposable trip accounts xoá thành công; không còn JSON ledger trong `signup-accounts`/`trip-accounts`, không còn `trip-accounts.lock`.
-- Audit collection trước/sau: tài khoản A vẫn đúng một `Maestro smoke` từ 11/09, Private, 0 place; B không có collection. Không còn Maestro CRUD. Đây là audit hai tài khoản test, không phải toàn DB.
-- Lượt 17 cuối hoàn tất kết bạn lại và logout; không sửa fixture bằng API để làm xanh assertion.
+Trên `54bdd56398509aa36e80f5de359dcb84a0950e3f`: P1 hai lượt liên tiếp `20261120-181004` / `20261120-181405`; full `20261120-181739` 20/22, retry nguyên mã `20261120-192724` 22/22. Sau đó mới đăng ký flow 22 vào config. Các lượt này là lịch sử, không thay bằng chứng sau rebase ở trên. Regression Back đỏ trước sửa, xanh sau sửa; 130 test ProfileScreen/MeScreen PASS.
 
-## Artifacts và cách chạy tiếp
+## Artifacts và chạy tiếp
 
-Checkout local: `/Volumes/T7-Workspace/Projects/Claude/city-crew-e2e-stability`. Artifacts nằm local, không theo PR/clone; không commit credentials hoặc ledger.
+Checkout `/Volumes/T7-Workspace/Projects/Claude/city-crew-e2e-stability`. Artifact local, không theo clone/PR; không commit credential hoặc ledger.
 
-- `.smoke-local/maestro/<run ID>/report.xml`, `console.log`, `<timestamp>/<flow>/{logs,screenshots,screen-hierarchy,commands.json}`.
-- `.smoke-local/p1-{accept1,accept2,full,full-retry}.log`, `p1-evidence.json`.
-- `.smoke-local/p1-final-{typecheck,lint,test,test-tz,coverage}.log`; `p1-regression-{red,green}.log`.
-- `.smoke-local/p1-collections-{before,after-attempt,after-final}.json` (audit đọc, không phải credential ledger).
-- Probe logs: `p1-probe.log`, `p1-probe2.log`, `p1-remaining-probe.log`.
+- `.smoke-local/maestro/<run ID>/report.xml`, console, logs, screenshots và hierarchy.
+- `.smoke-local/rebase-p1-{22,trips,full,full-fixed}.log`.
+- `.smoke-local/rebase-search-{original,fix1,direct,budget,confirm}.log`.
+- `.smoke-local/rebase-p1-{typecheck,lint,test,collection-unit-probe}.log`, `rebase-p1-limited-{test,test-tz,coverage}.log`.
+- `.smoke-local/rebase-p1-collections-after.json`; đối chiếu `p1-collections-before.json`.
 
 ```sh
 cd /Volumes/T7-Workspace/Projects/Claude/city-crew-e2e-stability
 PATH="$PWD/.smoke-local/device-bin:/Users/andy/.nvm/versions/node/v24.14.0/bin:$PATH" \
-EXPO_URL=exp://127.0.0.1:8085 caffeinate -i bash app/.maestro/smoke.sh .maestro/22-profile-account.yaml
+EXPO_URL=exp://127.0.0.1:8085 caffeinate -i bash app/.maestro/smoke.sh
 ```
 
-Bỏ target cuối để chạy config hiện tại gồm 23 flow. Wrapper local thêm `--device` đúng UDID; cần kiểm tra lại PATH/cwd Metro/runner/ledger trước lượt mới. Giữ nguyên SHA và working tree trong khi chạy. Baseline trước P1: 22/22 trên `d0c9cd07`, run `20261120-142328` (#1492); không gộp vào kết quả trên.
+Trước lượt mới kiểm SHA/working tree, chỉ một runner và cwd Metro. P3 theo [e2e-plan.md](e2e-plan.md): làm CM-1…CM-6 và CM-10 bằng A, PR riêng sau merge P1; không chặn A/B, không dùng disposable account cho comments. P2 và phần kế hoạch P3 còn lại được giữ nguyên.

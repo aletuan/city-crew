@@ -18,6 +18,9 @@ Tài khoản A = `TEST_EMAIL` (`@maestro`).
 `20261120-181004`; lượt liên tiếp thứ hai: `20261120-181405`, cùng SHA
 `54bdd56398509aa36e80f5de359dcb84a0950e3f`. Suite 22 flow hiện có đạt
 `20261120-192724` trên cùng SHA; sau đó mới đăng ký flow 22 vào config.
+Sau rebase: full **23/23** `20261120-222643` trên
+`34a7121e59b657929a2b6fdb302226208433267b`; 22 cũng đạt lượt riêng
+`20261120-213702` trên `4fb26f05`.
 Chi tiết lỗi phát hiện, bản sửa và giới hạn: [e2e-latest.md](e2e-latest.md).
 
 | Ca | Bước và assertion | Bảo vệ điều gì |
