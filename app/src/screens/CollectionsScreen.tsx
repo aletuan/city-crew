@@ -29,7 +29,7 @@ import {
 import SearchField from '../components/SearchField';
 import { useDuckOnScroll, useTabBarDucked } from '../components/tabBarDuck';
 import { DockOffer, DockSlot, useDockOffer } from '../components/DockSlot';
-import { AddPill } from '../components/add';
+import { AddPill, HeaderAdd } from '../components/add';
 import { createDuckTracker } from '../lib/duck';
 import { useSession } from '../lib/auth';
 import { useCityList, useCurrentCity } from '../lib/city';
@@ -882,11 +882,9 @@ export default function CollectionsScreen({ navigation, route }: {
       <ScreenTitle
         title={t('Collections', 'Bộ sưu tập', 'コレクション', '合集', '合集')}
         right={session ? (
-          <AddPill
-            quiet
-            label={t('New', 'Tạo mới', '新規', '新建', '新增')}
+          <HeaderAdd
+            label={t('New collection', 'Bộ sưu tập mới', '新しいコレクション', '新建合集', '新增合集')}
             onPress={startNew}
-            accessibilityLabel={t('New collection', 'Bộ sưu tập mới', '新しいコレクション', '新建合集', '新增合集')}
             testID={floating ? 'collection-floating-new' : 'collection-new'}
           />
         ) : undefined}

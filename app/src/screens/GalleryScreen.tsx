@@ -42,7 +42,7 @@ import { Glyph, ICON } from '../components/ui/glyph';
 import { Image } from 'expo-image';
 import type { SheetAction } from '../components/ActionSheet';
 import PhotoSheet from '../components/PhotoSheet';
-import { AddPill } from '../components/add';
+import { HeaderAdd } from '../components/add';
 import { ScoreBadge, ScoreGlyph, ScoredCard, ScoringDialog, tenText } from '../components/PhotoScore';
 import {
   Card, Empty, PressableScale, Screen, SECONDARY_CONTROL_H, successHaptic, useTabBarClearance,
@@ -376,13 +376,11 @@ export default function GalleryScreen({ navigation, route }: { navigation: Nav; 
       backBare
       // The one invitation on the screen. Not repeated as a tile in the
       // grid: two offers to do one thing read as two different things,
-      // the rule `AddPill` states.
+      // the rule `AddPill` states. The header's plus: `HeaderAdd`.
       right={mode === 'view' ? (
-        <AddPill
-          quiet
-          label={t('Add', 'Thêm', '追加', '添加', '新增')}
+        <HeaderAdd
+          label={t('Add a photo', 'Thêm ảnh', '写真を追加', '添加照片', '新增照片')}
           busy={adder.busy}
-          accessibilityLabel={t('Add a photo', 'Thêm ảnh', '写真を追加', '添加照片', '新增照片')}
           onPress={() => { void adder.add(); }}
         />
       ) : undefined}

@@ -339,8 +339,10 @@ describe('who may keep it', () => {
     show([mine('m')], place({ submitted_by: 'u2' }));
     await waitFor(() => expect(data.fetchGallery).toHaveBeenCalled());
     expect(screen.queryByText('This is not yours to keep.')).toBeNull();
-    // Quiet: the header's weight, not the gradient (owner, 26 Oct 2026).
-    expect(screen.getByRole('button', { name: 'Add a photo' }).querySelector('[data-stub="LinearGradient"]')).toBeNull();
+    // The header's plus, not the gradient pill (owner, 20 Nov 2026).
+    const plus = screen.getByRole('button', { name: 'Add a photo' });
+    expect(plus.querySelector('[data-stub="LinearGradient"]')).toBeNull();
+    expect(plus.querySelector('[data-icon="add"]')).toBeTruthy();
   });
 
   it('draws nothing but the header while the place is still loading', () => {
@@ -703,26 +705,26 @@ describe('adding one', () => {
   // Adding took one to three seconds on a phone and the only sign of it
   // was the pill's word turning into "…" — a narrower pill that read as
   // a different button, over a grid that did nothing until the read-back
-  // landed (owner, 7 Oct 2026). The pill now keeps its word and its width
-  // and goes quiet; the grid grows a waiting tile that names the step it
-  // is on, because those are the two steps that actually take the time.
-  it('keeps the pill\'s word while adding, locks it, and walks a waiting tile through both steps', async () => {
+  // landed (owner, 7 Oct 2026). The header's plus (20 Nov 2026) keeps its
+  // box and holds a spinner in it; the grid grows a waiting tile that
+  // names the step it is on, because those are the two steps that
+  // actually take the time.
+  it('holds a spinner in the plus\'s place while adding, locks it, and walks a waiting tile through both steps', async () => {
     gates.shrink.hold = true;
     gates.upload.hold = true;
     show([photo('a')]);
     await grid();
-    const pill = screen.getByRole('button', { name: 'Add a photo' });
-    fireEvent.click(pill);
+    const plus = () => screen.getByRole('button', { name: 'Add a photo' });
+    fireEvent.click(plus());
     await screen.findByTestId('gallery-uploading');
     expect(screen.getByText('Compressing…')).toBeTruthy();
-    expect(screen.getByText('Add')).toBeTruthy();
     expect(screen.queryByText('…')).toBeNull();
-    expect(pill.getAttribute('aria-disabled')).toBe('true');
-    expect(pill.getAttribute('aria-busy')).toBe('true');
-    // The pill's plus has made way for its spinner.
-    expect(pill.querySelector('[role="progressbar"]')).toBeTruthy();
+    expect(plus().getAttribute('aria-busy')).toBe('true');
+    // The plus has made way for its spinner.
+    expect(plus().querySelector('[data-icon="add"]')).toBeNull();
+    expect(plus().querySelector('[role="progressbar"]')).toBeTruthy();
     // A second tap while it works opens nothing.
-    fireEvent.click(pill);
+    fireEvent.click(plus());
     expect(data.picker).toHaveBeenCalledTimes(1);
     // The tile sits at the end of the grid, the size of a cell.
     const tile = screen.getByTestId('gallery-uploading');
@@ -734,7 +736,8 @@ describe('adding one', () => {
     await act(async () => { gates.upload.release(); });
     await waitFor(() => expect(data.addPlacePhoto).toHaveBeenCalled());
     await waitFor(() => expect(screen.queryByTestId('gallery-uploading')).toBeNull());
-    expect(pill.getAttribute('aria-disabled')).not.toBe('true');
+    expect(plus().getAttribute('aria-busy')).not.toBe('true');
+    expect(plus().querySelector('[data-icon="add"]')).toBeTruthy();
   });
 
   it('shows the waiting tile in place of the empty note while the first photo is on its way', async () => {
