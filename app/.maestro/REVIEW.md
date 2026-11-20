@@ -383,3 +383,12 @@ Helper mới: `20261120-142003` 05 PASS 2m40s, `open-best-plan.yaml` hoàn tất
 - Rebase thêm #1510 thành `8be85a2e757aeeb659868dd4a7d4ee43d950869b`, range-diff giữ nguyên bốn commit của PR. Các gate local lại PASS; chạy lại 22, nhóm Trips và full trên SHA mới. Kết quả native chỉ ghi sau khi hoàn tất, không mang 23/23 cũ sang SHA này.
 
 - Nghiệm thu sau rebase lần hai: `20261121-000339` **5/5** (22/05/13/16/20), `20261121-003748` **23/23** toàn config, cùng `8be85a2e`. Runner exit 0, JUnit không failure/error/skip; signup/trip ledgers rỗng, A chỉ còn bộ Private cũ, B không có bộ. CI `44780565125` PASS.
+
+### DOM đã đổi chưa chắc Pressable đã nhận cấu hình mới trong UI test
+
+- CI `44797970177`, head `8ce0e0cc`, thất bại `CollectionFormScreen › hands Friends to the page under it`: nhãn Friends đã đổi, Save không busy/disabled trên DOM, nhưng không gọi goBack sau 3s. Trước đó local từng fail ca Save Public cùng helper. Không merge khi CI đỏ.
+- Source: SheetRows gọi lựa chọn qua timer 220ms; helper `pick` chỉ đợi chữ. `react-native-web/usePressEvents` cấu hình lại responder trong `useEffect`, tách khỏi DOM commit. Vì vậy mutation observer của waitFor có thể trả trước effect; tăng thời gian chờ navigation sau một click bị bỏ không giải quyết được thứ tự này.
+- Sửa ở **test helper**: sau khi nhãn đổi, `await act(async () => {})` để flush effects trước thao tác tiếp; giữ tất cả assertion dispatch/goBack và bỏ timeout 3s ở ba ca Save. Không đổi production app, Maestro hoặc timeout E2E.
+- Giới hạn chẩn đoán: 100 lượt ca Friends trên helper cũ chạy riêng đều PASS; chưa tái hiện race có kiểm soát trên máy local. Cơ chế trên là kết luận từ source và bằng chứng CI, không phải phép đo trực tiếp responder tại thời điểm failure. File 74 test sau sửa PASS; kết quả stress/gates/CI tiếp theo ghi trong e2e-latest.md.
+
+- Sau sửa helper: 74/74 file, stress 100/100; mutant bỏ dispatch audience FAIL đúng assertion rồi hoàn nguyên. Năm gate mặc định local (không giới hạn worker) đều PASS: 7.531/319, coverage floors đạt. Production app/flow so với `8be85a2e` không thay đổi; không chạy lại native chỉ vì thay đồng bộ trong unit test.

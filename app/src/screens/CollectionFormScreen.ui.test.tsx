@@ -9,7 +9,7 @@
 import React from 'react';
 import { Alert } from 'react-native';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { cleanup, fireEvent, render, screen, viewStyleOf, waitFor } from '../uitest/render';
+import { act, cleanup, fireEvent, render, screen, viewStyleOf, waitFor } from '../uitest/render';
 import type { Nav, RootRoute } from '../nav';
 import type { Collection, Place } from '../lib/types';
 import { DAILY_LIMIT } from '../lib/quota';
@@ -138,6 +138,12 @@ const pick = async (v: 'public' | 'friends' | 'private') => {
   fireEvent.click(screen.getByTestId(`sheet-action-${v}`));
   const word = { public: 'Public', friends: 'Friends', private: 'Private' }[v];
   await waitFor(() => expect(screen.getByTestId('collection-form-seen').textContent!.startsWith(word)).toBe(true), { timeout: 3000 });
+  // The sheet changes audience from a timer, outside fireEvent's act.
+  // waitFor can see the committed words before react-native-web's
+  // usePressEvents effect has reconfigured Save from disabled to enabled.
+  // Flush that effect before the next press; waiting longer AFTER a
+  // dropped press cannot deliver it (CI 44797970177, and local before it).
+  await act(async () => {});
 };
 
 const create = (title: string) => {
@@ -692,8 +698,7 @@ describe('renaming a list', () => {
       return navigation;
     };
     const saveButton = () => screen.getByRole('button', { name: 'Save changes' });
-    // Save follows a sheet's press, which waits out the sheet's exit;
-    // under CI's load the save then took past waitFor's 1s once (#1486).
+    // pick waits for both the audience and the press responder's effects.
 
     // Kept for Save like the name: the ✓ lights for it, and Save hands
     // it to the page under the form, which does it by its own sheet's
@@ -704,7 +709,7 @@ describe('renaming a list', () => {
       await pick('public');
       expect(saveButton().getAttribute('aria-disabled')).not.toBe('true');
       fireEvent.click(saveButton());
-      await waitFor(() => expect(navigation.goBack).toHaveBeenCalled(), { timeout: 3000 });
+      await waitFor(() => expect(navigation.goBack).toHaveBeenCalled());
       expect(navigation.dispatch).toHaveBeenCalledWith(expect.objectContaining({
         type: 'SET_PARAMS', payload: { params: { seen: 'public' } }, source: 'page-1',
       }));
@@ -721,7 +726,7 @@ describe('renaming a list', () => {
       expect(saveButton().getAttribute('aria-disabled')).toBe('true');
       fireEvent.change(screen.getByPlaceholderText('Weekend coffee'), { target: { value: 'Night bars' } });
       fireEvent.click(saveButton());
-      await waitFor(() => expect(navigation.goBack).toHaveBeenCalled(), { timeout: 3000 });
+      await waitFor(() => expect(navigation.goBack).toHaveBeenCalled());
       expect(navigation.dispatch).not.toHaveBeenCalled();
     });
 
@@ -730,7 +735,7 @@ describe('renaming a list', () => {
       const navigation = renameOver(false);
       await pick('friends');
       fireEvent.click(saveButton());
-      await waitFor(() => expect(navigation.goBack).toHaveBeenCalled(), { timeout: 3000 });
+      await waitFor(() => expect(navigation.goBack).toHaveBeenCalled());
       expect(navigation.dispatch).toHaveBeenCalledWith(expect.objectContaining({ payload: { params: { seen: 'friends' } } }));
       expect(goTo).not.toHaveBeenCalled();
     });

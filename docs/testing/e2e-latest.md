@@ -71,6 +71,10 @@ Không cộng các lượt riêng thành một lượt suite xanh. Sau mỗi reb
 - **UX còn mở:** Cancel trên tìm kiếm trang cá nhân khi bàn phím đang mở chỉ đóng bàn phím ở lần chạm đầu. P1 đóng bàn phím rõ trước Cancel; không sửa UX trong PR này.
 - Lỗi 16/17 của full cũ `20261120-181739` (Profile còn loading / alert network connection lost) không tái hiện trong các lượt sau rebase; không coi một lượt xanh là hết flaky.
 
+## CI sau commit báo cáo: chưa được merge khi đỏ
+
+Head `8ce0e0cc` có CI `44797970177` đỏ ở một unit test CollectionFormScreen (Friends → Save → goBack). Bản sửa tiếp theo chỉ sửa helper unit: flush React effects sau lựa chọn audience trước khi bấm Save, bỏ timeout 3s ở ba assertion; production app và Maestro vẫn đúng bản đã chạy 23/23 trên `8be85a2e`. Chạy stress cũ 100 lượt riêng đều qua, nên không tuyên bố đã tái hiện race local; source cho thấy timer và usePressEvents effect chưa được helper đồng bộ. Xem REVIEW.md. Sau sửa: file 74/74 PASS, stress Friends 100/100 PASS; mutant bỏ dispatch audience bị bắt đúng (đã hoàn nguyên). Cả năm gate **mặc định**, không giới hạn worker: typecheck/lint/unit/timezone/coverage PASS, 7.531/319 và coverage floors không đổi. Artifacts `collection-save-{effects,stress-before,stress-after,mutant}.log` và `p1-effects-{typecheck,lint,test,test-tz,coverage}.log`. Chỉ merge khi CI của head sửa test cũng xanh.
+
 ## Gate, CI và cleanup
 
 - Typecheck, lint PASS; unit, timezone, coverage **7.531 test / 319 file PASS** (2 worker local). Coverage floors đạt; tổng statements/lines 99,93%, branches 98,43%, functions 98,02%.
