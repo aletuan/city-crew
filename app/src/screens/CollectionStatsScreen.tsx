@@ -222,7 +222,7 @@ export default function CollectionStatsScreen({ navigation, route }: {
 const GLYPH: Record<StatKind, GlyphName> = {
   views: 'eye-outline',
   likes: 'heart-outline',
-  copies: 'duplicate-outline',
+  copies: 'copy-outline',
   trips: 'calendar-outline',
 };
 /** The label's glyph: 15, the size "View activity ›" sets beside 15pt words. */

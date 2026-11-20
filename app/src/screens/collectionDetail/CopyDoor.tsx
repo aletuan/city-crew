@@ -55,7 +55,7 @@ export function CopyDoor({ list, canCopy, onCopy, navigation }: {
     >
       {/* Filled in the accent once it is yours, as the heart is: a state
           the reader made. */}
-      <Glyph name={have ? 'duplicate' : 'duplicate-outline'} size={ACT_GLYPH} color={have ? colors.accent : colors.textSecondary} />
+      <Glyph name={have ? 'copy' : 'copy-outline'} size={ACT_GLYPH} color={have ? colors.accent : colors.textSecondary} />
       {st.n > 0 ? <Text style={s.act} testID="collection-copy-count">{st.n}</Text> : null}
     </PressableScale>
   );
