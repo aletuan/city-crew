@@ -8,6 +8,13 @@
 // else; what is not held yet is the part that says what there is to do
 // here, which is what the badges are for (`lib/badges`).
 //
+// ── no heading, no count (owner, 20 Nov 2026) ──
+//
+// The card was headed "Badges" with "3 / 9" across from it. The sheet is
+// headed "Achievements" already, and the level's card above it has no
+// heading of its own; and how many are held is what the grid shows at a
+// glance, in colour against grey. Both came off, on the phone.
+//
 // ── the line under the grid ──
 //
 // Nine sentences under nine pictures is a page of small print. So one
@@ -15,6 +22,13 @@
 // one the reader is nearest to (`nextBadge`) — the bar over the level
 // says "two more places", and this says the same kind of thing about
 // the badges without being asked.
+//
+// The sentence alone, centred under the grid (owner, 20 Nov 2026). It
+// had the badge's name over it, with "1 / 5" or "Earned" across: the
+// name is under the tinted cell already, which says which badge the
+// sentence is about, and the owner found the count more detail than the
+// sheet needs — the sentence says what it takes, the picture whether it
+// is held.
 //
 // ── the dot ──
 //
@@ -29,7 +43,7 @@ import { Image } from 'expo-image';
 import { sheetBody } from './ActionSheet';
 import { BADGE_IMAGES } from './badgeImages';
 import { PressableScale } from './ui';
-import { BADGES, badgeHow, badgeName, badgeSteps, nextBadge, type BadgeId } from '../lib/badges';
+import { BADGES, badgeHow, badgeName, nextBadge, type BadgeId } from '../lib/badges';
 import { useI18n } from '../lib/i18n';
 import { useRewards } from '../lib/rewards';
 import { colors, font } from '../theme';
@@ -55,10 +69,6 @@ export default function BadgeShelf() {
 
   return (
     <View style={sheetBody} testID="badge-shelf">
-      <View style={s.head}>
-        <Text style={s.title} accessibilityRole="header">{t('Badges', 'Huy hiệu', 'バッジ', '徽章', '徽章')}</Text>
-        <Text style={s.count} testID="badge-count">{`${earned.length} / ${BADGES.length}`}</Text>
-      </View>
       <View style={s.grid}>
         {BADGES.map((id) => {
           const has = earned.includes(id);
@@ -99,34 +109,13 @@ export default function BadgeShelf() {
   );
 }
 
-/** One badge, said: its name, how far along, and what earns it. */
+/** What earns the badge the grid has tinted. */
 function About({ id }: { id: BadgeId }) {
   const { t } = useI18n();
-  const { facts, earned } = useRewards();
-  const has = earned.includes(id);
-  const { done, of } = badgeSteps(id, facts);
-  return (
-    <View style={s.about} testID="badge-about">
-      <View style={s.aboutHead}>
-        <Text style={s.aboutName} numberOfLines={1}>{badgeName(id, t)}</Text>
-        {/* A first has no "0 / 1" worth reading; the two that count say
-            how many. */}
-        {has
-          ? <Text style={[s.steps, s.stepsDone]} testID="badge-steps">{t('Earned', 'Đã đạt', '獲得済み', '已获得', '已獲得')}</Text>
-          : of > 1 ? <Text style={s.steps} testID="badge-steps">{`${done} / ${of}`}</Text> : null}
-      </View>
-      <Text style={s.how}>{badgeHow(id, t)}</Text>
-    </View>
-  );
+  return <Text style={s.how} testID="badge-about">{badgeHow(id, t)}</Text>;
 }
 
 const s = StyleSheet.create({
-  head: { flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between' },
-  // The card's own heading: a step under the level's, in the card above
-  // (`HeroFace`'s `title`, 18), which is the first thing the sheet is
-  // asked about.
-  title: { color: colors.text, fontSize: 16, lineHeight: 22, fontWeight: font.semibold },
-  count: { color: colors.textTertiary, fontSize: 13, fontWeight: font.semibold, fontVariant: ['tabular-nums'] },
   // Three across. Each cell is a third of the row, so the columns line
   // up whatever the names' lengths.
   grid: { flexDirection: 'row', flexWrap: 'wrap', rowGap: 6 },
@@ -154,10 +143,5 @@ const s = StyleSheet.create({
     color: colors.text, fontSize: 12, lineHeight: NAME_LINE, fontWeight: font.medium, textAlign: 'center',
   },
   nameOff: { color: colors.textTertiary },
-  about: { gap: 2 },
-  aboutHead: { flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between', gap: 8 },
-  aboutName: { flexShrink: 1, color: colors.text, fontSize: 15, lineHeight: 20, fontWeight: font.semibold },
-  steps: { color: colors.textTertiary, fontSize: 13, fontWeight: font.semibold, fontVariant: ['tabular-nums'] },
-  stepsDone: { color: colors.ok },
-  how: { color: colors.textSecondary, fontSize: 14, lineHeight: 19 },
+  how: { color: colors.textSecondary, fontSize: 14, lineHeight: 19, textAlign: 'center' },
 });
