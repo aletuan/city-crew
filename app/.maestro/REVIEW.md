@@ -364,3 +364,12 @@ Helper mới: `20261120-142003` 05 PASS 2m40s, `open-best-plan.yaml` hoàn tất
 - Full `20261120-181739` trên `54bdd563`: 20/22, lỗi 16/17. 16 đã vào tab Profile nhưng hierarchy còn `person-loading` sau 15s; nguyên nhân request cụ thể chưa rõ. 17 có alert rõ “The network connection was lost” sau Accept. Screenshot/step và run nằm trong e2e-latest.md.
 - Không sửa selector, timeout hay bỏ assertion; để suite hoàn tất, kiểm tra cleanup, restart riêng simulator test rồi chạy lại **toàn bộ** 22 flow trên cùng SHA. Run `20261120-192724`: 22/22, không failure/error/skip, cleanup sạch; 16/17 đều PASS. Không coi retry thành công là đã chữa được flaky.
 - CLI retry từng báo “0 flows” lúc khởi tạo nhưng thực thi đầy đủ: đối chiếu JUnit với config theo cả tên, số lượng và thứ tự; không chỉ xem exit code hay một dòng console.
+
+## Rebase P1: search rộng phụ thuộc chiều dài dữ liệu trước kết quả (20/11/2026)
+
+- Trên rebase `4fb26f05b5e2a673a98961d3c59196c0b6075879` (main `8d2c98ab`), 22 đạt `20261120-213702`, nhóm 05/13/16/20 đạt `20261120-214100` và dọn sạch fixture.
+- Full attempt `20261120-221219`: 00–02 qua, 03 hết hạn cuộn 30s. Dừng có kiểm soát (exit 130) sau failure để sửa; signup/trip cleanup thành công. Đây là lượt chưa hoàn tất, không phải kết quả toàn suite.
+- 03 nguyên bản tái hiện `20261120-221734`. Giảm visibility xuống 80%/center không giúp (`20261120-221911`), và probe không cuộn (`20261120-222105`) cho thấy chỉ Collections đang ở viewport. Vì vậy loại giả thuyết clipping/đổi tab: vẫn là Search, nhưng Places nằm dưới nhiều Collections.
+- Source `buildSearchRows` đưa **mọi** collection khớp lên trước Places, không giới hạn số hàng. Các hierarchy sau lần cuộn cuối đã có search-result-0, nhưng lệnh vừa hết budget. Không đổi keyword `cafe`, không đổi selector đầu tiên, không giảm yêu cầu hiển thị 100%.
+- Bản sửa chỉ tăng budget cuộn hữu hạn lên 60s. Probe `20261120-222307` PASS 1m12s: riêng bước cuộn mất **30,67s**, sau đó tap search-result-0, detail-name, Back, xoá query và Cancel đều qua. Đây là thời gian đi qua danh sách, không phải đo latency request. Flow cuối sẽ được kiểm tiếp trong full suite trên SHA mới.
+- Unit sau rebase: một lần timeout 3s ở CollectionFormScreen (Save audience) khi chạy mặc định song song simulator. File 74 test chạy riêng qua; toàn bộ unit/timezone/coverage với 2 worker đều 7531/319 PASS, không thay test hoặc timeout. Chưa coi là đã sửa được flaky; CI vẫn phải qua trước merge.
