@@ -1157,7 +1157,8 @@ describe('the badges, under the level', () => {
     const shelf = screen.getByTestId('badge-shelf');
     expect(level.compareDocumentPosition(shelf) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     expect(level.parentElement).toBe(shelf.parentElement);
-    expect(screen.getByTestId('badge-count').textContent).toBe('2 / 9');
+    // The reader's own: what they have done is what is held.
+    expect(screen.getAllByRole('button', { name: /, earned$/ })).toHaveLength(2);
     // The level's card is still the level's alone.
     expect(level.contains(shelf)).toBe(false);
     // Twelve between the two, as between the header and the first.
