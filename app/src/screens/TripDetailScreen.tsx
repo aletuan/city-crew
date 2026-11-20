@@ -96,7 +96,7 @@ export default function TripDetailScreen({ navigation, route }: {
   // Who is coming. Above the early return with the two above, and for the
   // same reason: React counts hooks, and one declared under a branch that
   // only sometimes runs throws on the render where the branch flips.
-  const { ships, people, mutual } = useCrew();
+  const { ships, people } = useCrew();
   const { invites, crewCounts } = useInvitations();
   const [sheetOpen, setSheetOpen] = useState(false);
   const [sending, setSending] = useState(false);
@@ -550,7 +550,6 @@ export default function TripDetailScreen({ navigation, route }: {
         company={trip.company}
         friendIds={me ? splitFriendships(ships.data, me).friends : []}
         people={people}
-        mutual={mutual}
         invites={mineInvites}
         sending={sending}
         onClose={() => setSheetOpen(false)}
