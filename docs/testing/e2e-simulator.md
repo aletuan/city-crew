@@ -244,6 +244,7 @@ sách toàn suite < 30 phút (xem mục 2).
 | Flow | Tài khoản / dữ liệu | Phạm vi | Bằng chứng |
 | --- | --- | --- | --- |
 | `22-profile-account` ✅ | TEST_EMAIL (@maestro), bộ Private `Maestro smoke` có sẵn; không tạo dữ liệu mới | PA-1…PA-6, gồm hai lối Activity và search/cancel | Hai lượt `20261120-181004`, `20261120-181405`; suite 22/22 `20261120-192724`, cùng `54bdd563`; đăng ký config sau nghiệm thu; sau rebase full 23/23 `20261121-003748` trên `8be85a2e` |
+| `23-comments-own` ⏳ | TEST_EMAIL (@maestro), có cờ `comments`; tạo bộ Public `Maestro Comments` trong flow và xoá ở cuối | CM-1…CM-6, CM-10 (từ cấm `zzmaestroban`) | Chưa chạy. Viết 21/11/2026 trên cloud, không có simulator |
 
 Kế hoạch còn lại giữ tại [e2e-plan.md](e2e-plan.md). P2/P3 chưa triển khai.
 
