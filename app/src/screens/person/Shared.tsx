@@ -153,7 +153,7 @@ export function marks(seen: ListSeen, t: T): ActivityMark {
   return { icon: SEEN_GLYPH.friends, text: lent, label: lent };
 }
 
-export default function Shared({ me, person, lists, seenOf, coverFor, onOpen, onComments, reach = 0 }: {
+export default function Shared({ me, person, lists, seenOf, coverFor, onOpen, onComments, reasonOf, missed, reach = 0 }: {
   me: string | null;
   person: FriendProfile;
   /** The collections this reader may see here, newest first
@@ -165,6 +165,13 @@ export default function Shared({ me, person, lists, seenOf, coverFor, onOpen, on
   onOpen: (c: Collection) => void;
   /** Opens a collection's thread of comments — `useCardComments`. */
   onComments?: (c: Collection) => void;
+  /** While the page is searched (`person/Find`): why a card is there,
+   *  in its line's place — "Là Việt Coffee · 1 of 4 places" — or null
+   *  for the count it always says. */
+  reasonOf?: (c: Collection) => string | null;
+  /** Words were typed and nothing answers them: the empty card says
+   *  that, not that there are no lists. */
+  missed?: boolean;
   /** How many times the reader has come near the page's end (`useReach`). */
   reach?: number;
 }) {
@@ -208,7 +215,21 @@ export default function Shared({ me, person, lists, seenOf, coverFor, onOpen, on
   const none = lists.length === 0;
   return (
     <>
-      {none ? (
+      {missed ? (
+        <Card style={s.none} testID="person-find-none">
+          <Text style={s.noneTitle}>
+            {t('Nothing found', 'Không tìm thấy', '見つかりませんでした', '没有找到', '沒有找到')}
+          </Text>
+          <Text style={s.noneBody}>
+            {t(
+              'Try the name of a place, or of a collection.',
+              'Thử tên một địa điểm, hoặc tên bộ sưu tập.',
+              'スポット名かコレクション名で試してください。',
+              '试试地点名或合集名。', '試試地點名或合集名。',
+            )}
+          </Text>
+        </Card>
+      ) : none ? (
         <Card style={s.none} testID="person-no-lists">
           <Text style={s.noneTitle}>
             {t('No public collections yet', 'Chưa có bộ sưu tập công khai', '公開コレクションはまだありません', '还没有公开的合集', '還沒有公開的合集')}
@@ -235,7 +256,7 @@ export default function Shared({ me, person, lists, seenOf, coverFor, onOpen, on
               mark={marks(seenOf(c), t)}
               title={localized(c, 'title', lang)}
               uri={coverFor(c)}
-              meta={placesWord(c.collection_places.length)}
+              meta={reasonOf?.(c) ?? placesWord(c.collection_places.length)}
               desc={localized(c, 'desc', lang)}
               liked={!!c.id && myLikes.includes(c.id)}
               likes={likes[c.slug] ?? 0}
