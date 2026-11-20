@@ -1,0 +1,127 @@
+# P1 PA-1..PA-6: one persistent account, no new collections or accounts.
+# PA-4 uses the existing private "Maestro smoke" collection maintained by 06.
+# English is selected explicitly for the Account row's shared feature-row id
+# (the same text-selection convention as common/open-crew.yaml).
+appId: host.exp.Exponent
+env:
+  EXPO_URL: ${EXPO_URL || 'exp://127.0.0.1:8081'}
+---
+- runFlow: common/start.yaml
+- runFlow: common/ensure-signed-out.yaml
+- runFlow:
+    file: common/pick-language.yaml
+    env:
+      LANG_ID: en
+# PA-5: the guest's tab is a root screen, with both auth actions.
+- tapOn:
+    id: "tab-profile"
+- assertVisible:
+    id: "profile-sign-in"
+- assertVisible:
+    id: "profile-sign-up"
+- assertNotVisible:
+    id: "account-back"
+- runFlow: common/ensure-signed-in.yaml
+# Sign-in verifies TEST_EMAIL and ends in Account.
+- tapOn:
+    id: "account-back"
+# PA-1: the tab opens the owner's page, not Account.
+- tapOn:
+    id: "tab-profile"
+- assertVisible:
+    id: "person-own-face"
+- assertVisible:
+    id: "person-handle"
+    text: '.*@maestro.*'
+- assertVisible:
+    id: "person-own-tools"
+- assertVisible:
+    id: "person-search"
+- assertVisible:
+    id: "person-bell"
+- assertVisible:
+    id: "person-settings"
+- assertNotVisible:
+    id: "account-back"
+# PA-2: verify identity at the settings destination, then the return path.
+- tapOn:
+    id: "person-settings"
+- assertVisible:
+    id: "account-back"
+- copyTextFrom:
+    id: "profile-email"
+- assertTrue: ${maestro.copiedText.trim().toLowerCase() === TEST_EMAIL.trim().toLowerCase()}
+- tapOn:
+    id: "account-back"
+- assertVisible:
+    id: "person-handle"
+# PA-4: restrict the match to a collection card; the input is not a result.
+- tapOn:
+    id: "person-search"
+- tapOn:
+    id: "person-find-input"
+- inputText: 'Maestro smoke'
+# Person ScrollView consumes a first outside tap while the keyboard is up.
+- hideKeyboard
+- scrollUntilVisible:
+    element:
+      id: "activity-open"
+      text: 'Maestro smoke,.*'
+    direction: DOWN
+    timeout: 15000
+- assertVisible:
+    id: "activity-open"
+    text: 'Maestro smoke,.*'
+- scrollUntilVisible:
+    element:
+      id: "person-find-cancel"
+    direction: UP
+    timeout: 15000
+- tapOn:
+    id: "person-find-cancel"
+- assertNotVisible:
+    id: "person-find-input"
+- assertVisible:
+    id: "person-handle"
+- assertVisible:
+    id: "person-own-tools"
+# PA-3: both entrances expose the same two Activity tabs.
+- tapOn:
+    id: "person-bell"
+- runFlow: common/check-activity-tabs.yaml
+- assertVisible:
+    id: "person-handle"
+- tapOn:
+    id: "person-settings"
+- scrollUntilVisible:
+    element:
+      text: ".*Activity.*What's new.*"
+    direction: DOWN
+    centerElement: true
+    timeout: 15000
+- tapOn:
+    text: ".*Activity.*What's new.*"
+- runFlow: common/check-activity-tabs.yaml
+- scrollUntilVisible:
+    element:
+      id: "account-back"
+    direction: UP
+    timeout: 15000
+- tapOn:
+    id: "account-back"
+- assertVisible:
+    id: "person-handle"
+# PA-6: leave through settings and sign out without a dev navigation error.
+- tapOn:
+    id: "person-settings"
+- runFlow: common/ensure-signed-out.yaml
+- assertNotVisible:
+    text: '.*POP_TO_TOP.*'
+- tapOn:
+    id: "tab-profile"
+- assertVisible:
+    id: "profile-sign-in"
+- assertVisible:
+    id: "profile-sign-up"
+- assertNotVisible:
+    id: "account-back"

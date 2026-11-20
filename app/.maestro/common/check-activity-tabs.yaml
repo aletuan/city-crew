@@ -1,0 +1,29 @@
+# Both Activity entrances must expose the two tabs and a working return.
+appId: host.exp.Exponent
+---
+- scrollUntilVisible:
+    element:
+      id: "activity-tab-for-you"
+    direction: DOWN
+    timeout: 20000
+- assertVisible:
+    id: "activity-tab-yours"
+- tapOn:
+    id: "activity-tab-yours"
+- assertVisible:
+    id: "activity-tab-yours"
+    selected: true
+- tapOn:
+    id: "activity-tab-for-you"
+- assertVisible:
+    id: "activity-tab-for-you"
+    selected: true
+# AuthHeader has no back testID. The parent explicitly selects English;
+# use its accessibility label without changing production components.
+- scrollUntilVisible:
+    element:
+      text: '^Back$'
+    direction: UP
+    timeout: 15000
+- tapOn:
+    text: '^Back$'

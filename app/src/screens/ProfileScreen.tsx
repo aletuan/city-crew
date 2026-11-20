@@ -28,7 +28,7 @@ import { GuestHub } from './profile/GuestHub';
 import { AccountProfile } from './profile/AccountProfile';
 import { ProfileReturn } from './profile/ProfileReturn';
 
-export default function ProfileScreen({ navigation }: { navigation: Nav }) {
+export default function ProfileScreen({ navigation, home = false }: { navigation: Nav; home?: boolean }) {
   const { t } = useI18n();
   const { ready, session } = useSession();
   const tabClearance = useTabBarClearance();
@@ -70,7 +70,9 @@ export default function ProfileScreen({ navigation }: { navigation: Nav }) {
   // docs/profile-home-plan.md). Not pushed: the guest's, which is still
   // the tab's first page. Parent tab history can make canGoBack() true
   // at the stack root, so inspect this stack's index instead.
-  const [pushed] = useState(() => navigation.getState().index > 0);
+  // MeScreen can mount this hub before the sign-out reset removes Account.
+  // The navigator's active index then describes Account, not this root route.
+  const [pushed] = useState(() => !home && navigation.getState().index > 0);
   const stack = useMemo(() => (pushed ? ['ProfileHome', 'Account'] : undefined), [pushed]);
   const returning = useMemo(() => ({ sheet, spendSheet, y, scrollBy, stack }), [sheet, spendSheet, scrollBy, stack]);
   // Signed out from here — the last rows of this page — there is no

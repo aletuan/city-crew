@@ -347,6 +347,20 @@ describe('the gate', () => {
     expect(r.raw.popToTop).not.toHaveBeenCalled();
   });
 
+  it('keeps the newly mounted guest hub at root while the old Account stack is still settling', () => {
+    state.session = null;
+    const r = nav(true);
+    const route = { key: 'ProfileHome-1', name: 'ProfileHome' as const };
+    const page = render(<MeScreen navigation={r.n} route={route} />);
+    expect(screen.getByTestId('profile-sign-in')).toBeTruthy();
+    expect(screen.queryByTestId('account-back')).toBeNull();
+    expect(r.raw.popToTop).not.toHaveBeenCalled();
+    r.raw.getState.mockReturnValue({ index: 0, routeNames: ['ProfileHome', 'Account'] });
+    page.rerender(<MeScreen navigation={r.n} route={route} />);
+    expect(screen.queryByTestId('account-back')).toBeNull();
+    expect(r.raw.popToTop).not.toHaveBeenCalled();
+  });
+
   it('gives a reader with no session the guest hub, not the account', () => {
     state.session = null;
     draw();

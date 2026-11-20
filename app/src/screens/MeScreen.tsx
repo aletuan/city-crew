@@ -35,7 +35,7 @@ export default function MeScreen({ navigation, route }: { navigation: Nav; route
   const { t } = useI18n();
   const { ready, session } = useSession();
   const { profile } = useProfile();
-  if (!ready || !session) return <ProfileScreen navigation={navigation} />;
+  if (!ready || !session) return <ProfileScreen navigation={navigation} home />;
   if (!profile.handle) {
     return (
       <Screen title={t('Profile', 'Trang cá nhân', 'プロフィール', '主页', '主頁')}>
