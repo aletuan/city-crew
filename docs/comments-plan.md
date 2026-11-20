@@ -252,7 +252,7 @@ vào dòng của mình như với `is_public`.
 
 - `collections.comments_off`: tắt là không nhận bình luận mới, bình luận
   cũ vẫn đọc được.
-- `banned_words`: danh sách từ cấm. **Đang trống**; Data Desk sửa ở trang
+- `banned_words`: danh sách từ cấm. **Chưa có từ thật** (chỉ có từ thử `zzmaestroban` của Maestro); Data Desk sửa ở trang
   Banned words (C8).
 - `reports.kind` có giá trị `comment`; `reports_queue` trả nội dung, tên
   bộ và người viết cho loại này, và `moderate_comment` là cách Data Desk
@@ -622,7 +622,8 @@ sở dữ liệu thật ngày 19/11/2026, kiểu dữ liệu đã sinh lại):*
   "ass" không chặn "class"). Danh sách trống thì trang cảnh báo bình luận
   chưa được lọc.
 - **Còn phải làm bằng tay trước khi mở cờ:** nhập danh sách từ cấm. Bảng
-  vẫn trống.
+  mới chỉ có `zzmaestroban`, từ thử của Maestro (chủ dự án duyệt,
+  20/11/2026); từ đó không lọc gì cho người dùng thật.
 
 **C9. Pháp lý và cửa hàng** — xong, trừ luồng Maestro
 - [x] **Điều khoản** (`app/src/lib/legal.ts`, hiệu lực 19/11/2026): bình
