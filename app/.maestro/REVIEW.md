@@ -310,3 +310,14 @@ Base `0a1008d9`, branch `codex/maestro-stable-baseline`. Lấy riêng phần URL
 - Helper là chờ điều kiện `notVisible`, không phải sleep. Nó không chứng minh mọi trường hợp banner có thể đến muộn sau khi assertion đã kết thúc; không coi probe có banner là chứng minh mọi độ trễ mạng. Nếu tái hiện race đó, ghi timestamp từ sự kiện lưu đến notice trước khi tăng timeout.
 - Kiểm tra cú pháp 22 flow + helper mới đạt; `maestroIds.test.ts` 122 test đạt. Full-suite sẽ được ghi riêng sau khi kết thúc trên SHA đã chốt.
 - Worktree/artifacts đặt trên T7 để tránh hết ổ trong: `/Volumes/T7-Workspace/Projects/Claude/city-crew-e2e-stability`. Chỉ một runner foreground, giữ máy thức bằng `caffeinate -i`; không dùng launchd tự khởi động lại.
+
+
+### `centerElement` có thể timeout dù nút đã thấy đầy đủ — 20/11/2026
+
+Lượt toàn suite `20261120-093151`, SHA `52946726`: `17-unfriend` thất bại ở `common/ensure-signed-out.yaml` cuối flow. Đăng xuất đã thành công: screenshot `step-189-scrollUntilVisible-profile-sign-in.png` hiển thị guest Account và nút Sign in; log ghi bounds `(22,232,358,58)` và visibility `1.0` lặp năm lần. `centerElement: true` vẫn cuộn DOWN tới timeout 20s vì nút gần đầu nội dung không thể nằm giữa màn hình. Thông báo cuối “No visible element found” không mô tả đúng nguyên nhân. Đây là lỗi helper test, không phải bằng chứng unfriend hay auth backend hỏng.
+
+**Bài học:** đối chiếu bounds/visibility và screenshot trước khi tăng timeout hoặc sửa selector. Centering là yêu cầu bổ sung ngoài visibility; không dùng nó cho phần tử không thể đưa vào giữa viewport. Cần giữ xử lý nút dưới status bar từng gặp ngày 9/10 khi sửa. Lượt baseline vẫn giữ nguyên YAML; bản sửa và kết quả chạy lại sẽ được ghi riêng sau khi baseline kết thúc.
+
+Cùng lượt, `19-collection-privacy` cũng thất bại ở helper này trong `sign-in-trip-guest`, trước assertion nghiệp vụ privacy. Log lặp cùng bounds y=232 và visibility 1.0 tới timeout; phải chạy lại cả 17 và 19 sau sửa, không tính 19 là đã kiểm chứng quyền riêng tư.
+
+`20-guest-trip-resume` cũng gặp cùng bounds/visibility trong bước chuẩn bị. Baseline hoàn tất **19/22 PASS, 3 FAIL (17/19/20)** trên `52946726`, có JUnit; signup/trip cleanup thành công. Bản sửa helper: bỏ centering ở Sign in, vẫn `scrollUntilVisible` UP, thêm một swipe DOWN để nút không dừng dưới status bar, rồi `assertVisible`. Không tăng timeout. Kết quả kiểm chứng sau sửa đang chờ.
