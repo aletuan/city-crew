@@ -663,6 +663,8 @@ describe('renaming a list', () => {
       return navigation;
     };
     const saveButton = () => screen.getByRole('button', { name: 'Save changes' });
+    // Save follows a sheet's press, which waits out the sheet's exit;
+    // under CI's load the save then took past waitFor's 1s once (#1486).
 
     // Kept for Save like the name: the ✓ lights for it, and Save hands
     // it to the page under the form, which does it by its own sheet's
@@ -673,7 +675,7 @@ describe('renaming a list', () => {
       await pick('public');
       expect(saveButton().getAttribute('aria-disabled')).not.toBe('true');
       fireEvent.click(saveButton());
-      await waitFor(() => expect(navigation.goBack).toHaveBeenCalled());
+      await waitFor(() => expect(navigation.goBack).toHaveBeenCalled(), { timeout: 3000 });
       expect(navigation.dispatch).toHaveBeenCalledWith(expect.objectContaining({
         type: 'SET_PARAMS', payload: { params: { seen: 'public' } }, source: 'page-1',
       }));
@@ -690,7 +692,7 @@ describe('renaming a list', () => {
       expect(saveButton().getAttribute('aria-disabled')).toBe('true');
       fireEvent.change(screen.getByPlaceholderText('Weekend coffee'), { target: { value: 'Night bars' } });
       fireEvent.click(saveButton());
-      await waitFor(() => expect(navigation.goBack).toHaveBeenCalled());
+      await waitFor(() => expect(navigation.goBack).toHaveBeenCalled(), { timeout: 3000 });
       expect(navigation.dispatch).not.toHaveBeenCalled();
     });
 
@@ -699,7 +701,7 @@ describe('renaming a list', () => {
       const navigation = renameOver(false);
       await pick('friends');
       fireEvent.click(saveButton());
-      await waitFor(() => expect(navigation.goBack).toHaveBeenCalled());
+      await waitFor(() => expect(navigation.goBack).toHaveBeenCalled(), { timeout: 3000 });
       expect(navigation.dispatch).toHaveBeenCalledWith(expect.objectContaining({ payload: { params: { seen: 'friends' } } }));
       expect(goTo).not.toHaveBeenCalled();
     });
