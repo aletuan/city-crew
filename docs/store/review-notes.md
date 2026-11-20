@@ -105,11 +105,12 @@ không tìm thấy, hoặc về một bộ lọc chưa lọc gì:
 
 1. Cờ `comments` đã bật cho mọi người (không chỉ `app_flag_testers`), và
    tài khoản demo mở được luồng bình luận của một bộ sưu tập công khai.
-2. Bảng `banned_words` **không trống**. Câu "filtered against a list of
-   banned words" là sai khi danh sách chưa có từ nào:
+2. Bảng `banned_words` có **từ thật**. Câu "filtered against a list of
+   banned words" là sai khi danh sách chưa có từ nào. Từ `zzmaestroban`
+   (từ thử của Maestro, có từ 20/11/2026) không tính:
 
    ```sql
-   select count(*) from public.banned_words;   -- phải > 0
+   select count(*) from public.banned_words where word <> 'zzmaestroban';   -- phải > 0
    ```
 
 3. Trên Data Desk, một báo cáo bình luận thử hiện đúng nội dung và gỡ được
