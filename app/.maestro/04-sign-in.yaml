@@ -3,7 +3,7 @@
 # returns to the guest Profile. Uses the dedicated test account — see README.md.
 appId: host.exp.Exponent
 env:
-  EXPO_URL: exp://127.0.0.1:8081
+  EXPO_URL: ${EXPO_URL || 'exp://127.0.0.1:8081'}
 ---
 - runFlow: common/start.yaml
 - runFlow: common/ensure-signed-out.yaml

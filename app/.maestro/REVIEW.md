@@ -299,3 +299,31 @@ Cleanup tài khoản fixture thành công, không còn JSON ledger/lock của l�
 Lượt `20261120-060554`: 05 PASS **3m01s**, 06 PASS **2m20s**, 13 PASS **4m51s**, 16 PASS **20m14s**. 20 bị `Unknown error` tại tap `tab-trips` trong chuẩn bị, screenshot đã hiển thị Trips rỗng; cleanup đồng thời báo `fetch failed`. Chưa xác định chính xác nguyên nhân gián đoạn; không coi đây là assertion lỗi Account hoặc lỗi nghiệp vụ resume. Ledger được giữ lại và cleanup chạy lại thành công khi mạng phản hồi.
 
 Chạy riêng 20, giữ máy thức trong lúc runner hoạt động: `20261120-065804` **PASS 4m06s**, runner exit 0, cleanup tài khoản fixture thành công. Tổng cộng **5/5 ca mục tiêu đã PASS qua hai lượt**, không phải một lượt 5/5 hay toàn bộ 22 flow. Cả hai lượt đều có JUnit; kiểm tra cú pháp helper và diff whitespace đạt. Chạy trên Metro 8084 bằng bản sao flow chỉ thay URL như lượt trước, source helper mới giống hệt bản được kiểm chứng.
+
+
+## Ổn định URL Metro và RewardBanner — 20/11/2026
+
+Base `0a1008d9`, branch `codex/maestro-stable-baseline`. Lấy riêng phần URL/banner từ branch tham chiếu `claude/maestro-expo-url-reference` (`02fcd0d9`); không lấy lại thay đổi Profile/MeScreen/SessionNavSync hoặc chép đè helper Account đã merge.
+
+- **Flow env thắng tham số CLI:** 22 flow nay giữ `EXPO_URL` được truyền vào bằng `${EXPO_URL || 'exp://127.0.0.1:8081'}`. `00` PASS qua runner mặc định ở `20261120-091655` (27s), trực tiếp không truyền biến ở `.smoke-local/url-default-direct` (26s), và runner override 8085 ở `20261120-091943` (25s). Log `Maestro.openLink` xác nhận đúng URL cho cả hai cổng, không dùng bản sao flow để đổi URL.
+- **Không chỉ kiểm nhánh không có banner:** fixture account mới + collection private rỗng, UI lần đầu lưu có `reward-banner` First Find thật. Probe dùng cùng helper và thêm assertion/screenshot để chứng minh banner tồn tại trước khi chờ; helper đợi khoảng 2,6 giây tới khi banner mất rồi mới bấm Saved. `20261120-092035` PASS 2m29s; lưu lại với cùng account đã nhận badge, probe xác nhận banner không có, `20261120-092317` PASS 2m27s. Sau probe, cleanup cặp account thành công.
+- Helper là chờ điều kiện `notVisible`, không phải sleep. Nó không chứng minh mọi trường hợp banner có thể đến muộn sau khi assertion đã kết thúc; không coi probe có banner là chứng minh mọi độ trễ mạng. Nếu tái hiện race đó, ghi timestamp từ sự kiện lưu đến notice trước khi tăng timeout.
+- Kiểm tra cú pháp 22 flow + helper mới đạt; `maestroIds.test.ts` 122 test đạt. Full-suite sẽ được ghi riêng sau khi kết thúc trên SHA đã chốt.
+- Worktree/artifacts đặt trên T7 để tránh hết ổ trong: `/Volumes/T7-Workspace/Projects/Claude/city-crew-e2e-stability`. Chỉ một runner foreground, giữ máy thức bằng `caffeinate -i`; không dùng launchd tự khởi động lại.
+
+
+### `centerElement` có thể timeout dù nút đã thấy đầy đủ — 20/11/2026
+
+Lượt toàn suite `20261120-093151`, SHA `52946726`: `17-unfriend` thất bại ở `common/ensure-signed-out.yaml` cuối flow. Đăng xuất đã thành công: screenshot `step-189-scrollUntilVisible-profile-sign-in.png` hiển thị guest Account và nút Sign in; log ghi bounds `(22,232,358,58)` và visibility `1.0` lặp năm lần. `centerElement: true` vẫn cuộn DOWN tới timeout 20s vì nút gần đầu nội dung không thể nằm giữa màn hình. Thông báo cuối “No visible element found” không mô tả đúng nguyên nhân. Đây là lỗi helper test, không phải bằng chứng unfriend hay auth backend hỏng.
+
+**Bài học:** đối chiếu bounds/visibility và screenshot trước khi tăng timeout hoặc sửa selector. Centering là yêu cầu bổ sung ngoài visibility; không dùng nó cho phần tử không thể đưa vào giữa viewport. Cần giữ xử lý nút dưới status bar từng gặp ngày 9/10 khi sửa. Lượt baseline vẫn giữ nguyên YAML; bản sửa và kết quả chạy lại sẽ được ghi riêng sau khi baseline kết thúc.
+
+Cùng lượt, `19-collection-privacy` cũng thất bại ở helper này trong `sign-in-trip-guest`, trước assertion nghiệp vụ privacy. Log lặp cùng bounds y=232 và visibility 1.0 tới timeout; phải chạy lại cả 17 và 19 sau sửa, không tính 19 là đã kiểm chứng quyền riêng tư.
+
+`20-guest-trip-resume` cũng gặp cùng bounds/visibility trong bước chuẩn bị. Baseline hoàn tất **19/22 PASS, 3 FAIL (17/19/20)** trên `52946726`, có JUnit; signup/trip cleanup thành công. Bản sửa helper: bỏ centering ở Sign in, vẫn `scrollUntilVisible` UP, thêm một swipe DOWN để nút không dừng dưới status bar, rồi `assertVisible`. Không tăng timeout. Kết quả kiểm chứng sau sửa đang chờ.
+
+Lượt retry `20261120-105743` trên `f3fedc5e` bị gián đoạn, không có JUnit hay kết luận PASS; artifacts dừng ở openLink. Máy reboot lúc 11:33:59 (xác nhận `kern.boottime`), Metro/runner mất, `/tmp` bị dọn. Không đủ bằng chứng kết luận nguyên nhân reboot. Cleanup ledger cũ thành công trước khi chạy lại. Lượt `114411` sai đường dẫn CLI `app/.maestro` sau khi runner đã cd vào app; không thực thi case nào, fixture đã cleanup. Lượt hợp lệ tiếp theo `114433` dùng wrapper local chỉ thêm `--device` UDID iPhone 17 Pro vì sau reboot có thêm Pro Max booted; không sửa hay sao chép flow.
+
+**Kiểm chứng sau sửa:** `20261120-114433`, SHA `f3fedc5e`: 17 PASS 4m39s, 19 PASS 7m59s, 20 PASS 3m42s; JUnit 3/3, runner exit 0, cleanup thành công, không còn JSON ledger signup/trip hay trip lock. Các lần đăng xuất trong 19/20 đi tiếp được vào màn Sign in và nhập credential sau helper mới. Cú pháp helper và 122 kiểm tra testID đạt; 5 gate chạy lại sau reboot đều đạt (7460 test/318 file cho unit và timezone; coverage qua floors). Không gộp baseline và retry thành một lượt 22/22 trên revision cuối.
+
+**Chi phí suite:** baseline có tổng thời gian testcase 5064s (~84m24s), trip invite 1204s (~24%). Có thể ưu tiên đo phần setup/auth/cold start trước khi tối ưu; không diễn giải tổng thời gian driver thành độ trễ app. Cảnh báo Maestro “number of flows (0)” lúc đầu không phải kết quả discovery cuối: JUnit thực tế có đủ 22 tên flow.
