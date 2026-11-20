@@ -108,3 +108,18 @@ EXPO_URL=exp://127.0.0.1:8085 caffeinate -i bash app/.maestro/smoke.sh
 ```
 
 Trước lượt mới kiểm SHA/working tree, chỉ một runner và cwd Metro. P3 theo [e2e-plan.md](e2e-plan.md): làm CM-1…CM-6 và CM-10 bằng A, PR riêng sau merge P1; không chặn A/B, không dùng disposable account cho comments. P2 và phần kế hoạch P3 còn lại được giữ nguyên.
+
+## P3 một tài khoản — `23-comments-own` — 21/11/2026
+
+**Hai lượt xanh liền nhau trên `9fe5854`** (flow), bundle Metro `exp://127.0.0.1:8085` ở `f4b14b4` (main sau #1508; app trên branch giống hệt). Chạy bằng `smoke.sh`, một flow, foreground `caffeinate -i`, không launchctl. iPhone 17 Pro / iOS 26.5, Maestro 2.10.0.
+
+| Run ID | Flow SHA | Kết quả | Ghi chú |
+| --- | --- | --- | --- |
+| `20261121-044930` | `17cb26f1` | FAIL `collection-visibility` | Lần chạm đầu trên thẻ vừa tạo hoàn tất nhưng trang không mở. Sửa: chờ form đóng, `retry` chạm tới khi thấy `collection-more` |
+| `20261121-045435` | `c12c694f` | FAIL `collection-comments-count` | CM-1, CM-2 đã qua; số "1" có trên màn hình nhưng nằm trong nhãn của nút (`Comments, 1`), XCUITest không thấy id con. Sửa: đọc số từ nhãn của `collection-comments` và `comment-reply` |
+| `20261121-045850` | `9fe5854` | **PASS** 5m04s | Có dọn bộ "Maestro Comments" lượt trước để lại |
+| `20261121-050415` | `9fe5854` | **PASS** 4m26s | Lượt thứ hai liền |
+
+Sau cả hai lượt, SQL: không còn bộ "Maestro Comments" nào của @maestro, không còn bình luận nào của @maestro. Từ `zzmaestroban` vẫn trong `banned_words`.
+
+Bài học cho P3 hai tài khoản: số đếm vẽ trong một nút (`collection-comments-count`, `comment-replies`, có lẽ cả `comment-likes`) không đọc được bằng id riêng; đọc từ nhãn của nút cha.
