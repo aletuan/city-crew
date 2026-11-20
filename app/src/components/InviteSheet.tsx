@@ -64,7 +64,9 @@ export default function InviteSheet({
   // rather than an empty slate the reader would have to rebuild.
   const [picked, setPicked] = useState<Set<string>>(new Set());
   useEffect(() => {
-    if (open) setPicked(new Set(rows.filter((r) => r.invited).map((r) => r.id)));
+    // `seated`, not `invited`: a refusal is an invitation on the row but
+    // not a yes, and ticking it opened the sheet saying she was coming.
+    if (open) setPicked(new Set(rows.filter((r) => r.seated).map((r) => r.id)));
   }, [open, rows]);
 
   const { invite, withdraw } = diffSelection(rows, picked);
@@ -147,12 +149,13 @@ export default function InviteSheet({
       rows={rows.map((r) => {
         const on = picked.has(r.id);
         const benched = full && !on && !r.locked;
-        return {
-          id: r.id,
-          on,
-          off: r.locked || benched,
-          badge: r.locked ? t('Answered', 'Đã trả lời', '回答済み', '已回复', '已回覆') : undefined,
-        };
+        // An answered row says which way: a locked row that holds no seat
+        // is a refusal (`candidates`), and wearing "Answered" it looked
+        // like a yes (owner, 20 Nov 2026).
+        const badge = !r.locked ? undefined : r.seated
+          ? t('Accepted', 'Đã đồng ý', '承諾済み', '已接受', '已接受')
+          : t('Can’t make it', 'Không đi được', '不参加', '无法参加', '無法參加');
+        return { id: r.id, on, off: r.locked || benched, badge };
       })}
       people={people}
       // The Crew screen is where that happens — and no link to it from

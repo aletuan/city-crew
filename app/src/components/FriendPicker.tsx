@@ -44,9 +44,9 @@
 // number of friends, which would be two sheets to learn.
 //
 // A face that cannot be moved says so on the strip too. An answered
-// invitation keeps its tick and wears the word under the name
-// (`badge`), where the rows put it in place of the tick; a seat the
-// evening has no room for (`off`) is dimmed and silent under the thumb.
+// invitation wears its answer under the name (`badge`): a yes keeps its
+// tick, a refusal has none and is dimmed; a seat the evening has no room
+// for (`off`) is dimmed and silent under the thumb.
 //
 // ── no search field ──
 //
@@ -78,7 +78,7 @@ export type PickRow = {
    *  disabled — a checkbox that ignores the tap is worse than one that
    *  stands down. */
   off?: boolean;
-  /** A word worn under the name — an answered invitation's "Answered".
+  /** A word worn under the name — an answered invitation's answer.
    *  A tick that cannot be untapped should not look like one that can. */
   badge?: string;
 };
@@ -217,9 +217,10 @@ function Strip({ rows, people, rowTestID, onToggle }: {
             accessibilityState={{ checked: r.on, disabled: !!r.off }}
             aria-checked={r.on}
             testID={rowTestID(i)}
-            // Dimmed only when there is no seat. An answered face keeps
-            // its tick at full strength: it is the one that says yes.
-            contentStyle={[s.cell, { width: cell }, r.off && !r.badge && s.cellOff]}
+            // Dimmed when it cannot be ticked and is not: no seat left, or
+            // a refusal. A face that is ticked and locked — a yes — keeps
+            // its strength: it is the one that says yes.
+            contentStyle={[s.cell, { width: cell }, r.off && !r.on && s.cellOff]}
           >
             <View style={[s.halo, r.on && s.haloOn]}>
               <Avatar url={p?.avatar_url} size={FACE} />
@@ -233,7 +234,7 @@ function Strip({ rows, people, rowTestID, onToggle }: {
                 </View>
               ) : null}
             </View>
-            <Text style={s.cellName} numberOfLines={2}>{name}</Text>
+            <Text style={[s.cellName, r.badge && s.cellNameTagged]} numberOfLines={2}>{name}</Text>
             {r.badge ? <Text style={s.cellBadge}>{r.badge}</Text> : null}
           </PressableScale>
         );
@@ -266,6 +267,9 @@ const s = StyleSheet.create({
   stripIn: { paddingHorizontal: space.page - 7, paddingTop: 8, paddingBottom: 2 },
   cell: { alignItems: 'center', gap: 6 },
   cellOff: { opacity: 0.4 },
+  // The two lines held for a long name are not held when the word sits
+  // under it, or it hangs a line below a short one.
+  cellNameTagged: { minHeight: 0 },
   cellBadge: { color: colors.textTertiary, fontSize: 11, lineHeight: 14, marginTop: -4 },
   halo: { width: HALO, height: HALO, borderRadius: HALO / 2, alignItems: 'center', justifyContent: 'center' },
   haloOn: { backgroundColor: colors.accentSoft },
