@@ -14,14 +14,26 @@ Baseline 22/22 đạt trong một lượt trên `d0c9cd07` (lượt `20261120-14
 
 Tài khoản A = `TEST_EMAIL` (`@maestro`).
 
+**Đã làm PA-1…PA-6** trong `22-profile-account.yaml`. Lượt đạt đầu tiên:
+`20261120-181004`; lượt liên tiếp thứ hai: `20261120-181405`, cùng SHA
+`54bdd56398509aa36e80f5de359dcb84a0950e3f`. Suite 22 flow hiện có đạt
+`20261120-192724` trên cùng SHA; sau đó mới đăng ký flow 22 vào config.
+Sau rebase: full **23/23** `20261120-222643` trên
+`34a7121e59b657929a2b6fdb302226208433267b`; 22 cũng đạt lượt riêng
+`20261120-213702` trên `4fb26f05`.
+Tích hợp thêm #1510: nhóm 22/05/13/16/20 **5/5** `20261121-000339`,
+full **23/23** `20261121-003748`, cùng SHA
+`8be85a2e757aeeb659868dd4a7d4ee43d950869b`.
+Chi tiết lỗi phát hiện, bản sửa và giới hạn: [e2e-latest.md](e2e-latest.md).
+
 | Ca | Bước và assertion | Bảo vệ điều gì |
 | --- | --- | --- |
-| PA-1 tab cuối là trang của bạn | `tab-profile` → thấy `person-own-face`, `person-handle` chứa `@maestro`, `person-own-tools` với `person-search`, `person-bell`, `person-settings`; **không** thấy `account-back` | P1 của `docs/profile-home-plan.md` và #1485: tab mở trang của bạn, công cụ ở đầu trang |
-| PA-2 vào và ra Tài khoản | `person-settings` → `account-back`, `profile-email` khớp `TEST_EMAIL` → `account-back` → lại thấy `person-handle` | lối vào Tài khoản bằng bánh răng và đường quay về |
-| PA-3 Hoạt động từ hai lối | `person-bell` → `activity-tab-for-you` và `activity-tab-yours` hiện → back. Rồi `person-settings` → cuộn tới dòng chữ `.*Activity.*What's new.*` → cùng màn Hoạt động | #1463 và #1478: hai lối vào một trang, hai tab |
-| PA-4 tìm trên trang | `person-search` → gõ vào `person-find-input` tên một bộ của A → bộ đó hiện → `person-find-cancel` → trang trở lại như cũ | #1491 |
-| PA-5 khách không có nút quay lại | `ensure-signed-out` → `tab-profile` → `profile-sign-in` và `profile-sign-up` hiện; **không** thấy `account-back` | lỗi `canGoBack()` đã sửa ở #1479: trang khách từng có chevron quay về Explore |
-| PA-6 đăng xuất không hiện màn đỏ | `person-settings` → cuộn tới `profile-sign-out` → xác nhận → `profile-sign-in` hiện; `notVisible: text ".*POP_TO_TOP.*"` | lỗi `POP_TO_TOP` khi đăng xuất (#1479; chỉ hiện ở bản dev) |
+| ✅ PA-1 tab cuối là trang của bạn | `tab-profile` → thấy `person-own-face`, `person-handle` chứa `@maestro`, `person-own-tools` với `person-search`, `person-bell`, `person-settings`; **không** thấy `account-back` | P1 của `docs/profile-home-plan.md` và #1485: tab mở trang của bạn, công cụ ở đầu trang |
+| ✅ PA-2 vào và ra Tài khoản | `person-settings` → `account-back`, `profile-email` khớp `TEST_EMAIL` → `account-back` → lại thấy `person-handle` | lối vào Tài khoản bằng bánh răng và đường quay về |
+| ✅ PA-3 Hoạt động từ hai lối | `person-bell` → `activity-tab-for-you` và `activity-tab-yours` hiện → back. Rồi `person-settings` → cuộn tới dòng chữ `.*Activity.*What's new.*` → cùng màn Hoạt động | #1463 và #1478: hai lối vào một trang, hai tab |
+| ✅ PA-4 tìm trên trang | `person-search` → gõ vào `person-find-input` tên một bộ của A → bộ đó hiện → `person-find-cancel` → trang trở lại như cũ | #1491 |
+| ✅ PA-5 khách không có nút quay lại | `ensure-signed-out` → `tab-profile` → `profile-sign-in` và `profile-sign-up` hiện; **không** thấy `account-back` | lỗi `canGoBack()` đã sửa ở #1479: trang khách từng có chevron quay về Explore |
+| ✅ PA-6 đăng xuất không hiện màn đỏ | `person-settings` → cuộn tới `profile-sign-out` → xác nhận → `profile-sign-in` hiện; `notVisible: text ".*POP_TO_TOP.*"` | lỗi `POP_TO_TOP` khi đăng xuất (#1479; chỉ hiện ở bản dev) |
 
 PA-1, PA-2, PA-5 và PA-6 có thể là một flow. PA-3 và PA-4 có thể thêm vào flow đó hoặc tách riêng, tuỳ thời gian chạy.
 

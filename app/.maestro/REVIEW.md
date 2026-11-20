@@ -348,3 +348,47 @@ Chạy riêng 05 giữ nguyên YAML trên `ad7df999`: `20261120-141628` PASS 2m3
 Helper mới: `20261120-142003` 05 PASS 2m40s, `open-best-plan.yaml` hoàn tất bằng assertion editor trước scroll Save; cleanup thành công. 123 selector tests và cú pháp đạt. Những dòng FAIL nhanh của 06 trở đi trong lượt `140733` xuất hiện khi SIGINT dừng runner, không phân loại là lỗi assertion độc lập hay kết quả kiểm chức năng; chỉ 05 có lỗi quan sát trước khi hủy. Root cause cấp touch/driver của tap bị mất vẫn chưa chứng minh, không gọi một lần PASS là đã loại bỏ mọi flake.
 
 **Baseline xanh được xác nhận:** run `20261120-142328`, SHA `d0c9cd07b033d3abf28fa5d94107697fbcc32421`, 22/22 PASS trong 1h16m45s; JUnit khớp đủ 22 flow config, không failures/errors/skips, runner exit 0. 05/13/16/20 dùng helper mở editor mới đều đạt trong cùng lượt. Không sửa executable files giữa lượt. Cleanup không còn JSON ledger signup/trip/probe hoặc trip lock. Audit hai tài khoản Keychain sau test bằng backend app: không đổi so với trước — đúng một Smoke cũ Private/rỗng, không CRUD tồn dư, tài khoản 2 không collection. Chi tiết artifacts và giới hạn root cause của lần tap mất ở `docs/testing/e2e-latest.md`.
+
+## P1: kiểm tra native phát hiện trạng thái mà test render bỏ sót (20/11/2026)
+
+- Lượt probe `20261120-175938`, base main `7737fe91`: PA-1/PA-2 và kết quả tìm bộ `Maestro smoke` đã qua; tap `person-find-cancel` chỉ đóng bàn phím, `person-find-input` vẫn hiện. Screenshot `step-111-assertCondition-person-find-input.png`. `PersonScreen` dùng ScrollView không đặt `keyboardShouldPersistTaps`; bước tiếp theo tách `hideKeyboard` trước khi kiểm nút huỷ. Đây là điểm UX còn tồn tại, không phải lý do bỏ assertion huỷ. Bản điều chỉnh đã qua hai lượt P1 ghi dưới.
+- Probe `20261120-180318` bắt đầu từ phiên đang đăng nhập: `ensure-signed-out` xong nhưng trang khách vẫn hiện `account-back` (screenshot `step-055-assertCondition-account-back.png`). PA-5 fail thật trên native, không coi tap tab thêm lần nữa hoặc cold start là sửa lỗi.
+- Giả thuyết source: `MeScreen` chuyển từ Person sang `ProfileScreen` khi mất session, trong khi stack vẫn có Account phía trên; `ProfileScreen` chụp `navigation.getState().index > 0` vào `useState` lúc mount. Reset stack sau đó không đổi giá trị `pushed` đã chụp. Regression test và hai lượt native sau đó xác nhận bản sửa; xem kết quả dưới.
+- Selector tìm kiếm phải kết hợp `id: activity-open` và title của collection; assert riêng chữ `Maestro smoke` có thể đạt vì chính ô nhập chứa nó.
+- Các probe không phải lượt nghiệm thu; ở thời điểm probe chưa thêm flow 22 vào config. Giữ yêu cầu hai lượt liên tiếp và suite xanh trên cùng SHA.
+- Probe riêng `20261120-180542` (bỏ assertion Back để chẩn đoán, **không** tính nghiệm thu) đã qua PA-1/2/3/4/6; `hideKeyboard` giúp nút huỷ thực sự đóng search. Hai lối Hoạt động và chuyển tab đều qua. Không đổi UX bàn phím trong PR này.
+- Regression unit `keeps the newly mounted guest hub at root while the old Account stack is still settling` tái hiện lỗi trên source cũ. Bản sửa truyền `home` từ `MeScreen`, không suy ra vị trí của hub từ active index của navigator; 130 test của ProfileScreen/MeScreen đã xanh sau sửa. Nghiệm thu native trên `54bdd563`: hai lượt `20261120-181004`/`20261120-181405` PASS; full suite cuối `20261120-192724` đạt 22/22. Sau đó mới đăng ký flow 22 vào config.
+
+### Không che failure mạng bằng cách cộng lượt hoặc tăng timeout
+
+- Full `20261120-181739` trên `54bdd563`: 20/22, lỗi 16/17. 16 đã vào tab Profile nhưng hierarchy còn `person-loading` sau 15s; nguyên nhân request cụ thể chưa rõ. 17 có alert rõ “The network connection was lost” sau Accept. Screenshot/step và run nằm trong e2e-latest.md.
+- Không sửa selector, timeout hay bỏ assertion; để suite hoàn tất, kiểm tra cleanup, restart riêng simulator test rồi chạy lại **toàn bộ** 22 flow trên cùng SHA. Run `20261120-192724`: 22/22, không failure/error/skip, cleanup sạch; 16/17 đều PASS. Không coi retry thành công là đã chữa được flaky.
+- CLI retry từng báo “0 flows” lúc khởi tạo nhưng thực thi đầy đủ: đối chiếu JUnit với config theo cả tên, số lượng và thứ tự; không chỉ xem exit code hay một dòng console.
+
+## Rebase P1: search rộng phụ thuộc chiều dài dữ liệu trước kết quả (20/11/2026)
+
+- Trên rebase `4fb26f05b5e2a673a98961d3c59196c0b6075879` (main `8d2c98ab`), 22 đạt `20261120-213702`, nhóm 05/13/16/20 đạt `20261120-214100` và dọn sạch fixture.
+- Full attempt `20261120-221219`: 00–02 qua, 03 hết hạn cuộn 30s. Dừng có kiểm soát (exit 130) sau failure để sửa; signup/trip cleanup thành công. Đây là lượt chưa hoàn tất, không phải kết quả toàn suite.
+- 03 nguyên bản tái hiện `20261120-221734`. Giảm visibility xuống 80%/center không giúp (`20261120-221911`), và probe không cuộn (`20261120-222105`) cho thấy chỉ Collections đang ở viewport. Vì vậy loại giả thuyết clipping/đổi tab: vẫn là Search, nhưng Places nằm dưới nhiều Collections.
+- Source `buildSearchRows` đưa **mọi** collection khớp lên trước Places, không giới hạn số hàng. Các hierarchy sau lần cuộn cuối đã có search-result-0, nhưng lệnh vừa hết budget. Không đổi keyword `cafe`, không đổi selector đầu tiên, không giảm yêu cầu hiển thị 100%.
+- Bản sửa chỉ tăng budget cuộn hữu hạn lên 60s. Probe `20261120-222307` PASS 1m12s: riêng bước cuộn mất **30,67s**, sau đó tap search-result-0, detail-name, Back, xoá query và Cancel đều qua. Đây là thời gian đi qua danh sách, không phải đo latency request. Xác nhận commit `34a7121e`: 03 riêng `20261120-222450` PASS; full `20261120-222643` **23/23 PASS**, exit 0 và cleanup sạch.
+- Unit sau rebase: một lần timeout 3s ở CollectionFormScreen (Save audience) khi chạy mặc định song song simulator. File 74 test chạy riêng qua; toàn bộ unit/timezone/coverage với 2 worker đều 7531/319 PASS, không thay test hoặc timeout. Chưa coi là đã sửa được flaky; CI vẫn phải qua trước merge.
+
+- CI mặc định trên `34a7121e` đã PASS (Actions `44769675558`), gồm app/unit/timezone/coverage. Không xoá bằng chứng timeout local; nguyên nhân flaky vẫn chưa được chứng minh.
+
+### CI xanh chưa đủ nếu head chậm main
+
+- Head `91e0b2e0843e914e1d4746bfbff6d27c2c4e23ef` đã có E2E 23/23 trên source tương ứng và CI xanh (`44777238440`), nhưng `gh pr merge --squash --match-head-commit` bị từ chối vì main thêm #1510. `gh pr view` báo `BEHIND`.
+- Endpoint branch protection trả "Branch not protected" không chứng minh không có điều kiện merge khác (ví dụ ruleset). Tin kết quả merge/mergeStateStatus, không dùng `--admin` để bỏ qua.
+- Rebase thêm #1510 thành `8be85a2e757aeeb659868dd4a7d4ee43d950869b`, range-diff giữ nguyên bốn commit của PR. Các gate local lại PASS; chạy lại 22, nhóm Trips và full trên SHA mới. Kết quả native chỉ ghi sau khi hoàn tất, không mang 23/23 cũ sang SHA này.
+
+- Nghiệm thu sau rebase lần hai: `20261121-000339` **5/5** (22/05/13/16/20), `20261121-003748` **23/23** toàn config, cùng `8be85a2e`. Runner exit 0, JUnit không failure/error/skip; signup/trip ledgers rỗng, A chỉ còn bộ Private cũ, B không có bộ. CI `44780565125` PASS.
+
+### DOM đã đổi chưa chắc Pressable đã nhận cấu hình mới trong UI test
+
+- CI `44797970177`, head `8ce0e0cc`, thất bại `CollectionFormScreen › hands Friends to the page under it`: nhãn Friends đã đổi, Save không busy/disabled trên DOM, nhưng không gọi goBack sau 3s. Trước đó local từng fail ca Save Public cùng helper. Không merge khi CI đỏ.
+- Source: SheetRows gọi lựa chọn qua timer 220ms; helper `pick` chỉ đợi chữ. `react-native-web/usePressEvents` cấu hình lại responder trong `useEffect`, tách khỏi DOM commit. Vì vậy mutation observer của waitFor có thể trả trước effect; tăng thời gian chờ navigation sau một click bị bỏ không giải quyết được thứ tự này.
+- Sửa ở **test helper**: sau khi nhãn đổi, `await act(async () => {})` để flush effects trước thao tác tiếp; giữ tất cả assertion dispatch/goBack và bỏ timeout 3s ở ba ca Save. Không đổi production app, Maestro hoặc timeout E2E.
+- Giới hạn chẩn đoán: 100 lượt ca Friends trên helper cũ chạy riêng đều PASS; chưa tái hiện race có kiểm soát trên máy local. Cơ chế trên là kết luận từ source và bằng chứng CI, không phải phép đo trực tiếp responder tại thời điểm failure. File 74 test sau sửa PASS; kết quả stress/gates/CI tiếp theo ghi trong e2e-latest.md.
+
+- Sau sửa helper: 74/74 file, stress 100/100; mutant bỏ dispatch audience FAIL đúng assertion rồi hoàn nguyên. Năm gate mặc định local (không giới hạn worker) đều PASS: 7.531/319, coverage floors đạt. Production app/flow so với `8be85a2e` không thay đổi; không chạy lại native chỉ vì thay đồng bộ trong unit test.

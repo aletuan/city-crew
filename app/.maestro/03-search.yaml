@@ -38,7 +38,11 @@ env:
     element:
       id: "search-result-0"
     direction: DOWN
-    timeout: 30000
+    # Collections are not capped in buildSearchRows. With the live cafe
+    # matches, the first place only mounted after the last swipe of the
+    # old 30s budget. Keep the query/first-result/100% checks; allow time
+    # to traverse the preceding collection rows, not a fixed sleep.
+    timeout: 60000
 - waitForAnimationToEnd:
     timeout: 5000
 - tapOn:

@@ -9,9 +9,10 @@ says what each flow checks; it does not say how many there are, because a
 count written here is a count that goes stale — this sentence replaced one
 that said eight when the directory held nine.
 
-They select by `testID` only — never by label — because every label is
-trilingual. The one exception is iOS's own alert buttons, which take no id
-and are matched in all three languages.
+They prefer existing `testID`s. Native alerts use labels; Account rows
+share `feature-row`, so `common/open-crew.yaml` and P1 use the row's text.
+P1 explicitly selects English before matching Activity and the existing
+AuthHeader Back label (which has no testID). Fixture titles are data.
 
 **Not wired into CI.** These run on a developer's Mac by hand. Running them
 on GitHub would need a macOS runner plus a dev build (Expo Go cannot be
@@ -19,7 +20,7 @@ scripted from a Linux job). See "Why not CI" at the end.
 
 ## Latest verified results / bàn giao cho agent
 
-Xem [kết quả và bàn giao ngày 20/11/2026](../../docs/testing/e2e-latest.md) trước khi tiếp tục: revision, kết quả từng run, artifacts và các giới hạn. Năm ca lỗi mục tiêu đã PASS qua hai lượt sau sửa helper; chưa chạy lại toàn suite trên revision cuối. [REVIEW.md](REVIEW.md) giữ nguyên nhân và bài học của từng đợt.
+Xem [kết quả và bàn giao ngày 20/11/2026](../../docs/testing/e2e-latest.md) trước khi tiếp tục: revision, kết quả từng run, artifacts và các giới hạn. Sau rebase, toàn config **23/23 PASS** trong lượt `20261121-003748` trên `8be85a2e`; các lượt riêng và lịch sử P1 có trong file bàn giao. [REVIEW.md](REVIEW.md) giữ nguyên nhân và bài học của từng đợt.
 
 ## What runs
 
@@ -46,7 +47,8 @@ Xem [kết quả và bàn giao ngày 20/11/2026](../../docs/testing/e2e-latest.m
 | `19-collection-privacy.yaml` | A switches a populated collection Private → Public → Private through UI. B checks Community after each state; public detail has no Edit/Delete. Read-only REST checks both collection and members as A/B without client visibility filters. |
 | `20-guest-trip-resume.yaml` | Guest edits a draft’s arrival time, signs in, and returns to the same first stop/time. Verify session email; Trips remains empty until explicit Save; cold restart shows one trip, then it is deleted. |
 | `21-tab-bar-responsive.yaml` | As a guest, then signed in after a cold start: every tab opens its screen within 10 s (the tab reads selected, then its content shows); Collections → Community → Mosaic, scrolled through the first city's block (which has no heading at rest since 7 Nov) — and a jump to Elsewhere through the city sheet, opened from the pinned city bar when it is up, else from a heading; once tapped the sheet must open — then away to Explore, Trips, Profile and back. Written for the 6 November freeze; see *Reproducing the 6 November freeze*. |
-| `12-language.yaml` | As a guest: Profile → Language → Tiếng Việt, the Places tab reads "Địa điểm", the first place opens and draws; the same in 日本語 ("スポット"); back to English. The only flow that asserts labels. Runs last — the choice persists on the device. |
+| `22-profile-account.yaml` | PA-1…PA-6: own Profile header/tools, Account email and return, both Activity entrances/tabs, search/cancel, guest root and sign-out without POP_TO_TOP. Uses TEST_EMAIL (@maestro) and the existing private "Maestro smoke" list; creates no business data. English setup; keyboard dismissed before cancel. |
+| `12-language.yaml` | As a guest: Profile → Language → Tiếng Việt, the Places tab reads "Địa điểm", the first place opens and draws; the same in 日本語 ("スポット"); back to English. Deliberately checks translated labels. Runs last — the choice persists on the device. |
 
 The signed-in flows share `common/start.yaml` (open fresh, grant
 notifications — saving a trip plants a reminder, and the permission alert
@@ -319,7 +321,9 @@ reaches the native view.
 | `CitySwitcher` | `city-search`, `city-row-<index>` (the A–Z list), `city-recent-<index>` (the recent section, when shown) |
 | `PlaceDetailScreen` | `detail-name`, `detail-address`, `detail-photo`, `detail-back` |
 | `SearchScreen` | `search-input`, `search-cancel`, `search-result-<index>` |
-| `ProfileScreen` | `profile-sign-in` (guest), `profile-sign-out` (signed in), `profile-delete-account`, `profile-language`, `profile-email` (actual signed-in email) |
+| `ProfileScreen` | `account-back`, `profile-sign-up`, `profile-sign-in` (guest), `profile-sign-out` (signed in), `profile-delete-account`, `profile-language`, `profile-email` (actual signed-in email) |
+| `PersonScreen` / own page | `person-own-face`, `person-handle`, `person-own-tools`, `person-search`, `person-bell`, `person-settings`, `person-find-input`, `person-find-cancel`; collection result `activity-open` + title |
+| `ActivityScreen` | `activity-tab-for-you`, `activity-tab-yours`; existing Back accessibility label in English |
 | `LanguageSwitcher` | `lang-<en\|vi\|ja\|zh>` |
 | `SignInScreen` | `signin-email`, `signin-password`, `signin-submit`, `signin-switch-signup` (`SwitchRow`), `signin-forgot`; `auth-error` (`FormError`) |
 | `ForgotPasswordScreen` | `forgot-email`, `forgot-submit`; on the code step `forgot-code`, `forgot-resend`, `forgot-reset` (`forgot-password` is set but no flow types into it — see `14`'s header) |
