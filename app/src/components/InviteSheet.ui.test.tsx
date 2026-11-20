@@ -12,7 +12,7 @@
 import React from 'react';
 import * as Haptics from 'expo-haptics';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { fireEvent, render, screen } from '../uitest/render';
+import { fireEvent, render, screen, viewStyleOf } from '../uitest/render';
 
 vi.mock('../lib/i18n', () => ({
   useI18n: () => ({ lang: 'en', setLang: () => {}, t: (en: string) => en }),
@@ -40,7 +40,6 @@ const show = (props: Partial<React.ComponentProps<typeof InviteSheet>> = {}) => 
     company="friends"
     friendIds={friendIds}
     people={people}
-    mutual={{ lan: 4, minh: 2, ha: 6 }}
     invites={[]}
     sending={false}
     onClose={() => {}}
@@ -52,23 +51,15 @@ const show = (props: Partial<React.ComponentProps<typeof InviteSheet>> = {}) => 
 beforeEach(() => onSend.mockClear());
 
 describe('the list', () => {
-  it('names each friend with their handle and shared saves', () => {
+  // A strip of faces to scroll sideways since 20 Nov 2026 (owner): the
+  // name under each face and nothing else — no handle, and no count of
+  // places saved in common.
+  it('draws each friend as a face with a name, across', () => {
     show();
+    expect(screen.getByTestId('picker-strip')).toBeTruthy();
     expect(screen.getByText('Lan Phương')).toBeTruthy();
-    expect(screen.getByText('@lanphuong · 4 mutual saves')).toBeTruthy();
-    expect(screen.getByText('@hamy · 6 mutual saves')).toBeTruthy();
-  });
-
-  it('says one save in the singular', () => {
-    show({ mutual: { lan: 1 } });
-    expect(screen.getByText('@lanphuong · 1 mutual save')).toBeTruthy();
-  });
-
-  // A friend with nothing in common is still a friend, and a bare "· 0"
-  // reads as a score they lost.
-  it('leaves the number off entirely when there is nothing shared', () => {
-    show({ mutual: {} });
-    expect(screen.getByText('@lanphuong')).toBeTruthy();
+    expect(screen.queryByText(/@lanphuong/)).toBeNull();
+    expect(screen.queryByText(/mutual save/)).toBeNull();
   });
 
   it('points at the Crew screen rather than dead-ending an empty list', () => {
@@ -210,6 +201,14 @@ describe('a couple’s evening', () => {
     expect(felt).toHaveBeenCalledTimes(1);
   });
 
+  // On the strip a benched face is dimmed, and an answered one is not: the
+  // answered face is the one that says yes.
+  it('dims a benched face and leaves an answered one at full strength', () => {
+    show({ company: 'couple', invites: [inv({ invitee_id: 'lan', status: 'accepted' })] });
+    expect(viewStyleOf(screen.getByTestId('invite-friend-0').firstElementChild!).opacity).toBeUndefined();
+    expect(viewStyleOf(screen.getByTestId('invite-friend-1').firstElementChild!)).toMatchObject({ opacity: 0.4 });
+  });
+
   it('wakes the list back up when the tick comes off', () => {
     show({ company: 'couple' });
     fireEvent.click(screen.getByText('Lan Phương'));
@@ -245,19 +244,16 @@ describe('a couple’s evening', () => {
   });
 });
 
-describe('a row with less to say', () => {
+describe('a face with less to say', () => {
   it('names a friend by handle when the profile has no name', () => {
-    show({ people: { ...people, minh: { ...people.minh, full_name: '' } }, mutual: {} });
-    // As the name, and again as the meta line — the handle is all there is.
-    expect(screen.getAllByText(/minhdi/)).toHaveLength(2);
+    show({ people: { ...people, minh: { ...people.minh, full_name: '' } } });
+    // The handle is all there is, so it is the name under the face.
+    expect(screen.getByText('minhdi')).toBeTruthy();
   });
 
-  it('calls a friend the crew copy has not loaded Someone, with an empty meta line', () => {
-    show({ people: { lan: people.lan }, mutual: {} });
+  it('calls a friend the crew copy has not loaded Someone', () => {
+    show({ people: { lan: people.lan } });
     expect(screen.getAllByText('Someone')).toHaveLength(2);
-    // One handle on the sheet — Lan's. Not "@undefined" twice under the
-    // two the crew copy has not loaded.
-    expect(screen.getAllByText(/@/).map((el) => el.textContent)).toEqual(['@lanphuong']);
   });
 });
 
@@ -265,7 +261,7 @@ describe('closed, and opened again', () => {
   it('draws nothing while closed, and reseeds the ticks from the truth on opening', () => {
     const view = render(
       <InviteSheet
-        open={false} company="friends" friendIds={friendIds} people={people} mutual={{}}
+        open={false} company="friends" friendIds={friendIds} people={people}
         invites={[inv({ invitee_id: 'lan' })]} sending={false} onClose={() => {}} onSend={onSend}
       />,
     );
@@ -273,7 +269,7 @@ describe('closed, and opened again', () => {
 
     view.rerender(
       <InviteSheet
-        open company="friends" friendIds={friendIds} people={people} mutual={{}}
+        open company="friends" friendIds={friendIds} people={people}
         invites={[inv({ invitee_id: 'lan' })]} sending={false} onClose={() => {}} onSend={onSend}
       />,
     );

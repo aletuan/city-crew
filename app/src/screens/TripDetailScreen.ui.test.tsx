@@ -93,7 +93,6 @@ vi.mock('../lib/crew', () => ({
   useCrew: () => ({
     ships: { data: state.ships },
     people: { host: { avatar_url: 'host.jpg' } },
-    mutual: {},
   }),
 }));
 vi.mock('../lib/invitations', () => ({

@@ -140,7 +140,6 @@ export default function ShareSheet({
           '選んだ友だちだけがこのリストを見て使えます。',
           '只有你选择的好友才能看到和使用这个清单。', '只有你選擇的好友才能看到和使用這個清單。',
         )}
-      across
       rows={rows.map((id) => ({ id, on: picked.has(id) }))}
       people={people}
       // "Friends", the app's word for them — the line said "crew" /
