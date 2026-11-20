@@ -45,8 +45,7 @@ PA-7 và PA-8 cần A và B **chưa** là bạn, mà `17-unfriend` để họ l�
 3. **Giới hạn 30 bình luận mỗi người mỗi 24 giờ** (`own_comments_today`, chỉ đếm các dòng còn tồn tại). Mỗi flow đăng tối đa khoảng 3 bình luận. Một lượt fail giữa chừng để lại bình luận cho tới khi bộ bị xoá, nên phần dọn phải chạy cả khi flow fail, hoặc lượt sau phải dọn trước.
 4. **Từ cấm cho CM-10: đã duyệt** (chủ dự án, 20/11/2026 17:58). Từ `zzmaestroban` nằm trong bảng `banned_words` thật từ lúc đó. Đã kiểm bằng `comment_clean`: "Test ZZMAESTROBAN!" bị chặn; "zzmaestrobanned" và một câu bình thường thì qua (luật khớp cả từ). Flow không thêm hay xoá từ này: chỉ tài khoản biên tập sửa được bảng, và tài khoản Maestro không phải biên tập. Không xoá từ này khỏi bảng khi dọn dẹp.
 5. **Báo cáo cho CM-11: đã duyệt** (chủ dự án, 20/11/2026 18:12). Flow được gửi một báo cáo bình luận thật; nó vào hàng chờ Reports của Data Desk. Màn báo cáo không có ô ghi chú (chỉ chọn lý do, `reportFlow.tsx`), nên báo cáo không tự nói mình là test. Nhận ra nó bằng: người báo là `@usera8b792a2`, lý do "Something else", và sau khi bộ bị xoá thì dòng đó hiện "Nothing left to show". Flow không đóng được báo cáo (chỉ biên tập viên đóng được), nên nó nằm lại trong hàng chờ cho tới khi chủ dự án bấm "Nothing wrong". Mỗi người gửi tối đa 20 báo cáo một ngày (`my_reports_today`); vượt mức thì app báo "Could not send this report".
-6. **Còn chờ chủ dự án quyết**, đừng viết trước khi có câu trả lời:
-   - **Chặn:** chặn sẽ cắt tình bạn A–B, mà `17-unfriend` đang dùng cặp đó.
+6. **Chặn: không làm trên cặp A–B** (chủ dự án, 20/11/2026 18:44). Chặn cắt tình bạn A–B, mà `17-unfriend` cần hai người là bạn khi kết thúc; một lượt fail giữa chừng sẽ để cặp này ở trạng thái đã chặn và làm hỏng các lượt sau. Việc chặn ẩn bình luận được bảo vệ ở bench thay cho Maestro: `supabase/tests/comments_test.sql` (mục "a block": mỗi người thấy bình luận của người kia như đã mất, và không với tới nhau được) và `comment_news_test.sql` (không có tin nào đi qua một lượt chặn). Nếu sau này cần thử trên simulator, phải dùng một cặp tài khoản riêng có cờ `comments`, không dùng chung với `17-unfriend`, và hỏi lại chủ dự án.
 
 ### Một tài khoản (A, trên bộ công khai A tạo trong flow)
 
@@ -79,6 +78,6 @@ Không đưa vào Maestro (đã có unit test, hoặc kiểm tay): ánh sáng 1,
 2. **P3, một tài khoản:** CM-1 tới CM-6.
 3. **P3, hai tài khoản:** CM-7 tới CM-9, sau khi CM-1…6 đạt hai lượt liền.
 4. **P2:** PA-7, PA-8, sau khi chốt cách giữ trạng thái kết bạn của cặp A–B.
-5. **Chờ chủ dự án:** chặn. CM-10 đã được duyệt và có thể làm cùng CM-1…6; CM-11 làm cùng CM-7…9 (cần hai tài khoản).
+5. CM-10 làm cùng CM-1…6; CM-11 làm cùng CM-7…9 (cần hai tài khoản). Chặn không làm (điều kiện 6).
 
 Mỗi flow mới thêm vào `config.yaml` và vào bảng của `docs/testing/e2e-simulator.md`; kết quả chạy ghi vào `e2e-latest.md` (SHA, run ID, phạm vi thật).
