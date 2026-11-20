@@ -1,0 +1,19 @@
+# On the saved collection page, check the persisted audience BEFORE tapping.
+appId: host.exp.Exponent
+---
+- extendedWaitUntil:
+    visible:
+      id: "collection-visibility"
+    timeout: 15000
+- tapOn:
+    id: "collection-visibility"
+- assertVisible:
+    id: "sheet-action-private"
+    selected: true
+# Re-select the already asserted state to close the sheet without changing it.
+- tapOn:
+    id: "sheet-action-private"
+- extendedWaitUntil:
+    notVisible:
+      id: "sheet-action-private"
+    timeout: 10000
