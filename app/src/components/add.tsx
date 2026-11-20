@@ -46,7 +46,7 @@ import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { Glyph, ICON } from './ui/glyph';
-import { INK_GAP_END, PressableScale, RoundIconButton, SECONDARY_CONTROL_H } from './ui';
+import { PressableScale, RoundIconButton, SECONDARY_CONTROL_H } from './ui';
 import { useScheme } from '../lib/theme';
 import { colors, font, gradAI, radius, space, textTertiaryHex, type } from '../theme';
 
@@ -363,19 +363,26 @@ export function AddPill({ label, onPress, busy, icon = 'add', accessibilityLabel
  *     chevron. Heavier is bigger: 27, the next step, if the 22 reads
  *     faint on a phone. Not seen on one yet.
  *
- * ── 27, and level with the capitals (owner's phone, 20 Nov 2026) ──
+ * ── on a disc (owner's phone, 20 Nov 2026) ──
  *
- * At 22 it read small, high and hard to make out beside the 30pt title.
- * Small, because Ionicons' plus is 320 of its 512 units: its arms were
- * 13.75pt, the size of a word's capital in body type. At 27 they are
- * 16.9, and the stroke thickens with them. High, because the title row
- * (`ScreenTitle`) stands its right slot on the title's foot: the plus's
- * ink is centred 22.0 above the foot of its 44 box, and the capitals of
- * the title's face (Space Grotesk Bold: cap 700, descent 292 of 1000, at
- * 30) are centred 19.3 above the foot of the title's line — 2.7 short,
- * read from the two fonts with fontTools. `onTitle` lowers it by 3.
- * Not on the compact header (a gallery's): there the row stands its
- * controls on their tops, and the plus is level with the back chevron.
+ * Bare, at 22 and then at 27, it read small, high and hard to make out
+ * as a button beside the 30pt title: Ionicons' plus is 320 of its 512
+ * units, so its arms were 13.75pt, then 16.9 — a mark, not a control.
+ * The owner chose the round buttons' own disc for it: `surfaceGlass`,
+ * 5% of the body's ink, 44 across, the plus at the 22 of the back
+ * chevron — the plan editor's Share wears the same, the one header
+ * control that kept its disc when the rest went bare (12–14 Nov). The
+ * rule that leaves them: a disc for the header's actions, Share and
+ * this; none for its ways about — back, ⋯, search — which stay bare.
+ * The disc meets the margin itself, so nothing hangs past it.
+ *
+ * Level with the capitals: the title row (`ScreenTitle`) stands its
+ * right slot on the title's foot. The disc is centred 22.0 above its
+ * own foot, and the capitals of the title's face (Space Grotesk Bold:
+ * cap 700, descent 292 of 1000, at 30) 19.3 above the foot of the
+ * title's line — 2.7 short, read from the font with fontTools. `onTitle`
+ * lowers it by 3. Not on the compact header (a gallery's): there the row
+ * stands its controls on their tops, level with the back chevron.
  *
  * `busy`: a spinner in the plus's place, the same box, and no press — a
  * gallery's photo on its way.
@@ -389,11 +396,11 @@ export function HeaderAdd({ label, onPress, busy, onTitle, testID }: {
   onTitle?: boolean;
   testID?: string;
 }) {
-  const hang = { marginRight: -INK_GAP_END.add, marginBottom: onTitle ? -3 : 0 };
+  const drop = { marginBottom: onTitle ? -3 : 0 };
   if (busy) {
     return (
       <View
-        style={[s.headerBusy, hang]}
+        style={[s.headerBusy, drop]}
         accessible
         accessibilityRole="button"
         accessibilityLabel={label}
@@ -405,7 +412,7 @@ export function HeaderAdd({ label, onPress, busy, onTitle, testID }: {
       </View>
     );
   }
-  return <RoundIconButton bare icon="add" size={ICON.feature} label={label} onPress={onPress} style={hang} testID={testID} />;
+  return <RoundIconButton icon="add" label={label} onPress={onPress} style={drop} testID={testID} />;
 }
 
 const s = StyleSheet.create({
@@ -465,7 +472,10 @@ const s = StyleSheet.create({
   // carries a spinner saying so.
   pillBusy: { opacity: 0.7 },
   pillText: { color: colors.accentInk, fontSize: 16, fontWeight: font.semibold },
-  // The round button's own 44 box, so the spinner stands where the plus
+  // The round button's own disc, so the spinner stands where the plus
   // did and the header does not move.
-  headerBusy: { width: SECONDARY_CONTROL_H, height: SECONDARY_CONTROL_H, alignItems: 'center', justifyContent: 'center' },
+  headerBusy: {
+    width: SECONDARY_CONTROL_H, height: SECONDARY_CONTROL_H, borderRadius: SECONDARY_CONTROL_H / 2,
+    alignItems: 'center', justifyContent: 'center', backgroundColor: colors.surfaceGlass,
+  },
 });

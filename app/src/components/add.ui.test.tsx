@@ -191,43 +191,46 @@ describe('AddPill', () => {
   });
 });
 
-// The header's plus (owner, 20 Nov 2026): no word, no disc, the body's ink.
+// The header's plus (owner, 20 Nov 2026): no word, on the round buttons'
+// neutral disc, the body's ink.
 describe('HeaderAdd', () => {
-  it('is a plus alone at 27 in the body\'s ink, a button named with the whole phrase', () => {
+  const disc = () => StyleSheet.flatten(propsWhere((p) => 'contentStyle' in p).contentStyle as StyleProp<ViewStyle>);
+  const outer = () => StyleSheet.flatten(propsWhere((p) => 'contentStyle' in p).style as StyleProp<ViewStyle>);
+
+  it('is a plus at 22 in the body\'s ink on a 44 disc of the round buttons\' glass, named with the whole phrase', () => {
     const go = vi.fn();
     render(<HeaderAdd label="New trip" onPress={go} testID="new" />);
     const plus = document.querySelector('[data-icon="add"]')!;
-    expect([plus.getAttribute('data-size'), plus.getAttribute('data-color')]).toEqual(['27', String(colors.text)]);
+    expect([plus.getAttribute('data-size'), plus.getAttribute('data-color')]).toEqual(['22', String(colors.text)]);
+    expect(disc()).toMatchObject({ width: 44, height: 44, borderRadius: 22, backgroundColor: colors.surfaceGlass });
     expect(screen.queryByText('New')).toBeNull();
     fireEvent.click(screen.getByRole('button', { name: 'New trip' }));
     expect(go).toHaveBeenCalledTimes(1);
-    expect(document.querySelector('[data-stub="LinearGradient"]')).toBeNull();
   });
 
-  // The plus's arms stop 14 short of its 44 box's right edge at 27: hung
-  // by as much, its ink ends where the content's right edge does.
-  const hung = () => StyleSheet.flatten(propsWhere((p) => p.onPress !== undefined && 'style' in p && !!StyleSheet.flatten(p.style as StyleProp<ViewStyle>)?.marginRight).style as StyleProp<ViewStyle>);
-  it('hangs past the margin by the plus\'s own empty edge, and stands where it is put', () => {
+  // The disc meets the margin itself: nothing hangs past it.
+  it('stands where it is put, on the compact header', () => {
     render(<HeaderAdd label="Add a photo" onPress={() => {}} testID="new" />);
-    expect(hung()).toMatchObject({ marginRight: -14, marginBottom: 0 });
+    expect(outer()).toMatchObject({ marginBottom: 0 });
+    expect(outer()?.marginRight).toBeUndefined();
   });
 
-  // Beside a large title it is lowered to the title's capitals (owner's
-  // phone, 20 Nov 2026): 22.0 against 19.3 above the row's foot.
+  // Beside a large title it is lowered to the title's capitals: 22.0
+  // against 19.3 above the row's foot.
   it('drops 3 beside a large title, level with its capitals', () => {
     render(<HeaderAdd label="New trip" onPress={() => {}} onTitle testID="new" />);
-    expect(hung()).toMatchObject({ marginRight: -14, marginBottom: -3 });
+    expect(outer()).toMatchObject({ marginBottom: -3 });
   });
 
-  it('holds a spinner in the plus\'s box while busy, and takes no press', () => {
+  it('holds a spinner on the same disc while busy, and takes no press', () => {
     const go = vi.fn();
-    render(<HeaderAdd label="Add a photo" onPress={go} busy testID="new" />);
+    render(<HeaderAdd label="Add a photo" onPress={go} busy onTitle testID="new" />);
     expect(document.querySelector('[data-icon="add"]')).toBeNull();
     const box = screen.getByTestId('new');
     expect(box.getAttribute('aria-busy')).toBe('true');
     expect(box.getAttribute('aria-label')).toBe('Add a photo');
     expect(StyleSheet.flatten(propsWhere((p) => p.testID === 'new' && 'style' in p).style as StyleProp<ViewStyle>))
-      .toMatchObject({ width: 44, height: 44, marginRight: -14 });
+      .toMatchObject({ width: 44, height: 44, borderRadius: 22, backgroundColor: colors.surfaceGlass, marginBottom: -3 });
     expect(propsWhere((p) => 'size' in p && p.size === 'small').color).toBe(colors.text);
     fireEvent.click(box);
     expect(go).not.toHaveBeenCalled();

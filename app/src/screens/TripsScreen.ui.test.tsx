@@ -267,10 +267,10 @@ describe('nothing saved yet', () => {
     // Quiet: the header's weight, not the gradient (owner, 26 Oct 2026).
     expect(screen.getByRole('button', { name: 'New trip' }).querySelector('[data-stub="LinearGradient"]')).toBeNull();
     fireEvent.click(screen.getByRole('button', { name: 'New trip' }));
-    // The header's plus, at 27, lowered to the large title's capitals.
+    // The header's plus on its disc, lowered to the large title's capitals.
     {
       const plus = screen.getByRole('button', { name: 'New trip' });
-      expect(plus.querySelector('[data-icon="add"]')!.getAttribute('data-size')).toBe('27');
+      expect(plus.querySelector('[data-icon="add"]')!.getAttribute('data-size')).toBe('22');
       const box = [plus, plus.parentElement!].map((el) => getComputedStyle(el).marginBottom);
       expect(box).toContain('-3px');
     }
