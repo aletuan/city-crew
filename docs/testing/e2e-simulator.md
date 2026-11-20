@@ -6,6 +6,12 @@ Chi tiết cài đặt nằm ở [`app/.maestro/README.md`](../../app/.maestro/R
 quy tắc viết flow ở [`app/.maestro/GUIDELINES.md`](../../app/.maestro/GUIDELINES.md).
 File này không lặp lại hai file đó; nó là bản đồ và lộ trình.
 
+## Kết quả mới nhất và bàn giao
+
+Xem [bàn giao ngày 20/11/2026](e2e-latest.md): revision đã push, kết quả từng lượt, unit/integration test, artifacts local, cleanup và việc còn mở. Năm ca lỗi mục tiêu đã PASS sau sửa helper qua hai lượt; **chưa chạy lại toàn bộ 22 flow trên revision cuối**.
+
+Các số liệu tháng 9–10 và kế hoạch dưới đây là lịch sử, không phải release gate hiện tại. Danh sách flow thực thi lấy từ `app/.maestro/config.yaml`; signup/delete (07), guest resume (18/20), privacy (19) và tab responsive (21) đã có flow tự động.
+
 ## 1. Bộ e2e làm gì
 
 Vitest render từng màn hình trong jsdom và kiểm logic. Nó không thấy được app
@@ -30,7 +36,7 @@ flowchart LR
   EG -->|HTTPS| SB[(Supabase<br/>amdvitzpogaejzzqroco)]
 ```
 
-## 2. Các flow hiện có
+## 2. Lịch sử các flow và thời gian tháng 10
 
 Danh sách và thứ tự nằm ở `app/.maestro/config.yaml`; flow nào kiểm những gì,
 cùng các subflow trong `common/`, thì
@@ -58,7 +64,7 @@ hai file kia không có: **thời gian đo được**, vì đó là ngân sách 
 | `12-language` | guest | 1 m 43 s |
 | `07-sign-up-delete` | dùng một lần | không chạy tự động — QA tay mỗi release |
 
-**Kết quả gần nhất:** 12/10/2026, iPhone 17 · iOS 26.5 · Expo Go, code tại
+**Kết quả lịch sử:** 12/10/2026, iPhone 17 · iOS 26.5 · Expo Go, code tại
 `75f692b7` (main, gồm #892–#894) cộng `16-trip-invite` và `17-unfriend` —
 **17/17 passed trong 33 m 32 s**, vượt ngân sách 30 phút (xem dưới).
 `16` lượt này 7 m 53 s, lượt trước 4 m 58 s: chênh lệch nằm ở phần lập
@@ -152,10 +158,10 @@ README, mục *Test account*. Tài khoản B phải để theme **Light**: nếu
 lượt `15-theme` dừng khi B còn đăng nhập và B bị đổi theme, đặt lại Light
 bằng tay trước lượt sau.
 
-Một điều kiện chỉ ghi ở đây, vì nó thuộc về lúc chạy chứ không thuộc về công
-cụ: trước khi chạy, `git fetch && git log --oneline HEAD..origin/main` phải
-rỗng. Nếu không thì merge rồi bấm `r` ở tab Metro — bằng không bộ test đang
-kiểm code cũ, và một lần xanh không nói lên điều gì.
+Trước khi chạy, fetch để biết chênh lệch với main, ghi SHA và phạm vi cần kiểm,
+rồi xác nhận Metro phục vụ đúng checkout đó. Một lượt kiểm bản sửa trên branch
+không cần tự merge main; nếu đổi revision thì phải ghi nhận lại. Kết quả chỉ
+áp dụng cho revision đã chạy, không tự đại diện cho main mới nhất.
 
 ## 4. Sự cố môi trường đã gặp (26/09) và cách xử lý
 
@@ -195,7 +201,7 @@ Bài học:
   "Metro không báo gì" không có nghĩa là không có lỗi JS. Bộ đếm in mỗi
   giây (`tick`) cho biết JS còn sống hay không.
 
-## 5. Độ phủ hiện tại
+## 5. Sơ đồ độ phủ lịch sử
 
 ```mermaid
 flowchart TB
@@ -227,7 +233,7 @@ flowchart TB
 
 Xanh: đã có flow. Vàng: QA tay. Cam: chưa có.
 
-## 6. Kế hoạch bổ sung
+## 6. Kế hoạch lịch sử và các hạng mục bổ sung
 
 Nguyên tắc chọn flow (từ GUIDELINES): chỉ thêm đường mà **hỏng thì người dùng
 không dùng được app**, và **vitest không phủ được**. Mỗi flow tốn ~1 phút; ngân
