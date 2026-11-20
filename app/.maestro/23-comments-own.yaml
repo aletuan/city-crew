@@ -158,8 +158,12 @@ env:
     visible:
       id: "collection-comments"
     timeout: 20000
+# The figure is drawn inside the bubble's button, which XCUITest reads as
+# one element: the count is in its label ("Comments, 1"), not under its
+# own id.
 - assertNotVisible:
-    id: "collection-comments-count"
+    id: "collection-comments"
+    text: ".*, [0-9]+$"
 - tapOn:
     id: "collection-comments"
 - extendedWaitUntil:
@@ -188,8 +192,8 @@ env:
     id: "comments-back"
 - extendedWaitUntil:
     visible:
-      id: "collection-comments-count"
-      text: "1"
+      id: "collection-comments"
+      text: ".*, 1$"
     timeout: 20000
 - tapOn:
     id: "collection-comments"
@@ -215,9 +219,10 @@ env:
       id: "comment-words"
       text: ".*Maestro CM-3 reply.*"
     timeout: 20000
+# As on the list's bubble, the figure is in the reply button's label.
 - assertVisible:
-    id: "comment-replies"
-    text: "1"
+    id: "comment-reply"
+    text: ".*, 1 reply$"
 - assertNotVisible:
     id: "composer-replying"
 # Reply mode can be left without sending.
@@ -273,8 +278,8 @@ env:
 - assertNotVisible:
     id: "composer-error"
 - assertVisible:
-    id: "comment-replies"
-    text: "2"
+    id: "comment-reply"
+    text: ".*, 2 replies$"
 
 # CM-4. Past the 500-character ceiling (`BODY_MAX`): the count shows, the
 # send is off, and a press on it posts nothing. 520 characters, so the
