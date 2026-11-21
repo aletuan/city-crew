@@ -71,13 +71,21 @@ env:
     timeout: 15000
 
 # PA-8, the sent side: the face and name open the addressee's page.
-- tapOn:
-    id: "crew-sent-who-0"
-- extendedWaitUntil:
-    visible:
-      id: "person-handle"
-      text: "@${TRIP_HANDLE}"
-    timeout: 15000
+# Seen on 21 November: a tap 0.4 s after the row appeared, while the Add
+# sheet was still going, completed and opened nothing. Waited out, and
+# the tap repeated until the page is there.
+- waitForAnimationToEnd:
+    timeout: 5000
+- retry:
+    maxRetries: 2
+    commands:
+      - tapOn:
+          id: "crew-sent-who-0"
+      - extendedWaitUntil:
+          visible:
+            id: "person-handle"
+            text: "@${TRIP_HANDLE}"
+          timeout: 10000
 - tapOn:
     id: "person-back"
 - extendedWaitUntil:
@@ -116,13 +124,18 @@ env:
     timeout: 15000
 
 # PA-8, the received side: the asker's face opens their page.
-- tapOn:
-    id: "crew-request-who-0"
-- extendedWaitUntil:
-    visible:
-      id: "person-handle"
-      text: "@${TRIP_HANDLE_2}"
-    timeout: 15000
+- waitForAnimationToEnd:
+    timeout: 5000
+- retry:
+    maxRetries: 2
+    commands:
+      - tapOn:
+          id: "crew-request-who-0"
+      - extendedWaitUntil:
+          visible:
+            id: "person-handle"
+            text: "@${TRIP_HANDLE_2}"
+          timeout: 10000
 - tapOn:
     id: "person-back"
 - extendedWaitUntil:
