@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   DAY_OF_EARLIEST_HOUR, DAY_OF_LEAD_MIN, dayOfFireDate, fireDateFor, planReminderSync, REMINDER_HOUR,
   REMINDER_PREFIX, reminderFireDate, reminderIdFor, reminderOf, reminderText, startMinOf, TODAY_PREFIX,
-  tripIdOfReminder, tripsToRemind, type ReminderHeld, type ReminderKind, type ReminderWant,
+  remindsAhead, tripIdOfReminder, tripsToRemind, type ReminderHeld, type ReminderKind, type ReminderWant,
 } from './remind';
 
 // The suite runs on Hanoi time (see vitest.config), so local-time maths
@@ -230,5 +230,38 @@ describe('reminderText', () => {
     const zh = (_a: string, _b: string, _c: string, z?: string) => z ?? '';
     expect(reminderText('today', w, zh)).toEqual({ title: '今天：Pho night', body: '第一个地点 18:00 开始。查看路线，准时出发。' });
     expect(reminderText('eve', w, zh).title).toBe('明天：Pho night');
+  });
+});
+
+describe('remindsAhead', () => {
+  const now = new Date(2026, 8, 18, 12, 0); // Sep 18, noon
+  const trip = (day: string, owner_id = 'host', stops: { arrive_min: number | null }[] = []) =>
+    ({ id: 't1', owner_id, day, title: 'Pho night', trip_stops: stops });
+  const invite = (status: string, invitee_id = 'me') => ({ trip_id: 't1', invitee_id, status });
+
+  it('is true for the planner of a trip still to come', () => {
+    expect(remindsAhead(trip('2026-09-20', 'me'), [], 'me', now)).toBe(true);
+  });
+
+  it('is true for whoever accepted, and false for one only asked, or who said no', () => {
+    expect(remindsAhead(trip('2026-09-20'), [invite('accepted')], 'me', now)).toBe(true);
+    expect(remindsAhead(trip('2026-09-20'), [invite('pending')], 'me', now)).toBe(false);
+    expect(remindsAhead(trip('2026-09-20'), [invite('declined')], 'me', now)).toBe(false);
+    // Somebody else's yes does not count for the reader.
+    expect(remindsAhead(trip('2026-09-20'), [invite('accepted', 'other')], 'me', now)).toBe(false);
+  });
+
+  it('is false for nobody signed in', () => {
+    expect(remindsAhead(trip('2026-09-20', 'me'), [], null, now)).toBe(false);
+  });
+
+  it('is false once both moments have passed, true while either is still ahead', () => {
+    // Trip is today at 18:00: the evening before and (7:00-clamped) 16:00 start… the eve note is gone,
+    // the day-of note at 16:00 is still ahead at noon.
+    expect(remindsAhead(trip('2026-09-18', 'me', [{ arrive_min: 18 * 60 }]), [], 'me', now)).toBe(true);
+    // Same trip, no timed stop: nothing to be two hours before, and the eve is gone.
+    expect(remindsAhead(trip('2026-09-18', 'me'), [], 'me', now)).toBe(false);
+    // Yesterday's trip.
+    expect(remindsAhead(trip('2026-09-17', 'me', [{ arrive_min: 18 * 60 }]), [], 'me', now)).toBe(false);
   });
 });

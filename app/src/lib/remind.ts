@@ -188,6 +188,26 @@ export function tripsToRemind(
     .map((t) => ({ tripId: t.id, day: t.day, title: t.title, startMin: startMinOf(t.trip_stops ?? []) }));
 }
 
+/**
+ * Whether the phone is meant to remind the reader about this one trip,
+ * and would still have a note to fire.
+ *
+ * What the warning on a trip's screen asks: it has nothing to say to
+ * somebody who is not reminded (an invitation not yet accepted — the yes
+ * is what raises the permission sheet), nor about a trip whose two
+ * moments have both gone, where there is no reminder left to lose.
+ * `tripsToRemind` already says who is going; this adds only "still ahead".
+ */
+export function remindsAhead(
+  trip: TripLike,
+  invites: readonly InviteLike[],
+  me: string | null,
+  now: Date,
+): boolean {
+  return tripsToRemind([trip], invites, me)
+    .some((w) => REMINDER_KINDS.some((k) => fireDateFor(k, w, now) !== null));
+}
+
 /** One note to plant: which trip, which of its two. */
 export type ReminderPlant = { kind: ReminderKind; want: ReminderWant };
 /** One note to pull. */
