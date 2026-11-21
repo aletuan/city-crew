@@ -11,6 +11,7 @@ import { useCurrentCity } from '../../lib/city';
 import { useI18n } from '../../lib/i18n';
 import { useScheme } from '../../lib/theme';
 import { SwitchRow, SettingRow } from './rows';
+import { RemindRow } from './RemindRow';
 import { ProfileReturn } from './ProfileReturn';
 import { s } from './styles';
 
@@ -95,6 +96,7 @@ export function SettingsCard() {
           onPress={() => setThemeOpen(true)}
           testID="profile-theme"
         />
+        <RemindRow />
         <SwitchRow
           icon="bulb-outline"
           label={t('Show guide', 'Hiện hướng dẫn', 'ガイドを表示', '显示新手引导', '顯示新手引導')}
