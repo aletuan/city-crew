@@ -123,3 +123,25 @@ Trước lượt mới kiểm SHA/working tree, chỉ một runner và cwd Metro
 Sau cả hai lượt, SQL: không còn bộ "Maestro Comments" nào của @maestro, không còn bình luận nào của @maestro. Từ `zzmaestroban` vẫn trong `banned_words`.
 
 Bài học cho P3 hai tài khoản: số đếm vẽ trong một nút (`collection-comments-count`, `comment-replies`, có lẽ cả `comment-likes`) không đọc được bằng id riêng; đọc từ nhãn của nút cha.
+
+## P2 — `25-friend-request` — 21/11/2026
+
+**Hai lượt xanh liền nhau trên `5d43326`**, bundle Metro `exp://127.0.0.1:8085` ở `f4b14b4`. Cặp tài khoản tạm của `maestro-trip-fixtures.mjs`; fixture nay ghi thêm `handle`, `handle2` (đọc từ `profiles`) và `smoke.sh` truyền `TRIP_HANDLE`, `TRIP_HANDLE_2`. Cặp tạm được dọn sau mỗi lượt (`✓ disposable trip accounts cleaned up`).
+
+| Run ID | Kết quả |
+| --- | --- |
+| `20261121-083028` | **PASS** 6m10s |
+| `20261121-083724` | **PASS** 6m09s |
+
+## P3 hai tài khoản — `24-comments-pair` — 21/11/2026
+
+**Hai lượt xanh liền nhau trên `718f4a0`**, bundle `f4b14b4` (Metro 8085). A = @maestro, B = @usera8b792a2.
+
+| Run ID | Flow SHA | Kết quả | Ghi chú |
+| --- | --- | --- | --- |
+| `20261121-084412` | `d511d59` | FAIL `.*Maestro Pair.*` | Trang của A không có bộ: trang người khác ẩn bộ trống (`person.listsOn`). Sửa: A lưu một địa điểm vào bộ |
+| `20261121-084901` | `718f4a0` | **PASS** 11m24s | |
+| `20261121-090058` | `718f4a0` | **PASS** 10m53s | |
+
+SQL sau hai lượt: không còn bộ "Maestro Pair", không còn bình luận nào của A và B. Có **2 báo cáo** `kind = comment`, `reason = other` của @usera8b792a2 trong hàng chờ Reports (mỗi lượt một, theo điều kiện 5): cần chủ dự án bấm "Nothing wrong" trên Data Desk.
+

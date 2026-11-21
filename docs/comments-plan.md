@@ -654,9 +654,9 @@ sở dữ liệu thật ngày 19/11/2026, kiểu dữ liệu đã sinh lại):*
   App Privacy ghi thêm bình luận vào dòng `Other User Content`.
 - [x] **Luồng Maestro, một tài khoản** (#1511): `23-comments-own` — mở
   luồng, đăng, trả lời, từ cấm, giới hạn độ dài, tắt/bật, xoá kéo theo
-  trả lời; hai lượt xanh liền ngày 21/11/2026 trên @maestro. Ca hai tài
-  khoản (tag, thông báo, tim, báo cáo) là CM-7…CM-9, CM-11 trong
-  `docs/testing/e2e-plan.md`. Cả hai cần dòng `app_flag_testers` của
+  trả lời; hai lượt xanh liền ngày 21/11/2026 trên @maestro. Hai tài
+  khoản (tag, thông báo, tim, báo cáo — CM-7…CM-9, CM-11):
+  `24-comments-pair`, hai lượt xanh liền cùng ngày. Cả hai cần dòng `app_flag_testers` của
   @maestro và @usera8b792a2 cho tới khi cờ bật.
 
 **C10. Phát hành**
