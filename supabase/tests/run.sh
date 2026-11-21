@@ -803,7 +803,7 @@ run "$DB" -f "$HERE/report_handler_backfill_test.sql"
 # and their check, and `moderate_profile`'s fifth argument. Last, because
 # it replaces the four-argument function the tests above call by name.
 echo "→ profile wall"
-for f in "$ROOT"/supabase/migrations/*_profile_wall.sql; do
+for f in "$ROOT"/supabase/migrations/*_profile_wall.sql "$ROOT"/supabase/migrations/*_reports_queue_wall.sql; do
   run "$DB" -f "$f" >/dev/null
 done
 run "$DB" -f "$HERE/profile_wall_test.sql"

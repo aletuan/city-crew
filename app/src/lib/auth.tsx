@@ -94,6 +94,11 @@ export type Profile = {
  *  this the same day: 70 KB to 16 KB on average, 142 KB to 27 KB at most. */
 const AVATAR_PX = 288;
 const AVATAR_QUALITY = 0.8;
+/** The cover is the page's width across, 170pt high: about 410pt on the
+ *  widest phone this app is drawn for, 1230 device pixels at 3x. 1200
+ *  is that, rounded down to where a JPEG at this quality stays near
+ *  200 KB for a photograph of a street. */
+const WALL_PX = 1200;
 
 /**
  * A request that never settles is worse than one that fails: the spinner
@@ -112,6 +117,46 @@ function withTimeout<T>(work: Promise<T>, ms: number, step: string): Promise<T> 
     work,
     new Promise<T>((_, reject) => setTimeout(() => reject(new Error(step)), ms)),
   ]);
+}
+
+/**
+ * A photograph of the account's own, shrunk, stored and stamped.
+ *
+ * One object per person and purpose (`<uid>/avatar.jpg`, `<uid>/wall.jpg`),
+ * overwritten: nothing accumulates, so nothing needs sweeping up — at the
+ * cost of a stable URL, which the stamp makes change. The bucket's update
+ * policy refuses a second write of the same object inside sixty seconds
+ * (`avatar_cooldown.sql`); Storage reports that the way it reports any
+ * policy, and `lib/quota` knows the shape.
+ */
+async function uploadOwnPhoto(uid: string, name: 'avatar' | 'wall', localUri: string, px: number): Promise<string> {
+  const shrunk = await withTimeout(
+    manipulateAsync(localUri, [{ resize: { width: px } }], { compress: AVATAR_QUALITY, format: SaveFormat.JPEG, base64: true }),
+    20_000,
+    'slow_prepare',
+  );
+  if (!shrunk.base64) throw new Error('bad_image');
+  const path = `${uid}/${name}.jpg`;
+  const { error } = await withTimeout(
+    supabase.storage.from('avatars').upload(path, decode(shrunk.base64), { contentType: 'image/jpeg', upsert: true }),
+    45_000,
+    'slow_upload',
+  );
+  if (error && refusedByPolicy(error)) throw new Error(TOO_SOON);
+  if (error) throw new Error(error.message);
+  const { data } = supabase.storage.from('avatars').getPublicUrl(path);
+  return `${data.publicUrl}?v=${Date.now()}`;
+}
+
+/** The profile row, written. Wrapped in a real Promise: PostgREST's
+ *  builder is thenable but not one, and withTimeout races a Promise. */
+async function saveRow(uid: string, patch: Partial<Profile>): Promise<void> {
+  const { error } = await withTimeout(
+    Promise.resolve(supabase.from('profiles').update(patch).eq('id', uid)),
+    20_000,
+    'slow_save',
+  );
+  if (error) throw new Error(error.message);
 }
 
 type Auth = {
@@ -157,6 +202,8 @@ type Auth = {
   /** Compress, upload and save in one step — the avatar is its own object,
    *  not a field of the edit form. */
   setAvatar: (localUri: string) => Promise<void>;
+  /** The page's cover from a photograph — `person/Wall`. */
+  setWallPhoto: (localUri: string) => Promise<void>;
   /** Wear one of the bundled animals (`lib/avatars`) instead of a photo. */
   setAvatarPreset: (key: AvatarPreset) => Promise<void>;
   clearAvatar: () => Promise<void>;
@@ -207,7 +254,7 @@ const ProfileCtx = createContext<AuthProfile>({ profile: EMPTY_PROFILE, memberSi
 const ActionsCtx = createContext<AuthActions>({
   signIn: async () => {}, signUp: async () => ({ needsConfirm: false }),
   confirmSignUp: async () => {}, requestReset: async () => {}, resetPassword: async () => {},
-  updateProfile: async () => {}, setAvatar: async () => {}, setAvatarPreset: async () => {}, clearAvatar: async () => {},
+  updateProfile: async () => {}, setAvatar: async () => {}, setWallPhoto: async () => {}, setAvatarPreset: async () => {}, clearAvatar: async () => {},
   signOut: async () => {},
   confirmSession: async () => false,
   deleteAccount: async () => {},
@@ -440,55 +487,29 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   // `not_signed_in` and `bad_image` below are names, not sentences, for
   // `asAuthFail`'s reason: `t` is a hook and this module is not a
   // component. `useFailText` has the words.
+  //
+  // The id comes from the session already in memory. getUser() would go
+  // to the network for something we hold, and every extra auth call takes
+  // the client's auth lock — the surest way to make an upload appear to
+  // hang forever is to queue it behind a token refresh that stalled.
   const setAvatar = useCallback(async (localUri: string) => {
-    // The id comes from the session already in memory. getUser() would go
-    // to the network for something we hold, and every extra auth call takes
-    // the client's auth lock — the surest way to make an upload appear to
-    // hang forever is to queue it behind a token refresh that stalled.
     const uid = session?.user?.id;
     if (!uid) throw new Error('not_signed_in');
-
-    const shrunk = await withTimeout(
-      manipulateAsync(
-        localUri,
-        [{ resize: { width: AVATAR_PX } }],
-        { compress: AVATAR_QUALITY, format: SaveFormat.JPEG, base64: true },
-      ),
-      20_000,
-      'slow_prepare',
-    );
-    if (!shrunk.base64) throw new Error('bad_image');
-
-    // One object per person, overwritten. Nothing accumulates, so nothing
-    // needs sweeping up — at the cost of a stable URL, handled below.
-    const path = `${uid}/avatar.jpg`;
-    const { error } = await withTimeout(
-      supabase.storage
-        .from('avatars')
-        .upload(path, decode(shrunk.base64), { contentType: 'image/jpeg', upsert: true }),
-      45_000,
-      'slow_upload',
-    );
-    // The bucket's update policy refuses a second face inside sixty
-    // seconds of the last — see `avatar_cooldown.sql`. Storage reports
-    // that the way it reports any policy; `lib/quota` knows the shape.
-    if (error && refusedByPolicy(error)) throw new Error(TOO_SOON);
-    if (error) throw new Error(error.message);
-
-    const { data } = supabase.storage.from('avatars').getPublicUrl(path);
-    // The path never changes, so a plain URL would show the old face from
-    // cache long after the new one is stored. The stamp is what makes the
-    // change visible.
-    const url = `${data.publicUrl}?v=${Date.now()}`;
-    // Wrapped in a real Promise: PostgREST's builder is thenable but not
-    // one, and withTimeout races a Promise.
-    const { error: saveError } = await withTimeout(
-      Promise.resolve(supabase.from('profiles').update({ avatar_url: url }).eq('id', uid)),
-      20_000,
-      'slow_save',
-    );
-    if (saveError) throw new Error(saveError.message);
+    const url = await uploadOwnPhoto(uid, 'avatar', localUri, AVATAR_PX);
+    await saveRow(uid, { avatar_url: url });
     setProfile((p) => ({ ...p, avatar_url: url }));
+  }, [session]);
+
+  // The page's cover, from the phone (docs/wall-plan.md, W3): the same
+  // pipeline as the face, its own object beside it, and the row told it
+  // is an upload. One at a time — the object is overwritten — as the
+  // owner asked.
+  const setWallPhoto = useCallback(async (localUri: string) => {
+    const uid = session?.user?.id;
+    if (!uid) throw new Error('not_signed_in');
+    const url = await uploadOwnPhoto(uid, 'wall', localUri, WALL_PX);
+    await saveRow(uid, { wall_kind: 'upload', wall_ref: url });
+    setProfile((p) => ({ ...p, wall_kind: 'upload', wall_ref: url }));
   }, [session]);
 
   // A name in the row, and no upload: the animal ships with the app, so
@@ -565,9 +586,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   );
   const actions = useMemo<AuthActions>(() => ({
     signIn, signUp, confirmSignUp, requestReset, resetPassword, updateProfile,
-    setAvatar, setAvatarPreset, clearAvatar, signOut, confirmSession, deleteAccount,
+    setAvatar, setWallPhoto, setAvatarPreset, clearAvatar, signOut, confirmSession, deleteAccount,
   }), [signIn, signUp, confirmSignUp, requestReset, resetPassword,
-      updateProfile, setAvatar, setAvatarPreset, clearAvatar, signOut, confirmSession, deleteAccount]);
+      updateProfile, setAvatar, setWallPhoto, setAvatarPreset, clearAvatar, signOut, confirmSession, deleteAccount]);
 
   return (
     <EventsCtx.Provider value={subscribe}>

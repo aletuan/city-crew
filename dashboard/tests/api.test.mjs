@@ -471,7 +471,7 @@ test('moderateProfile clears only the flagged fields', async () => {
   const { api, client } = await loadApi([{ data: null, error: null }]);
   await api.moderateProfile('u1', { bio: true });
   assert.deepEqual(client.calls[0].args, {
-    target: 'u1', clear_bio: true, clear_avatar: false, clear_name: false,
+    target: 'u1', clear_bio: true, clear_avatar: false, clear_name: false, clear_wall: false,
   });
 });
 
