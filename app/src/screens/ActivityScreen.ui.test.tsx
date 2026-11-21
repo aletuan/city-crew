@@ -291,6 +291,7 @@ describe('the empty state', () => {
     await renderScreen();
     expect(screen.getByText('You could try')).toBeTruthy();
     const card = screen.getByTestId('activity-try');
+    expect(viewStyleOf(card).paddingHorizontal).toBe(space.cardPadding);
     expect([...card.querySelectorAll('[role="button"]')].map((b) => b.textContent))
       .toEqual(['Explore places', 'Browse community collections', 'Save places you love']);
     expect([...card.querySelectorAll('[data-icon]')].map((g) => g.getAttribute('data-icon')))
@@ -786,7 +787,7 @@ describe('a friendship that began', () => {
     expect(rows[1].getAttribute('data-testid')).toBe('activity-requests');
     expect(screen.getAllByTestId('activity-invites')).toHaveLength(1);
     expect(rows[0].textContent).toMatch(/^@giang and 1 other invited you on trips/);
-    expect(rows[0].querySelector('[data-icon="airplane"]')).toBeTruthy();
+    expect(rows[0].querySelector('[data-icon="calendar"]')).toBeTruthy();
     expect(within(rows[0] as HTMLElement).getByTestId('row-new')).toBeTruthy();
     expect(data.seenThrough).toHaveBeenLastCalledWith('2026-09-02T10:00:00Z');
     fireEvent.click(screen.getByTestId('activity-tab-yours'));

@@ -269,7 +269,7 @@ function inviteRow(
       ? t(`${who} invited you on a trip`, `${who} mời bạn đi cùng một chuyến đi`, `${who}さんが旅程に招待しています`, `${who} 邀请你参加行程`, `${who} 邀請你參加行程`)
       : t(`${who} and ${k} other${k === 1 ? '' : 's'} invited you on trips`, `${who} và ${k} người khác mời bạn đi cùng chuyến đi`, `${who}さんほか${k}人が旅程に招待しています`, `${who} 和另外 ${k} 人邀请你参加行程`, `${who} 和另外 ${k} 人邀請你參加行程`);
   return {
-    row: { key: 'invites', face: first?.avatar_url || null, badge: 'airplane', line, open },
+    row: { key: 'invites', face: first?.avatar_url || null, badge: 'calendar', line, open },
     at: latest.created_at, fresh, testID: 'activity-invites',
   };
 }

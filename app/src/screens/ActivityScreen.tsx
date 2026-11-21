@@ -114,7 +114,7 @@ import { useCrew } from '../lib/crew';
 import { type ActivityItem, type Applause, buildActivity, type Copy, friendsMade, splitFriendships } from '../lib/friends';
 import { useFreshNews } from '../lib/freshNews';
 import { useI18n } from '../lib/i18n';
-import { colors, type } from '../theme';
+import { colors, space, type } from '../theme';
 import type { Nav } from '../nav';
 
 /** One of the three fetches the timeline is built from. */
@@ -294,7 +294,7 @@ export default function ActivityScreen({ navigation }: { navigation: Nav }) {
       {/* The glyphs these offers already wear elsewhere: the compass on
           Collections' "Explore places", the globe on a public list, the
           bookmark of the Collections tab. */}
-      <Card testID="activity-try">
+      <Card style={s.tryCard} testID="activity-try">
         <SettingRow
           icon="compass-outline"
           label={t('Explore places', 'Khám phá địa điểm', 'スポットを見る', '探索地点', '探索地點')}
@@ -362,4 +362,7 @@ const NO_ACTS: MyActs = { likes: [], copies: [], lists: [] };
 const s = StyleSheet.create({
   // The Profile stack's section heading (`profile/styles`' `section`).
   head: { color: colors.text, ...type.section, marginTop: 10 },
+  // The rows' own lane, as every Profile card gives its rows: without it the
+  // chevron sat on the card's edge and the glyph's slot began there.
+  tryCard: { paddingHorizontal: space.cardPadding },
 });

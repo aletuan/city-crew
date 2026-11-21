@@ -210,7 +210,7 @@ function TryNext({ navigation }: { navigation: Nav }) {
   return (
     <>
       <Text style={s.tryHead}>{t('You could try', 'Bạn có thể thử', 'こちらもどうぞ', '你可以试试', '你可以試試')}</Text>
-      <Card testID="trips-try">
+      <Card style={s.tryCard} testID="trips-try">
         <SettingRow
           icon="compass-outline"
           label={t('Explore places', 'Khám phá địa điểm', 'スポットを見る', '探索地点', '探索地點')}
@@ -361,7 +361,7 @@ export default function TripsScreen({ navigation, route }: { navigation: Nav; ro
         <AmbientWarmth />
         <View style={s.first}>
           <View style={s.firstIcon}>
-            <Glyph name="map" size={ICON.feature} color={colors.accent} />
+            <Glyph name="calendar-outline" size={ICON.feature} color={colors.accent} />
           </View>
           <Text style={s.firstTitle}>
             {t('Where to next?', 'Đi đâu tiếp theo?', '次はどこへ？', '下一站去哪儿？', '下一站去哪裡？')}
@@ -376,7 +376,7 @@ export default function TripsScreen({ navigation, route }: { navigation: Nav; ro
           </Text>
           <GradientCta
             wide
-            icon="sparkles-outline"
+            icon="paw"
             label={t('Try planning a trip', 'Thử lên kế hoạch', '旅の計画を試す', '试着规划一次行程', '試著規劃一次行程')}
             onPress={() => navigation.getParent()?.navigate('Ideas', { screen: 'IdeasHome' })}
           />

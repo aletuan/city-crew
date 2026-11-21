@@ -221,7 +221,7 @@ export function FirstTrip({ onPress }: { onPress: () => void }) {
   const { t } = useI18n();
   return (
     <EmptyState
-      icon="map"
+      icon="calendar-outline"
       title={t('No trips yet', 'Chưa có chuyến đi nào', '旅程はまだありません', '还没有行程', '還沒有行程')}
       // The owner's words (25 Oct 2026). It read "Answer four questions
       // in Explore and keep the plan you like": a count where the point
@@ -237,7 +237,7 @@ export function FirstTrip({ onPress }: { onPress: () => void }) {
       testID="trips-empty"
     >
       <GradientCta
-        icon="sparkles"
+        icon="paw"
         label={t('Plan a trip', 'Lên kế hoạch', 'プランを立てる', '规划行程', '規劃行程')}
         onPress={onPress}
       />

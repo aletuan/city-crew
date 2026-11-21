@@ -103,7 +103,7 @@ vi.mock('../components/InviteCard', async () => {
 });
 
 import TripsScreen from './TripsScreen';
-import { colors, font } from '../theme';
+import { colors, font, space } from '../theme';
 
 const alert = vi.spyOn(Alert, 'alert').mockImplementation(() => {});
 
@@ -273,6 +273,21 @@ describe('nothing saved yet', () => {
     const card = viewStyleOf(screen.getByTestId('trips-empty'));
     expect(card.marginHorizontal ?? 0).toBe(0);
     expect(card.marginLeft ?? 0).toBe(0);
+  });
+
+  // The owner's review against the Plan screen (21 Nov 2026): the rows keep
+  // the lane every card's rows have, so the chevron is off the edge; the
+  // heading is the Plan screen's size; and the glyphs are the outline ones
+  // of the tab, with the planner's own paw on the button.
+  it('draws the rows in a lane, the heading at the Plan screen’s size, and the tab’s own glyphs', () => {
+    show([]);
+    expect(viewStyleOf(screen.getByTestId('trips-try')).paddingHorizontal).toBe(space.cardPadding);
+    expect(textStyleOf(screen.getByText('You could try'))?.fontSize).toBe(20);
+    const empty = screen.getByTestId('trips-empty');
+    expect(empty.querySelector('[data-icon="calendar-outline"]')).toBeTruthy();
+    expect(empty.querySelector('[data-icon="map"]')).toBeNull();
+    expect(empty.querySelector('[data-icon="paw"]')).toBeTruthy();
+    expect(empty.querySelector('[data-icon="sparkles"]')).toBeNull();
   });
 
   it('offers no other things to try once there is a list', () => {
