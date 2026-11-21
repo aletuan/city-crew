@@ -117,6 +117,7 @@
 // to answer, and nothing in it counts the press: the production build
 // sends no usage analytics (`lib/legal`), so the answer will come from
 // asking people.
+import { PencilGlyph } from '../components/PencilGlyph';
 import React, { useEffect, useRef, useState } from 'react';
 import { useScrollToTop } from '@react-navigation/native';
 import {
@@ -528,7 +529,7 @@ function BioInvite({ onAdd, focused }: { onAdd: () => void; focused: () => boole
     >
       <View style={s.bioTail}><View style={s.bioTailFill} /></View>
       <Text style={s.bioAddText}>{t('Write a few words about you', 'Viết đôi dòng về bạn', '自分についてひとこと書く', '写几句介绍自己', '寫幾句介紹自己')}</Text>
-      <Glyph name="pencil" size={ICON.text} color={colors.sun} />
+      <PencilGlyph color={colors.sun} />
     </PressableScale>
   );
 }

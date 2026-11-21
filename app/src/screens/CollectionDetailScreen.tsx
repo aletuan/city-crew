@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { PencilGlyph } from '../components/PencilGlyph';
 import {
   AccessibilityInfo, ActivityIndicator, Alert, FlatList,
   type NativeScrollEvent,
@@ -1555,7 +1556,7 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
             testID="collection-desc-add"
           >
             <Text style={s.descAddText}>{t('Write a few lines about this collection', 'Viết vài dòng về bộ sưu tập này', 'このコレクションについてひとこと書く', '为这个合集写几句介绍', '為這個合集寫幾句介紹')}</Text>
-            <Glyph name="pencil" size={ICON.text} color={colors.sun} />
+            <PencilGlyph color={colors.sun} />
           </PressableScale>
         ) : null}
         {kindRow}

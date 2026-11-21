@@ -400,8 +400,9 @@ describe('the bio, and the way to write one', () => {
     // pencil in the app's gold.
     expect(viewStyleOf(add.firstElementChild as HTMLElement)).toMatchObject({ backgroundColor: colors.surfaceGlassStrong, borderRadius: 18, flexDirection: 'row' });
     expect(textStyleOf(screen.getByText('Write a few words about you'))).toMatchObject({ color: colors.textTertiary, fontStyle: 'italic' });
-    const pencil = add.querySelector('[data-icon="pencil"]')!;
-    expect([pencil.getAttribute('data-size'), pencil.getAttribute('data-color')]).toEqual(['15', String(colors.sun)]);
+    // The thick gold pencil (`PencilGlyph`), the words' 15 high.
+    const pencil = within(add).getByTestId('pencil-glyph');
+    expect([pencil.getAttribute('width'), pencil.getAttribute('fill')]).toEqual(['15', String(colors.sun)]);
     expect(add.querySelector('[data-icon="add"]')).toBeNull();
     // Words first, the pencil beside them.
     expect(screen.getByText('Write a few words about you').compareDocumentPosition(pencil) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();

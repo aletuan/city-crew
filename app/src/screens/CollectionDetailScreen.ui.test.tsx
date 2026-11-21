@@ -855,8 +855,9 @@ describe('your own list', () => {
     // pass for the description, and not one more accent button.
     const add = screen.getByTestId('collection-desc-add');
     expect(textStyleOf(screen.getByText('Write a few lines about this collection'))).toMatchObject({ color: colors.textTertiary, fontStyle: 'italic' });
-    const pencil = add.querySelector('[data-icon="pencil"]')!;
-    expect([pencil.getAttribute('data-size'), pencil.getAttribute('data-color')]).toEqual(['15', String(colors.sun)]);
+    // The thick gold pencil (`PencilGlyph`), the words' 15 high.
+    const pencil = within(add).getByTestId('pencil-glyph');
+    expect([pencil.getAttribute('width'), pencil.getAttribute('fill')]).toEqual(['15', String(colors.sun)]);
     expect(add.querySelector('[data-icon="add"]')).toBeNull();
     expect(screen.getByText('Write a few lines about this collection').compareDocumentPosition(pencil) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     expect(screen.queryByText(/Add a few words/)).toBeNull();
