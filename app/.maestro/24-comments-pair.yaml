@@ -1,6 +1,8 @@
 # P3, two accounts: CM-7, CM-8, CM-9 and CM-11 of docs/testing/e2e-plan.md.
 # A (@maestro, TEST_EMAIL) owns a public list made here and deleted at the
 # end; B (@usera8b792a2, TEST_EMAIL_2) is A's friend and comments on it.
+# The list holds one place so B can reach it from A's page; it is public
+# for the few minutes of the run, and in the Community tab for them.
 # Both have the `comments` flag (`app_flag_testers`); the disposable trip
 # pair does not, which is why this is not on it.
 #
@@ -111,11 +113,40 @@ env:
     notVisible:
       id: "collection-name"
     timeout: 15000
-# The list is opened once here, as in 23: a new card can swallow the first
-# tap, and the comments bubble is waited for so a missing flag fails here.
+# One place in it. Another reader's view of A's page leaves empty lists
+# out (`person.listsOn`, the `collection_places.length > 0` filter), so
+# without a place B has no way to it but a link. The first place on
+# Explore, through its bookmark, as 11 does — after a relaunch, because
+# after the create the save sheet can read as an empty tree (11).
+- runFlow: common/start.yaml
+- tapOn:
+    id: "tab-explore"
+- extendedWaitUntil:
+    visible:
+      id: "place-card-0"
+    timeout: 30000
+- tapOn:
+    id: "place-card-0"
+- extendedWaitUntil:
+    visible:
+      id: "detail-name"
+    timeout: 20000
+- runFlow: common/open-save-sheet.yaml
+- tapOn:
+    text: ".*Maestro Pair.*"
+- tapOn:
+    id: "save-done"
+- tapOn:
+    id: "detail-back"
+# Then opened once, as in 23: a card can swallow the first tap. The
+# comments bubble is waited for, so a missing flag fails here.
+- tapOn:
+    id: "tab-collections"
+- tapOn:
+    id: "collections-yours"
 - scrollUntilVisible:
     element:
-      text: "^Maestro Pair(,.*)?$"
+      text: "Maestro Pair(,.*)?"
     direction: UP
     timeout: 15000
 - waitForAnimationToEnd:
@@ -124,7 +155,7 @@ env:
     maxRetries: 2
     commands:
       - tapOn:
-          text: "^Maestro Pair(,.*)?$"
+          text: "Maestro Pair(,.*)?"
       - extendedWaitUntil:
           visible:
             id: "collection-more"
@@ -400,17 +431,17 @@ env:
     id: "collections-yours"
 - scrollUntilVisible:
     element:
-      text: "^Maestro Pair(,.*)?$"
+      text: "Maestro Pair(,.*)?"
     direction: UP
     timeout: 15000
 - tapOn:
-    text: "^Maestro Pair(,.*)?$"
+    text: "Maestro Pair(,.*)?"
 - extendedWaitUntil:
     visible:
       id: "collection-more"
     timeout: 15000
 - runFlow: common/delete-open-collection.yaml
 - assertNotVisible:
-    text: "^Maestro Pair(,.*)?$"
+    text: "Maestro Pair(,.*)?"
 - runFlow: common/start.yaml
 - runFlow: common/ensure-signed-out.yaml
