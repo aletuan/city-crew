@@ -19,10 +19,11 @@ import { useProfile, useSession } from '../lib/auth';
 import { categoriesOf } from '../lib/categories';
 import { narrowTo } from '../lib/collectionKinds';
 import { useCollections, useCuratorAvatar, useLikes, usePlaces } from '../lib/catalog';
+import { askCommentsAgain } from '../lib/commentsChanged';
 import { likesWorthShowing } from '../lib/likes';
 import {
   deleteCollection, isNotShareable, membersOf, setCollectionPublic, setShares,
-  unseenMembers, unseenSentence, useCountView, useMyListShares, usePrefetchOwnListActivity, useProfileByHandle, useSharedWithMe,
+  unseenMembers, unseenSentence, useCopyCountsQuery, useCountView, useMyListShares, usePrefetchOwnListActivity, useProfileByHandle, useSharedWithMe,
   type Collection,
 } from '../lib/data';
 import { useCrew } from '../lib/crew';
@@ -129,6 +130,30 @@ function FaceDoor({ url, onPress }: { url: string | null; onPress?: () => void }
   );
 }
 
+/** The pull's spinner: armed by the gesture, let go when `loading` is. */
+function usePullSpinner(loading: boolean) {
+  const [pulling, setPulling] = useState(false);
+  useEffect(() => {
+    if (pulling && !loading) setPulling(false);
+  }, [pulling, loading]);
+  return [pulling, setPulling] as const;
+}
+
+/**
+ * The three figures under the card, asked again on a pull (owner, 21 Nov
+ * 2026): a pull that brought back the places but left the hearts, the
+ * comments and the copies at what they were when the page opened looked
+ * as if it had not reached the server. None holds the spinner; each
+ * lands when it lands. The hearts' counts and your own set together
+ * (`reloadLikes`), every thread's count (`askCommentsAgain`), and the
+ * copies' figures, which every card on a feed shares.
+ */
+function useReloadFigures() {
+  const { reloadLikes } = useLikes();
+  const { reload: reloadCopies } = useCopyCountsQuery();
+  return () => { reloadLikes(); askCommentsAgain(); reloadCopies(); };
+}
+
 export default function CollectionDetailScreen({ navigation, route }: { navigation: Nav; route: RootRoute<'CollectionDetail'> }) {
   const { t, lang } = useI18n();
   // `userId` keys what the phone keeps per reader (`readerKey`), and is
@@ -188,11 +213,12 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
   // The spinner belongs to the pull, as on Collections and Explore: armed
   // by the gesture, disarmed when the fetches settle, and never lit by a
   // background revalidate nobody asked to watch.
-  const [pulling, setPulling] = useState(false);
-  useEffect(() => {
-    if (pulling && !loading) setPulling(false);
-  }, [pulling, loading]);
-  const pull = () => { setPulling(true); cols.reload(); mine.reload(); shared.reload(); placesReload(); listShares.reload(); };
+  const [pulling, setPulling] = usePullSpinner(loading);
+  // And the figures under the card — see `useReloadFigures`.
+  const reloadFigures = useReloadFigures();
+  const pull = () => {
+    setPulling(true); cols.reload(); mine.reload(); shared.reload(); placesReload(); listShares.reload(); reloadFigures();
+  };
   const owned = !!col?.owner_id && col.owner_id === uid;
   // The owner's activity, asked for here so that "View activity ›" opens
   // on it rather than on a spinner (owner, 13 Nov 2026): the round trip

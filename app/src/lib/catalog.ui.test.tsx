@@ -259,6 +259,15 @@ describe('the heart', () => {
   const Reader = () => { seen = useLikes(); return null; };
   const mountReader = () => render(<CatalogProvider><Reader /></CatalogProvider>);
 
+  // A list's page asks both again on a pull, together, as a tap does.
+  it('asks the counts and your own set again together, nothing else', () => {
+    mountReader();
+    act(() => { seen.reloadLikes(); });
+    expect(world.likeCounts.reload).toHaveBeenCalledOnce();
+    expect(world.myLikes.reload).toHaveBeenCalledOnce();
+    expect(writes.like).not.toHaveBeenCalled();
+  });
+
   it('moves the heart and the tally at once, before the server answers', async () => {
     let answer: (ok: boolean) => void = () => {};
     writes.like.mockImplementation(() => new Promise<boolean>((r) => { answer = r; }));
@@ -398,9 +407,9 @@ describe('the two halves', () => {
     expect(data.places).toBe(world.places);
     expect(data.collections).toBe(world.collections);
     expect(data.face).toBeNull();
-    expect(Object.keys(likes).sort()).toEqual(['likes', 'myLikes', 'rankLikes', 'toggleLike']);
+    expect(Object.keys(likes).sort()).toEqual(['likes', 'myLikes', 'rankLikes', 'reloadLikes', 'toggleLike']);
     expect(Object.keys(all).sort()).toEqual([
-      'collections', 'curatorAvatars', 'likes', 'myLikes', 'places', 'rankLikes', 'terms', 'toggleLike',
+      'collections', 'curatorAvatars', 'likes', 'myLikes', 'places', 'rankLikes', 'reloadLikes', 'terms', 'toggleLike',
     ]);
     expect(all.places).toBe(world.places);
     expect(all.toggleLike).toBe(likes.toggleLike);
