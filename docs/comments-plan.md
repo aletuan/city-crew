@@ -660,7 +660,22 @@ sở dữ liệu thật ngày 19/11/2026, kiểu dữ liệu đã sinh lại):*
   @maestro và @usera8b792a2 cho tới khi cờ bật.
 
 **C10. Phát hành**
-- Bật cờ, nộp bản mới, theo dõi kết quả duyệt.
+- [x] Ba điều kiện của đoạn COMMENTS trong `docs/store/review-notes.md`
+  (21/11/2026): `banned_words` có 46 từ thật (tiếng Việt và tiếng Anh;
+  `dm`, `vl` để ngỏ theo ý chủ dự án; không nhập bản không dấu nào trùng
+  với một từ thường); chủ dự án đã tự gỡ một bình luận thử trên Data Desk
+  (`moderation_log` có dòng `remove_comment`); đã đọc điều khoản trong app.
+- [x] **Cờ `comments` bật cho mọi người** (21/11/2026, chủ dự án chọn bật
+  trước khi nộp, thay vì chỉ bật cho tài khoản demo của App Review). Mọi
+  bản từ 1.0.10 (Expo SDK 58) nhận JS từ main qua EAS Update, nên thấy
+  bình luận ngay ở lần mở tiếp theo. Bản 1.0.9 trở về trước không bao
+  giờ thấy: chủ một bộ công khai trên bản đó không xem, xoá hay tắt được
+  bình luận người khác viết vào bộ của mình — còn Report và Data Desk.
+  Tắt lại: `update app_flags set enabled = false where key = 'comments';`
+- [x] Xoá 5 dòng `app_flag_testers` của `comments` (21/11/2026), vì cờ đã
+  bật cho mọi người.
+- [ ] Tăng `version` lên 1.0.18, dán đoạn COMMENTS vào ghi chú App Review,
+  nộp bản `production`, theo dõi Build và Submissions.
 
 **C11. Thông báo đẩy** — sau khi phát hành; xem "Về thông báo"
 - Bắt đầu bằng một trang đề xuất riêng: bảng mã thiết bị, lúc xin quyền,
@@ -674,8 +689,10 @@ cho tất cả, có bảng `app_flag_testers` (18/11/2026): một dòng (khoá, 
 khoản) bật cờ đó riêng cho tài khoản ấy. Chỉ bật thêm được, không tắt
 bớt; chỉ sửa được trong SQL editor; mỗi người chỉ đọc được dòng của mình.
 
-Đang bật `comments` cho (kiểm bằng SQL ngày 21/11/2026): **@trang**, **@tuananh**,
-**@xitrum**, và hai tài khoản Maestro **@maestro**, **@usera8b792a2**.
+Không còn dòng nào cho `comments`: cờ bật cho mọi người từ 21/11/2026 và 5
+dòng thử (@trang, @tuananh, @xitrum, @maestro, @usera8b792a2) đã xoá cùng
+ngày. Flow Maestro 23 và 24 vẫn chạy được vì cờ chung đã bật; nếu cờ chung
+tắt lại, hai flow đó cần thêm lại dòng của @maestro và @usera8b792a2.
 
 Thêm một người:
 
