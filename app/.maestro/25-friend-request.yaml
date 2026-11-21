@@ -1,0 +1,165 @@
+# P2 of docs/testing/e2e-plan.md: PA-7 (a request reaches the first page of
+# the last tab, and the tab says so) and PA-8 (a face on Connect with
+# friends opens that person's page, while Accept only accepts — #1480).
+#
+# On the disposable trip pair, not on A/B: both cases need two accounts
+# that are NOT friends, and @maestro/@usera8b792a2 are kept friends for 17.
+# The pair is made friends by `maestro-trip-fixtures.mjs`, so the flow
+# first unfriends them through the app; the accounts are deleted after
+# the run, whatever state they end in. TRIP_HANDLE is the owner's
+# username, read by the fixture from `profiles` when it made the pair.
+#
+# Roles here: the trip owner is the one who receives (A), the guest is
+# the one who asks (B).
+#
+# Not checked here, and why:
+# - `friends-dot` on Account and `dot-profile` on the tab bar are Views
+#   inside a pressable, which XCUITest reads as one element (see 23). The
+#   tab's own label carries the request ("Profile, 1 friend request
+#   waiting", `spokenTab`), so the tab is read by that instead; the
+#   Connect-with-friends row's label carries no count, so its dot is left
+#   to `FriendsCard`'s unit test.
+# - `crew-suggestion-who-*`: who is suggested depends on the live graph,
+#   not on anything this flow sets up.
+appId: host.exp.Exponent
+env:
+  EXPO_URL: ${EXPO_URL || 'exp://127.0.0.1:8081'}
+---
+# ── A unfriends B, as 17 does ──
+- runFlow: common/start.yaml
+- runFlow: common/sign-in-trip-owner.yaml
+- runFlow: common/open-crew.yaml
+- tapOn:
+    id: "crew-tab-friends"
+- extendedWaitUntil:
+    visible:
+      id: "crew-friend-0"
+    timeout: 10000
+    optional: true
+- runFlow:
+    when:
+      visible:
+        id: "crew-friend-0"
+    commands:
+      - longPressOn:
+          id: "crew-friend-0"
+      - tapOn:
+          id: "sheet-action-unfriend"
+      - tapOn:
+          text: "Unfriend|Huỷ kết bạn|友達を解除|删除好友|刪除好友"
+- extendedWaitUntil:
+    notVisible:
+      id: "crew-friend-0"
+    timeout: 15000
+
+# ── B asks A, by username ──
+- runFlow: common/start.yaml
+- runFlow: common/sign-in-trip-guest.yaml
+- runFlow: common/open-crew.yaml
+- tapOn:
+    id: "crew-add"
+- tapOn:
+    id: "crew-handle"
+- inputText: ${TRIP_HANDLE}
+- hideKeyboard
+- tapOn:
+    id: "crew-send"
+    optional: true
+- extendedWaitUntil:
+    visible:
+      id: "crew-sent-0"
+    timeout: 15000
+
+# PA-8, the sent side: the face and name open the addressee's page.
+- tapOn:
+    id: "crew-sent-who-0"
+- extendedWaitUntil:
+    visible:
+      id: "person-handle"
+      text: "@${TRIP_HANDLE}"
+    timeout: 15000
+- tapOn:
+    id: "person-back"
+- extendedWaitUntil:
+    visible:
+      id: "crew-sent-0"
+    timeout: 10000
+
+# ── PA-7: A sees the request without going looking for it ──
+- runFlow: common/start.yaml
+- runFlow: common/sign-in-trip-owner.yaml
+- extendedWaitUntil:
+    visible:
+      id: "tab-profile"
+      text: ".*1 friend request.*|.*1 lời mời kết bạn.*"
+    timeout: 20000
+- tapOn:
+    id: "tab-profile"
+- extendedWaitUntil:
+    visible:
+      id: "person-requests"
+    timeout: 20000
+- assertVisible:
+    id: "person-requests"
+    text: "^1 friend request.*|^1 lời mời kết bạn.*"
+- tapOn:
+    id: "person-requests"
+- extendedWaitUntil:
+    visible:
+      id: "crew-tab-requests"
+    timeout: 15000
+- tapOn:
+    id: "crew-tab-requests"
+- extendedWaitUntil:
+    visible:
+      id: "crew-accept-0"
+    timeout: 15000
+
+# PA-8, the received side: the asker's face opens their page.
+- tapOn:
+    id: "crew-request-who-0"
+- extendedWaitUntil:
+    visible:
+      id: "person-handle"
+      text: "@${TRIP_HANDLE_2}"
+    timeout: 15000
+- tapOn:
+    id: "person-back"
+- extendedWaitUntil:
+    visible:
+      id: "crew-accept-0"
+    timeout: 10000
+
+# Accept accepts and goes nowhere: the screen stays, the request leaves it.
+- tapOn:
+    id: "crew-accept-0"
+- extendedWaitUntil:
+    notVisible:
+      id: "crew-accept-0"
+    timeout: 15000
+- assertVisible:
+    id: "crew-tab-requests"
+- assertNotVisible:
+    id: "person-handle"
+
+# Handled, so cleared: no reason left on the tab, nor on the first page
+# (the rule of docs/profile-home-plan.md: every dot clears when handled).
+- runFlow: common/start.yaml
+- extendedWaitUntil:
+    visible:
+      id: "tab-profile"
+    timeout: 20000
+- assertNotVisible:
+    id: "tab-profile"
+    text: ".*friend request.*|.*lời mời kết bạn.*"
+- tapOn:
+    id: "tab-profile"
+- extendedWaitUntil:
+    visible:
+      id: "person-own-face"
+    timeout: 20000
+- assertNotVisible:
+    id: "person-requests"
+
+- runFlow: common/start.yaml
+- runFlow: common/ensure-signed-out.yaml
