@@ -59,13 +59,14 @@ còn trong danh sách đó thì là *Tự động* (quyết định 4).
 
 ## Các bước
 
-- [ ] **W1. Dữ liệu và nghĩa vụ** (migration):
+- [x] **W1. Dữ liệu và nghĩa vụ** (migration `20261121120000_profile_wall.sql`):
   - hai cột, check trên `wall_kind`, `wall_ref` bắt buộc khi có `wall_kind`;
   - `moderate_profile` thêm `clear_wall` (về tự động, ghi `moderation_log`);
   - `delete-account` xoá `${uid}/wall.jpg`;
-  - file xuất dữ liệu có `wall_kind`, `wall_ref`;
-  - `legal.ts`: chính sách nói tới ảnh bìa tải lên; `app-privacy-labels.md`.
-- [ ] **W2. Tấm chọn, không có tải ảnh**: `lib/wall.ts` (giải ảnh bìa, danh
+  - `legal.ts`: chính sách nói tới ảnh bìa (hiệu lực 21/11/2026); `app-privacy-labels.md`.
+  - Check trên hai cột bọc `coalesce`: một check trả về null là *đạt*, nên
+    `wall_kind = 'city'` với `wall_ref` null đã lọt qua trước khi bench bắt được.
+- [ ] **W2. Tấm chọn, không có tải ảnh**: `Profile` đọc hai cột, file xuất dữ liệu có chúng (cùng lúc, vì cả hai đọc `Profile`); `lib/wall.ts` (giải ảnh bìa, danh
   sách ứng viên — thuần, 100% coverage), `WallSheet`, hai lối vào, *Tự động*
   bỏ qua bộ đầu.
 - [ ] **W3. Tải ảnh lên**: hàng thứ ba của tấm chọn, cắt 2,4:1, thu nhỏ và

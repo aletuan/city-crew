@@ -48,8 +48,11 @@ Deno.serve(async (req) => {
   const uid = userData?.user?.id;
   if (!uid) return json({ error: "not signed in" }, 401);
 
-  // Best-effort, before the account goes: afterwards nothing owns the file.
-  await admin.storage.from("avatars").remove([`${uid}/avatar.jpg`]).catch(() => {});
+  // Best-effort, before the account goes: afterwards nothing owns the files.
+  // The face and the page's cover (docs/wall-plan.md) share the person's
+  // folder; one call takes both, and a name with no file behind it is not
+  // an error to Storage.
+  await admin.storage.from("avatars").remove([`${uid}/avatar.jpg`, `${uid}/wall.jpg`]).catch(() => {});
 
   const { error } = await admin.auth.admin.deleteUser(uid);
   if (error) return json({ error: error.message }, 500);
