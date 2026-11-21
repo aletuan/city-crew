@@ -116,6 +116,16 @@ vi.mock('../components/TripCrew', async () => {
     },
   };
 });
+// The line about a phone that will not remind is held by its own test; here
+// only what this screen hands it.
+vi.mock('../components/TripReminderNote', async () => {
+  const { Text } = await import('react-native');
+  return {
+    default: (p: { trip: { id: string }; invites: { status: string }[]; me: string | null }) => (
+      <Text testID="reminder-note">{`${p.trip.id}|${p.me}|${p.invites.length}`}</Text>
+    ),
+  };
+});
 vi.mock('../components/InviteSheet', async () => {
   const { Pressable, Text } = await import('react-native');
   return {
@@ -248,6 +258,14 @@ describe('keeping the answers current', () => {
     act(() => { pullControl().onRefresh(); });
     expect(tripsReload).toHaveBeenCalledTimes(1);
     expect(invitesReload).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('the phone that will not remind', () => {
+  it('is handed the trip, the invitations and the reader, above the crew', () => {
+    state.invites = [{ trip_id: 't1', invitee: 'u1', status: 'accepted' }];
+    show();
+    expect(screen.getByTestId('reminder-note').textContent).toBe('t1|u1|1');
   });
 });
 

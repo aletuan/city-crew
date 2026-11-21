@@ -51,6 +51,7 @@ import { splitFriendships } from '../lib/friends';
 import InviteSheet from '../components/InviteSheet';
 import StopGallery from '../components/StopGallery';
 import TripCrew from '../components/TripCrew';
+import TripReminderNote from '../components/TripReminderNote';
 import { cancelTripReminder } from '../lib/reminders';
 import { clockOf, dateline, fmtMinutes, openLabel } from '../lib/format';
 import {  } from '../lib/geo';
@@ -106,10 +107,7 @@ export default function TripDetailScreen({ navigation, route }: {
   const [sending, setSending] = useState(false);
   const tripId = route.params.id;
   const me = session?.user?.id ?? null;
-  const mineInvites = useMemo(
-    () => invites.data.filter((i) => i.trip_id === tripId),
-    [invites.data, tripId],
-  );
+  const mineInvites = useMemo(() => invites.data.filter((i) => i.trip_id === tripId), [invites.data, tripId]);
 
   const trip = trips.data.find((x) => x.id === tripId) ?? null;
   const owned = !!trip && !!me && trip.owner_id === me;
@@ -336,6 +334,7 @@ export default function TripDetailScreen({ navigation, route }: {
             answer to who the day is for: a button offering to add people
             to a day whose whole premise is being alone is the app not
             having listened. */}
+        <TripReminderNote trip={trip} invites={invites.data} me={me} />
         <TripCrew
           mine={owned}
           invites={owned ? mineInvites : []}
