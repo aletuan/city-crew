@@ -80,6 +80,10 @@ export type Profile = {
   interests: string;
   /** Public URL of the uploaded avatar, with a cache-busting stamp. */
   avatar_url: string;
+  /** The page's cover, as chosen — `lib/wall`. Absent from a profile
+   *  cached before the columns existed, and so read as automatic. */
+  wall_kind?: string | null;
+  wall_ref?: string | null;
 };
 
 /** The circle is 96pt at most (`EditProfileScreen`), 288 device pixels on
@@ -304,7 +308,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     } catch { /* nothing worth surfacing: the fetch below is the truth */ }
     const { data } = await supabase
       .from('profiles')
-      .select('handle, full_name, bio, location, interests, avatar_url')
+      .select('handle, full_name, bio, location, interests, avatar_url, wall_kind, wall_ref')
       .eq('id', uid)
       .maybeSingle();
     // A miss leaves the empty profile in place. The row is made by a

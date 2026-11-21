@@ -40,20 +40,14 @@
 // ── the head ──
 //
 // A cover across the top and the face overlapping its lower edge, as the
-// owner asked. The cover is **the cover of their newest list that has
-// one** (`coverAmong`), not a picture they upload: it says where this
-// person goes, the desk has already seen it, and there is no upload to
-// build or moderate. Somebody with no public list wearing a photograph
-// has the city's cover instead, the one Explore's hero wears for the
-// city the reader is in (`cityCoverUri`; owner, 21 Nov 2026) — on every
-// page, the reader's own and anyone else's. Most pages were bare
-// before it: about ninety profiles and fewer public lists than that,
-// each under the accent's tint, and the sign-up guide's fourth step now
-// opens a new reader's own page, which is always one of them. The
-// reader's city and not the owner's because a profile keeps no city;
-// it changes with the switcher, and a public list with a photograph
-// takes the cover back from it. The tint is left for a city with no
-// photograph at all.
+// owner asked. Until 21 Nov 2026 the page chose the cover — the newest
+// public list's, else the city's — and on the owner's phone that put the
+// same pastries twice, the cover over the first card. Now the owner
+// chooses it, from a city, a collection's cover or one upload, and the
+// page's own choice is kept as *automatic* for everyone who never does,
+// skipping the first list for that reason: `person/Wall`, `lib/wall` and
+// docs/wall-plan.md. The tint is left for a page with no photograph at
+// all.
 //
 // Under the app's ordinary header, as a card, and not bled to the top of
 // the screen behind floating buttons as the sketch drew it. `Screen`
@@ -127,7 +121,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { useScrollToTop } from '@react-navigation/native';
 import {
   ActivityIndicator, type LayoutChangeEvent, type NativeScrollEvent, type NativeSyntheticEvent,
-  ScrollView, StyleSheet, Text, View,
+  Pressable, ScrollView, StyleSheet, Text, View,
 } from 'react-native';
 import { Image } from 'expo-image';
 import {
@@ -147,18 +141,18 @@ import Shared, { useReach } from './person/Shared';
 import { Requests } from './person/Requests';
 import { FindField, usePageFind } from './person/Find';
 import { OwnTools, Search } from './person/Tools';
+import { useWall } from './person/Wall';
 import { useCardCopy } from './person/useCardCopy';
 import { OwnFace, useOwnPicture } from './person/OwnFace';
 import { Counts } from './profile/Counts';
 import { useCollections, usePlaces } from '../lib/catalog';
-import { useCurrentCity } from '../lib/city';
 import { useTourAnchor } from '../components/SignupTour';
 import {
-  cityCoverUri, type Collection, coverUriOf, type FriendProfile, type Place, membersOf, useMyListShares, useProfileByHandle, useSharedWithMe,
+  type Collection, coverUriOf, type FriendProfile, membersOf, useMyListShares, useProfileByHandle, useSharedWithMe,
 } from '../lib/data';
 import { atHandle, normalizeHandle } from '../lib/handle';
 import { useI18n } from '../lib/i18n';
-import { coverAmong, IN_COMMON_ON, listsBy, listsOn, seenOn, TOP_FRIEND_ON } from '../lib/person';
+import { IN_COMMON_ON, listsBy, listsOn, seenOn, TOP_FRIEND_ON } from '../lib/person';
 import { useMyLists } from '../lib/save';
 import { sharesByList } from '../lib/shares';
 import { useScheme } from '../lib/theme';
@@ -240,7 +234,6 @@ export default function PersonScreen({ navigation, route, home }: {
   // `usePageLists`. The cover is asked of the second.
   const { lists, open, seenOf } = usePageLists(me, person?.id);
   const coverFor = (c: Collection) => coverUriOf(c, membersOf(c, places.data));
-  const cover = usePageCover(open, coverFor, places.data);
 
   const { friendButton, crew } = useFriendButtons(me, 'person', 'page');
   // Report, block, unblock — `usePersonMenu`.
@@ -252,6 +245,9 @@ export default function PersonScreen({ navigation, route, home }: {
   // read again — `useReloadOnReturn`.
   const own = !!me && personId === me;
   useReloadOnReturn(navigation, own, who.reload);
+  // The cover: as its owner chose it, and on your own page the sheet
+  // that changes it — `person/Wall`.
+  const wall = useWall({ person, own, open, coverFor, places: places.data, reload: who.reload });
   const { news, log } = useFreshNews();
   const { invites } = useInvitations();
   const refresh = usePullControl(own ? [who, crew.ships, crew.blocks, news, log, invites] : [who, crew.ships]);
@@ -276,7 +272,7 @@ export default function PersonScreen({ navigation, route, home }: {
   const copyOf = useCardCopy(navigation);
   const search = () => { scroll.current?.scrollTo?.({ y: 0, animated: false }); find.open(); };
   const tools = own
-    ? <OwnTools onSearch={search} onActivity={() => toProfileRoom(navigation, 'Activity')} onAccount={() => toProfileRoom(navigation, 'Account')} />
+    ? <OwnTools onCover={wall.edit} onSearch={search} onActivity={() => toProfileRoom(navigation, 'Activity')} onAccount={() => toProfileRoom(navigation, 'Account')} />
     : <View style={s.topRight}><Search onPress={search} />{topFriend}{menu.button}</View>;
   // The tab pressed again while this is its first page: back to the top,
   // as every tab's first page does (ExploreScreen's `tabPress` note). On
@@ -296,7 +292,7 @@ export default function PersonScreen({ navigation, route, home }: {
           narrowed — `person/Find`. */}
       {find.on
         ? <FindField find={find} name={own ? null : person.full_name || atHandle(person.handle)} />
-        : <Head me={me} person={person} own={own} cover={cover} ring={ring} friend={friend} onRowLayout={top.onRowLayout} navigation={navigation} />}
+        : <Head me={me} person={person} own={own} cover={wall.cover} onCover={wall.onCover} ring={ring} friend={friend} onRowLayout={top.onRowLayout} navigation={navigation} />}
 
       {/* What they have shared: what they did, newest first, and every
           — `person/Shared`. */}
@@ -368,6 +364,7 @@ export default function PersonScreen({ navigation, route, home }: {
         {page}
       </ScrollView>
       {menu.node}
+      {wall.sheet}
     </Screen>
   );
 }
@@ -536,13 +533,6 @@ function BioInvite({ onAdd, focused }: { onAdd: () => void; focused: () => boole
   );
 }
 
-/** The page's cover: their newest public list's, else the city's — see
- *  the note on the cover at the head of this file. */
-function usePageCover(open: readonly Collection[], coverFor: (c: Collection) => string | undefined, places: readonly Place[]) {
-  const { city } = useCurrentCity();
-  return coverAmong(open, coverFor) ?? cityCoverUri(city, places);
-}
-
 /**
  * Your own page, read again when you come back to it.
  *
@@ -578,23 +568,33 @@ function useReloadOnReturn(navigation: Nav, on: boolean, reload: () => void) {
  * Its own function since 20 Nov 2026, when searching the page
  * (`person/Find`) put a box in its place.
  */
-function Head({ me, person, own, cover, ring, friend, onRowLayout, navigation }: {
+function Head({ me, person, own, cover, onCover, ring, friend, onRowLayout, navigation }: {
   me: string | null;
   person: FriendProfile;
   own: boolean;
   cover: string | undefined;
+  /** On your own page, the cover is a door to its sheet — `person/Wall`. */
+  onCover?: () => void;
   ring: { borderColor: string };
   friend: React.ReactNode;
   onRowLayout: (e: LayoutChangeEvent) => void;
   navigation: Nav;
 }) {
+  const { t } = useI18n();
   return (
     <>
-      <View style={s.coverCard} testID="person-cover">
+      <Pressable
+        style={s.coverCard}
+        testID="person-cover"
+        onPress={onCover}
+        disabled={!onCover}
+        accessibilityRole={onCover ? 'button' : undefined}
+        accessibilityLabel={onCover ? t('Change cover', 'Đổi ảnh bìa', 'カバーを変更', '更换封面', '更換封面') : undefined}
+      >
         {cover
           ? <Image source={{ uri: cover }} style={s.coverPhoto} contentFit="cover" transition={160} />
           : <View style={[s.coverPhoto, s.tint]} testID="person-cover-tint" />}
-      </View>
+      </Pressable>
       <View style={s.headRow}>
         {/* Your own in the level's ring — `person/OwnFace`. */}
         <Face own={own} url={person.avatar_url} ring={ring} />

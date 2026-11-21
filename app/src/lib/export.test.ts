@@ -313,8 +313,8 @@ describe('shared', () => {
     expect(JSON.stringify(out)).not.toMatch(/"(me|f1|f2)"/);
   });
 
-  it('is in format 4', () => {
-    expect(EXPORT_FORMAT_VERSION).toBe(4);
+  it('is in format 5', () => {
+    expect(EXPORT_FORMAT_VERSION).toBe(5);
   });
 });
 
@@ -433,10 +433,16 @@ describe('history and contributions', () => {
 // own, every column of them is already on a screen it owns, and there is
 // nothing in either to reduce.
 describe('the account\'s own rows', () => {
+  it('carries the cover the account chose', () => {
+    const b = buildExport({ ...bare(), profile: { ...bare().profile, wall_kind: 'city', wall_ref: 'hanoi' } }, NOW, 'en');
+    expect(b.profile).toMatchObject({ wall_kind: 'city', wall_ref: 'hanoi' });
+  });
   it('carries the profile and preferences unchanged', () => {
     const b = buildExport(bare(), NOW, 'en');
     expect(b.profile.handle).toBe('dang');
     expect(b.profile.avatar_url).toBe('https://x/y.jpg');
+    // A profile cached before the cover's columns: both written, as null.
+    expect(b.profile).toMatchObject({ wall_kind: null, wall_ref: null });
     expect(b.preferences).toEqual({ categories: ['cafes'], budget_vnd: null, history_on: true });
   });
 
