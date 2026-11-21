@@ -1018,6 +1018,56 @@ chỉnh cỡ chữ và khoảng cách.
 • 探索の「みんなの」コレクションが、起動後すぐに表示されます。
 ```
 
+## Release notes v1.0.18 (What's New)
+
+Viết từ các PR merge sau tag v1.0.17 (9d61e19, #1400): #1401 → #1525.
+1.0.17 đã được duyệt nên app.json nâng lên 1.0.18 ở PR này. Binary mới
+mang bản vá Expo (expo 58.0.26, expo-file-system 58.0.14); bỏ
+`lucide-react-native` (icon về lại Ionicons, #1439). `runtimeVersion` vẫn là
+exposdk:58.0.0, nên mọi thay đổi JS dưới đây đã tới máy 1.0.10 trở lên qua
+EAS Update. Bản này là bản nộp của bước C10 (`docs/comments-plan.md`): cờ
+`comments` đã bật cho mọi người, `banned_words` có 46 từ, Data Desk đã gỡ
+thử một bình luận — dán đoạn COMMENTS của `docs/store/review-notes.md` vào
+ghi chú App Review. Mười bốn migration (comments, comment_*, tab_traces,
+lists_born_public, collection_copy_counts, report_handler…) đã có trên
+production. Không nhắc ở đây: Maestro, test, chỉnh icon, cỡ chữ, khoảng cách.
+
+### EN
+
+```
+• Comments on public collections: reply, tag friends and places with @, and like a comment. The owner can delete comments on their list or turn them off, and any comment can be reported.
+• The last tab is now your own page, with your collections and what you've done. Account is a tap away from it.
+• Badges for the first things you do, like saving your first place or making a collection public.
+• One bell for what's new: likes, copies, comments, friend requests and trip invitations.
+• Trips are split into Invitations, Upcoming and Past.
+• When you make a collection, choose who sees it: Public, Friends or Private. Public is selected first.
+• Collections show how many people copied them, and you can search a person's page by list or place.
+```
+
+### VI
+
+```
+• Bình luận trên bộ sưu tập công khai: trả lời, gắn bạn bè và địa điểm bằng @, và thả tim cho bình luận. Chủ bộ sưu tập có thể xoá bình luận hoặc tắt bình luận, và ai cũng có thể báo cáo một bình luận.
+• Tab cuối giờ là trang của chính bạn, với các bộ sưu tập và hoạt động của bạn. Tài khoản nằm ngay dưới trang đó.
+• Huy hiệu cho những việc đầu tiên bạn làm, như lưu địa điểm đầu tiên hay công khai một bộ sưu tập.
+• Một chiếc chuông cho mọi tin mới: lượt thích, bản sao, bình luận, lời mời kết bạn và lời mời chuyến đi.
+• Chuyến đi chia thành Lời mời, Sắp tới và Đã qua.
+• Khi tạo bộ sưu tập, bạn chọn ai được xem: Công khai, Bạn bè hoặc Riêng tư. Công khai được chọn sẵn.
+• Bộ sưu tập hiện số người đã sao chép, và bạn có thể tìm trong trang của một người theo bộ sưu tập hoặc địa điểm.
+```
+
+### JA
+
+```
+• 公開コレクションにコメントできます。返信、@で友達やスポットのタグ付け、コメントへのいいねもできます。オーナーはコメントの削除やコメントのオフができ、どのコメントも報告できます。
+• 最後のタブは自分のページになりました。自分のコレクションと活動を表示し、アカウントはそこからすぐ開けます。
+• はじめてのスポット保存やコレクションの公開など、最初の行動でバッジがもらえます。
+• いいね、コピー、コメント、友達リクエスト、旅程への招待を、ひとつのベルでお知らせします。
+• 旅程は「招待」「これから」「これまで」に分かれました。
+• コレクションを作るときに公開範囲（公開・友だち・非公開）を選べます。最初は「公開」が選ばれています。
+• コレクションにコピーした人数を表示します。人のページをリストやスポットで検索できます。
+```
+
 ## Phạm vi phủ — kiểm lại trước mỗi lần nộp
 
 Description và release notes nói về số thành phố, nên chúng là metadata có thể
