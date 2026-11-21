@@ -223,19 +223,23 @@ export function spokenTab(
 const settled = tabSettled({ platform: Platform.OS, osVersion: String(Platform.Version), isDev: __DEV__, channel: CHANNEL });
 
 /**
- * The guide's ring on the profile tab (`SignupTour`, step 4); it rang
- * the collections tab until 21 Nov 2026, when that step went to open the
- * Collections page itself. The pill's own
- * shape (owner, 22 Oct 2026): the cell's width, and the inset in from the
- * island's rim above and below. Ringed as other controls are, a little
- * clear of the cell's box, it was 82×70 against the 75×56 pill a reader
- * knows as "the selected tab", and stood 4pt out past the island's rim
- * top and foot. Out of the bar for its ceiling.
+ * The guide's rings on the bar (`SignupTour`): the profile tab (step 4)
+ * and the planner's tab (step 5). Step 3 rang the collections tab until
+ * 21 Nov 2026, when it went to open the Collections page itself. Step 5
+ * rang the planner's first question for one release that day; a ring
+ * round a whole block of tiles lit most of the screen (owner), so it went
+ * back to the tab, with the guide opening the planner behind it. The
+ * pill's own shape (owner, 22 Oct 2026): the cell's width, and the inset
+ * in from the island's rim above and below. Ringed as other controls
+ * are, a little clear of the cell's box, it was 82×70 against the 75×56
+ * pill a reader knows as "the selected tab", and stood 4pt out past the
+ * island's rim top and foot. Out of the bar for its ceiling.
  */
 function useTabAnchors(navigation: BottomTabBarProps['navigation']) {
   const ring = { x: 0, y: -PILL_INSET };
   const Profile = useTourAnchor('profile', () => navigation.navigate('Profile'), undefined, ring);
-  return { Profile } as Record<string, typeof Profile | undefined>;
+  const Ideas = useTourAnchor('plan', () => navigation.navigate('Ideas'), undefined, ring);
+  return { Profile, Ideas } as Record<string, typeof Profile | undefined>;
 }
 
 export default function FloatingTabBar({ state, descriptors, navigation }: BottomTabBarProps) {

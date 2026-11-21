@@ -723,7 +723,7 @@ describe('the duck', () => {
 // (owner, 22 Oct 2026, of the collections tab it rang then): the cell's
 // width, and in from the island's rim by the pill's inset, so it is the
 // selected tab's mark and never stands out past the bar.
-describe('the guide’s ring on the profile tab', () => {
+describe('the guide’s rings on the profile and planner tabs', () => {
   const rung = () => {
     anchorCalls.length = 0;
     const out = propsFor(0);
@@ -733,26 +733,28 @@ describe('the guide’s ring on the profile tab', () => {
     return { seen, navigation: out.navigation };
   };
 
-  it('rings the profile tab alone, the pill’s size: the cell’s width, the pill’s height', () => {
+  it('rings the profile and planner tabs only, each the pill’s size: the cell’s width, the pill’s height', () => {
     const { seen } = rung();
-    expect([...seen.keys()]).toEqual(['profile']);
-    const [, , , outset] = seen.get('profile')!;
-    expect(outset.x).toBe(0);
-    expect(TAB_BAR_HEIGHT + outset.y * 2).toBe(parseFloat(getComputedStyle(pill()).height));
+    expect([...seen.keys()].sort()).toEqual(['plan', 'profile']);
+    for (const id of ['plan', 'profile']) {
+      const [, , , outset] = seen.get(id)!;
+      expect(outset.x).toBe(0);
+      expect(TAB_BAR_HEIGHT + outset.y * 2).toBe(parseFloat(getComputedStyle(pill()).height));
+    }
   });
 
-  // On its own tab's cell, not a neighbour's.
-  it('is fixed to the profile tab', () => {
+  // Each on its own tab's cell, not a neighbour's.
+  it.each([['profile', 'Profile', 'Collections'], ['plan', 'Ideas', 'Explore']])('fixes %s to its own tab', (id, mine, next) => {
     rung();
-    const cell = anchorRefs.get('profile')!.current as HTMLElement;
-    expect(cell.contains(tab('Profile')) || tab('Profile').contains(cell)).toBe(true);
-    expect(cell.contains(tab('Collections'))).toBe(false);
+    const cell = anchorRefs.get(id)!.current as HTMLElement;
+    expect(cell.contains(tab(mine)) || tab(mine).contains(cell)).toBe(true);
+    expect(cell.contains(tab(next))).toBe(false);
   });
 
   // Tapping the ring is tapping the tab: the guide hands the press back.
-  it('opens Profile when the guide hands the press back', () => {
+  it.each([['profile', 'Profile'], ['plan', 'Ideas']])('opens the tab when the guide hands %s’s press back', (id, route) => {
     const { seen, navigation } = rung();
-    seen.get('profile')![1]();
-    expect(navigation.navigate).toHaveBeenCalledWith('Profile');
+    seen.get(id)![1]();
+    expect(navigation.navigate).toHaveBeenCalledWith(route);
   });
 });

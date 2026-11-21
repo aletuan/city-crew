@@ -34,8 +34,9 @@ import { AttentionPulse, attentionRing } from './Attention';
 // made-up lists, friends or hearts on a page are made-up news, and would
 // be gone the moment the guide closed. Step 4 rings the profile tab and
 // does not open it: an empty page teaches nothing. Step 5 opens the
-// planner and rings its first question (`GuidedSection`), so the guide
-// ends where a reader can carry on.
+// planner and rings its tab, so the guide ends where a reader can carry
+// on. It rang the planner's first question for one release; a ring round
+// a block of tiles lit most of the screen (owner, 21 Nov 2026).
 type Target = 'search' | 'save' | 'community' | 'profile' | 'plan';
 /** How far the ring stands out from the control it marks, each side;
  *  negative draws it inside. */
