@@ -125,7 +125,9 @@ export const api = {
 
   /** Mark one answered. `actioned` means the desk did something about
    *  the content; `dismissed` means it looked and found nothing wrong.
-   *  Both are answers, and the queue counts neither. */
+   *  Both are answers, and the queue counts neither. Who answered and
+   *  when are set by the database as the status changes (the
+   *  report_handler migration); the time sent here is overwritten. */
   markReport: async (id, status) => {
     db(await supabase
       .from('reports')

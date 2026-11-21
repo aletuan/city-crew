@@ -785,3 +785,16 @@ for f in "$ROOT"/supabase/migrations/*_collection_copy_counts.sql; do
   run "$DB" -f "$f" >/dev/null
 done
 run "$DB" -f "$HERE/collection_copy_counts_test.sql"
+
+# Who answered a report (21 Nov 2026): the trigger, then the backfill run
+# a second time over the rows the first test file leaves behind. After the
+# comment desk, whose removal is the log line the backfill copies from.
+echo "→ report handler"
+for f in "$ROOT"/supabase/migrations/*_report_handler.sql; do
+  run "$DB" -f "$f" >/dev/null
+done
+run "$DB" -f "$HERE/report_handler_test.sql"
+for f in "$ROOT"/supabase/migrations/*_report_handler.sql; do
+  run "$DB" -f "$f" >/dev/null
+done
+run "$DB" -f "$HERE/report_handler_backfill_test.sql"
