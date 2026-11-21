@@ -85,10 +85,10 @@ const NONE: Record<TripsTab, { icon: React.ComponentProps<typeof Glyph>['name'];
   invites: {
     icon: 'mail-outline',
     text: (t) => t(
-      'When a friend invites you on a trip, it shows up here',
-      'Khi bạn bè rủ bạn đi cùng, lời mời sẽ hiện ở đây',
-      '友達に旅程に誘われると、ここに表示されます',
-      '朋友邀请你加入行程时，会显示在这里', '朋友邀請你加入行程時，會顯示在這裡',
+      'No invitations from friends yet',
+      'Bạn chưa nhận lời mời nào từ bạn bè',
+      '友達からの招待はまだありません',
+      '还没有收到朋友的邀请', '還沒有收到朋友的邀請',
     ),
   },
   upcoming: {
