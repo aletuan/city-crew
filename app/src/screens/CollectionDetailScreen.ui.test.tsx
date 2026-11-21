@@ -4407,8 +4407,9 @@ describe('the copy button', () => {
     const { raw } = show();
     await act(async () => {});
     expect(count()).toBe('10');
-    // Other people's copies: grey, figure and all.
+    // Other people's copies: the plain sheets, grey, figure and all.
     expect(copyBtn()!.querySelector('[data-icon="copy-outline"]')!.getAttribute('data-color')).toBe(String(colors.textSecondary));
+    expect(within(copyBtn()!).queryByTestId('copy-glyph-tick')).toBeNull();
     expect(textStyleOf(screen.getByTestId('collection-copy-count'))?.color).toBe(colors.textSecondary);
     expect(copyBtn()!.getAttribute('aria-label')).toBe('Save a copy, 10');
     fireEvent.click(copyBtn()!);
@@ -4417,15 +4418,17 @@ describe('the copy button', () => {
     });
   });
 
-  it('opens the copy the reader already has, in the ink, and makes no second', async () => {
+  it('opens the copy the reader already has, ticked, and makes no second', async () => {
     copyRows.rows = [{ slug: 'old-quarter', copies: 11 }];
     state.mine = [collection({ id: 'mine-1', slug: 'my-old-quarter', copied_from: 'c1' })];
     const { raw } = show();
     await act(async () => {});
-    // The outline in the ink, and its figure with it (owner, 21 Nov 2026).
-    expect(copyBtn()!.querySelector('[data-icon="copy"]')).toBeNull();
-    expect(copyBtn()!.querySelector('[data-icon="copy-outline"]')!.getAttribute('data-color')).toBe(String(colors.text));
-    expect(textStyleOf(screen.getByTestId('collection-copy-count'))?.color).toBe(colors.text);
+    // A tick in the front sheet; the grey and the figure as anybody's
+    // (owner, 21 Nov 2026).
+    expect(copyBtn()!.querySelector('[data-icon]')).toBeNull();
+    expect(within(copyBtn()!).getByTestId('copy-glyph-tick')).toBeTruthy();
+    expect(within(copyBtn()!).getByTestId('copy-glyph-yours').getAttribute('stroke')).toBe(String(colors.textSecondary));
+    expect(textStyleOf(screen.getByTestId('collection-copy-count'))?.color).toBe(colors.textSecondary);
     expect(copyBtn()!.getAttribute('aria-label')).toBe('Open your copy, 11');
     fireEvent.click(copyBtn()!);
     expect(raw.push).toHaveBeenCalledWith('CollectionDetail', { slug: 'my-old-quarter' });
