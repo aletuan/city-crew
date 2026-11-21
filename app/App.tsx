@@ -38,6 +38,7 @@ import FloatingTabBar from './src/components/FloatingTabBar';
 import RewardBanner from './src/components/RewardBanner';
 import { AppBoundary, ScreenBoundary } from './src/components/ScreenBoundary';
 import WelcomeSheet from './src/components/WelcomeSheet';
+import ReminderAskSheet from './src/components/ReminderAskSheet';
 import ShareShield from './src/components/ShareShield';
 import { SignupTourProvider } from './src/components/SignupTour';
 import { TabBarDuckProvider } from './src/components/tabBarDuck';
@@ -470,6 +471,7 @@ function Root() {
                   exists only once `holdingFirstFrame` has let go, so the
                   sheet cannot arrive over the blank ground frame. */}
               <WelcomeSheet />
+              <ReminderAskSheet />
             </CityProvider>
           </I18nProvider>
         </AuthProvider>
