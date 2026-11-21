@@ -17,6 +17,7 @@
 
 import * as Notifications from 'expo-notifications';
 import { permissionOf, type PermissionStatus } from './remindState';
+import { offerReminderAsk } from './reminderAsk';
 import {
   fireDateFor, planReminderSync, REMINDER_KINDS, reminderIdFor, reminderOf, reminderText,
   type ReminderHeld, type ReminderKind, type ReminderWant, type Translate,
@@ -34,8 +35,9 @@ Notifications.setNotificationHandler({
   }),
 });
 
-/** Ask only when there is something to schedule — the agreed timing: the
- *  first trip is the moment the permission makes sense to a person. */
+/** Raise the phone's own permission sheet, if it may be raised. Reached
+ *  only from the reader's agreement — the explainer's button, or the row's
+ *  switch — never from a save on its own. */
 async function ensurePermission(): Promise<boolean> {
   try {
     const have = await Notifications.getPermissionsAsync();
@@ -66,7 +68,9 @@ export const askReminderPermission = ensurePermission;
 /**
  * Plant both notes for a saved trip. No-op for a note whose moment has
  * passed (see `lib/remind`), when permission is refused, or when the
- * platform balks — a save must never fail over a courtesy.
+ * platform balks — a save must never fail over a courtesy. Where the
+ * phone has not been asked yet it plants nothing and offers the sheet
+ * that asks; the sync plants once the reader has said yes.
  */
 export async function scheduleTripReminder(
   trip: { id: string; day: string; title: string; startMin: number | null },
@@ -79,7 +83,15 @@ export async function scheduleTripReminder(
       .map((kind) => ({ kind, fire: fireDateFor(kind, w, now) }))
       .filter((d): d is { kind: ReminderKind; fire: Date } => d.fire !== null);
     if (!due.length) return;
-    if (!(await ensurePermission())) return;
+    // Not `ensurePermission`: the first time, the phone's own sheet would
+    // appear over a screen that has just closed, with no word of why. What
+    // this does instead is offer the app's sheet, which says what the
+    // reminders are and raises the phone's only when the reader agrees.
+    // Where the phone has already said no there is nothing to offer — the
+    // reader's way back is the row in Account and the line on the trip.
+    const status = await reminderPermission();
+    if (status === 'undetermined') { offerReminderAsk(); return; }
+    if (status !== 'granted') return;
     for (const { kind, fire } of due) await plant(kind, w, reminderText(kind, w, t), fire);
   } catch { /* a courtesy, not a contract */ }
 }
