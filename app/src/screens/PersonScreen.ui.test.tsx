@@ -1151,13 +1151,17 @@ describe('lists that are not for everybody', () => {
       expect(acts()).toHaveLength(3);
     });
 
-    // The cover's camera leads the row, and the cover itself is the same
-    // door (docs/wall-plan.md); on somebody else's page neither is.
-    it('opens the cover\'s sheet from the camera and from the cover, on your own page only', async () => {
+    // The camera is on the cover, and the whole cover is the door
+    // (docs/wall-plan.md); the header's row keeps search first, as on
+    // everybody else's page. On somebody else's page neither is there.
+    it('opens the cover\'s sheet from the camera on the cover and from the cover, on your own page only', async () => {
       await show('me');
       const camera = screen.getByTestId('person-cover-edit');
-      expect(camera.getAttribute('aria-label')).toBe('Change cover');
-      expect(screen.getByTestId('person-own-tools').firstElementChild!.contains(camera)).toBe(true);
+      expect(screen.getByTestId('person-cover').contains(camera)).toBe(true);
+      expect(camera.querySelector('[data-icon="camera-outline"]')).toBeTruthy();
+      const tools = screen.getByTestId('person-own-tools');
+      expect(tools.contains(camera)).toBe(false);
+      expect(tools.firstElementChild!.contains(screen.getByTestId('person-search'))).toBe(true);
       fireEvent.click(camera);
       expect(screen.getByTestId('wall-sheet')).toBeTruthy();
       fireEvent.click(screen.getByTestId('wall-close'));

@@ -27,9 +27,13 @@ thì đánh dấu bước đó ở đây, trong cùng PR.
    ô cuối hở một nửa; *Tự động* là ô đầu của hàng thành phố. Bản đầu có ô xem
    trước 2,4:1 trong tấm chọn và ô 2,4:1 cao 58pt: trên điện thoại, hai hàng
    cuối bị khuất dưới nút Lưu.
-3. **Mở tấm chọn**: icon máy ảnh trên hàng icon trên cùng (cạnh tìm kiếm,
-   chuông, cài đặt), **và** bấm vào chính ảnh bìa. Chỉ trên trang của mình;
-   trang người khác không có icon, bấm ảnh bìa không làm gì.
+3. **Mở tấm chọn**: bấm vào ảnh bìa, có **nút máy ảnh nhỏ ở góc dưới phải
+   ảnh bìa** để thấy đó là chỗ bấm được (như huy hiệu máy ảnh trên ảnh đại
+   diện). Chỉ trên trang của mình; trang người khác không có nút, bấm ảnh bìa
+   không làm gì. Máy ảnh từng đứng đầu hàng icon trên cùng (21/11/2026, một
+   buổi tối) rồi chuyển xuống ảnh bìa: việc ít làm nhất chiếm chỗ đầu, và đẩy
+   kính lúp khỏi vị trí nó đứng trên trang người khác. Hàng icon là *tìm kiếm ·
+   chuông · cài đặt*.
 4. **Bộ đã chọn mất đi** (xoá, chuyển riêng tư, chủ bỏ sao chép): ảnh bìa
    về *Tự động*. Bộ đổi ảnh đại diện: ảnh bìa đổi theo. Không bao giờ ô
    trống.
