@@ -672,8 +672,8 @@ sở dữ liệu thật ngày 19/11/2026, kiểu dữ liệu đã sinh lại):*
   giờ thấy: chủ một bộ công khai trên bản đó không xem, xoá hay tắt được
   bình luận người khác viết vào bộ của mình — còn Report và Data Desk.
   Tắt lại: `update app_flags set enabled = false where key = 'comments';`
-- [ ] Xoá các dòng `app_flag_testers` của `comments` (không còn tác dụng
-  khi cờ đã bật cho mọi người).
+- [x] Xoá 5 dòng `app_flag_testers` của `comments` (21/11/2026), vì cờ đã
+  bật cho mọi người.
 - [ ] Tăng `version` lên 1.0.18, dán đoạn COMMENTS vào ghi chú App Review,
   nộp bản `production`, theo dõi Build và Submissions.
 
@@ -689,8 +689,10 @@ cho tất cả, có bảng `app_flag_testers` (18/11/2026): một dòng (khoá, 
 khoản) bật cờ đó riêng cho tài khoản ấy. Chỉ bật thêm được, không tắt
 bớt; chỉ sửa được trong SQL editor; mỗi người chỉ đọc được dòng của mình.
 
-Đang bật `comments` cho (kiểm bằng SQL ngày 21/11/2026): **@trang**, **@tuananh**,
-**@xitrum**, và hai tài khoản Maestro **@maestro**, **@usera8b792a2**.
+Không còn dòng nào cho `comments`: cờ bật cho mọi người từ 21/11/2026 và 5
+dòng thử (@trang, @tuananh, @xitrum, @maestro, @usera8b792a2) đã xoá cùng
+ngày. Flow Maestro 23 và 24 vẫn chạy được vì cờ chung đã bật; nếu cờ chung
+tắt lại, hai flow đó cần thêm lại dòng của @maestro và @usera8b792a2.
 
 Thêm một người:
 
