@@ -13,7 +13,7 @@ import React from 'react';
 import { Text } from 'react-native';
 import { copyLabel, type CopyTarget, useCopyState } from '../../components/CopyCount';
 import { PressableScale } from '../../components/ui';
-import { Glyph } from '../../components/ui/glyph';
+import { CopyGlyph } from '../../components/CopyGlyph';
 import { useI18n } from '../../lib/i18n';
 import type { Nav } from '../../nav';
 import { colors } from '../../theme';
@@ -53,10 +53,9 @@ export function CopyDoor({ list, canCopy, onCopy, navigation }: {
       accessibilityLabel={copyLabel(st, t)}
       testID="collection-copy"
     >
-      {/* Once it is yours, the outline in the ink, and its figure with it
-          (owner, 21 Nov 2026) — see `CopyFoot` in ActivityCard. */}
-      <Glyph name="copy-outline" size={ACT_GLYPH} color={have ? colors.text : colors.textSecondary} />
-      {st.n > 0 ? <Text style={[s.act, have && s.actOn]} testID="collection-copy-count">{st.n}</Text> : null}
+      {/* A tick in the front sheet once it is yours — see `CopyGlyph`. */}
+      <CopyGlyph have={have} size={ACT_GLYPH} color={colors.textSecondary} />
+      {st.n > 0 ? <Text style={s.act} testID="collection-copy-count">{st.n}</Text> : null}
     </PressableScale>
   );
 }

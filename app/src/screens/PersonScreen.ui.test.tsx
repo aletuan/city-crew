@@ -2292,8 +2292,9 @@ describe('copying from a card', () => {
     const navigation = await show();
     const btn = copyOn()!;
     expect(within(btn).getByTestId('activity-copy-count').textContent).toBe('4');
-    // Somebody else's copies: the grey outline and the figure, as anyone sees them.
+    // Somebody else's copies: the plain sheets, grey, and the figure.
     expect(btn.querySelector('[data-icon="copy-outline"]')!.getAttribute('data-color')).toBe(String(colors.textSecondary));
+    expect(within(btn).queryByTestId('copy-glyph-tick')).toBeNull();
     expect(textStyleOf(within(btn).getByTestId('activity-copy-count'))?.color).toBe(colors.textSecondary);
     expect(btn.getAttribute('aria-label')).toBe('Save a copy, 4');
     fireEvent.click(btn);
@@ -2302,12 +2303,12 @@ describe('copying from a card', () => {
     });
   });
 
-  it('draws the figure in the ink too once the copy is yours', async () => {
+  it('keeps the figure grey once the copy is yours: only the glyph says so', async () => {
     state.shelf = [list('pho')];
     state.mine = [list('my-pho', { owner_id: 'me-id', copied_from: 'pho' })];
     state.copyRows = [{ slug: 'pho', copies: 2 }];
     await show();
-    expect(textStyleOf(within(copyOn()!).getByTestId('activity-copy-count'))?.color).toBe(colors.text);
+    expect(textStyleOf(within(copyOn()!).getByTestId('activity-copy-count'))?.color).toBe(colors.textSecondary);
   });
 
   it('opens the copy the reader already has', async () => {
@@ -2315,9 +2316,11 @@ describe('copying from a card', () => {
     state.mine = [list('my-pho', { owner_id: 'me-id', copied_from: 'pho' })];
     const navigation = await show();
     const btn = copyOn()!;
-    // Yours: the same outline in the ink, never filled, never the heart's red.
-    expect(btn.querySelector('[data-icon="copy"]')).toBeNull();
-    expect(btn.querySelector('[data-icon="copy-outline"]')!.getAttribute('data-color')).toBe(String(colors.text));
+    // Yours: the same sheets with a tick in the front one, in the same
+    // grey — never filled, never the heart's red (owner, 21 Nov 2026).
+    expect(btn.querySelector('[data-icon]')).toBeNull();
+    expect(within(btn).getByTestId('copy-glyph-yours').getAttribute('stroke')).toBe(String(colors.textSecondary));
+    expect(within(btn).getByTestId('copy-glyph-tick')).toBeTruthy();
     expect(within(btn).queryByTestId('activity-copy-count')).toBeNull();
     fireEvent.click(btn);
     expect(navigation.navigate).toHaveBeenCalledWith('CollectionDetail', { slug: 'my-pho' });

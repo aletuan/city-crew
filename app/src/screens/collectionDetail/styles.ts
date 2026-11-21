@@ -116,8 +116,6 @@ export const s = StyleSheet.create({
   // The heart's tally and Share's word: the acts' ink, a step darker
   // than the byline's — see `ACT_GLYPH`.
   act: { color: colors.textSecondary, ...type.meta },
-  // The copy's figure once the reader has a copy (`CopyDoor`).
-  actOn: { color: colors.text },
   // The heart and its tally, one fact, first in the activity row (see
   // `activity`). In the header it had to sit beside the count, or it read
   // as a second header control slipped a line under ⋯ — inside the card
