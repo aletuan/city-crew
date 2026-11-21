@@ -114,7 +114,8 @@ const field = (placeholder: string) => screen.getByPlaceholderText(placeholder) 
 const nameField = () => field('Enter your full name');
 const handleField = () => field('yourname');
 const townField = () => field('Hanoi, Vietnam');
-const bioField = () => field('Coffee lover · Weekend explorer');
+// An example, and says so: not a bio already written.
+const bioField = () => field('e.g. Coffee lover · Weekend explorer');
 const type = (el: HTMLElement, value: string) => fireEvent.change(el, { target: { value } });
 const saveButton = () => screen.getByRole('button', { name: 'Save changes' });
 const save = () => fireEvent.click(saveButton());

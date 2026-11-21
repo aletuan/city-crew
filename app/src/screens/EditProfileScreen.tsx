@@ -84,7 +84,10 @@ function BioField({ value, onChangeText, route }: {
       <FieldRow
         grouped
         label={t('Bio', 'Giới thiệu', '自己紹介', '个人简介', '個人簡介')}
-        placeholder={t('Coffee lover · Weekend explorer', 'Mê cà phê · Thích khám phá cuối tuần', 'コーヒー好き · 週末の探検家', '咖啡爱好者 · 周末探索家', '咖啡愛好者 · 週末探索家')}
+        // Marked as an example (owner, 21 Nov 2026): grey on an empty
+        // field, the line read as a bio already written, with only the
+        // 0/160 under it to say otherwise.
+        placeholder={t('e.g. Coffee lover · Weekend explorer', 'Ví dụ: Mê cà phê · Thích khám phá cuối tuần', '例：コーヒー好き · 週末の探検家', '例如：咖啡爱好者 · 周末探索家', '例如：咖啡愛好者 · 週末探索家')}
         value={value}
         onChangeText={onChangeText}
         multiline
