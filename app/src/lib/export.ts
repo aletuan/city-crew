@@ -58,8 +58,10 @@ import type {
 // and its friends, either way. 3 since 13 Nov 2026: `from_collections`
 // on each trip, the lists it was started from. 4 since 19 Nov 2026:
 // `comments` and `comment_hearts`, what the account wrote and liked in
-// comments (C9 of docs/comments-plan.md).
-export const EXPORT_FORMAT_VERSION = 4;
+// comments (C9 of docs/comments-plan.md). 5 since 21 Nov 2026:
+// `profile.wall_kind` and `profile.wall_ref`, the cover the account chose
+// for its page (docs/wall-plan.md), both null for automatic.
+export const EXPORT_FORMAT_VERSION = 5;
 
 /** The profile columns `lib/auth` reads. Declared here rather than
  *  imported because `auth.tsx` pulls in React, and this file is held to
@@ -71,6 +73,8 @@ export type ExportProfile = {
   bio: string;
   interests: string;
   avatar_url: string;
+  wall_kind?: string | null;
+  wall_ref?: string | null;
 };
 
 export type ExportInput = {
@@ -270,7 +274,10 @@ export function buildExport(input: ExportInput, now: Date, lang: ExportLang): Ex
       omitted: notes.omitted,
     },
 
-    profile: input.profile,
+    // Both columns always written, null for automatic: a profile kept in
+    // the phone's cache from before they existed has neither, and a file
+    // whose keys come and go is harder to read than one that says null.
+    profile: { ...input.profile, wall_kind: input.profile.wall_kind ?? null, wall_ref: input.profile.wall_ref ?? null },
     preferences: input.preferences,
 
     collections: input.collections.map((c) => ({

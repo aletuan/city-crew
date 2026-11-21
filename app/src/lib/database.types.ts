@@ -1241,6 +1241,8 @@ export type Database = {
           id: string
           interests: string
           location: string
+          wall_kind: string | null
+          wall_ref: string | null
         }
         Insert: {
           avatar_url?: string
@@ -1251,6 +1253,8 @@ export type Database = {
           id: string
           interests?: string
           location?: string
+          wall_kind?: string | null
+          wall_ref?: string | null
         }
         Update: {
           avatar_url?: string
@@ -1261,6 +1265,8 @@ export type Database = {
           id?: string
           interests?: string
           location?: string
+          wall_kind?: string | null
+          wall_ref?: string | null
         }
         Relationships: []
       }

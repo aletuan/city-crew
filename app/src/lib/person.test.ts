@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { coverAmong, listsBy, listsOn, seenOn } from './person';
+import { listsBy, listsOn, seenOn } from './person';
 import type { Collection } from './types';
 
 const one = [{ sort_order: 0, places: { slug: 'p0' } }] as unknown as Collection['collection_places'];
@@ -33,24 +33,6 @@ describe('listsBy', () => {
     expect(listsBy(null, shelf)).toEqual([]);
     expect(listsBy(undefined, shelf)).toEqual([]);
     expect(listsBy('', shelf)).toEqual([]);
-  });
-});
-
-describe('coverAmong', () => {
-  const covers: Record<string, string> = { b: 'http://x/b.jpg', c: 'http://x/c.jpg' };
-  const coverFor = (c: Collection) => covers[c.slug];
-
-  it('is the newest list’s cover', () => {
-    expect(coverAmong([list('b'), list('c')], coverFor)).toBe('http://x/b.jpg');
-  });
-
-  it('passes over a list with none for the next that has one', () => {
-    expect(coverAmong([list('a'), list('c')], coverFor)).toBe('http://x/c.jpg');
-  });
-
-  it('is nothing when no list has one, or there are no lists', () => {
-    expect(coverAmong([list('a')], coverFor)).toBeUndefined();
-    expect(coverAmong([], coverFor)).toBeUndefined();
   });
 });
 

@@ -157,28 +157,3 @@ export function seenOn(c: Collection, own: boolean, shares: number): ListSeen {
   return visibilityOf(false, shares) === 'friends' ? { kind: 'friends', n: shares } : { kind: 'private' };
 }
 
-/**
- * The photograph across the top of the page: the cover of their newest
- * list that has one.
- *
- * Their own lists and not a picture they upload (owner): the page says
- * where this person goes, a cover the desk has already seen needs no
- * second moderation, and there is no upload to build. The newest that
- * *has* one, because a list made in another city resolves no members
- * against this city's catalog and so has no cover unless its owner chose
- * one — the newest list being bare should not leave the page bare when
- * the one before it is not.
- */
-// The cover is still asked of the public lists alone (`listsBy`), your
-// own page included: a cover from a private list would be a head only
-// its owner ever saw, on the page that shows them what others see.
-export function coverAmong(
-  lists: readonly Collection[],
-  coverFor: (c: Collection) => string | undefined,
-): string | undefined {
-  for (const c of lists) {
-    const uri = coverFor(c);
-    if (uri) return uri;
-  }
-  return undefined;
-}

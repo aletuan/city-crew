@@ -66,7 +66,7 @@ còn trong danh sách đó thì là *Tự động* (quyết định 4).
   - `legal.ts`: chính sách nói tới ảnh bìa (hiệu lực 21/11/2026); `app-privacy-labels.md`.
   - Check trên hai cột bọc `coalesce`: một check trả về null là *đạt*, nên
     `wall_kind = 'city'` với `wall_ref` null đã lọt qua trước khi bench bắt được.
-- [ ] **W2. Tấm chọn, không có tải ảnh**: `Profile` đọc hai cột, file xuất dữ liệu có chúng (cùng lúc, vì cả hai đọc `Profile`); `lib/wall.ts` (giải ảnh bìa, danh
+- [x] **W2. Tấm chọn, không có tải ảnh** (`screens/person/Wall.tsx`): `Profile` đọc hai cột, file xuất dữ liệu có chúng (cùng lúc, vì cả hai đọc `Profile`); `lib/wall.ts` (giải ảnh bìa, danh
   sách ứng viên — thuần, 100% coverage), `WallSheet`, hai lối vào, *Tự động*
   bỏ qua bộ đầu.
 - [ ] **W3. Tải ảnh lên**: hàng thứ ba của tấm chọn, cắt 2,4:1, thu nhỏ và
