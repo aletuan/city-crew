@@ -147,7 +147,11 @@ export const s = StyleSheet.create({
     color: colors.textSecondary, fontSize: 15, lineHeight: 21,
     textAlign: 'center', marginBottom: 6,
   },
-  tryHead: { color: colors.text, ...type.section, marginTop: space.titleToContent, marginBottom: space.headingToContent },
+  // The Plan screen's heading size (`type.headline`, 20), not Activity's 22:
+  // this tab is the Plan screen's sibling, and its "You could try" sat a
+  // size above "In the mood for…" one tab over (owner, 21 Nov 2026).
+  tryCard: { paddingHorizontal: space.cardPadding },
+  tryHead: { color: colors.text, ...type.headline, marginTop: space.titleToContent, marginBottom: space.headingToContent },
   guestHint: { color: colors.textSecondary, fontSize: 13, lineHeight: 19, textAlign: 'center' },
   guestReturning: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', alignItems: 'center', marginHorizontal: space.page, marginBottom: space.titleToContent },
   guestSignIn: { minHeight: SECONDARY_CONTROL_H, justifyContent: 'center', paddingHorizontal: 6 },
