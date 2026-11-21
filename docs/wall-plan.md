@@ -50,9 +50,10 @@ thì đánh dấu bước đó ở đây, trong cùng PR.
    dưới đồng hồ, cao 200pt dưới đồng hồ; mép trên có dải tối mờ. Nút quay
    lại (trang người khác) và cụm công cụ nằm trong kính tối mờ như nút máy
    ảnh; cuộn qua ảnh thì nền trang và tên người hiện dần, icon và đồng hồ
-   chuyển sang mực của trang (`person/Bar`). Ảnh đại diện đè nửa lên ảnh
-   bìa, tâm nằm trên mép ảnh (trước là khoảng 40%). Khi tìm kiếm trong
-   trang, trang trở lại header thường.
+   chuyển sang mực của trang (`person/Bar`). Khi tìm kiếm trong trang,
+   trang trở lại header thường. Ảnh đại diện giữ mức đè cũ (26pt, khoảng
+   40%): đè một nửa đã thử trong một giờ, nhưng đuôi bong bóng bio chỉ
+   xuống dưới ảnh đại diện, hai khối rời nhau.
 
 ## Dữ liệu
 

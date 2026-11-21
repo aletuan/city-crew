@@ -340,8 +340,8 @@ describe('whose page it is', () => {
     expect(viewStyleOf(screen.getByTestId('person-cover').firstElementChild!)).toMatchObject({ height: 200 });
     expect(viewStyleOf(screen.getByTestId('person-cover'))).toMatchObject({ marginHorizontal: -space.page });
     expect(viewStyleOf(screen.getByTestId('person-cover')).borderRadius).toBeUndefined();
-    // Half the ringed face over the cover, its centre on the cover's foot.
-    expect(viewStyleOf(screen.getByTestId('person-head-row'))).toMatchObject({ marginTop: -44 });
+    // 26 of the ringed face over the cover, the bubble level with its foot.
+    expect(viewStyleOf(screen.getByTestId('person-head-row'))).toMatchObject({ marginTop: -26 });
   });
 
   it('asks for the profile by the handle it was opened with, the `@` and case off', async () => {
@@ -363,7 +363,7 @@ describe('whose page it is', () => {
     const named = screen.getByTestId('role-row');
     expect(named.contains(handle)).toBe(true);
     expect([...named.parentElement!.children]).toEqual([named]);
-    expect(viewStyleOf(named.parentElement!)).toMatchObject({ flex: 1, marginTop: 50 });
+    expect(viewStyleOf(named.parentElement!)).toMatchObject({ flex: 1, marginTop: 32 });
     // Once in the head; the bar's title says it again only past the cover.
     expect(within(screen.getByTestId('person-scroll')).getAllByText('@lan')).toHaveLength(1);
     expect(screen.queryByTestId('person-name')).toBeNull();
@@ -489,9 +489,9 @@ describe('the bio, and the way to write one', () => {
     expect(handle.nextElementSibling).toBe(bubble);
     const row = screen.getByTestId('person-cover').nextElementSibling as HTMLElement;
     expect(row.contains(bubble)).toBe(true);
-    // Half the picture on the cover again (22 Nov 2026), 44 of 88: it
-    // was 26, a little over a quarter, from 17 Nov.
-    expect(viewStyleOf(row)).toMatchObject({ alignItems: 'flex-start', marginTop: -44 });
+    // The picture hangs so the bubble stands level with its foot: 26 of
+    // it on the cover (half for an hour on 22 Nov 2026, and back).
+    expect(viewStyleOf(row)).toMatchObject({ alignItems: 'flex-start', marginTop: -26 });
     const dress = viewStyleOf(bubble);
     // As wide as the words; a tinted well with no hairline.
     expect(dress.alignSelf).toBe('flex-start');
