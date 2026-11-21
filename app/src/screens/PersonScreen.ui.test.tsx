@@ -991,6 +991,7 @@ describe('their lists', () => {
     await show();
     expect(cards()).toEqual([]);
     expect(within(screen.getByTestId('person-no-lists')).getByText('No public collections yet')).toBeTruthy();
+    expect(within(screen.getByTestId('person-no-lists')).getByText('When they share a collection, it will show here.')).toBeTruthy();
   });
 });
 
@@ -1150,6 +1151,9 @@ describe('lists that are not for everybody', () => {
       state.shelf = [];
       await show('me');
       expect(screen.getByTestId('person-no-lists')).toBeTruthy();
+      // In your own person: "they" was a stranger's word for you.
+      expect(within(screen.getByTestId('person-no-lists')).getByText('Your public collections will show here.')).toBeTruthy();
+      expect(screen.queryByText('When they share a collection, it will show here.')).toBeNull();
       expect(screen.getByTestId('person-settings')).toBeTruthy();
     });
 

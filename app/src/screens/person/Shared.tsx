@@ -236,13 +236,18 @@ export default function Shared({ me, person, lists, seenOf, coverFor, onOpen, on
           <Text style={s.noneTitle}>
             {t('No public collections yet', 'Chưa có bộ sưu tập công khai', '公開コレクションはまだありません', '还没有公开的合集', '還沒有公開的合集')}
           </Text>
+          {/* In the person the page is about: "they" on somebody else's,
+              "your" on your own, where "Khi họ chia sẻ" spoke of you as
+              a stranger (owner, 21 Nov 2026). */}
           <Text style={s.noneBody}>
-            {t(
-              'When they share a collection, it will show here.',
-              'Khi họ chia sẻ một bộ sưu tập, nó sẽ hiện ở đây.',
-              'コレクションが公開されると、ここに表示されます。',
-              '对方分享合集后，会显示在这里。', '對方分享合集後，會顯示在這裡。',
-            )}
+            {me && person.id === me
+              ? t('Your public collections will show here.', 'Bộ sưu tập công khai của bạn sẽ hiện ở đây.', 'あなたの公開コレクションがここに表示されます。', '你的公开合集会显示在这里。', '你的公開合集會顯示在這裡。')
+              : t(
+                'When they share a collection, it will show here.',
+                'Khi họ chia sẻ một bộ sưu tập, nó sẽ hiện ở đây.',
+                'コレクションが公開されると、ここに表示されます。',
+                '对方分享合集后，会显示在这里。', '對方分享合集後，會顯示在這裡。',
+              )}
           </Text>
         </Card>
       ) : (

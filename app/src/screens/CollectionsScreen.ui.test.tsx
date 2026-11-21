@@ -752,7 +752,9 @@ describe('CollectionsScreen — signed in', () => {
     const { navigation } = show();
     fireEvent.click(screen.getByRole('tab', { name: /Yours/ }));
     expect(screen.getByText('No collections yet')).toBeTruthy();
-    expect(screen.getByText('Only you can see them until you choose to share.')).toBeTruthy();
+    // What Save does with a new list: public (born public since 20 Nov 2026).
+    expect(screen.getByText('Public by default — make one private any time.')).toBeTruthy();
+    expect(screen.getByText('Gather the places you love by theme, then share them or plan an outing from one.')).toBeTruthy();
     expect(screen.queryByText('New collection')).toBeNull();
     fireEvent.click(screen.getByText('Create your first collection'));
     expect(navigation.navigate).toHaveBeenCalledWith('CollectionForm');
