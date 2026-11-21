@@ -58,7 +58,7 @@ function Page({ who, own, open, reload = () => {} }: { who: FriendProfile; own: 
   const wall = useWall({ person: who, own, open, coverFor, places: [], reload });
   return (
     <>
-      <div data-testid="cover" data-src={wall.cover ?? ''} />
+      <div data-testid="cover" data-src={wall.cover ?? ''} data-trying={String(wall.trying)} />
       {wall.onCover ? <button type="button" onClick={wall.onCover}>edit</button> : null}
       {wall.sheet}
     </>
@@ -69,7 +69,8 @@ const settleModal = () => {
   document.querySelectorAll('[class*="r-animationKeyframes"]').forEach((el) => fireEvent.animationEnd(el));
 };
 const src = () => screen.getByTestId('cover').getAttribute('data-src');
-const previewSrc = () => screen.getByTestId('wall-preview').querySelector('img')?.getAttribute('src');
+const trying = () => screen.getByTestId('cover').getAttribute('data-trying');
+const sheetOpen = () => !!screen.queryByTestId('wall-sheet');
 
 beforeEach(() => {
   st.city = { id: 'hcmc', hero_photo_uri: 'https://city/hcmc.jpg', hero_place_slug: null };
@@ -149,16 +150,24 @@ describe('the sheet on your own page', () => {
     expect(screen.queryByTestId('wall-lists')).toBeNull();
   });
 
-  it('previews a tap without saving it, and saves only what differs', async () => {
+  // The page is the preview (owner, 21 Nov 2026): a tap puts the picture
+  // on the cover itself, said to be a trial, and saves nothing.
+  it('tries a tap on the page\'s own cover without saving it, and saves only what differs', async () => {
     render(<Page who={person()} own open={open} />);
     fireEvent.click(screen.getByText('edit'));
-    expect(previewSrc()).toBe('https://b.jpg');
+    expect(src()).toBe('https://b.jpg');
+    expect(trying()).toBe('false');
     expect(screen.getByTestId('wall-save').getAttribute('aria-disabled')).toBe('true');
     fireEvent.click(screen.getByTestId('wall-tile-city-hcmc'));
-    expect(previewSrc()).toBe('https://city/hcmc.jpg');
+    expect(src()).toBe('https://city/hcmc.jpg');
+    expect(trying()).toBe('true');
     expect(screen.getByTestId('wall-tile-city-hcmc').getAttribute('aria-selected')).toBe('true');
     expect(st.saved).toEqual([]);
     expect(screen.getByTestId('wall-save').getAttribute('aria-disabled')).not.toBe('true');
+    // Back to what is saved: no longer a trial, nothing to save.
+    fireEvent.click(screen.getByTestId('wall-auto'));
+    expect(src()).toBe('https://b.jpg');
+    expect(trying()).toBe('false');
   });
 
   it('writes the choice and reads the page again on Save', async () => {
@@ -170,7 +179,11 @@ describe('the sheet on your own page', () => {
     expect(st.saved).toEqual([{ wall_kind: 'collection', wall_ref: 'a' }]);
     expect(reload).toHaveBeenCalledTimes(1);
     settleModal();
-    expect(screen.queryByTestId('wall-preview')).toBeNull();
+    expect(sheetOpen()).toBe(false);
+    // Kept on the cover until the page reads itself again, with no trial
+    // left to announce.
+    expect(src()).toBe('https://a.jpg');
+    expect(trying()).toBe('false');
   });
 
   it('goes back to automatic as two nulls', async () => {
@@ -191,19 +204,37 @@ describe('the sheet on your own page', () => {
     await act(async () => { fireEvent.click(screen.getByTestId('wall-save')); });
     expect(st.alerts).toEqual(['Couldn\'t save the cover. Try again.']);
     expect(reload).not.toHaveBeenCalled();
-    expect(screen.getByTestId('wall-preview')).toBeTruthy();
+    expect(sheetOpen()).toBe(true);
+    expect(src()).toBe('https://city/hcmc.jpg');
   });
 
-  it('closes on × without saving, and opens again on what is worn', () => {
+  it('closes on × without saving, the cover back as it was, and opens again on what is worn', () => {
     render(<Page who={person()} own open={open} />);
     fireEvent.click(screen.getByText('edit'));
     fireEvent.click(screen.getByTestId('wall-tile-city-hcmc'));
+    expect(src()).toBe('https://city/hcmc.jpg');
     fireEvent.click(screen.getByTestId('wall-close'));
     settleModal();
-    expect(screen.queryByTestId('wall-preview')).toBeNull();
+    expect(sheetOpen()).toBe(false);
+    expect(src()).toBe('https://b.jpg');
+    expect(trying()).toBe('false');
     fireEvent.click(screen.getByText('edit'));
     expect(screen.getByTestId('wall-auto').getAttribute('aria-selected')).toBe('true');
     expect(st.saved).toEqual([]);
+  });
+
+  it('lets the cover go once the page says the same as was saved', async () => {
+    const open2 = [list('a', 'https://a.jpg'), list('b', 'https://b.jpg')];
+    const { rerender } = render(<Page who={person()} own open={open2} />);
+    fireEvent.click(screen.getByText('edit'));
+    fireEvent.click(screen.getByTestId('wall-tile-collection-a'));
+    await act(async () => { fireEvent.click(screen.getByTestId('wall-save')); });
+    settleModal();
+    // The page read again, now saying the list; then a change made
+    // elsewhere is shown, not held over by the old look.
+    rerender(<Page who={person({ wall_kind: 'collection', wall_ref: 'a' })} own open={open2} />);
+    rerender(<Page who={person({ wall_kind: 'city', wall_ref: 'hcmc' })} own open={open2} />);
+    expect(src()).toBe('https://city/hcmc.jpg');
   });
 });
 
@@ -215,9 +246,12 @@ describe('a photograph of your own', () => {
     fireEvent.click(screen.getByText('edit'));
     // Nothing of yours to offer back yet.
     expect(screen.queryByTestId('wall-tile-upload')).toBeNull();
+    // A look tried first is not what the upload leaves on the cover.
+    fireEvent.click(screen.getByTestId('wall-tile-city-hcmc'));
     await act(async () => { fireEvent.click(screen.getByTestId('wall-upload')); });
     expect(st.uploaded).toEqual(['file:///street.jpg']);
     expect(reload).toHaveBeenCalledTimes(1);
+    expect(trying()).toBe('false');
     expect(st.saved).toEqual([]);
   });
 
