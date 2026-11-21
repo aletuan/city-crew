@@ -142,13 +142,15 @@ export const api = {
   },
 
   /** Blank one field of a profile. Each flag on its own, because a bio
-   *  that breaks the rules is not a reason to take somebody's photo. */
+   *  that breaks the rules is not a reason to take somebody's photo.
+   *  `wall` puts the page's cover back to automatic (docs/wall-plan.md). */
   moderateProfile: async (id, flags) => {
     db(await supabase.rpc('moderate_profile', {
       target: id,
       clear_bio: !!flags.bio,
       clear_avatar: !!flags.avatar,
       clear_name: !!flags.name,
+      clear_wall: !!flags.wall,
     }));
   },
 

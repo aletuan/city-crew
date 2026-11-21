@@ -110,3 +110,35 @@ begin
     'public.moderate_profile(uuid, boolean, boolean, boolean, boolean)', 'execute'),
     'moderate_profile is open to anon';
 end $$;
+
+-- ── the desk sees the cover on a profile report, and only there ──
+-- (20261121130000_reports_queue_wall)
+do $$
+declare r record; n int;
+begin
+  update public.profiles set wall_kind = 'upload',
+    wall_ref = 'https://amdvitzpogaejzzqroco.supabase.co/storage/v1/object/public/avatars/d2e00000-0000-0000-0000-00000000000a/wall.jpg?v=9'
+   where id = 'd2e00000-0000-0000-0000-00000000000a';
+  delete from public.reports;
+  insert into public.reports (reporter, kind, target_id, reason) values
+   ('d2e00000-0000-0000-0000-00000000000b', 'profile', 'd2e00000-0000-0000-0000-00000000000a', 'offensive');
+
+  set local role rls_client;
+  set local test.uid = 'd2e00000-0000-0000-0000-00000000000e';
+  set local test.jwt = '{"email": "anhlt1983@gmail.com"}';
+  select * into r from public.reports_queue();
+  reset role;
+  assert r.kind = 'profile' and r.owner_handle = 'wallowner', format('the queue read %s / %s', r.kind, r.owner_handle);
+  assert r.wall_kind = 'upload' and r.wall_ref like '%/d2e00000-0000-0000-0000-00000000000a/wall.jpg?v=9',
+    format('the cover read %s / %s', r.wall_kind, r.wall_ref);
+
+  -- A reader still sees no queue at all.
+  set local role rls_client;
+  set local test.uid = 'd2e00000-0000-0000-0000-00000000000b';
+  set local test.jwt = '{"email": "wall-b@x.com"}';
+  select count(*) into n from public.reports_queue();
+  reset role;
+  assert n = 0, format('a reader read %s reports', n);
+  assert not has_function_privilege('anon', 'public.reports_queue()', 'execute'), 'the queue is open to anon';
+  delete from public.reports;
+end $$;

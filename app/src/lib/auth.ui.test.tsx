@@ -431,6 +431,43 @@ describe('profile edits', () => {
   });
 });
 
+describe('the page\'s cover from a photograph', () => {
+  const bucketCalls = () => h.fake.log.filter((a) => a.op === 'storage');
+
+  it('uploads its own object beside the face, wider, and saves it as an upload', async () => {
+    await mount({ signedIn: session('u1'), fetched: row() });
+    manipulateAsync.mockResolvedValue({ base64: 'aGk=' });
+    h.fake.replies({ data: {} }, { data: null });
+    await act(async () => { await seen.api.setWallPhoto('file:///street.jpg'); });
+    expect(manipulateAsync).toHaveBeenCalledWith('file:///street.jpg', [{ resize: { width: 1200 } }], expect.objectContaining({ format: 'jpeg' }));
+    expect(bucketCalls()).toEqual([expect.objectContaining({
+      table: 'avatars', fn: 'upload', payload: { path: 'u1/wall.jpg', opts: { contentType: 'image/jpeg', upsert: true } },
+    })]);
+    const saved = h.fake.log.filter((a) => a.table === 'profiles' && a.op === 'update')[0];
+    expect(saved.filters).toEqual([['id', 'u1']]);
+    const { wall_kind, wall_ref } = saved.payload as { wall_kind: string; wall_ref: string };
+    expect(wall_kind).toBe('upload');
+    expect(wall_ref).toMatch(/^https:\/\/storage\.test\/avatars\/u1\/wall\.jpg\?v=\d+$/);
+    expect(seen.api.profile).toMatchObject({ wall_kind: 'upload', wall_ref });
+    // The face is untouched.
+    expect(saved.payload).not.toHaveProperty('avatar_url');
+  });
+
+  it('says the row was not saved, and keeps the profile as it was', async () => {
+    await mount({ signedIn: session('u1'), fetched: row() });
+    manipulateAsync.mockResolvedValue({ base64: 'aGk=' });
+    h.fake.replies({ data: {} }, { error: { message: 'violates check constraint' } });
+    await expect(seen.api.setWallPhoto('file:///street.jpg')).rejects.toThrow('violates check constraint');
+    expect(seen.api.profile.wall_kind).toBeUndefined();
+  });
+
+  it('refuses without an account', async () => {
+    await mount();
+    await expect(seen.api.setWallPhoto('file:///x.jpg')).rejects.toThrow('not_signed_in');
+    expect(manipulateAsync).not.toHaveBeenCalled();
+  });
+});
+
 describe('the avatar', () => {
   const bucketCalls = () => h.fake.log.filter((a) => a.op === 'storage');
 

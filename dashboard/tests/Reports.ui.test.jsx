@@ -21,6 +21,7 @@ const ROWS = [
   {
     id: 'r-bio', kind: 'profile', reason: 'offensive', status: 'new', created_at: ago(13),
     target_id: 'u2', owner_id: 'u2', owner_handle: 'an', body: 'a bio with words in it',
+    wall_kind: 'upload', wall_ref: 'https://storage/avatars/u2/wall.jpg?v=1',
   },
   {
     id: 'r-fresh', kind: 'profile', reason: 'other', status: 'new', created_at: ago(0.1),
@@ -103,6 +104,30 @@ describe('Reports', () => {
     fireEvent.click(within(card('a bio with words in it')).getByRole('button', { name: 'Clear the photo' }));
     expect((await findToast()).textContent).toBe('Photo cleared');
     expect(api.moderateProfile).toHaveBeenCalledWith('u2', { avatar: true });
+  });
+
+  // docs/wall-plan.md, W4: the one picture on a page nobody at the desk
+  // has seen is drawn; a cover from the catalog is named; a page on
+  // automatic has nothing to take down.
+  it('draws an uploaded cover and takes it down as its own act', async () => {
+    api.reports.mockResolvedValue(ROWS);
+    renderDesk('/reports');
+    await screen.findByText('a bio with words in it');
+    const c = card('a bio with words in it');
+    expect(within(c).getByAltText('Uploaded cover').getAttribute('src')).toBe('https://storage/avatars/u2/wall.jpg?v=1');
+    fireEvent.click(within(c).getByRole('button', { name: 'Take the cover down' }));
+    expect((await findToast()).textContent).toBe('Cover taken down');
+    expect(api.moderateProfile).toHaveBeenCalledWith('u2', { wall: true });
+    expect(api.markReport).toHaveBeenCalledWith('r-bio', 'actioned');
+  });
+
+  it('names a cover from the catalog, and offers nothing for a page on automatic', async () => {
+    api.reports.mockResolvedValue([{ ...ROWS[1], wall_kind: 'city', wall_ref: 'hanoi' }, ROWS[2]]);
+    renderDesk('/reports');
+    await screen.findByText('a bio with words in it');
+    expect(within(card('a bio with words in it')).getByText('Cover: city hanoi')).toBeTruthy();
+    expect(within(card('a bio with words in it')).queryByAltText('Uploaded cover')).toBeNull();
+    expect(within(card('Nothing left to show — already cleared.')).queryByRole('button', { name: 'Take the cover down' })).toBeNull();
   });
 
   it('asks before suspending, and does nothing when told no', async () => {

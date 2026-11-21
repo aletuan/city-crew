@@ -69,10 +69,16 @@ còn trong danh sách đó thì là *Tự động* (quyết định 4).
 - [x] **W2. Tấm chọn, không có tải ảnh** (`screens/person/Wall.tsx`): `Profile` đọc hai cột, file xuất dữ liệu có chúng (cùng lúc, vì cả hai đọc `Profile`); `lib/wall.ts` (giải ảnh bìa, danh
   sách ứng viên — thuần, 100% coverage), `WallSheet`, hai lối vào, *Tự động*
   bỏ qua bộ đầu.
-- [ ] **W3. Tải ảnh lên**: hàng thứ ba của tấm chọn, cắt 2,4:1, thu nhỏ và
-  tải như `setAvatar`, ô ảnh đã tải đứng cạnh nút.
-- [ ] **W4. Data Desk**: báo cáo hồ sơ hiện ảnh bìa đang dùng và nút *Gỡ ảnh
-  bìa* (`clear_wall`).
+- [x] **W3. Tải ảnh lên**: hàng thứ ba của tấm chọn, thu nhỏ rộng 1200px và
+  tải như `setAvatar` (một hàm chung, `uploadOwnPhoto`), ô ảnh đã tải đứng
+  cạnh nút khi đang dùng. **Không cắt 2,4:1**: trình sửa ảnh của thư viện
+  iOS luôn cắt vuông, mà khung vuông là sai khung cho ảnh bìa; ảnh bìa lấy
+  phần giữa (`contentFit="cover"`). Ảnh mới thay ảnh cũ, giới hạn một lần
+  một phút của bucket áp dụng riêng cho `wall.jpg`.
+- [x] **W4. Data Desk** (migration `20261121130000_reports_queue_wall.sql`):
+  `reports_queue` trả thêm `wall_kind`, `wall_ref` của hồ sơ bị báo cáo; thẻ
+  báo cáo vẽ ảnh tải lên, ghi tên thành phố/bộ nếu là ảnh có sẵn, và có nút
+  *Take the cover down* (`clear_wall`) khi trang không ở chế độ tự động.
 
 W3 và W4 đi cùng bản phát hành: một ảnh tải lên công khai không được có
 mặt trước khi gỡ được nó.

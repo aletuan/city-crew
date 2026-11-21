@@ -1744,6 +1744,8 @@ option { background: var(--bg-elevated); color: var(--text-primary); }
    not a caption. */
 .reptext { margin: 0 0 6px; font-size: 15px; line-height: 1.5; color: var(--text-primary); }
 .repnote { margin: 0 0 6px; font-size: 14px; line-height: 1.5; color: var(--text-secondary); font-style: italic; }
+/* A reported person's uploaded cover, at the page's proportions. */
+.repwall { display: block; width: 100%; max-width: 480px; aspect-ratio: 2.4 / 1; object-fit: cover; border-radius: 12px; margin: 4px 0 10px; }
 .repacts { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
 
 /* Banned words: the list as chips, each with its own way out. */

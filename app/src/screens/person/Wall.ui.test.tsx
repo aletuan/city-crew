@@ -19,6 +19,12 @@ const st = vi.hoisted(() => ({
   saved: [] as unknown[],
   fail: false,
   alerts: [] as string[],
+  picked: null as string | null,
+  uploaded: [] as string[],
+  uploadFail: null as string | null,
+}));
+vi.mock('expo-image-picker', () => ({
+  launchImageLibraryAsync: async () => (st.picked ? { canceled: false, assets: [{ uri: st.picked }] } : { canceled: true, assets: [] }),
 }));
 vi.mock('../../lib/city', () => ({
   useCurrentCity: () => ({ city: st.city }),
@@ -31,6 +37,7 @@ vi.mock('../../lib/data', async (orig) => ({
 vi.mock('../../lib/auth', () => ({
   useAuthActions: () => ({
     updateProfile: async (patch: unknown) => { if (st.fail) throw new Error('x'); st.saved.push(patch); },
+    setWallPhoto: async (uri: string) => { if (st.uploadFail) throw new Error(st.uploadFail); st.uploaded.push(uri); },
   }),
 }));
 vi.mock('../../lib/i18n', () => ({ useI18n: () => ({ t: (en: string) => en, lang: 'en' }) }));
@@ -72,6 +79,9 @@ beforeEach(() => {
   st.saved = [];
   st.fail = false;
   st.alerts = [];
+  st.picked = null;
+  st.uploaded = [];
+  st.uploadFail = null;
 });
 
 describe('the cover the page wears', () => {
@@ -196,3 +206,47 @@ describe('the sheet on your own page', () => {
     expect(st.saved).toEqual([]);
   });
 });
+
+describe('a photograph of your own', () => {
+  it('uploads the one picked at once, and reads the page again', async () => {
+    st.picked = 'file:///street.jpg';
+    const reload = vi.fn();
+    render(<Page who={person()} own open={[]} reload={reload} />);
+    fireEvent.click(screen.getByText('edit'));
+    // Nothing of yours to offer back yet.
+    expect(screen.queryByTestId('wall-tile-upload')).toBeNull();
+    await act(async () => { fireEvent.click(screen.getByTestId('wall-upload')); });
+    expect(st.uploaded).toEqual(['file:///street.jpg']);
+    expect(reload).toHaveBeenCalledTimes(1);
+    expect(st.saved).toEqual([]);
+  });
+
+  it('does nothing when the library is closed without a choice', async () => {
+    const reload = vi.fn();
+    render(<Page who={person()} own open={[]} reload={reload} />);
+    fireEvent.click(screen.getByText('edit'));
+    await act(async () => { fireEvent.click(screen.getByTestId('wall-upload')); });
+    expect(st.uploaded).toEqual([]);
+    expect(reload).not.toHaveBeenCalled();
+  });
+
+  it('says why an upload failed, in the account\'s words for it', async () => {
+    st.picked = 'file:///again.jpg';
+    st.uploadFail = 'too_soon';
+    render(<Page who={person()} own open={[]} />);
+    fireEvent.click(screen.getByText('edit'));
+    await act(async () => { fireEvent.click(screen.getByTestId('wall-upload')); });
+    expect(st.alerts).toHaveLength(1);
+    expect(st.alerts[0]).not.toBe('too_soon');
+  });
+
+  it('offers the upload worn back as a tile, ticked', () => {
+    const up = 'https://up/wall.jpg?v=1';
+    render(<Page who={person({ wall_kind: 'upload', wall_ref: up })} own open={[]} />);
+    fireEvent.click(screen.getByText('edit'));
+    const tile = screen.getByTestId('wall-tile-upload');
+    expect(tile.getAttribute('aria-selected')).toBe('true');
+    expect(tile.querySelector('img')!.getAttribute('src')).toBe(up);
+  });
+});
+
