@@ -1538,15 +1538,14 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
           // Not the whole card, since the chips under the line are
           // a filter and a tap meant for one would open the form.
           //
-          // Drawn as an action, not as words. It was a sentence in
-          // the description's own face one grey lighter — "Thêm vài
-          // dòng về bộ sưu tập này." — and the owner read it as the
-          // description (18 Oct 2026): on the sand ground the two
-          // greys are a shade apart, and a sentence about the list
-          // reads as one. Now a plus and two words in the accent,
-          // the colour this app gives the things a tap changes,
-          // at the caption's size: it is a control in the place
-          // the words will go, not the words.
+          // Drawn as the empty bio is on your own page (`BioInvite`):
+          // the words faint and in italic, then a small pencil in the
+          // app's gold (owner, 21 Nov 2026). It was "＋ Add a
+          // description" in the accent, a button among the card's
+          // hearts, chips and ⋯; and before that (18 Oct) a sentence
+          // one grey lighter than a description, which the owner read
+          // as one. The italic and the pencil are what tell the two
+          // apart now, as they do on the bio.
           <PressableScale
             onPress={edit}
             scaleTo={0.96}
@@ -1555,8 +1554,8 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
             contentStyle={s.descAdd}
             testID="collection-desc-add"
           >
-            <Glyph name="add" size={ICON.action} color={colors.accent} />
-            <Text style={s.descAddText}>{t('Add a description', 'Thêm mô tả', '説明を追加', '添加简介', '新增簡介')}</Text>
+            <Text style={s.descAddText}>{t('Write a few lines about this collection', 'Viết vài dòng về bộ sưu tập này', 'このコレクションについてひとこと書く', '为这个合集写几句介绍', '為這個合集寫幾句介紹')}</Text>
+            <Glyph name="pencil" size={ICON.text} color={colors.sun} />
           </PressableScale>
         ) : null}
         {kindRow}
