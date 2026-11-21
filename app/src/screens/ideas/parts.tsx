@@ -4,7 +4,6 @@ import { Glyph, ICON } from '../../components/ui/glyph';
 import { PressableScale, TileGrid } from '../../components/ui';
 import { colors, space } from '../../theme';
 import { s } from './styles';
-import { useTourAnchor } from '../../components/SignupTour';
 
 /**
  * A question and the grid of answers under it.
@@ -29,29 +28,13 @@ export function MoreRow({ label, onPress }: { label: string; onPress: () => void
   );
 }
 
-/**
- * The first question of the planner, ringed by the sign-up guide's last
- * step (owner, 21 Nov 2026). The guide had meant to ring "Plan a trip";
- * that button stands under three questions, below the first screen, and
- * is dimmed until two are answered — a ring on a dimmed button below the
- * fold points at nothing a reader can do. The first question is where
- * planning starts, and is always in sight when the tab opens. A press on
- * the ring does nothing but close the guide: the tiles inside are the
- * reader's to choose.
- */
-export function GuidedSection(props: Omit<React.ComponentProps<typeof Section>, 'anchorRef'>) {
-  return <Section {...props} anchorRef={useTourAnchor('plan', noop)} />;
-}
-const noop = () => {};
-
-export function Section({ title, cols, children, anchorRef }: {
+export function Section({ title, cols, children }: {
   title: string;
   cols: number;
   children: React.ReactNode;
-  anchorRef?: React.Ref<React.ComponentRef<typeof View>>;
 }) {
   return (
-    <View ref={anchorRef} collapsable={false} style={{ marginBottom: space.titleToContent }}>
+    <View style={{ marginBottom: space.titleToContent }}>
       <Text style={s.heading}>{title}</Text>
       <View style={s.grid}><TileGrid cols={cols}>{children}</TileGrid></View>
     </View>

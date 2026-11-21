@@ -22,10 +22,10 @@ vi.mock('react-native', async orig => ({ ...(await orig<Record<string, unknown>>
 const pressed = vi.fn();
 const getRoute = () => state.route;
 function Anchor({ id }: { id: 'search' | 'save' | 'community' | 'profile' | 'plan' }) {
-  // The collections tab rings as the tab bar asks: in from its box above
-  // and below, out by nothing at the sides.
+  // The profile and planner tabs ring as the tab bar asks: in from the
+  // box above and below, out by nothing at the sides.
   const ref = useTourAnchor(id, pressed, id === 'search' ? () => state.focused : undefined,
-    id === 'profile' ? { x: 0, y: -4 } : undefined);
+    id === 'profile' || id === 'plan' ? { x: 0, y: -4 } : undefined);
   useEffect(() => {
     ref.current = { measureInWindow: (cb: (x: number, y: number, w: number, h: number) => void) => cb(state.x, state.offscreen ? -50 : state.readings.shift() ?? state.y, state.w, state.h) } as unknown as React.ComponentRef<typeof View>;
   }, [ref]);
@@ -70,7 +70,7 @@ it('does not start on sign-in; runs five steps and finishes without a skip on th
   // Step 5 waits for the planner.
   fireEvent.click(screen.getByText('Tiếp theo'));
   await waitFor(() => expect(screen.queryByTestId('signup-tour')).toBeNull());
-  // Not on Collections either: the planner's question is on the planner.
+  // Not on Collections either: the guide opens the planner behind its tab.
   await act(async () => { await new Promise(resolve => setTimeout(resolve, 300)); });
   expect(screen.queryByTestId('signup-tour')).toBeNull();
   state.route = 'IdeasHome';
@@ -394,8 +394,8 @@ it('draws the ring where the control asks, and keeps the card as clear of it', a
   // The profile tab: the box's width, 4 in from its top and foot.
   expect([target().style.left, target().style.top, target().style.width, target().style.height]).toEqual(['40px', '64px', '40px', '32px']);
   expect(card().style.top).toBe('108px');
-  // The planner's first question: a control on its page again.
+  // The planner's tab: as the profile tab.
   state.route = 'IdeasHome';
   fireEvent.click(screen.getByText('Tiếp theo')); await screen.findByText('5/5');
-  expect([target().style.left, target().style.top, target().style.width, target().style.height]).toEqual(['36px', '56px', '48px', '48px']);
+  expect([target().style.left, target().style.top, target().style.width, target().style.height]).toEqual(['40px', '64px', '40px', '32px']);
 });
