@@ -51,6 +51,7 @@ import type Ionicons from '@expo/vector-icons/Ionicons';
 import { StyleSheet, Text, View } from 'react-native';
 import { Image } from 'expo-image';
 import LikeHeart from './LikeHeart';
+import { CopyGlyph } from './CopyGlyph';
 import { Glyph, ICON } from './ui/glyph';
 import { PressableScale } from './ui/controls';
 import { Avatar, Card } from './ui/surfaces';
@@ -86,15 +87,9 @@ const MARK = ICON.meta;
  *  whether the reader has a copy, what VoiceOver says, and the press. */
 export type CardCopy = { n: number; have: boolean; label: string; onPress: () => void };
 
-/** The copy button in the foot, drawn as the comments are. Once the
- *  reader has a copy, its outline and figure take the ink; everybody
- *  else, the owner included, sees the grey and the count (owner, 21 Nov
- *  2026). It was filled in the accent, as the heart is, until then:
- *  two red marks side by side read as two hearts, and the copy glyph
- *  filled — two squares — is more ink than the heart it stood beside.
- *  Rejected the same day: filled in the ink (as heavy, in black), and
- *  a tick drawn on the outline (8pt at this size, and the mark of a
- *  copy to the clipboard, which is gone in a second). */
+/** The copy button in the foot, drawn as the comments are; a tick in the
+ *  front sheet once the reader has a copy (`CopyGlyph`, where the states
+ *  and what they replaced are written). */
 function CopyFoot({ copy }: { copy: CardCopy }) {
   return (
     <PressableScale
@@ -107,8 +102,8 @@ function CopyFoot({ copy }: { copy: CardCopy }) {
       accessibilityLabel={copy.label}
       testID="activity-copy"
     >
-      <Glyph name="copy-outline" size={HEART} color={copy.have ? colors.text : colors.textSecondary} />
-      {copy.n > 0 ? <Text style={[s.count, copy.have && s.countOn]} testID="activity-copy-count">{copy.n}</Text> : null}
+      <CopyGlyph have={copy.have} size={HEART} color={colors.textSecondary} />
+      {copy.n > 0 ? <Text style={s.count} testID="activity-copy-count">{copy.n}</Text> : null}
     </PressableScale>
   );
 }
@@ -280,6 +275,4 @@ const s = StyleSheet.create({
   foot: { flexDirection: 'row', alignItems: 'center', gap: 18, minHeight: 44, paddingHorizontal: space.cardPadding },
   heart: { flexDirection: 'row', alignItems: 'center', gap: 6, minHeight: 44 },
   count: { color: colors.textSecondary, fontSize: 14, fontWeight: font.medium, fontVariant: ['tabular-nums'] },
-  // The copy's figure once the reader has one — see `CopyFoot`.
-  countOn: { color: colors.text },
 });
