@@ -65,7 +65,7 @@ vi.mock('../lib/supabase', async () => {
 
 vi.mock('expo-linear-gradient', () => ({ LinearGradient: passthrough('LinearGradient') }));
 vi.mock('expo-blur', () => ({ BlurView: passthrough('BlurView') }));
-vi.mock('expo-status-bar', () => ({ StatusBar: () => null }));
+vi.mock('expo-status-bar', () => ({ StatusBar: () => null, setStatusBarStyle: vi.fn() }));
 
 // `expo-image` takes a `source` where the web `img` takes `src`, and tests
 // assert on alt text and on which photo was chosen, so this one keeps the
@@ -285,6 +285,9 @@ vi.mock('@react-navigation/native', () => ({
   useNavigation: () => ({
     navigate: vi.fn(), goBack: vi.fn(), replace: vi.fn(), push: vi.fn(),
     popToTop: vi.fn(), setOptions: vi.fn(), addListener: vi.fn(() => vi.fn()),
+    // In front, as every screen under test is: a hook that owns the
+    // clock's ink takes it on mount (`useOwnedStatusBar`).
+    isFocused: () => true,
   }),
   useIsFocused: () => true,
   useRoute: () => ({ params: {} }),

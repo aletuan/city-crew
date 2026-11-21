@@ -16,7 +16,7 @@ import { act, cleanup, pullControl, fireEvent, render, screen, textStyleOf, view
 import type { Nav, RootRoute } from '../nav';
 import type { FriendshipRow } from '../lib/friends';
 import type { Collection } from '../lib/types';
-import { bgHex, colors } from '../theme';
+import { bgHex, colors, onPhoto, space } from '../theme';
 
 type AlertButton = { text: string; onPress?: () => void };
 const alert = vi.hoisted(() => vi.fn<(title: string, body?: string, buttons?: AlertButton[]) => void>());
@@ -333,10 +333,15 @@ describe('whose page it is', () => {
     const face = screen.getByTestId('person-cover').nextElementSibling!.firstElementChild as HTMLElement;
     expect(face.querySelector('img')!.getAttribute('src')).toBe('https://faces/lan.jpg');
     expect(viewStyleOf(face)).toMatchObject({ borderWidth: 4, borderColor: bgHex.dark });
-    // 80 since 19 Nov 2026, from 88, under a cover of 170, from 148
-    // (owner, after an outside review).
+    // 80 since 19 Nov 2026, from 88 (owner, after an outside review).
     expect(viewStyleOf(face.querySelector('img')!)).toMatchObject({ width: 80, height: 80 });
-    expect(viewStyleOf(screen.getByTestId('person-cover').firstElementChild!)).toMatchObject({ height: 170 });
+    // The cover to the screen's edges and under the clock (22 Nov 2026):
+    // 200 under it, the clock's inset (none here) on top.
+    expect(viewStyleOf(screen.getByTestId('person-cover').firstElementChild!)).toMatchObject({ height: 200 });
+    expect(viewStyleOf(screen.getByTestId('person-cover'))).toMatchObject({ marginHorizontal: -space.page });
+    expect(viewStyleOf(screen.getByTestId('person-cover')).borderRadius).toBeUndefined();
+    // Half the ringed face over the cover, its centre on the cover's foot.
+    expect(viewStyleOf(screen.getByTestId('person-head-row'))).toMatchObject({ marginTop: -44 });
   });
 
   it('asks for the profile by the handle it was opened with, the `@` and case off', async () => {
@@ -358,8 +363,9 @@ describe('whose page it is', () => {
     const named = screen.getByTestId('role-row');
     expect(named.contains(handle)).toBe(true);
     expect([...named.parentElement!.children]).toEqual([named]);
-    expect(viewStyleOf(named.parentElement!)).toMatchObject({ flex: 1, marginTop: 32 });
-    expect(screen.getAllByText('@lan')).toHaveLength(1);
+    expect(viewStyleOf(named.parentElement!)).toMatchObject({ flex: 1, marginTop: 50 });
+    // Once in the head; the bar's title says it again only past the cover.
+    expect(within(screen.getByTestId('person-scroll')).getAllByText('@lan')).toHaveLength(1);
     expect(screen.queryByTestId('person-name')).toBeNull();
     expect(screen.queryByTestId('person-bio')).toBeNull();
     // And no invitation to write one: it is not the reader's to write.
@@ -450,9 +456,9 @@ describe('the bio, and the way to write one', () => {
     state.lang = 'vi';
     await show();
     expect(screen.getByTestId('person-bio-add').textContent).toBe('Viết đôi dòng về bạn');
-    // And the page is "Trang cá nhân" — the name for the page a person
-    // shows the world; "Hồ sơ" until 17 Nov 2026.
-    expect(screen.getByText('Trang cá nhân')).toBeTruthy();
+    // No "Trang cá nhân" over a cover (22 Nov 2026): the bar past the
+    // cover is headed by the person's own name — see `person/Bar`.
+    expect(screen.queryByText('Trang cá nhân')).toBeNull();
     expect(screen.queryByText('Hồ sơ')).toBeNull();
     // The gear is named with the Account page's own word. The way there
     // read "Hồ sơ" for an hour on 19 Nov 2026, which this line is here to
@@ -483,10 +489,9 @@ describe('the bio, and the way to write one', () => {
     expect(handle.nextElementSibling).toBe(bubble);
     const row = screen.getByTestId('person-cover').nextElementSibling as HTMLElement;
     expect(row.contains(bubble)).toBe(true);
-    // The picture hangs lower so the bubble stands level with its foot:
-    // the row starts at the top of the column, 28 of the picture on the
-    // cover where it was 44.
-    expect(viewStyleOf(row)).toMatchObject({ alignItems: 'flex-start', marginTop: -26 });
+    // Half the picture on the cover again (22 Nov 2026), 44 of 88: it
+    // was 26, a little over a quarter, from 17 Nov.
+    expect(viewStyleOf(row)).toMatchObject({ alignItems: 'flex-start', marginTop: -44 });
     const dress = viewStyleOf(bubble);
     // As wide as the words; a tinted well with no hairline.
     expect(dress.alignSelf).toBe('flex-start');
@@ -1377,6 +1382,51 @@ const scrollAt = (y: number, content: number) => act(() => {
 });
 const scrollTo = (y: number) => scrollAt(y, 2000);
 
+// The cover to the screen's edges and the bar over it (owner, 22 Nov
+// 2026) — `person/Bar`. The clock's inset is none here, so the cover is
+// 200 tall and leaves the bar's 50 at 150; the page's ground comes in
+// over the 44 before that.
+describe('the bar over the cover', () => {
+  const ink = (id: string) => screen.getByTestId(id).querySelector('[data-icon]')!.getAttribute('data-color');
+
+  it('stands its way back and its tools in the cover’s glass, light, with no name', async () => {
+    await show();
+    const bar = screen.getByTestId('person-bar');
+    expect(bar.contains(screen.getByTestId('person-back'))).toBe(true);
+    expect(bar.contains(screen.getByTestId('person-search'))).toBe(true);
+    expect(ink('person-search')).toBe(onPhoto.text);
+    expect(ink('person-back')).toBe(onPhoto.text);
+    expect(screen.getByTestId('person-back-glass')).toBeTruthy();
+    expect(screen.getByTestId('person-tools-glass')).toBeTruthy();
+    expect(screen.queryByTestId('person-bar-title')).toBeNull();
+    // And the cover's scrim under the clock.
+    expect(screen.getByTestId('person-cover').contains(screen.getByTestId('person-cover-scrim'))).toBe(true);
+  });
+
+  it('takes the page’s ink and the person’s name once the cover has left it', async () => {
+    await show();
+    // Inside the fade: the name is drawn, the glyphs still light.
+    scrollTo(110);
+    expect(screen.getByTestId('person-bar-title').textContent).toBe('Lan Phạm');
+    expect(ink('person-search')).toBe(onPhoto.text);
+    // Past it: the page's ink.
+    scrollTo(150);
+    expect(ink('person-search')).toBe(String(colors.text));
+    expect(ink('person-back')).toBe(String(colors.text));
+    // And back again.
+    scrollTo(0);
+    expect(ink('person-search')).toBe(onPhoto.text);
+    expect(screen.queryByTestId('person-bar-title')).toBeNull();
+  });
+
+  it('is the plain header again while searching, the box in the head’s place', async () => {
+    await show();
+    fireEvent.click(screen.getByTestId('person-search'));
+    expect(screen.queryByTestId('person-bar')).toBeNull();
+    expect(screen.getByTestId('person-back')).toBeTruthy();
+  });
+});
+
 // What there is to do about a person, in a row of its own under the head
 // (owner, 16 Nov 2026). The friend button stood at the end of the name's
 // row and, at 44, cut a long name and its handle.
@@ -2066,8 +2116,10 @@ describe('your own page', () => {
     expect(screen.queryByTestId('person-back')).toBeNull();
     // The tab says whose page it is (owner, 19 Nov 2026).
     expect(screen.queryByText('Profile')).toBeNull();
-    // With no header, the tools stand in a row of their own.
-    expect(screen.getByTestId('person-home-tools').contains(screen.getByTestId('person-own-tools'))).toBe(true);
+    // With no header, the tools stand over the cover, in the bar's glass
+    // (22 Nov 2026); their own row only while the page is loading.
+    expect(screen.queryByTestId('person-home-tools')).toBeNull();
+    expect(screen.getByTestId('person-bar').contains(screen.getByTestId('person-own-tools'))).toBe(true);
     fireEvent.click(screen.getByTestId('person-settings'));
     expect(navigation.navigate).toHaveBeenCalledExactlyOnceWith('Account');
     expect(out.tabs!.navigate).not.toHaveBeenCalled();
@@ -2078,10 +2130,10 @@ describe('your own page', () => {
   // you see, then what you did.
   it('draws your counts, then the requests waiting, between your head and your activity', async () => {
     await show('me', true, PROFILE_STACK);
-    const [tools, name, counts, requests] = ['person-own-tools', 'person-name', 'owner-counts', 'owner-requests'].map((id) => screen.getByTestId(id));
+    const [name, counts, requests] = ['person-name', 'owner-counts', 'owner-requests'].map((id) => screen.getByTestId(id));
     // No lists of yours in this test: the feed's place is its empty card.
     const activity = screen.getByTestId('person-no-lists');
-    for (const [a, b] of [[tools, name], [name, counts], [counts, requests], [requests, activity]]) {
+    for (const [a, b] of [[name, counts], [counts, requests], [requests, activity]]) {
       expect(a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     }
   });
@@ -2091,16 +2143,19 @@ describe('your own page', () => {
   // rooms are in the last tab, so a press changes tab.
   it('is the same page from another tab, its rooms reached through the last tab', async () => {
     const navigation = await show('me', false, ['CollectionsHome', 'CollectionDetail', 'Person']);
-    expect(screen.getByTestId('person-back')).toBeTruthy();
-    expect(screen.getByText('Profile')).toBeTruthy();
+    // The way back over the cover, in a disc of its glass; no "Profile"
+    // over a cover (22 Nov 2026).
+    expect(screen.getByTestId('person-bar').contains(screen.getByTestId('person-back'))).toBe(true);
+    expect(screen.queryByText('Profile')).toBeNull();
     expect(screen.getByTestId('owner-counts')).toBeTruthy();
     fireEvent.click(screen.getByTestId('owner-requests'));
     expect(out.tabs!.navigate).toHaveBeenLastCalledWith('Profile', { screen: 'Crew', initial: false });
     fireEvent.click(screen.getByTestId('person-settings'));
     expect(out.tabs!.navigate).toHaveBeenLastCalledWith('Profile', { screen: 'Account', initial: false });
     expect(navigation.navigate).not.toHaveBeenCalled();
-    // In the header, beside the way back: no row of its own off the tab.
+    // In the bar, beside the way back: no row of its own off the tab.
     expect(screen.queryByTestId('person-home-tools')).toBeNull();
+    expect(screen.getByTestId('person-bar').contains(screen.getByTestId('person-own-tools'))).toBe(true);
   });
 
   it('shows none of it on somebody else’s page', async () => {

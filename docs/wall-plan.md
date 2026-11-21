@@ -46,6 +46,14 @@ thì đánh dấu bước đó ở đây, trong cùng PR.
    chính sách quyền riêng tư và nhãn App Privacy, bị xoá khi xoá tài khoản,
    có trong file xuất dữ liệu.
 
+7. **Tràn viền** (chủ dự án, 22/11/2026): ảnh bìa chạy hết hai mép và lên
+   dưới đồng hồ, cao 200pt dưới đồng hồ; mép trên có dải tối mờ. Nút quay
+   lại (trang người khác) và cụm công cụ nằm trong kính tối mờ như nút máy
+   ảnh; cuộn qua ảnh thì nền trang và tên người hiện dần, icon và đồng hồ
+   chuyển sang mực của trang (`person/Bar`). Ảnh đại diện đè nửa lên ảnh
+   bìa, tâm nằm trên mép ảnh (trước là khoảng 40%). Khi tìm kiếm trong
+   trang, trang trở lại header thường.
+
 ## Dữ liệu
 
 `profiles` thêm hai cột:
