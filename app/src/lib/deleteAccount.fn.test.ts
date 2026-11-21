@@ -110,7 +110,7 @@ describe('delete-account', () => {
     h.fake.replies(signedIn('u1'), { data: {} }, { data: {}, error: null });
     await call({ token: 'jwt-u1' });
     expect(fns()).toEqual(['getUser', 'remove', 'admin.deleteUser']);
-    expect(h.fake.log[1]).toMatchObject({ table: 'avatars', op: 'storage', payload: ['u1/avatar.jpg'] });
+    expect(h.fake.log[1]).toMatchObject({ table: 'avatars', op: 'storage', payload: ['u1/avatar.jpg', 'u1/wall.jpg'] });
   });
 
   it('still deletes the account when removing the avatar throws', async () => {
