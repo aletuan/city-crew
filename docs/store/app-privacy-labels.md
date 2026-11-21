@@ -15,7 +15,7 @@ mới được nộp.
 | Loại dữ liệu (Apple) | Thu thập? | Liên kết danh tính? | Tracking? | Mục đích |
 |---|---|---|---|---|
 | Contact Info → Email Address | **Yes** | Yes (email là tài khoản) | No | App Functionality |
-| User Content → Photos or Videos | **Yes** (ảnh đại diện tự chọn; từ 1.0.4 thêm ảnh địa điểm do local guide upload, #614) | Yes | No | App Functionality |
+| User Content → Photos or Videos | **Yes** (ảnh đại diện tự chọn; từ 1.0.4 thêm ảnh địa điểm do local guide upload, #614; từ 1.0.18 thêm ảnh bìa trang cá nhân tải lên, `docs/wall-plan.md`) | Yes | No | App Functionality |
 | User Content → Other User Content | **Yes** (bộ sưu tập, kế hoạch, lưu/thích, đề xuất địa điểm, hồ sơ, **văn bản mô tả buổi tối gửi cho planner**; từ bản bật cờ `comments`: bình luận và tim trên bình luận. Cùng nhãn, không thêm dòng mới) | Yes | No | App Functionality |
 | Identifiers → User ID | **Yes** (id tài khoản Supabase) | Yes | No | App Functionality |
 | Usage Data → Product Interaction | **Yes** | Yes | No | App Functionality (xem ghi chú) |
