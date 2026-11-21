@@ -18,7 +18,7 @@ export function RemindRow() {
       <SettingRow
         icon="notifications-off-outline"
         label={label}
-        value={t('Off in Settings', 'Tắt trong Cài đặt', '設定でオフ', '在设置中关闭', '在設定中關閉')}
+        value={t('Turn on in Settings', 'Bật trong Cài đặt', '設定でオンにする', '在设置中开启', '在設定中開啟')}
         onPress={() => { Linking.openSettings().catch(() => {}); }}
         testID="profile-reminders"
       />

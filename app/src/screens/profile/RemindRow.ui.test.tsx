@@ -48,7 +48,7 @@ describe('RemindRow', () => {
     (Linking as unknown as { openSettings?: () => Promise<void> }).openSettings = open;
     render(<RemindRow />);
     expect(screen.queryByRole('switch')).toBeNull();
-    expect(screen.getByText('Off in Settings')).toBeTruthy();
+    expect(screen.getByText('Turn on in Settings')).toBeTruthy();
     fireEvent.click(screen.getByTestId('profile-reminders'));
     expect(open).toHaveBeenCalledTimes(1);
   });
