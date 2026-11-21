@@ -266,8 +266,8 @@ export const s = StyleSheet.create({
   // place blurbs and every other paragraph stay set ragged-right.
   descText: { color: colors.textSecondary, ...type.body, lineHeight: 24, textAlign: 'justify' },
   // `alignSelf` keeps the press to the words, as the curator row's does.
-  descAdd: { flexDirection: 'row', alignItems: 'center', gap: 4, alignSelf: 'flex-start', minHeight: 24 },
-  descAddText: { color: colors.accent, fontSize: 14, fontWeight: font.semibold },
+  descAdd: { flexDirection: 'row', alignItems: 'center', gap: 6, alignSelf: 'flex-start', minHeight: 24 },
+  descAddText: { color: colors.textTertiary, fontSize: 15, fontStyle: 'italic', flexShrink: 1 },
   // The ⋯'s box: the header's 44pt width, so the header's measure of the
   // glyph's ink (`INK_GAP_END`, a 21pt ⋯ centred in 44) still holds, and
   // `CHIP_H` tall, an action inside a row; `CHIP_SLOP` makes 44 of that

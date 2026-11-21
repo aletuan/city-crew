@@ -847,13 +847,18 @@ describe('your own list', () => {
     state.mine = [collection({ desc_en: null })];
     const { raw } = show();
     expect(screen.queryByTestId('collection-desc')).toBeNull();
-    fireEvent.click(screen.getByRole('button', { name: 'Add a description' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Write a few lines about this collection' }));
     const card = screen.getByTestId('collection-desc-empty');
-    expect(card.textContent).toMatch(/^andyAdd a description/);
-    // An action, not a sentence that could pass for the description: a
-    // plus and the words, in the accent (18 Oct 2026).
+    expect(card.textContent).toMatch(/^andyWrite a few lines about this collection/);
+    // As the empty bio is drawn (21 Nov 2026): the words faint and in
+    // italic, then a small pencil in the gold — not a sentence that could
+    // pass for the description, and not one more accent button.
     const add = screen.getByTestId('collection-desc-add');
-    expect(add.querySelector('[data-icon="add"]')?.getAttribute('data-color')).toBe(String(colors.accent));
+    expect(textStyleOf(screen.getByText('Write a few lines about this collection'))).toMatchObject({ color: colors.textTertiary, fontStyle: 'italic' });
+    const pencil = add.querySelector('[data-icon="pencil"]')!;
+    expect([pencil.getAttribute('data-size'), pencil.getAttribute('data-color')]).toEqual(['15', String(colors.sun)]);
+    expect(add.querySelector('[data-icon="add"]')).toBeNull();
+    expect(screen.getByText('Write a few lines about this collection').compareDocumentPosition(pencil) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     expect(screen.queryByText(/Add a few words/)).toBeNull();
     // The invitation, with the pencil gone, is the card's one way to the
     // form; the ⋯ beside the face is the other, through the sheet.
@@ -2656,7 +2661,7 @@ describe('the description, for a visitor', () => {
     expect(screen.getByTestId('collection-desc').textContent).toMatch(/^hanoicrew/);
     expect(screen.getByLabelText('3 places')).toBeTruthy();
     expect(screen.queryByTestId('collection-desc-empty')).toBeNull();
-    expect(screen.queryByText('Add a description')).toBeNull();
+    expect(screen.queryByText('Write a few lines about this collection')).toBeNull();
   });
 });
 
@@ -2931,7 +2936,7 @@ describe('the chips', () => {
     fireEvent.click(chip('eats'));
     expect(raw.navigate).not.toHaveBeenCalled();
     expect(cards()).toHaveLength(3);
-    fireEvent.click(screen.getByRole('button', { name: 'Add a description' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Write a few lines about this collection' }));
     expect(raw.navigate).toHaveBeenCalledTimes(1);
   });
 

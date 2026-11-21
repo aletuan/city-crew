@@ -89,7 +89,8 @@ import React, { useEffect, useRef, useState } from 'react';
 import { type NativeScrollEvent, type NativeSyntheticEvent, StyleSheet, Text, View } from 'react-native';
 import { Image } from 'expo-image';
 import ActivityCard, { type ActivityMark, type CardCopy } from '../../components/ActivityCard';
-import { Card, fireHaptic, PressableScale } from '../../components/ui';
+import { Card, fireHaptic, PressableScale, SECONDARY_CONTROL_H } from '../../components/ui';
+import { Glyph, ICON } from '../../components/ui/glyph';
 import { agoLabel } from '../../lib/ago';
 import { useLikes } from '../../lib/catalog';
 import { nearEnd } from '../../lib/feed';
@@ -100,7 +101,7 @@ import { localized } from '../../lib/localized';
 import type { ListSeen } from '../../lib/person';
 import { useSaveActions } from '../../lib/save';
 import { SEEN_GLYPH, seenName } from '../../lib/shares';
-import { colors, font, space, type } from '../../theme';
+import { colors, font, radius, space, type } from '../../theme';
 import { useCardComments } from './useCardComments';
 
 /** How many cards the feed draws at first, and adds at each "Show more". */
@@ -153,7 +154,44 @@ export function marks(seen: ListSeen, t: T): ActivityMark {
   return { icon: SEEN_GLYPH.friends, text: lent, label: lent };
 }
 
-export default function Shared({ me, person, lists, seenOf, coverFor, onOpen, onComments, copyOf, reasonOf, missed, reach = 0 }: {
+/**
+ * Your own page with no collection at all, none made and none copied
+ * (owner, 21 Nov 2026). Your own page draws every list of yours, the
+ * private ones with their padlock, so this card means "none yet" and
+ * not "none public": it said "No public collections yet" until then,
+ * which a reader with no list at all read as being told to share one.
+ *
+ * With a way to make the first: an outlined pill in the accent, the
+ * button this page lends to a thing done elsewhere. Not `GradientCta`,
+ * the button an empty tab's own card wears (Collections' first-list
+ * card makes the same list): the person page is where lists are shown,
+ * and a second gradient there would outweigh the face and the cover
+ * above it. Rejected the same day: a second state, "See your
+ * collections ›", for a reader whose lists are all private — that
+ * reader's page shows them, so the card is never drawn for them.
+ */
+function FirstOfYours({ onCreate }: { onCreate: () => void }) {
+  const { t } = useI18n();
+  return (
+    <Card style={s.none} testID="person-no-lists">
+      <Text style={s.noneTitle}>{t('No collections yet', 'Chưa có bộ sưu tập nào', 'コレクションはまだありません', '还没有合集', '還沒有合集')}</Text>
+      <Text style={s.noneBody}>{t('Your collections will show here.', 'Bộ sưu tập của bạn sẽ hiện ở đây.', 'あなたのコレクションがここに表示されます。', '你的合集会显示在这里。', '你的合集會顯示在這裡。')}</Text>
+      <PressableScale
+          onPress={onCreate}
+          scaleTo={0.96}
+          haptic="selection"
+          accessibilityRole="button"
+          contentStyle={s.first}
+          testID="person-first-list"
+        >
+          <Glyph name="add" size={ICON.text} color={colors.accent} />
+          <Text style={s.firstText}>{t('Create your first collection', 'Tạo bộ sưu tập đầu tiên', '最初のコレクションを作成', '创建第一个合集', '建立第一個合集')}</Text>
+      </PressableScale>
+    </Card>
+  );
+}
+
+export default function Shared({ me, person, lists, seenOf, coverFor, onOpen, onComments, copyOf, reasonOf, missed, reach = 0, onCreate }: {
   me: string | null;
   person: FriendProfile;
   /** The collections this reader may see here, newest first
@@ -176,6 +214,8 @@ export default function Shared({ me, person, lists, seenOf, coverFor, onOpen, on
   missed?: boolean;
   /** How many times the reader has come near the page's end (`useReach`). */
   reach?: number;
+  /** Opens the form on a new collection: your own page, with none. */
+  onCreate: () => void;
 }) {
   const { t, lang } = useI18n();
   const { likes, myLikes, toggleLike } = useLikes();
@@ -231,23 +271,20 @@ export default function Shared({ me, person, lists, seenOf, coverFor, onOpen, on
             )}
           </Text>
         </Card>
+      ) : none && me && person.id === me ? (
+        <FirstOfYours onCreate={onCreate} />
       ) : none ? (
         <Card style={s.none} testID="person-no-lists">
           <Text style={s.noneTitle}>
             {t('No public collections yet', 'Chưa có bộ sưu tập công khai', '公開コレクションはまだありません', '还没有公开的合集', '還沒有公開的合集')}
           </Text>
-          {/* In the person the page is about: "they" on somebody else's,
-              "your" on your own, where "Khi họ chia sẻ" spoke of you as
-              a stranger (owner, 21 Nov 2026). */}
           <Text style={s.noneBody}>
-            {me && person.id === me
-              ? t('Your public collections will show here.', 'Bộ sưu tập công khai của bạn sẽ hiện ở đây.', 'あなたの公開コレクションがここに表示されます。', '你的公开合集会显示在这里。', '你的公開合集會顯示在這裡。')
-              : t(
-                'When they share a collection, it will show here.',
-                'Khi họ chia sẻ một bộ sưu tập, nó sẽ hiện ở đây.',
-                'コレクションが公開されると、ここに表示されます。',
-                '对方分享合集后，会显示在这里。', '對方分享合集後，會顯示在這裡。',
-              )}
+            {t(
+              'When they share a collection, it will show here.',
+              'Khi họ chia sẻ một bộ sưu tập, nó sẽ hiện ở đây.',
+              'コレクションが公開されると、ここに表示されます。',
+              '对方分享合集后，会显示在这里。', '對方分享合集後，會顯示在這裡。',
+            )}
           </Text>
         </Card>
       ) : (
@@ -308,4 +345,13 @@ const s = StyleSheet.create({
   none: { padding: space.cardPadding, gap: 6, marginTop: TOP },
   noneTitle: { color: colors.text, fontSize: 15, fontWeight: font.semibold },
   noneBody: { color: colors.textSecondary, ...type.meta },
+  // The outlined pill in your own empty card (`FirstOfYours`): the
+  // secondary control's 44, the accent's line and words, 10 under the
+  // sentence above it (with the card's 6, 16 in all).
+  first: {
+    flexDirection: 'row', alignItems: 'center', gap: 6, alignSelf: 'flex-start', marginTop: 10,
+    minHeight: SECONDARY_CONTROL_H, paddingHorizontal: 16, borderRadius: radius.pill,
+    borderWidth: 1, borderColor: colors.accentLine,
+  },
+  firstText: { color: colors.accent, fontSize: 15, fontWeight: font.semibold },
 });

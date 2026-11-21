@@ -991,6 +991,8 @@ describe('their lists', () => {
     await show();
     expect(cards()).toEqual([]);
     expect(within(screen.getByTestId('person-no-lists')).getByText('No public collections yet')).toBeTruthy();
+    // Nothing to make on somebody else's page.
+    expect(screen.queryByTestId('person-first-list')).toBeNull();
     expect(within(screen.getByTestId('person-no-lists')).getByText('When they share a collection, it will show here.')).toBeTruthy();
   });
 });
@@ -1149,12 +1151,24 @@ describe('lists that are not for everybody', () => {
     it('has it with no list to your name', async () => {
       state.mine = [];
       state.shelf = [];
-      await show('me');
-      expect(screen.getByTestId('person-no-lists')).toBeTruthy();
-      // In your own person: "they" was a stranger's word for you.
-      expect(within(screen.getByTestId('person-no-lists')).getByText('Your public collections will show here.')).toBeTruthy();
+      const navigation = await show('me');
+      const card = screen.getByTestId('person-no-lists');
+      // In your own person, and "none" rather than "none public": your
+      // page shows your private lists too (21 Nov 2026).
+      expect(within(card).getByText('No collections yet')).toBeTruthy();
+      expect(within(card).getByText('Your collections will show here.')).toBeTruthy();
+      expect(screen.queryByText('No public collections yet')).toBeNull();
       expect(screen.queryByText('When they share a collection, it will show here.')).toBeNull();
       expect(screen.getByTestId('person-settings')).toBeTruthy();
+      // And the way to the first: an outlined pill, the secondary
+      // control's height, opening the form on a new collection.
+      const first = within(card).getByRole('button', { name: 'Create your first collection' });
+      expect(viewStyleOf(screen.getByTestId('person-first-list').firstElementChild as HTMLElement))
+        .toMatchObject({ minHeight: 44, borderWidth: 1, borderColor: colors.accentLine });
+      expect(textStyleOf(within(card).getByText('Create your first collection'))?.color).toBe(colors.accent);
+      expect(first.querySelector('[data-icon="add"]')).toBeTruthy();
+      fireEvent.click(first);
+      expect(navigation.navigate).toHaveBeenCalledWith('CollectionForm');
     });
 
     // A cover off a private list would be a head only its owner sees.
