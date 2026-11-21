@@ -383,7 +383,7 @@ describe('the tabs', () => {
     show([trip()]);
     fireEvent.click(tab(/Invites/));
     const none = screen.getByTestId('trips-none-invites');
-    expect(none.textContent).toBe('When a friend invites you on a trip, it shows up here');
+    expect(none.textContent).toBe('No invitations from friends yet');
     expect(none.querySelector('[data-icon="mail-outline"]')).toBeTruthy();
   });
 
