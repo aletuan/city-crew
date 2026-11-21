@@ -157,7 +157,7 @@ import { IN_COMMON_ON, listsBy, listsOn, seenOn, TOP_FRIEND_ON } from '../lib/pe
 import { useMyLists } from '../lib/save';
 import { sharesByList } from '../lib/shares';
 import { useScheme } from '../lib/theme';
-import { bgHex, colors, display, radius, space, type } from '../theme';
+import { bgHex, colors, display, font, radius, space, type } from '../theme';
 import { toProfileRoom, type Nav, type RootRoute } from '../nav';
 
 /** The face: 80, from 88 (owner, 19 Nov 2026, after an outside review
@@ -293,7 +293,7 @@ export default function PersonScreen({ navigation, route, home }: {
           narrowed — `person/Find`. */}
       {find.on
         ? <FindField find={find} name={own ? null : person.full_name || atHandle(person.handle)} />
-        : <Head me={me} person={person} own={own} cover={wall.cover} onCover={wall.onCover} ring={ring} friend={friend} onRowLayout={top.onRowLayout} navigation={navigation} />}
+        : <Head me={me} person={person} own={own} cover={wall.cover} onCover={wall.onCover} trying={wall.trying} ring={ring} friend={friend} onRowLayout={top.onRowLayout} navigation={navigation} />}
 
       {/* What they have shared: what they did, newest first, and every
           — `person/Shared`. */}
@@ -569,13 +569,15 @@ function useReloadOnReturn(navigation: Nav, on: boolean, reload: () => void) {
  * Its own function since 20 Nov 2026, when searching the page
  * (`person/Find`) put a box in its place.
  */
-function Head({ me, person, own, cover, onCover, ring, friend, onRowLayout, navigation }: {
+function Head({ me, person, own, cover, onCover, trying, ring, friend, onRowLayout, navigation }: {
   me: string | null;
   person: FriendProfile;
   own: boolean;
   cover: string | undefined;
   /** On your own page, the cover is a door to its sheet — `person/Wall`. */
   onCover?: () => void;
+  /** The sheet has the cover trying on a picture not yet saved. */
+  trying?: boolean;
   ring: { borderColor: string };
   friend: React.ReactNode;
   onRowLayout: (e: LayoutChangeEvent) => void;
@@ -595,6 +597,13 @@ function Head({ me, person, own, cover, onCover, ring, friend, onRowLayout, navi
         {cover
           ? <Image source={{ uri: cover }} style={s.coverPhoto} contentFit="cover" transition={160} />
           : <View style={[s.coverPhoto, s.tint]} testID="person-cover-tint" />}
+        {/* Said on the picture itself, so a look is never taken for a
+            change: nobody else sees it until Save. */}
+        {trying ? (
+          <View style={s.trying} testID="person-cover-trying">
+            <Text style={s.tryingText}>{t('Trying it', 'Đang xem thử', '試しに表示中', '预览中', '預覽中')}</Text>
+          </View>
+        ) : null}
       </Pressable>
       <View style={s.headRow}>
         {/* Your own in the level's ring — `person/OwnFace`. */}
@@ -765,6 +774,12 @@ const s = StyleSheet.create({
   spinner: { marginTop: 20 },
   // The accent's tint: a cover with no photograph to wear.
   tint: { backgroundColor: colors.accentSoft },
+  // The cover's corner, opposite the face: what the sheet is trying on.
+  trying: {
+    position: 'absolute', top: 10, right: 10, paddingHorizontal: 10, paddingVertical: 4,
+    borderRadius: 999, backgroundColor: 'rgba(0,0,0,0.55)',
+  },
+  tryingText: { color: '#fff', fontSize: 12, fontWeight: font.medium },
   coverCard: { borderRadius: radius.card, overflow: 'hidden' },
   coverPhoto: { width: '100%', height: COVER_H },
   // The face half over the cover's lower edge, at the card's own inset,

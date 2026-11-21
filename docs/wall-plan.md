@@ -19,11 +19,14 @@ thì đánh dấu bước đó ở đây, trong cùng PR.
      không có thì ảnh địa điểm đầu — đúng ảnh trên thẻ bộ). Gồm bộ tự tạo và
      bộ đã sao chép; **không gồm bộ riêng tư**, vì ảnh bìa ai cũng thấy.
    - *Ảnh tải lên*: **một ảnh tại một thời điểm**; tải ảnh mới thay ảnh cũ.
-2. **Bố cục**: ô xem trước lớn ở trên (tỉ lệ thật của ảnh bìa, có mặt
-   người đè lên như trên trang), rồi **mỗi nguồn một hàng cuộn ngang**, ô
-   2,4:1, ô cuối hở một nửa ở mép. Grid chỉ hợp cho một màn "Xem tất cả"
-   nếu sau này cần. Lý do: số ảnh mỗi nguồn chênh nhau (vài thành phố,
-   15+ bộ); grid 2 cột đẩy nút tải ảnh xuống đáy và ép ô quá thấp.
+2. **Bố cục** (sửa ngày 21/11/2026 sau khi chủ dự án thử trên máy): **trang
+   cá nhân chính là ô xem trước**. Bấm một ô thì ảnh bìa phía trên tấm chọn
+   đổi ngay, góc ảnh ghi "Đang xem thử"; *Lưu* mới ghi, đóng tấm chọn thì ảnh
+   bìa trở lại như cũ. Tấm chọn cao tối đa 60% màn hình để không che ảnh bìa,
+   nền không làm tối trang. Ô **vuông 92pt**, mỗi nguồn một hàng cuộn ngang,
+   ô cuối hở một nửa; *Tự động* là ô đầu của hàng thành phố. Bản đầu có ô xem
+   trước 2,4:1 trong tấm chọn và ô 2,4:1 cao 58pt: trên điện thoại, hai hàng
+   cuối bị khuất dưới nút Lưu.
 3. **Mở tấm chọn**: icon máy ảnh trên hàng icon trên cùng (cạnh tìm kiếm,
    chuông, cài đặt), **và** bấm vào chính ảnh bìa. Chỉ trên trang của mình;
    trang người khác không có icon, bấm ảnh bìa không làm gì.
