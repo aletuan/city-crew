@@ -143,6 +143,16 @@ export default function Reports() {
                   the reader to go and look is a queue nobody works. */}
               <p className="reptext">{previewOf(r) || <em>Nothing left to show — already cleared.</em>}</p>
               {r.note ? <p className="repnote">“{r.note}”</p> : null}
+              {/* The cover the person wears (docs/wall-plan.md): an upload
+                  is drawn, being the one picture on the page nobody at the
+                  desk has seen; a city or a list is the catalog's own and
+                  is named. */}
+              {r.kind === 'profile' && r.wall_kind === 'upload' && r.wall_ref ? (
+                <img className="repwall" src={r.wall_ref} alt="Uploaded cover" />
+              ) : null}
+              {r.kind === 'profile' && r.wall_kind && r.wall_kind !== 'upload' ? (
+                <p className="repnote">Cover: {r.wall_kind} {r.wall_ref}</p>
+              ) : null}
 
               {!gone && (
                 <div className="repacts">
@@ -174,6 +184,16 @@ export default function Reports() {
                       >
                         Clear the photo
                       </button>
+                      {r.wall_kind ? (
+                        <button
+                          type="button"
+                          className="syncbtn danger"
+                          disabled={busy === r.id}
+                          onClick={() => act(r, 'Cover taken down', () => api.moderateProfile(r.target_id, { wall: true }))}
+                        >
+                          Take the cover down
+                        </button>
+                      ) : null}
                     </>
                   )}
                   {r.kind === 'comment' && previewOf(r) && (
