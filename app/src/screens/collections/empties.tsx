@@ -136,17 +136,20 @@ export function FirstCollection({ onPress }: { onPress: () => void }) {
         <Text style={s.firstTitle}>
           {t('No collections yet', 'Chưa có bộ sưu tập nào', 'コレクションはまだありません', '还没有合集', '還沒有合集')}
         </Text>
-        {/* The owner's words (25 Oct 2026), made plainer on 21 Nov
-            2026: it says what a list is for — sharing, and planning an
-            outing from it, both of which the app does. The dash-led list
-            of three categories before it went: a reader who has made no
-            list yet does not need the app's categories to make one. */}
+        {/* What a collection is, in one line (owner, 21 Nov 2026, the
+            evening). It said what one is for — "Gom những nơi bạn thích
+            theo chủ đề, rồi chia sẻ hoặc dùng để lên kế hoạch đi chơi",
+            two lines — that morning, and the owner's longer words and
+            three example kinds before that (25 Oct). Passed over that
+            evening: "…để chia sẻ với bạn bè", which says less than is
+            true of a list born public; and a line of examples ("Quán cà
+            phê yêu thích, chỗ hẹn hò…"), lively but two lines again. */}
         <Text style={s.firstBody}>
           {t(
-            'Gather the places you love by theme, then share them or plan an outing from one.',
-            'Gom những nơi bạn thích theo chủ đề, rồi chia sẻ hoặc dùng để lên kế hoạch đi chơi.',
-            'お気に入りの場所をテーマ別にまとめて、シェアしたり、お出かけの計画に使ったり。',
-            '按主题收集你喜欢的地方，然后分享出去，或用来规划一次出行。', '按主題收集你喜歡的地方，然後分享出去，或用來規劃一次出行。',
+            'Keep the places you love, by theme.',
+            'Lưu những nơi bạn thích theo từng chủ đề.',
+            'お気に入りの場所をテーマごとに保存。',
+            '按主题保存你喜欢的地方。', '按主題儲存你喜歡的地方。',
           )}
         </Text>
         {/* A pill here, where the sheet's primary is a rounded rectangle:
@@ -158,14 +161,11 @@ export function FirstCollection({ onPress }: { onPress: () => void }) {
           label={t('Create your first collection', 'Tạo bộ sưu tập đầu tiên', '最初のコレクションを作る', '创建你的第一个合集', '建立你的第一個合集')}
           onPress={onPress}
         />
-        {/* Who sees a new list. It said "Only you can see them until you
-            choose to share" until 21 Nov 2026, a day after new lists began
-            to be born public (`useAudience`; the migration
-            `20261120120000_lists_born_public.sql`), which left the card
-            promising the opposite of what Save did (owner). */}
-        <Text style={s.firstFoot}>
-          {t('Public by default — make one private any time.', 'Mặc định công khai — chuyển sang riêng tư lúc nào cũng được.', 'デフォルトで公開 — いつでも非公開にできます。', '默认公开 — 随时可以改为私密。', '預設公開 — 隨時可以改為私密。')}
-        </Text>
+        {/* No line under the button since 21 Nov 2026 (owner). It said who
+            sees a new list — "Only you can see them…" until lists began to
+            be born public, then "Public by default — make one private any
+            time." — and the form the button opens asks exactly that, at
+            the moment it matters. */}
       </View>
     </View>
   );

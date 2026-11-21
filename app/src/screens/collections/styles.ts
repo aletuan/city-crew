@@ -200,6 +200,5 @@ export const s = StyleSheet.create({
     color: colors.textSecondary, fontSize: 15, lineHeight: 21,
     textAlign: 'center', marginBottom: 6,
   },
-  firstFoot: { color: colors.textTertiary, fontSize: 13, lineHeight: 18, textAlign: 'center', marginTop: 4 },
 
 });
