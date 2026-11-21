@@ -99,6 +99,8 @@ vi.mock('../lib/auth', () => ({
   // The reader's own profile, as the form saves it: the bio is what the
   // page reads of it.
   useProfile: () => ({ profile: { bio: state.myBio, handle: state.myHandle, avatar_url: state.myAvatar } }),
+  // The cover's sheet saves through it — `person/Wall.ui.test`.
+  useAuthActions: () => ({ updateProfile: async () => {} }),
 }));
 // The picker is its own business (`AvatarPicker.ui.test`); here, that it
 // is the face on your own page, and how.
@@ -805,6 +807,10 @@ describe('what they did', () => {
     expect(screen.queryByText(/^\d+ collections?$/)).toBeNull();
     // Nor the way to an account that is not the reader's.
     expect(screen.queryByTestId('person-settings')).toBeNull();
+    // Nor a way to change a cover that is not theirs.
+    expect(screen.queryByTestId('person-cover-edit')).toBeNull();
+    fireEvent.click(screen.getByTestId('person-cover'));
+    expect(screen.queryByTestId('wall-sheet')).toBeNull();
     expect(acts()).toHaveLength(3);
   });
 
@@ -1145,6 +1151,24 @@ describe('lists that are not for everybody', () => {
       expect(acts()).toHaveLength(3);
     });
 
+    // The cover's camera leads the row, and the cover itself is the same
+    // door (docs/wall-plan.md); on somebody else's page neither is.
+    it('opens the cover\'s sheet from the camera and from the cover, on your own page only', async () => {
+      await show('me');
+      const camera = screen.getByTestId('person-cover-edit');
+      expect(camera.getAttribute('aria-label')).toBe('Change cover');
+      expect(screen.getByTestId('person-own-tools').firstElementChild!.contains(camera)).toBe(true);
+      fireEvent.click(camera);
+      expect(screen.getByTestId('wall-sheet')).toBeTruthy();
+      fireEvent.click(screen.getByTestId('wall-close'));
+      document.querySelectorAll('[class*="r-animationKeyframes"]').forEach((el) => fireEvent.animationEnd(el));
+      expect(screen.queryByTestId('wall-sheet')).toBeNull();
+      const cover = screen.getByTestId('person-cover');
+      expect(cover.getAttribute('aria-label')).toBe('Change cover');
+      fireEvent.click(cover);
+      expect(screen.getByTestId('wall-sheet')).toBeTruthy();
+    });
+
     // With no navigator above the page, the container's way — now
     // `toProfileRoom`'s, tested with it in `nav.test.ts`.
 
@@ -1172,14 +1196,18 @@ describe('lists that are not for everybody', () => {
       expect(navigation.navigate).toHaveBeenCalledWith('CollectionForm');
     });
 
-    // A cover off a private list would be a head only its owner sees.
-    it('still takes the cover from a public list, though a private one is newer', async () => {
+    // A cover off a private list would be a head only its owner sees; and
+    // since 21 Nov 2026 automatic skips the first public list, which is the
+    // first card under the cover (docs/wall-plan.md). One public list and a
+    // newer private one: the city, and neither list.
+    it('takes the cover from neither a private list nor the first public one', async () => {
       state.mine = (state.mine as Collection[]).map((c) => ({
         ...c, cover: { photo_uri: `https://covers/${c.slug}.jpg` },
       })) as Collection[];
       state.shelf = [(state.mine as Collection[])[2]];
+      state.city = { hero_photo_uri: 'https://city/hanoi.jpg', hero_place_slug: null };
       await show('me');
-      expect(screen.getByTestId('person-cover').querySelector('img')!.getAttribute('src')).toBe('https://covers/open.jpg');
+      expect(screen.getByTestId('person-cover').querySelector('img')!.getAttribute('src')).toBe('https://city/hanoi.jpg');
     });
 
     // The owner's case (21 Nov 2026): one list, turned private, and the
@@ -1193,14 +1221,16 @@ describe('lists that are not for everybody', () => {
       expect(screen.queryByTestId('person-cover-tint')).toBeNull();
     });
 
-    it('keeps its own public list’s cover over the city’s', async () => {
-      state.mine = (state.mine as Collection[]).map((c) => ({
-        ...c, cover: { photo_uri: `https://covers/${c.slug}.jpg` },
-      })) as Collection[];
-      state.shelf = [(state.mine as Collection[])[2]];
+    it('wears the second public list’s cover over the city’s', async () => {
+      const open = (state.mine as Collection[])[2];
+      state.shelf = [
+        { ...open, cover: { photo_uri: 'https://covers/first.jpg' } },
+        { ...open, id: 'second-id', slug: 'second', cover: { photo_uri: 'https://covers/second.jpg' } },
+      ] as Collection[];
+      state.mine = [...(state.mine as Collection[]), state.shelf[1]] as Collection[];
       state.city = { hero_photo_uri: 'https://city/hanoi.jpg', hero_place_slug: null };
       await show('me');
-      expect(screen.getByTestId('person-cover').querySelector('img')!.getAttribute('src')).toBe('https://covers/open.jpg');
+      expect(screen.getByTestId('person-cover').querySelector('img')!.getAttribute('src')).toBe('https://covers/second.jpg');
     });
 
     it('wears the tint only when the city has no photograph either', async () => {

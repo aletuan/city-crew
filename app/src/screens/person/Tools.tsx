@@ -1,6 +1,6 @@
 // The header's right end on a person page (owner, 20 Nov 2026, from a
 // mock-up of his own): search, then on your own page the bell and the
-// gear.
+// gear — and since 21 Nov 2026 the cover's camera before them all.
 //
 // ── the gear is the way to Account ──
 //
@@ -54,11 +54,23 @@ export function Search({ onPress }: { onPress: () => void }) {
   );
 }
 
-/** Your own page's end of the header: search, the bell, the gear. */
-export function OwnTools({ onSearch, onActivity, onAccount }: { onSearch: () => void; onActivity: () => void; onAccount: () => void }) {
+/** Your own page's end of the header: the cover's camera, search, the
+ *  bell, the gear. The camera leads (owner, 21 Nov 2026): it changes the
+ *  picture the row stands over, the cover — `person/Wall` — which the
+ *  cover itself opens as well, for whoever reaches for the picture. */
+export function OwnTools({ onCover, onSearch, onActivity, onAccount }: {
+  onCover: () => void; onSearch: () => void; onActivity: () => void; onAccount: () => void;
+}) {
   const { t } = useI18n();
   return (
     <View style={s.row} testID="person-own-tools">
+      <RoundIconButton
+        bare
+        icon="camera-outline"
+        onPress={onCover}
+        label={t('Change cover', 'Đổi ảnh bìa', 'カバーを変更', '更换封面', '更換封面')}
+        testID="person-cover-edit"
+      />
       <Search onPress={onSearch} />
       <Bell onPress={onActivity} />
       <RoundIconButton
