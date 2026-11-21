@@ -584,6 +584,16 @@ export function UnderlineChoice<K extends string>({ items, chosen, onPick, all, 
   );
 }
 
+/**
+ * The ink a bar lends the bare controls inside it, where the ground under
+ * them is not the page: a person page's bar over its cover photograph
+ * (`person/Bar`, owner, 22 Nov 2026), whose dark glass the glyphs stand
+ * on in `onPhoto.text` until the page's own ground fades in behind them.
+ * Null, the default, is the page's ink. A control's own `color` still
+ * wins: that is a state, and a state is the same colour on any ground.
+ */
+export const BarInk = React.createContext<Color | null>(null);
+
 export function RoundIconButton({ icon, onPress, label, size = ICON.nav, color, bare, style, testID }: {
   icon: keyof typeof Ionicons.glyphMap;
   onPress: () => void;
@@ -626,6 +636,7 @@ export function RoundIconButton({ icon, onPress, label, size = ICON.nav, color, 
   style?: StyleProp<ViewStyle>;
   testID?: string;
 }) {
+  const barInk = React.useContext(BarInk);
   return (
     <PressableScale
       onPress={onPress}
@@ -636,7 +647,7 @@ export function RoundIconButton({ icon, onPress, label, size = ICON.nav, color, 
       accessibilityRole="button"
       accessibilityLabel={label}
     >
-      <Glyph name={icon} size={size} color={color ?? colors.text} />
+      <Glyph name={icon} size={size} color={color ?? barInk ?? colors.text} />
     </PressableScale>
   );
 }

@@ -87,11 +87,12 @@
 // The picture stood half over the cover until then, and the name and
 // handle filled exactly the half under it, so anything a third line said
 // began below the picture's foot and beside nothing. Now a little over a
-// quarter of the picture is on the cover (`FACE_OVER`), the name starts
-// just under the cover's edge, and the bubble's first line stands level
-// with the picture's foot — where a tail can point at the face. The
-// geometry was drawn to scale beside the reference before it was built;
-// it has not been measured on a phone.
+// quarter of the picture was on the cover, the name starts just under
+// the cover's edge, and the bubble's first line stood level with the
+// picture's foot — where a tail can point at the face. Half again since
+// 22 Nov 2026 (`faceOver`), with the cover run to the screen's edges:
+// the face rises by about 20 and the bubble does not, so its tail now
+// points a little under the face's foot. Not yet seen on a phone.
 //
 // ── the friend button ──
 //
@@ -125,6 +126,7 @@ import {
   Pressable, ScrollView, StyleSheet, Text, View,
 } from 'react-native';
 import { Image } from 'expo-image';
+import { LinearGradient } from 'expo-linear-gradient';
 import {
   Avatar, EmptyState, GradientCta, PressableScale, Screen, SECONDARY_CONTROL_H, useTabBarClearance,
 } from '../components/ui';
@@ -143,6 +145,8 @@ import { Requests } from './person/Requests';
 import { FindField, usePageFind } from './person/Find';
 import { OwnTools, Search } from './person/Tools';
 import { useWall } from './person/Wall';
+import { CoverBar, usePastCover } from './person/Bar';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useCardCopy } from './person/useCardCopy';
 import { OwnFace, useOwnPicture } from './person/OwnFace';
 import { Counts } from './profile/Counts';
@@ -157,7 +161,7 @@ import { IN_COMMON_ON, listsBy, listsOn, seenOn, TOP_FRIEND_ON } from '../lib/pe
 import { useMyLists } from '../lib/save';
 import { sharesByList } from '../lib/shares';
 import { useScheme } from '../lib/theme';
-import { bgHex, colors, display, font, radius, space, type } from '../theme';
+import { bgHex, colors, display, font, space, type } from '../theme';
 import { toProfileRoom, type Nav, type RootRoute } from '../nav';
 
 /** The face: 80, from 88 (owner, 19 Nov 2026, after an outside review
@@ -165,15 +169,24 @@ import { toProfileRoom, type Nav, type RootRoute } from '../nav';
  *  of page 4 wide: 88 across. Your own is 88 itself, in the level's ring
  *  — the Account page's picture, 103 across with the ring (`Face`). */
 const FACE = 80;
-/** The cover's height: 170, from 148 (owner, 19 Nov 2026, the same
- *  review: the cover read low under a face that large). Still under the
- *  16:9 of a 346pt card (195), and the counts and the feed come down 22.
- *  Not measured on a phone. */
-const COVER_H = 170;
-/** How much of the ringed picture lies over the cover: 26 of its 88,
- *  the proportion it had at 28 of 96 — the reference's (87 of 290px),
- *  where it was half. */
-const FACE_OVER = 26;
+/** The cover's height under the clock, running to the screen's edges
+ *  (owner, 22 Nov 2026): 200, so with a 59pt clock the photograph is
+ *  259 — the "about 260" agreed that morning, under a third of an 932pt
+ *  phone, and the feed comes down no further than the inset card's 170
+ *  and the 58 of tools row over it had it. It was 170 inside the page's
+ *  margins, rounded, under a row of its own for the tools. */
+const COVER_UNDER_CLOCK = 200;
+/** Across, with its ring: somebody else's face, 80 in a ring of page 4
+ *  wide, and your own, 88 in the level's ring (`Face`). */
+const FACE_ACROSS = FACE + 8;
+const OWN_FACE_ACROSS = 103;
+/** How much of the ringed picture lies over the cover: half, its centre
+ *  on the cover's foot (owner, 22 Nov 2026), as Facebook, X and LinkedIn
+ *  set theirs. It was 26 of 88, measured on the owner's screenshot as
+ *  70 of 180px — about 40%, which read as the face nearly touching the
+ *  photograph rather than pinned to it. Past 55–60% the face would hide
+ *  the cover and the level's ring would run on the photograph. */
+const faceOver = (own: boolean) => Math.round((own ? OWN_FACE_ACROSS : FACE_ACROSS) / 2);
 /** The name starts this far under the cover's edge. */
 const NAME_DROP = 6;
 /** How far the name shrinks to stay on its line beside the picture
@@ -202,6 +215,13 @@ function Face({ own, url, ring }: { own: boolean; url: string | null | undefined
       <Avatar url={url || null} size={FACE} />
     </View>
   );
+}
+
+/** The tools' own row on the tab's first page, before the cover's bar
+ *  can hold them — see the note where it is drawn. */
+function HomeTools({ on, children }: { on: boolean; children: React.ReactNode }) {
+  if (!on) return null;
+  return <View style={s.homeTools} testID="person-home-tools">{children}</View>;
 }
 
 export default function PersonScreen({ navigation, route, home }: {
@@ -282,6 +302,13 @@ export default function PersonScreen({ navigation, route, home }: {
   useScrollToTop(scroll);
 
   const tabClearance = useTabBarClearance();
+  // The cover to the screen's edges, under the clock, and the bar over it
+  // — `person/Bar`. Not while searching: the box stands in the head's
+  // place and the page wears its plain header again.
+  const coverH = useSafeAreaInsets().top + COVER_UNDER_CLOCK;
+  const bar = usePastCover(coverH, person, find.on);
+  const { bleed } = bar;
+  const onBack = home ? undefined : () => navigation.goBack();
   // A ring is a border, and a dynamic colour on a border flattens against
   // the phone's appearance rather than the app's (`bgHex`).
   const { scheme } = useScheme();
@@ -293,7 +320,7 @@ export default function PersonScreen({ navigation, route, home }: {
           narrowed — `person/Find`. */}
       {find.on
         ? <FindField find={find} name={own ? null : person.full_name || atHandle(person.handle)} />
-        : <Head me={me} person={person} own={own} cover={wall.cover} onCover={wall.onCover} trying={wall.trying} ring={ring} friend={friend} onRowLayout={top.onRowLayout} navigation={navigation} />}
+        : <Head me={me} person={person} own={own} cover={wall.cover} coverH={coverH} onCover={wall.onCover} trying={wall.trying} ring={ring} friend={friend} onRowLayout={top.onRowLayout} navigation={navigation} />}
 
       {/* What they have shared: what they did, newest first, and every
           — `person/Shared`. */}
@@ -340,23 +367,25 @@ export default function PersonScreen({ navigation, route, home }: {
   return (
     <Screen
       title={t('Profile', 'Trang cá nhân', 'プロフィール', '主页', '主頁')}
-      onBack={home ? undefined : () => navigation.goBack()}
+      onBack={onBack}
       titleScrolls={!!home}
       backTestID="person-back"
       backBare
       compactTitle
       right={tools}
+      bleed={bleed}
     >
       {/* The tab's first page has no header (`titleScrolls`), so the
           tools stand in a row of their own at the header's place and
           height: the same glyphs in the same spot whichever way the page
           was opened. Held 44 tall before the page has loaded, so the
-          cover does not drop when they arrive. */}
-      {home ? <View style={s.homeTools} testID="person-home-tools">{person ? tools : null}</View> : null}
+          head does not drop when they arrive. Over the cover once it is
+          there — `person/Bar`. */}
+      <HomeTools on={!!home && !bleed}>{person ? tools : null}</HomeTools>
       <ScrollView
         ref={scroll}
         testID="person-scroll"
-        onScroll={(e) => { top.onScroll(e); end.onScroll(e); }}
+        onScroll={(e) => { top.onScroll(e); end.onScroll(e); bar.onScroll(e); }}
         scrollEventThrottle={16}
         contentContainerStyle={[s.content, { paddingBottom: tabClearance }]}
         showsVerticalScrollIndicator={false}
@@ -364,6 +393,7 @@ export default function PersonScreen({ navigation, route, home }: {
       >
         {page}
       </ScrollView>
+      <CoverBar bar={bar} onBack={onBack} backTestID="person-back" tools={tools} />
       {menu.node}
       {wall.sheet}
     </Screen>
@@ -569,8 +599,10 @@ function useReloadOnReturn(navigation: Nav, on: boolean, reload: () => void) {
  * Its own function since 20 Nov 2026, when searching the page
  * (`person/Find`) put a box in its place.
  */
-function Head({ me, person, own, cover, onCover, trying, ring, friend, onRowLayout, navigation }: {
+function Head({ me, person, own, cover, coverH, onCover, trying, ring, friend, onRowLayout, navigation }: {
   me: string | null;
+  /** The cover's whole height, the clock's inset with it. */
+  coverH: number;
   person: FriendProfile;
   own: boolean;
   cover: string | undefined;
@@ -595,8 +627,11 @@ function Head({ me, person, own, cover, onCover, trying, ring, friend, onRowLayo
         accessibilityLabel={onCover ? t('Change cover', 'Đổi ảnh bìa', 'カバーを変更', '更换封面', '更換封面') : undefined}
       >
         {cover
-          ? <Image source={{ uri: cover }} style={s.coverPhoto} contentFit="cover" transition={160} />
-          : <View style={[s.coverPhoto, s.tint]} testID="person-cover-tint" />}
+          ? <Image source={{ uri: cover }} style={[s.coverPhoto, { height: coverH }]} contentFit="cover" transition={160} />
+          : <View style={[s.coverPhoto, { height: coverH }, s.tint]} testID="person-cover-tint" />}
+        {/* The clock's scrim: the photograph's top darkened, fading out,
+            so the light clock and the bar's glass read on a pale sky. */}
+        <LinearGradient colors={['rgba(0,0,0,0.38)', 'rgba(0,0,0,0)']} style={s.scrim} pointerEvents="none" testID="person-cover-scrim" />
         {/* The cover's camera, on your own page: it says the picture is
             a control, as the avatar's badge does, at the corner the face
             and the trial label leave free. The whole cover is the press. */}
@@ -613,7 +648,7 @@ function Head({ me, person, own, cover, onCover, trying, ring, friend, onRowLayo
           </View>
         ) : null}
       </Pressable>
-      <View style={s.headRow}>
+      <View style={[s.headRow, { marginTop: -faceOver(own) }]} testID="person-head-row">
         {/* Your own in the level's ring — `person/OwnFace`. */}
         <Face own={own} url={person.avatar_url} ring={ring} />
         {/* The name, beside the picture, and the handle right under it
@@ -625,7 +660,7 @@ function Head({ me, person, own, cover, onCover, trying, ring, friend, onRowLayo
             `PersonRole`. On the picture's corner for a day; after the
             name since 17 Nov 2026 (owner), for the reasons written
             there. */}
-        <View style={s.names}>
+        <View style={[s.names, { marginTop: faceOver(own) + NAME_DROP }]}>
           <PersonRole me={me} personId={person.id} line={TITLE_LINE}>
             {person.full_name
               ? <Text style={s.title} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={TITLE_SHRINK} testID="person-name">{person.full_name}</Text>
@@ -789,25 +824,31 @@ const s = StyleSheet.create({
     alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(0,0,0,0.55)',
   },
   // The cover's corner, opposite the face: what the sheet is trying on.
+  // Beside the camera at the foot: the cover's top is the bar's now.
   trying: {
-    position: 'absolute', top: 10, right: 10, paddingHorizontal: 10, paddingVertical: 4,
+    position: 'absolute', bottom: 13, right: 50, paddingHorizontal: 10, paddingVertical: 4,
     borderRadius: 999, backgroundColor: 'rgba(0,0,0,0.55)',
   },
   tryingText: { color: '#fff', fontSize: 12, fontWeight: font.medium },
-  coverCard: { borderRadius: radius.card, overflow: 'hidden' },
-  coverPhoto: { width: '100%', height: COVER_H },
+  // To the screen's edges and under the clock (owner, 22 Nov 2026): the
+  // page's margins taken back, no rounding. See `person/Bar`.
+  coverCard: { marginHorizontal: -space.page, overflow: 'hidden' },
+  coverPhoto: { width: '100%' },
+  // 120 of the photograph's top: the clock and the bar's 50 under it,
+  // and as far again to fade over.
+  scrim: { position: 'absolute', top: 0, left: 0, right: 0, height: 120 },
   // The face half over the cover's lower edge, at the card's own inset,
   // and the name beside it. On the picture's foot: its upper half lies
   // over the cover.
   headRow: {
     flexDirection: 'row', alignItems: 'flex-start', gap: 12,
-    marginTop: -FACE_OVER, paddingHorizontal: space.cardPadding,
+    paddingHorizontal: space.cardPadding,
   },
   // The page's ground around the face, so it parts from the photograph.
   faceRing: { borderWidth: 4, borderRadius: FACE / 2 + 4 },
   // The name over the handle over the bio, one column beside the
   // picture, begun just under the cover's edge.
-  names: { flex: 1, marginTop: FACE_OVER + NAME_DROP },
+  names: { flex: 1 },
   // The display face at 22, the size the page's own Profile heads its
   // sections in. It has the row to itself beside the picture — about
   // 240pt on a 390pt phone, by arithmetic — since the friend button left

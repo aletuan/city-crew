@@ -124,7 +124,7 @@ export function IconSubtitle({ icon, text }: {
   );
 }
 
-export function Screen({ title, subtitle, eyebrow, lede, children, right, onBack, backBare, backTestID, titleScrolls, compactTitle }: {
+export function Screen({ title, subtitle, eyebrow, lede, children, right, onBack, backBare, backTestID, titleScrolls, compactTitle, bleed }: {
   title: string;
   /** The title at `type.titleCompact`, the one size of a page reached
    *  from another (see there). Its first line is still centred on the
@@ -193,10 +193,16 @@ export function Screen({ title, subtitle, eyebrow, lede, children, right, onBack
    * moved kept a third of the phone from the list under it.
    */
   titleScrolls?: boolean;
+  /**
+   * The body runs under the clock and draws its own bar: no header, no
+   * inset at the top. A person page whose cover runs to the screen's
+   * edges (`person/Bar`, owner, 22 Nov 2026).
+   */
+  bleed?: boolean;
 }) {
   return (
-    <SafeAreaView style={s.screen} edges={['top']}>
-      {onBack ? (
+    <SafeAreaView style={s.screen} edges={bleed ? [] : ['top']}>
+      {bleed ? null : onBack ? (
         <View style={s.headerInline}>
           <BackButton onPress={onBack} bare={backBare} testID={backTestID} />
           <View style={[s.headerText, compactTitle && s.headerTextCompact]}>
