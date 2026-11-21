@@ -40,7 +40,7 @@ describe('SearchField', () => {
   // A cross in a 34pt circle (owner, 2 Nov 2026): the circle in the
   // theme's heavier glass, the cross in its accent, the word kept for
   // VoiceOver only.
-  it('puts Cancel inside the box, a cross in the theme\u2019s glass and accent, and runs it on a tap', () => {
+  it('puts Cancel inside the box, a cross in the accent on the page\u2019s own ground, and runs it on a tap', () => {
     const onPress = vi.fn();
     render(<SearchField value="hanoi" onChangeText={() => {}} placeholder="p"
       cancel={{ shown: true, label: 'Hủy', onPress }} />);
@@ -51,7 +51,9 @@ describe('SearchField', () => {
     expect(box.contains(button)).toBe(true);
     expect(button.textContent).toBe('');
     const face = getComputedStyle(button.firstElementChild as HTMLElement);
-    expect(face.backgroundColor).toBe(String(colors.surfaceGlassStrong).replace(/,(?=\S)/g, ', '));
+    // The page's ground, through the box: a hex here, so read back as rgb.
+    const hex = String(colors.bg);
+    expect(face.backgroundColor).toBe(`rgb(${[1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16)).join(', ')})`);
     expect([face.width, face.height, face.borderTopLeftRadius]).toEqual(['34px', '34px', '17px']);
     expect(getComputedStyle(box).paddingRight).toBe('4px');
     const cross = button.querySelector('[data-icon="close"]')!;
@@ -61,9 +63,9 @@ describe('SearchField', () => {
     expect(onPress).toHaveBeenCalledTimes(1);
   });
 
-  // The cross on its circle: the glass over the box's card over the page,
-  // in every look. 3:1 is what a glyph owes; Coffee is the floor today, at
-  // 3.68.
+  // The cross on its circle, which is the page's own ground (21 Nov
+  // 2026), in every look. 3:1 is what a glyph owes; the floor today is
+  // 4.53, up from 3.68 on the old glass.
   it('keeps the cross at 3:1 or better on its circle, in every look', () => {
     const lin = (c: number) => { const v = c / 255; return v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4; };
     const rgba = (h: string): number[] => h.startsWith('#')
@@ -73,14 +75,14 @@ describe('SearchField', () => {
     const lum = ([r, g, b]: number[]) => 0.2126 * lin(r) + 0.7152 * lin(g) + 0.0722 * lin(b);
     let low = Infinity;
     for (const [name, p] of Object.entries(PALETTES)) {
-      const card = over(rgba(p.surfaceCard), rgba(p.bg));
-      const ground = over(rgba(p.surfaceGlassStrong), [...card, 1]);
+      // The page's own ground, through the box (21 Nov 2026).
+      const ground = over(rgba(p.bg), [0, 0, 0, 1]);
       const [hi, lo] = [lum(rgba(p.accent)), lum(ground)].sort((x, y) => y - x);
       const k = (hi + 0.05) / (lo + 0.05);
       low = Math.min(low, k);
       expect([name, k >= 3]).toEqual([name, true]);
     }
-    expect(low).toBeGreaterThan(3.6);
+    expect(low).toBeGreaterThan(4.5);
   });
 
   // The slide is configured before the render that moves things: on the
