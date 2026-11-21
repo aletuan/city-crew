@@ -16,6 +16,7 @@
 // reminder is a courtesy, and no courtesy is worth failing a save over.
 
 import * as Notifications from 'expo-notifications';
+import { permissionOf, type PermissionStatus } from './remindState';
 import {
   fireDateFor, planReminderSync, REMINDER_KINDS, reminderIdFor, reminderOf, reminderText,
   type ReminderHeld, type ReminderKind, type ReminderWant, type Translate,
@@ -46,6 +47,21 @@ async function ensurePermission(): Promise<boolean> {
     return false;
   }
 }
+
+/** Where the phone's permission stands, without asking. A failing read is
+ *  "not asked": the row then tries, and `askReminderPermission` swallows
+ *  whatever the platform says to that. */
+export async function reminderPermission(): Promise<PermissionStatus> {
+  try {
+    return permissionOf(await Notifications.getPermissionsAsync());
+  } catch {
+    return 'undetermined';
+  }
+}
+
+/** The reader's own press on the switch: the one place besides saving a
+ *  plan and accepting an invitation that may raise the sheet. */
+export const askReminderPermission = ensurePermission;
 
 /**
  * Plant both notes for a saved trip. No-op for a note whose moment has
@@ -133,6 +149,18 @@ async function cancel(tripId: string, kind: ReminderKind): Promise<void> {
   try {
     await Notifications.cancelScheduledNotificationAsync(reminderIdFor(tripId, kind));
   } catch { /* already gone is the goal state */ }
+}
+
+/** Every note this file planted, and nothing else the phone holds: the
+ *  switch going off. Cancelling needs no permission. */
+export async function cancelAllTripReminders(): Promise<void> {
+  try {
+    const all = await Notifications.getAllScheduledNotificationsAsync();
+    for (const n of all) {
+      const ours = reminderOf(n.identifier);
+      if (ours) await cancel(ours.tripId, ours.kind);
+    }
+  } catch { /* a courtesy, not a contract */ }
 }
 
 /** A deleted trip takes both its notes with it — a phone that pings about

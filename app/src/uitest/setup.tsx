@@ -165,6 +165,20 @@ vi.mock('@react-native-async-storage/async-storage', () => {
   };
 });
 
+// The phone's notifications: there is no native half here, and the Account
+// row for trip reminders reaches it through `lib/reminders` from the
+// first render of any page that draws that card. A test about the
+// notifications themselves mocks it for itself (`reminders.test.ts`).
+vi.mock('expo-notifications', () => ({
+  setNotificationHandler: vi.fn(),
+  getPermissionsAsync: vi.fn(async () => ({ granted: false, canAskAgain: true })),
+  requestPermissionsAsync: vi.fn(async () => ({ granted: false })),
+  getAllScheduledNotificationsAsync: vi.fn(async () => []),
+  scheduleNotificationAsync: vi.fn(async () => 'id'),
+  cancelScheduledNotificationAsync: vi.fn(async () => {}),
+  SchedulableTriggerInputTypes: { DATE: 'date' },
+}));
+
 // The channel stamp, which `lib/channel` reads at import time and both
 // startup-trace flags then ask. Reaching the real module pulls in
 // `expo-modules-core`, whose EventEmitter wants a native half that is not

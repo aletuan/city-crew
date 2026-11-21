@@ -17,7 +17,8 @@ import { useI18n } from './i18n';
 import { useInvitations } from './invitations';
 import { useMyTrips } from './mytrips';
 import { tripsToRemind } from './remind';
-import { syncTripReminders } from './reminders';
+import { cancelAllTripReminders, syncTripReminders } from './reminders';
+import { useReminderPref, useReminderPrefWatch } from './reminderPref';
 
 export function ReminderSync() {
   const { session } = useSession();
@@ -25,6 +26,10 @@ export function ReminderSync() {
   const trips = useMyTrips();
   const { invites } = useInvitations();
   const { t, lang } = useI18n();
+  // The reader's own switch, and the phone's permission: either changing
+  // is a reason to reconcile, and an off switch is a reason to plant nothing.
+  useReminderPrefWatch();
+  const { off, status } = useReminderPref();
 
   const want = useMemo(
     () => tripsToRemind(trips.data, invites.data, me),
@@ -34,15 +39,18 @@ export function ReminderSync() {
   // identity, so an unrelated re-render does not re-read the phone's
   // schedule. The language is in it because a reminder's words are.
   const signature = `${lang}|${want.map((w) => `${w.tripId}:${w.day}:${w.title}:${w.startMin}`).join(',')}`;
-  const settled = trips.loaded && !trips.loading && !trips.fromCache && !trips.error
+  const settled = off !== null && status !== null && trips.loaded && !trips.loading && !trips.fromCache && !trips.error
     && invites.loaded && !invites.loading && !invites.error;
 
   useEffect(() => {
     if (!settled) return;
-    void syncTripReminders(want, t);
+    // Switched off here: pull what is planted and plant nothing, so what the
+    // switch did survives the next launch.
+    if (off) void cancelAllTripReminders();
+    else void syncTripReminders(want, t);
     // `want` and `t` are read through `signature`.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [settled, signature]);
+  }, [settled, signature, off, status]);
 
   return null;
 }

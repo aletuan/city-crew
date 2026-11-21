@@ -9,12 +9,15 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { render } from '../uitest/render';
 
 const sync = vi.hoisted(() => vi.fn(async (..._a: unknown[]) => {}));
+const cancelAll = vi.hoisted(() => vi.fn(async () => {}));
+const pref = vi.hoisted(() => ({ off: false as boolean | null, status: 'granted' as string | null }));
 const state = vi.hoisted(() => ({
   trips: { data: [] as unknown[], loading: false, loaded: true, fromCache: false, error: null as Error | null },
   invites: { data: [] as unknown[], loading: false, loaded: true, error: null as Error | null },
 }));
 
-vi.mock('./reminders', () => ({ syncTripReminders: sync }));
+vi.mock('./reminders', () => ({ syncTripReminders: sync, cancelAllTripReminders: cancelAll }));
+vi.mock('./reminderPref', () => ({ useReminderPref: () => pref, useReminderPrefWatch: () => {} }));
 vi.mock('./auth', () => {
   const m = { useAuth: () => ({ session: { user: { id: 'me' } } }) };
   const all = () => (m as { useAuth: () => object }).useAuth();
@@ -31,6 +34,8 @@ const trip = (id: string, owner_id: string, stops: { arrive_min: number | null }
 
 beforeEach(() => {
   vi.clearAllMocks();
+  pref.off = false;
+  pref.status = 'granted';
   state.trips = { data: [], loading: false, loaded: true, fromCache: false, error: null };
   state.invites = { data: [], loading: false, loaded: true, error: null };
 });
@@ -74,5 +79,45 @@ describe('ReminderSync', () => {
     state.trips = { ...state.trips, data: [trip('own', 'me')] };
     rerender(<ReminderSync />);
     expect(sync).toHaveBeenCalledTimes(2);
+  });
+
+  // The reader's own switch (Account, 21 Nov 2026): off pulls what is
+  // planted and plants nothing; and the sync waits to know, so a launch
+  // does not plant for the instant before the storage answers.
+  it('pulls the notes and plants none while the reader has them switched off', () => {
+    state.trips.data = [trip('own', 'me')];
+    pref.off = true;
+    render(<ReminderSync />);
+    expect(cancelAll).toHaveBeenCalledTimes(1);
+    expect(sync).not.toHaveBeenCalled();
+  });
+
+  it('waits for both the switch and the permission to be known', () => {
+    state.trips.data = [trip('own', 'me')];
+    pref.off = null;
+    const { rerender } = render(<ReminderSync />);
+    pref.off = false;
+    pref.status = null;
+    rerender(<ReminderSync />);
+    expect(sync).not.toHaveBeenCalled();
+    expect(cancelAll).not.toHaveBeenCalled();
+    pref.status = 'granted';
+    rerender(<ReminderSync />);
+    expect(sync).toHaveBeenCalledTimes(1);
+  });
+
+  it('reconciles again when the switch goes on, or the permission is given in Settings', () => {
+    state.trips.data = [trip('own', 'me')];
+    pref.off = true;
+    pref.status = 'granted';
+    const { rerender } = render(<ReminderSync />);
+    pref.off = false;
+    rerender(<ReminderSync />);
+    expect(sync).toHaveBeenCalledTimes(1);
+    pref.status = 'denied';
+    rerender(<ReminderSync />);
+    pref.status = 'granted';
+    rerender(<ReminderSync />);
+    expect(sync).toHaveBeenCalledTimes(3);
   });
 });

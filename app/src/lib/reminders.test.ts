@@ -10,6 +10,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 const os = vi.hoisted(() => ({
   scheduled: [] as { identifier: string; content: { data?: Record<string, unknown> } }[],
   granted: true,
+  canAsk: true,
+  readFails: false,
   scheduleNotificationAsync: vi.fn(async (..._a: unknown[]) => 'id'),
   cancelScheduledNotificationAsync: vi.fn(async (_id: string) => {}),
   requestPermissionsAsync: vi.fn(async () => ({ granted: true })),
@@ -18,14 +20,19 @@ const os = vi.hoisted(() => ({
 vi.mock('expo-notifications', () => ({
   setNotificationHandler: vi.fn(),
   getAllScheduledNotificationsAsync: vi.fn(async () => os.scheduled),
-  getPermissionsAsync: vi.fn(async () => ({ granted: os.granted, canAskAgain: true })),
+  getPermissionsAsync: vi.fn(async () => {
+    if (os.readFails) throw new Error('no');
+    return { granted: os.granted, canAskAgain: os.canAsk };
+  }),
   requestPermissionsAsync: os.requestPermissionsAsync,
   scheduleNotificationAsync: os.scheduleNotificationAsync,
   cancelScheduledNotificationAsync: os.cancelScheduledNotificationAsync,
   SchedulableTriggerInputTypes: { DATE: 'date' },
 }));
 
-import { cancelTripReminder, scheduleTripReminder, syncTripReminders } from './reminders';
+import {
+  askReminderPermission, cancelAllTripReminders, cancelTripReminder, reminderPermission, scheduleTripReminder, syncTripReminders,
+} from './reminders';
 
 // Noon on the 15th, local.
 const NOW = new Date(2026, 8, 15, 12, 0, 0);
@@ -40,6 +47,8 @@ beforeEach(() => {
   vi.clearAllMocks();
   os.scheduled = [];
   os.granted = true;
+  os.canAsk = true;
+  os.readFails = false;
   vi.useFakeTimers({ now: NOW, toFake: ['Date'] });
 });
 afterEach(() => { vi.useRealTimers(); });
@@ -124,5 +133,54 @@ describe('cancelTripReminder', () => {
   it('pulls both notes', async () => {
     await cancelTripReminder('a');
     expect(os.cancelScheduledNotificationAsync.mock.calls).toEqual([['trip-reminder-a'], ['trip-today-a']]);
+  });
+});
+
+// The Account row's three questions of the phone (21 Nov 2026).
+describe('reminderPermission', () => {
+  it('reads where the permission stands without asking', async () => {
+    expect(await reminderPermission()).toBe('granted');
+    os.granted = false;
+    expect(await reminderPermission()).toBe('undetermined');
+    os.canAsk = false;
+    expect(await reminderPermission()).toBe('denied');
+    expect(os.requestPermissionsAsync).not.toHaveBeenCalled();
+  });
+
+  it('reads a failing phone as not asked, so the row still offers the switch', async () => {
+    os.readFails = true;
+    expect(await reminderPermission()).toBe('undetermined');
+  });
+});
+
+describe('askReminderPermission', () => {
+  it('raises the sheet when never asked, and not once refused', async () => {
+    os.granted = false;
+    os.requestPermissionsAsync.mockResolvedValueOnce({ granted: true });
+    expect(await askReminderPermission()).toBe(true);
+    expect(os.requestPermissionsAsync).toHaveBeenCalledTimes(1);
+    os.canAsk = false;
+    expect(await askReminderPermission()).toBe(false);
+    expect(os.requestPermissionsAsync).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('cancelAllTripReminders', () => {
+  it('pulls every note of ours, both kinds, and never another app’s', async () => {
+    os.scheduled = [
+      held('a'), heldToday('a'), held('b'),
+      { identifier: 'someone-elses', content: { data: {} } },
+      { identifier: 'trip-reminder-', content: { data: {} } },
+    ];
+    await cancelAllTripReminders();
+    expect(os.cancelScheduledNotificationAsync.mock.calls.map((c) => c[0]).sort())
+      .toEqual(['trip-reminder-a', 'trip-reminder-b', 'trip-today-a']);
+  });
+
+  it('is quiet when the phone will not say what it holds', async () => {
+    const mod = await import('expo-notifications');
+    vi.mocked(mod.getAllScheduledNotificationsAsync).mockRejectedValueOnce(new Error('no'));
+    await expect(cancelAllTripReminders()).resolves.toBeUndefined();
+    expect(os.cancelScheduledNotificationAsync).not.toHaveBeenCalled();
   });
 });
