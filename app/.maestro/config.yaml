@@ -24,6 +24,8 @@ flows:
   - "21-tab-bar-responsive.yaml"
   - "22-profile-account.yaml"
   - "23-comments-own.yaml"
+  - "24-comments-pair.yaml"
+  - "25-friend-request.yaml"
   # Last: the language it picks persists on the device. See its header.
   - "12-language.yaml"
 executionOrder:
@@ -52,4 +54,6 @@ executionOrder:
     - 21-tab-bar-responsive
     - 22-profile-account
     - 23-comments-own
+    - 24-comments-pair
+    - 25-friend-request
     - 12-language

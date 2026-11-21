@@ -1,0 +1,447 @@
+# P3, two accounts: CM-7, CM-8, CM-9 and CM-11 of docs/testing/e2e-plan.md.
+# A (@maestro, TEST_EMAIL) owns a public list made here and deleted at the
+# end; B (@usera8b792a2, TEST_EMAIL_2) is A's friend and comments on it.
+# The list holds one place so B can reach it from A's page; it is public
+# for the few minutes of the run, and in the Community tab for them.
+# Both have the `comments` flag (`app_flag_testers`); the disposable trip
+# pair does not, which is why this is not on it.
+#
+#   A  makes "Maestro Pair", public
+#   B  CM-7: the list's first comment, through the quick field, tagging A
+#   A  CM-7: the bell says one new; For you has the line; it opens the
+#            thread on B's comment; the bell is clear after.
+#      CM-8: A answers B
+#   B  CM-8: For you has A's answer
+#      CM-9: B hearts A's answer
+#      CM-11: B reports A's answer (its ⋯ has Report and no Delete)
+#   A  CM-9: For you has the heart, and the bell does not count it
+#   A  deletes the list, which takes the comments, hearts and tags
+#
+# CM-11 reports A's answer rather than a comment A posts for the purpose:
+# it is A's only comment on the list, so its ⋯ is the only one with A's
+# name, and the run posts two comments, not three.
+#
+# The report is real: it goes to the Data Desk's Reports queue and stays
+# there until an editor answers it (owner's leave, 20 Nov 2026; condition 5
+# of the plan). After the list is deleted the report shows "Nothing left to
+# show". It is the last thing B does: its "Thanks" alert would blind any
+# ⋯ sheet after it (rule 11a).
+#
+# What this cannot read, and why: a count drawn inside a pressable (the
+# heart's `comment-likes`, the bell's `person-bell-figure`) is one element
+# with its button, so the bell is read by its label ("Activity, N new");
+# the heart's count is left to `LikeHeart`'s unit test. The bell is read
+# as "some new", not "1 new": A and B are long-lived accounts, and news
+# from outside this run can be waiting too.
+#
+# Blocking is not done on this pair (condition 6).
+appId: host.exp.Exponent
+env:
+  EXPO_URL: ${EXPO_URL || 'exp://127.0.0.1:8081'}
+---
+# ── A: a public list, after removing one a failed run left ──
+- runFlow: common/start.yaml
+- runFlow: common/ensure-signed-in.yaml
+- tapOn:
+    id: "tab-collections"
+- extendedWaitUntil:
+    visible:
+      id: "collections-yours"
+    timeout: 20000
+- tapOn:
+    id: "collections-yours"
+- waitForAnimationToEnd:
+    timeout: 5000
+- runFlow:
+    when:
+      visible:
+        text: "^Maestro Pair(,.*)?$"
+    commands:
+      - repeat:
+          while:
+            visible:
+              text: "^Maestro Pair(,.*)?$"
+          commands:
+            - tapOn:
+                text: "^Maestro Pair(,.*)?$"
+            - extendedWaitUntil:
+                visible:
+                  id: "collection-more"
+                timeout: 15000
+            - runFlow: common/delete-open-collection.yaml
+      - runFlow: common/start.yaml
+      - tapOn:
+          id: "tab-collections"
+      - extendedWaitUntil:
+          visible:
+            id: "collections-yours"
+          timeout: 20000
+      - tapOn:
+          id: "collections-yours"
+      - waitForAnimationToEnd:
+          timeout: 5000
+- extendedWaitUntil:
+    visible:
+      id: "collection-new"
+    timeout: 15000
+- tapOn:
+    id: "collection-new"
+- extendedWaitUntil:
+    visible:
+      id: "collection-name"
+    timeout: 10000
+- tapOn:
+    id: "collection-form-seen"
+- tapOn:
+    id: "sheet-action-public"
+- extendedWaitUntil:
+    notVisible:
+      id: "sheet-action-public"
+    timeout: 10000
+- tapOn:
+    id: "collection-name"
+- inputText: "Maestro Pair"
+- hideKeyboard
+- runFlow:
+    when:
+      visible:
+        id: "collection-submit"
+    commands:
+      - tapOn:
+          id: "collection-submit"
+- extendedWaitUntil:
+    notVisible:
+      id: "collection-name"
+    timeout: 15000
+# One place in it. Another reader's view of A's page leaves empty lists
+# out (`person.listsOn`, the `collection_places.length > 0` filter), so
+# without a place B has no way to it but a link. The first place on
+# Explore, through its bookmark, as 11 does — after a relaunch, because
+# after the create the save sheet can read as an empty tree (11).
+- runFlow: common/start.yaml
+- tapOn:
+    id: "tab-explore"
+- extendedWaitUntil:
+    visible:
+      id: "place-card-0"
+    timeout: 30000
+- tapOn:
+    id: "place-card-0"
+- extendedWaitUntil:
+    visible:
+      id: "detail-name"
+    timeout: 20000
+- runFlow: common/open-save-sheet.yaml
+- tapOn:
+    text: ".*Maestro Pair.*"
+- tapOn:
+    id: "save-done"
+- tapOn:
+    id: "detail-back"
+# Then opened once, as in 23: a card can swallow the first tap. The
+# comments bubble is waited for, so a missing flag fails here.
+- tapOn:
+    id: "tab-collections"
+- tapOn:
+    id: "collections-yours"
+- scrollUntilVisible:
+    element:
+      text: "Maestro Pair(,.*)?"
+    direction: UP
+    timeout: 15000
+- waitForAnimationToEnd:
+    timeout: 5000
+- retry:
+    maxRetries: 2
+    commands:
+      - tapOn:
+          text: "Maestro Pair(,.*)?"
+      - extendedWaitUntil:
+          visible:
+            id: "collection-more"
+          timeout: 10000
+- extendedWaitUntil:
+    visible:
+      id: "collection-comments"
+    timeout: 20000
+
+# ── B: CM-7, the first comment, tagging A ──
+- runFlow: common/start.yaml
+- runFlow: common/ensure-signed-out.yaml
+- tapOn:
+    id: "profile-sign-in"
+- runFlow:
+    file: common/sign-in.yaml
+    env:
+      TEST_EMAIL: ${TEST_EMAIL_2}
+      TEST_PASSWORD: ${TEST_PASSWORD_2}
+# A's page, through B's friends: the row is "@handle".
+- runFlow: common/open-crew.yaml
+- tapOn:
+    id: "crew-tab-friends"
+- extendedWaitUntil:
+    visible:
+      text: "^@maestro$"
+    timeout: 15000
+- tapOn:
+    text: "^@maestro$"
+- extendedWaitUntil:
+    visible:
+      id: "person-handle"
+      text: "@maestro"
+    timeout: 15000
+- scrollUntilVisible:
+    element:
+      text: ".*Maestro Pair.*"
+    direction: DOWN
+    centerElement: true
+    timeout: 20000
+- tapOn:
+    text: ".*Maestro Pair.*"
+- extendedWaitUntil:
+    visible:
+      id: "collection-comments"
+    timeout: 20000
+# Nobody has commented yet, and B is not the owner: the bubble raises the
+# quick field over the page (`quickOrThread`), not the thread.
+- tapOn:
+    id: "collection-comments"
+- extendedWaitUntil:
+    visible:
+      id: "comment-quick"
+    timeout: 15000
+- assertNotVisible:
+    id: "comments-empty"
+- tapOn:
+    id: "composer-field"
+- inputText: "Maestro CM-7 hello @maes"
+- extendedWaitUntil:
+    visible:
+      id: "composer-offer-person"
+      text: ".*@maestro$"
+    timeout: 15000
+- tapOn:
+    id: "composer-offer-person"
+    text: ".*@maestro$"
+- tapOn:
+    id: "composer-send"
+- extendedWaitUntil:
+    notVisible:
+      id: "comment-quick"
+    timeout: 20000
+# Sent: the bubble counts one, and now opens the thread, with the tag.
+- extendedWaitUntil:
+    visible:
+      id: "collection-comments"
+      text: ".*, 1$"
+    timeout: 20000
+- tapOn:
+    id: "collection-comments"
+- extendedWaitUntil:
+    visible:
+      id: "comment-words"
+      text: ".*Maestro CM-7 hello.*"
+    timeout: 20000
+# The tag is inside the comment's one element; its words carry it.
+- assertVisible:
+    id: "comment-words"
+    text: ".*Maestro CM-7 hello @maestro.*"
+
+# ── A: CM-7 arrives; CM-8, A answers ──
+- runFlow: common/start.yaml
+- runFlow: common/ensure-signed-in.yaml
+- tapOn:
+    id: "tab-profile"
+- extendedWaitUntil:
+    visible:
+      id: "person-bell"
+      text: ".*, [0-9]+ new$|.*, [0-9]+ mới$"
+    timeout: 30000
+- tapOn:
+    id: "person-bell"
+- extendedWaitUntil:
+    visible:
+      id: "activity-tab-for-you"
+    timeout: 15000
+- tapOn:
+    id: "activity-tab-for-you"
+# One row for the one event: a tag on the owner's own list reaches the
+# owner once, as a tag — `comment_news` takes 'tag' before 'on_list'.
+- extendedWaitUntil:
+    visible:
+      id: "news-tag"
+      text: ".*Maestro CM-7 hello.*"
+    timeout: 20000
+- tapOn:
+    id: "news-tag"
+    text: ".*Maestro CM-7 hello.*"
+- extendedWaitUntil:
+    visible:
+      id: "comment-words"
+      text: ".*Maestro CM-7 hello.*"
+    timeout: 20000
+- tapOn:
+    id: "comment-reply"
+    index: 0
+- extendedWaitUntil:
+    visible:
+      id: "composer-replying"
+    timeout: 10000
+- inputText: "Maestro CM-8 answer"
+- tapOn:
+    id: "composer-send"
+- extendedWaitUntil:
+    visible:
+      id: "comment-words"
+      text: ".*Maestro CM-8 answer.*"
+    timeout: 20000
+# Seen, so the bell is clear: back out to the first page.
+- tapOn:
+    id: "comments-back"
+- runFlow: common/start.yaml
+- tapOn:
+    id: "tab-profile"
+- extendedWaitUntil:
+    visible:
+      id: "person-bell"
+    timeout: 20000
+- assertNotVisible:
+    id: "person-bell"
+    text: ".*new$|.*mới$"
+
+# ── B: CM-8 arrives; CM-9, a heart; CM-11, a report ──
+- runFlow: common/start.yaml
+- runFlow: common/ensure-signed-out.yaml
+- tapOn:
+    id: "profile-sign-in"
+- runFlow:
+    file: common/sign-in.yaml
+    env:
+      TEST_EMAIL: ${TEST_EMAIL_2}
+      TEST_PASSWORD: ${TEST_PASSWORD_2}
+- tapOn:
+    id: "tab-profile"
+- extendedWaitUntil:
+    visible:
+      id: "person-bell"
+      text: ".*, [0-9]+ new$|.*, [0-9]+ mới$"
+    timeout: 30000
+- tapOn:
+    id: "person-bell"
+- extendedWaitUntil:
+    visible:
+      id: "activity-tab-for-you"
+    timeout: 15000
+- tapOn:
+    id: "activity-tab-for-you"
+- extendedWaitUntil:
+    visible:
+      id: "news-reply"
+      text: ".*Maestro CM-8 answer.*"
+    timeout: 20000
+- tapOn:
+    id: "news-reply"
+    text: ".*Maestro CM-8 answer.*"
+- extendedWaitUntil:
+    visible:
+      id: "comment-words"
+      text: ".*Maestro CM-8 answer.*"
+    timeout: 20000
+# CM-9. The heart under A's answer: the one below its words.
+- tapOn:
+    id: "comment-heart"
+    below:
+      id: "comment-words"
+      text: ".*Maestro CM-8 answer.*"
+- extendedWaitUntil:
+    visible:
+      id: "comment-heart"
+      selected: true
+    timeout: 15000
+# CM-11. A's answer is A's only comment here, so its ⋯ is the only one
+# labelled with A's name; B's own carries B's. Not the owner and not the
+# author: Report, and no Delete.
+- tapOn:
+    id: "comment-more-menu"
+    text: ".*maestro.*"
+- extendedWaitUntil:
+    visible:
+      id: "sheet-action-report"
+    timeout: 10000
+- assertNotVisible:
+    id: "sheet-action-delete"
+- tapOn:
+    id: "sheet-action-report"
+- extendedWaitUntil:
+    visible:
+      id: "sheet-action-other"
+    timeout: 10000
+- tapOn:
+    id: "sheet-action-other"
+- extendedWaitUntil:
+    visible:
+      text: "Thanks for telling us.*|Cảm ơn bạn đã báo.*"
+    timeout: 20000
+- tapOn:
+    text: "OK"
+
+# ── A: CM-9 arrives, and does not ring ──
+- runFlow: common/start.yaml
+- runFlow: common/ensure-signed-in.yaml
+- tapOn:
+    id: "tab-profile"
+- extendedWaitUntil:
+    visible:
+      id: "person-bell"
+    timeout: 20000
+- tapOn:
+    id: "person-bell"
+- extendedWaitUntil:
+    visible:
+      id: "activity-tab-for-you"
+    timeout: 15000
+- tapOn:
+    id: "activity-tab-for-you"
+- extendedWaitUntil:
+    visible:
+      id: "news-heart"
+      text: ".*Maestro CM-8 answer.*"
+    timeout: 20000
+# Read on the bell, after the heart has had every chance to arrive: a
+# heart is on the page and is never counted (C7c).
+- runFlow: common/start.yaml
+- tapOn:
+    id: "tab-profile"
+- extendedWaitUntil:
+    visible:
+      id: "person-bell"
+    timeout: 20000
+- assertNotVisible:
+    id: "person-bell"
+    text: ".*new$|.*mới$"
+
+# ── A: delete the list, and with it everything on it ──
+- tapOn:
+    id: "tab-collections"
+- extendedWaitUntil:
+    visible:
+      id: "collections-yours"
+    timeout: 20000
+- tapOn:
+    id: "collections-yours"
+- scrollUntilVisible:
+    element:
+      text: "Maestro Pair(,.*)?"
+    direction: UP
+    timeout: 15000
+- tapOn:
+    text: "Maestro Pair(,.*)?"
+- extendedWaitUntil:
+    visible:
+      id: "collection-more"
+    timeout: 15000
+- runFlow: common/delete-open-collection.yaml
+- assertNotVisible:
+    text: "Maestro Pair(,.*)?"
+- runFlow: common/start.yaml
+- runFlow: common/ensure-signed-out.yaml
