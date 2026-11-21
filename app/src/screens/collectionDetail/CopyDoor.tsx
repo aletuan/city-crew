@@ -53,10 +53,10 @@ export function CopyDoor({ list, canCopy, onCopy, navigation }: {
       accessibilityLabel={copyLabel(st, t)}
       testID="collection-copy"
     >
-      {/* Filled in the accent once it is yours, as the heart is: a state
-          the reader made. */}
-      <Glyph name={have ? 'copy' : 'copy-outline'} size={ACT_GLYPH} color={have ? colors.accent : colors.textSecondary} />
-      {st.n > 0 ? <Text style={s.act} testID="collection-copy-count">{st.n}</Text> : null}
+      {/* Once it is yours, the outline in the ink, and its figure with it
+          (owner, 21 Nov 2026) — see `CopyFoot` in ActivityCard. */}
+      <Glyph name="copy-outline" size={ACT_GLYPH} color={have ? colors.text : colors.textSecondary} />
+      {st.n > 0 ? <Text style={[s.act, have && s.actOn]} testID="collection-copy-count">{st.n}</Text> : null}
     </PressableScale>
   );
 }

@@ -4387,6 +4387,9 @@ describe('the copy button', () => {
     const { raw } = show();
     await act(async () => {});
     expect(count()).toBe('10');
+    // Other people's copies: grey, figure and all.
+    expect(copyBtn()!.querySelector('[data-icon="copy-outline"]')!.getAttribute('data-color')).toBe(String(colors.textSecondary));
+    expect(textStyleOf(screen.getByTestId('collection-copy-count'))?.color).toBe(colors.textSecondary);
     expect(copyBtn()!.getAttribute('aria-label')).toBe('Save a copy, 10');
     fireEvent.click(copyBtn()!);
     expect(raw.navigate).toHaveBeenCalledWith('CollectionForm', {
@@ -4394,12 +4397,15 @@ describe('the copy button', () => {
     });
   });
 
-  it('opens the copy the reader already has, filled, and makes no second', async () => {
+  it('opens the copy the reader already has, in the ink, and makes no second', async () => {
     copyRows.rows = [{ slug: 'old-quarter', copies: 11 }];
     state.mine = [collection({ id: 'mine-1', slug: 'my-old-quarter', copied_from: 'c1' })];
     const { raw } = show();
     await act(async () => {});
-    expect(copyBtn()!.querySelector('[data-icon="copy"]')).toBeTruthy();
+    // The outline in the ink, and its figure with it (owner, 21 Nov 2026).
+    expect(copyBtn()!.querySelector('[data-icon="copy"]')).toBeNull();
+    expect(copyBtn()!.querySelector('[data-icon="copy-outline"]')!.getAttribute('data-color')).toBe(String(colors.text));
+    expect(textStyleOf(screen.getByTestId('collection-copy-count'))?.color).toBe(colors.text);
     expect(copyBtn()!.getAttribute('aria-label')).toBe('Open your copy, 11');
     fireEvent.click(copyBtn()!);
     expect(raw.push).toHaveBeenCalledWith('CollectionDetail', { slug: 'my-old-quarter' });
