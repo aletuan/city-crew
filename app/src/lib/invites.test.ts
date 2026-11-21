@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   candidates, companySeats, crewOf, diffSelection, headcount, INVITE_CAP, roomLeft, seatsFull,
-  sortInvites, splitByStanding, standingOn, togglePick, waitingCount, type InviteRow,
+  sortInvites, splitByStanding, standingOn, togglePick, waitingCount, latestWaiting, type InviteRow,
 } from './invites';
 
 const inv = (over: Partial<InviteRow> = {}): InviteRow => ({
@@ -284,5 +284,19 @@ describe('diffSelection', () => {
     const { invite, withdraw } = diffSelection(before, new Set(['already', 'drop', 'joined']));
     expect(invite).toEqual([]);
     expect(withdraw).toEqual([]);
+  });
+});
+
+describe('latestWaiting', () => {
+  const at = (created_at: string, status: InviteRow['status'] = 'pending'): InviteRow =>
+    ({ trip_id: 't', invitee_id: 'me', inviter_id: 'u', status, created_at });
+  it('is the newest unanswered invitation’s time, whatever the order', () => {
+    expect(latestWaiting([at('2026-11-02'), at('2026-11-05'), at('2026-11-03')])).toBe('2026-11-05');
+    expect(latestWaiting([at('2026-11-05'), at('2026-11-02')])).toBe('2026-11-05');
+    expect(latestWaiting([at('2026-11-02'), at('2026-11-05', 'accepted'), at('2026-11-06', 'declined')])).toBe('2026-11-02');
+  });
+  it('is null with none waiting', () => {
+    expect(latestWaiting([])).toBeNull();
+    expect(latestWaiting([at('2026-11-05', 'accepted')])).toBeNull();
   });
 });

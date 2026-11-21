@@ -101,6 +101,13 @@ export function waitingCount(myInvites: readonly InviteRow[]): number {
   return myInvites.filter((i) => i.status === 'pending').length;
 }
 
+/** When the newest unanswered invitation was sent, or null for none: the
+ *  time of the one row the bell and Activity give them (`freshCount`). */
+export function latestWaiting(myInvites: readonly InviteRow[]): string | null {
+  const at = myInvites.filter((i) => i.status === 'pending').map((i) => i.created_at);
+  return at.length ? at.reduce((a, b) => (a > b ? a : b)) : null;
+}
+
 /**
  * Oldest first — the opposite of every other list in this app.
  *

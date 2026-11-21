@@ -185,11 +185,11 @@ export default function ActivityScreen({ navigation }: { navigation: Nav }) {
   // reply the dot has not heard of. So it is not one of the halves
   // above: a failure of it is not said, the page simply has no comment
   // rows; and a pull asks it again beside them.
-  const { news } = useFreshNews();
+  const { news, invited } = useFreshNews();
   // Two groups, what is for the reader above what the reader did — see
   // `lib/commentNews`.
   const groups = useMemo(() => activityGroups(earlier, news.data, since), [earlier, news.data, since]);
-  const nothing = groups.forYou.length + groups.yours.length === 0 && !(me && splitFriendships(crew.ships.data, me).incoming.length);
+  const nothing = groups.forYou.length + groups.yours.length === 0 && !(me && splitFriendships(crew.ships.data, me).incoming.length) && !invited;
 
   const actors = useMemo(
     () => earlier.map((it) => handleOf(it, crew.people) ?? '').filter(Boolean),

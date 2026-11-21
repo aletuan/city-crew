@@ -75,10 +75,12 @@ import { type ActivityEntry, type CommentNews, latestRequest, newestAt } from '.
 import type { FriendProfile } from '../../lib/data';
 import { type ActivityItem, type FriendshipRow, splitFriendships } from '../../lib/friends';
 import { useCrew } from '../../lib/crew';
+import { useInvitations } from '../../lib/invitations';
+import { type InviteRow, latestWaiting } from '../../lib/invites';
 import { useSeenThrough } from '../../lib/freshNews';
 import { atHandle } from '../../lib/handle';
 import { useI18n } from '../../lib/i18n';
-import { type Nav, toPerson, toProfileRoom } from '../../nav';
+import { type Nav, toPerson, toProfileRoom, toTrips } from '../../nav';
 import { colors, space, type } from '../../theme';
 
 type Translate = (en: string, vi: string, ja: string, zh?: string, hant?: string) => string;
@@ -115,15 +117,23 @@ export function ActivityGroups({ groups, people, faces, collectionOf, ago, navig
   // The requests' row is a row of "For you" like any: opening the page
   // moves the mark past it too, and it is new only until then.
   const askedAt = latestRequest(incoming);
-  const isNew = useSeenThrough(newestAt([...groups.forYou, ...(askedAt ? [{ at: askedAt }] : [])]));
+  // And the trips the reader is asked onto: one row beside it.
+  const { invites } = useInvitations();
+  const waiting = me ? invites.data.filter((i) => i.invitee_id === me && i.status === 'pending') : [];
+  const invitedAt = latestWaiting(waiting);
+  const isNew = useSeenThrough(newestAt([
+    ...groups.forYou, ...(askedAt ? [{ at: askedAt }] : []), ...(invitedAt ? [{ at: invitedAt }] : []),
+  ]));
   const [tab, setTab] = useState<'forYou' | 'yours'>(() =>
-    (groups.forYou.length === 0 && asking === 0 && groups.yours.length > 0 ? 'yours' : 'forYou'));
+    (groups.forYou.length === 0 && asking === 0 && !invitedAt && groups.yours.length > 0 ? 'yours' : 'forYou'));
   const news = tab === 'forYou';
   const entries = news ? groups.forYou : groups.yours;
   // What the card draws, in order: the requests first when "For you" is
   // up — somebody is waiting on the reader — then the rows.
   const asked = news && askedAt ? [requestRow(incoming, people, () => toProfileRoom(navigation, 'Crew'), isNew(askedAt), t)] : [];
+  const invited = news && invitedAt ? [inviteRow(waiting, people, () => toTrips(navigation), isNew(invitedAt), t)] : [];
   const shown = [
+    ...invited,
     ...asked,
     ...entries.map((e) => ({
       row: e.from === 'log' ? logRow(e.item, people, faces, collectionOf, onList, onPerson, t) : newsRow(e.news, onComment, t),
@@ -236,6 +246,31 @@ function requestRow(
   return {
     row: { key: 'requests', face: first?.avatar_url || null, badge: 'person-add', line, open },
     at: latest.created_at, fresh, testID: 'activity-requests',
+  };
+}
+
+/**
+ * The trips the reader is asked onto, as one row at the head of "For
+ * you", above the friends' (a trip has a day on it). The latest inviter
+ * named, the rest counted; it opens Trips, where each is answered. New
+ * by the mark, like every row: what keeps an invitation in sight until it
+ * is answered is the Trips tab's badge and its rail.
+ */
+function inviteRow(
+  rows: readonly InviteRow[], people: Record<string, FriendProfile>, open: () => void, fresh: boolean, t: Translate,
+): { row: Row; at: string; fresh: boolean; testID: string } {
+  const latest = [...rows].sort((a, b) => (a.created_at < b.created_at ? 1 : -1))[0];
+  const first = people[latest.inviter_id];
+  const who = first?.handle ? atHandle(first.handle) : null;
+  const k = rows.length - 1;
+  const line = !who
+    ? t(`${rows.length} trip invitation${rows.length === 1 ? '' : 's'}`, `${rows.length} lời mời chuyến đi`, `旅程の招待${rows.length}件`, `${rows.length} 个行程邀请`, `${rows.length} 個行程邀請`)
+    : k === 0
+      ? t(`${who} invited you on a trip`, `${who} mời bạn đi cùng một chuyến đi`, `${who}さんが旅程に招待しています`, `${who} 邀请你参加行程`, `${who} 邀請你參加行程`)
+      : t(`${who} and ${k} other${k === 1 ? '' : 's'} invited you on trips`, `${who} và ${k} người khác mời bạn đi cùng chuyến đi`, `${who}さんほか${k}人が旅程に招待しています`, `${who} 和另外 ${k} 人邀请你参加行程`, `${who} 和另外 ${k} 人邀請你參加行程`);
+  return {
+    row: { key: 'invites', face: first?.avatar_url || null, badge: 'airplane', line, open },
+    at: latest.created_at, fresh, testID: 'activity-invites',
   };
 }
 

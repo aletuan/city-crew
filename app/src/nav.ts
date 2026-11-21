@@ -303,6 +303,14 @@ export function toProfileRoom(navigation: Nav, room: 'Account' | 'Activity' | 'C
   else goTo('Profile', params);
 }
 
+/** The Trips tab, from a page of another: where an invitation is answered. */
+export function toTrips(navigation: Nav) {
+  const params = { screen: 'TripsHome', initial: false };
+  const tabs = navigation.getParent();
+  if (tabs) tabs.navigate('Trips', params);
+  else goTo('Trips', params);
+}
+
 /**
  * A person's page — or, for your own inside the last tab, that tab's
  * first page, which *is* your page since 19 Nov 2026
