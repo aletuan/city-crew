@@ -46,11 +46,14 @@ import type { Nav, RootRoute } from '../nav';
 import type { Collection, Place } from '../lib/types';
 import { CATEGORIES } from '../lib/categories';
 import { colors, space } from '../theme';
+import { changes } from '../lib/commentsChanged';
 import { CHIP_H, CHIP_SLOP } from '../components/ui';
 import { appFlags } from '../lib/flags';
 
 const spies = vi.hoisted(() => ({
   goTo: vi.fn(),
+  reloadLikes: vi.fn(),
+  copyCounts: vi.fn(),
   deleteCollection: vi.fn(async (_slug: string) => {}),
   reorderCollection: vi.fn(async (_slug: string, _slugs: string[]) => {}),
   setCollectionPublic: vi.fn(async (_slug: string, _next: boolean) => {}),
@@ -122,7 +125,7 @@ vi.mock('../lib/i18n', () => ({
 vi.mock('../lib/catalog', () => ({
   useCollections: () => ({ data: state.cols, loading: state.colsLoading, reload: spies.colsReload }),
   usePlaces: () => ({ data: state.places, loading: state.placesLoading, reload: spies.placesReload }),
-  useLikes: () => ({ likes: state.likes, myLikes: state.myLikes, toggleLike: spies.toggleLike }),
+  useLikes: () => ({ likes: state.likes, myLikes: state.myLikes, toggleLike: spies.toggleLike, reloadLikes: spies.reloadLikes }),
   useCuratorAvatar: () => state.cachedAvatar,
 }));
 vi.mock('../lib/save', () => {
@@ -163,7 +166,10 @@ vi.mock('../lib/data', async (orig) => ({
 // here is when this page counts an open, not how the call is made.
 // How many people copied each public list, for the copy button's figure.
 const copyRows = vi.hoisted(() => ({ rows: [] as { slug: string; copies: number }[] }));
-vi.mock('../lib/data/stats', () => ({ recordCollectionView: spies.countView, fetchCopyCounts: async () => copyRows.rows }));
+vi.mock('../lib/data/stats', () => ({
+  recordCollectionView: spies.countView,
+  fetchCopyCounts: async () => { spies.copyCounts(); return copyRows.rows; },
+}));
 // What the door to the comments asks for its figure, when it is drawn.
 vi.mock('../lib/data/comments', async (orig) => ({
   ...(await orig<Record<string, unknown>>()),
@@ -4307,6 +4313,20 @@ describe('pulling the list down', () => {
     expect(spies.placesReload).toHaveBeenCalledTimes(1);
     // Nothing is loading, so the spinner disarms as soon as it is armed.
     expect(list().refreshing).toBe(false);
+  });
+
+  // The figures under the card too (owner, 21 Nov 2026): the hearts, the
+  // comments' count and the copies'.
+  it('asks again for the hearts, the comments and the copies', async () => {
+    show();
+    await act(async () => {});
+    spies.reloadLikes.mockClear();
+    spies.copyCounts.mockClear();
+    const said = changes();
+    await act(async () => { list().onRefresh(); });
+    expect(spies.reloadLikes).toHaveBeenCalledTimes(1);
+    expect(changes()).toBe(said + 1);
+    expect(spies.copyCounts).toHaveBeenCalledTimes(1);
   });
 
   // The spinner is the pull's: a background revalidate does not light it,

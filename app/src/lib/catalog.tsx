@@ -82,6 +82,12 @@ type Catalog = {
    * already moved by the time the promise exists.
    */
   toggleLike: (c: { id: string; slug: string }) => Promise<void>;
+  /**
+   * Ask both again — the counts and your own set, together, for the
+   * reason `toggleLike` does. A list's page calls it on a pull (owner,
+   * 21 Nov 2026), so a heart somebody else gave since it opened shows.
+   */
+  reloadLikes: () => void;
 };
 
 /** The shipped floor, lifted out of the category table once rather than on
@@ -99,6 +105,7 @@ const EMPTY: Catalog = {
   rankLikes: {},
   myLikes: [],
   toggleLike: async () => {},
+  reloadLikes: () => {},
 };
 
 /**
@@ -122,6 +129,7 @@ const DataCtx = createContext<CatalogData>({
 });
 const LikesCtx = createContext<CatalogLikes>({
   likes: EMPTY.likes, rankLikes: EMPTY.rankLikes, myLikes: EMPTY.myLikes, toggleLike: EMPTY.toggleLike,
+  reloadLikes: EMPTY.reloadLikes,
 });
 
 export function CatalogProvider({ children }: { children: React.ReactNode }) {
@@ -321,9 +329,12 @@ export function CatalogProvider({ children }: { children: React.ReactNode }) {
     collections.fromCache, collections.reload,
     terms, curatorAvatars.data,
   ]);
+  const { reload: reloadCounts } = likeCounts;
+  const { reload: reloadMine } = myLikes;
+  const reloadLikes = useCallback(() => { reloadCounts(); reloadMine(); }, [reloadCounts, reloadMine]);
   const likes = useMemo<CatalogLikes>(
-    () => ({ likes: counts, rankLikes: likeCounts.data.ranked, myLikes: liked, toggleLike }),
-    [counts, likeCounts.data.ranked, liked, toggleLike],
+    () => ({ likes: counts, rankLikes: likeCounts.data.ranked, myLikes: liked, toggleLike, reloadLikes }),
+    [counts, likeCounts.data.ranked, liked, toggleLike, reloadLikes],
   );
 
   return (

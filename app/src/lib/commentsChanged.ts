@@ -33,3 +33,11 @@ export function commentsChanged(): void {
   n += 1;
   heard.forEach((f) => f());
 }
+
+/** Ask every thread again with nothing written: a list's page being
+ *  pulled to reload (owner, 21 Nov 2026), so a comment somebody else
+ *  left since it opened is counted. The same number moves; the name says
+ *  why a caller moves it. */
+export function askCommentsAgain(): void {
+  commentsChanged();
+}
