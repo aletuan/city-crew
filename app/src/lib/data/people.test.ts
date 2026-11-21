@@ -94,7 +94,7 @@ describe('profileByHandle', () => {
   it('asks for the bio with the face and the names', async () => {
     fake().replies({ data: { ...profile('u1', 'anh'), bio: 'Coffee first.' } });
     expect((await profileByHandle('anh'))?.bio).toBe('Coffee first.');
-    expect(fake().log[0].payload).toBe('id, handle, full_name, avatar_url, bio');
+    expect(fake().log[0].payload).toBe('id, handle, full_name, avatar_url, bio, wall_kind, wall_ref');
   });
 
   it('asks the forgiving question, because no such handle is an answer', async () => {

@@ -16,6 +16,10 @@ export type FriendProfile = {
    *  it — a person's own page draws it (16 Nov 2026); the rows of people
    *  everywhere else do not, and their queries do not carry it. */
   bio?: string | null;
+  /** The cover the person chose for their page — `lib/wall`. Only
+   *  `profileByHandle` asks for it, for the same reason as the bio. */
+  wall_kind?: string | null;
+  wall_ref?: string | null;
 };
 
 export async function fetchFriendships(): Promise<import('../friends').FriendshipRow[]> {
@@ -46,7 +50,7 @@ export async function fetchProfilesById(ids: string[]): Promise<Record<string, F
 export async function profileByHandle(handle: string): Promise<FriendProfile | null> {
   const { data, error } = await supabase
     .from('profiles')
-    .select('id, handle, full_name, avatar_url, bio')
+    .select('id, handle, full_name, avatar_url, bio, wall_kind, wall_ref')
     .ilike('handle', handle)
     .maybeSingle();
   if (error) throw new Error(error.message);
