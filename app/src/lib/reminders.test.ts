@@ -7,6 +7,9 @@
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+const offer = vi.hoisted(() => vi.fn());
+vi.mock('./reminderAsk', () => ({ offerReminderAsk: offer }));
+
 const os = vi.hoisted(() => ({
   scheduled: [] as { identifier: string; content: { data?: Record<string, unknown> } }[],
   granted: true,
@@ -107,9 +110,10 @@ describe('syncTripReminders', () => {
 });
 
 describe('scheduleTripReminder', () => {
-  it('asks once, then plants both notes with the first stop\'s hour', async () => {
+  it('plants both notes with the first stop\'s hour, asking for nothing', async () => {
     await scheduleTripReminder({ id: 'a', day: '2026-09-20', title: 'Pho night', startMin: 18 * 60 }, text);
     expect(os.requestPermissionsAsync).not.toHaveBeenCalled(); // already granted
+    expect(offer).not.toHaveBeenCalled();
     expect(os.scheduleNotificationAsync).toHaveBeenCalledTimes(2);
     const ids = os.scheduleNotificationAsync.mock.calls.map((c) => (c[0] as { identifier: string }).identifier);
     expect(ids).toEqual(['trip-reminder-a', 'trip-today-a']);
@@ -121,10 +125,28 @@ describe('scheduleTripReminder', () => {
     expect(ids).toEqual(['trip-reminder-a']);
   });
 
+  it('offers the explainer, and neither plants nor raises the phone\'s sheet, when the phone has not been asked', async () => {
+    os.granted = false;
+    os.canAsk = true;
+    await scheduleTripReminder({ id: 'a', day: '2026-09-20', title: 'Pho night', startMin: 18 * 60 }, text);
+    expect(offer).toHaveBeenCalledTimes(1);
+    expect(os.requestPermissionsAsync).not.toHaveBeenCalled();
+    expect(os.scheduleNotificationAsync).not.toHaveBeenCalled();
+  });
+
+  it('offers nothing and plants nothing where the phone already said no', async () => {
+    os.granted = false;
+    os.canAsk = false;
+    await scheduleTripReminder({ id: 'a', day: '2026-09-20', title: 'Pho night', startMin: 18 * 60 }, text);
+    expect(offer).not.toHaveBeenCalled();
+    expect(os.scheduleNotificationAsync).not.toHaveBeenCalled();
+  });
+
   it('does not ask for permission when nothing is due', async () => {
     os.granted = false;
     await scheduleTripReminder({ id: 'a', day: '2026-01-01', title: 'Gone', startMin: 18 * 60 }, text);
     expect(os.requestPermissionsAsync).not.toHaveBeenCalled();
+    expect(offer).not.toHaveBeenCalled();
     expect(os.scheduleNotificationAsync).not.toHaveBeenCalled();
   });
 });
