@@ -43,8 +43,27 @@ const crew = vi.hoisted(() => ({
   mutual: {} as Record<string, number>,
 }));
 vi.mock('../lib/crew', () => ({ useCrew: () => crew }));
+vi.mock('../lib/city', async (orig) => ({ ...(await orig<typeof import('../lib/city')>()), useCurrentCity: () => ({ city: state.city }) }));
+// The sign-up guide's anchors, as the page asks for them: the real hook,
+// with what it was asked kept.
+const tourAnchors = vi.hoisted(() => new Map<string, { ref: { current: unknown }; press: () => void; focused?: () => boolean }>());
+vi.mock('../components/SignupTour', async (orig) => {
+  const real = await orig<typeof import('../components/SignupTour')>();
+  return {
+    ...real,
+    useTourAnchor: (...args: Parameters<typeof real.useTourAnchor>) => {
+      const ref = real.useTourAnchor(...args);
+      tourAnchors.set(args[0], { ref, press: args[1], focused: args[2] });
+      return ref;
+    },
+  };
+});
 
 const state = vi.hoisted(() => ({
+  // The city the reader is in, as Explore's switcher has it: its cover
+  // heads a page with no public list wearing a photograph.
+  focused: true,
+  city: null as { hero_photo_uri: string | null; hero_place_slug: string | null } | null,
   me: 'me-id' as string | null,
   people: {} as Record<string, Who>,
   asked: [] as (string | null)[],
@@ -201,7 +220,7 @@ const heard: Record<string, (() => void)[]> = {};
 const said = (event: 'blur' | 'focus') => act(() => { (heard[event] ?? []).forEach((fn) => fn()); });
 const show = async (handle = 'lan', home?: boolean, routeNames?: string[]) => {
   const navigation = {
-    goBack: vi.fn(), navigate: vi.fn(), getParent: () => out.tabs,
+    goBack: vi.fn(), navigate: vi.fn(), getParent: () => out.tabs, isFocused: vi.fn(() => state.focused),
     getState: () => (routeNames ? { routeNames } : undefined),
     addListener: vi.fn((event: string, fn: () => void) => {
       (heard[event] ??= []).push(fn);
@@ -214,6 +233,8 @@ const show = async (handle = 'lan', home?: boolean, routeNames?: string[]) => {
 };
 
 beforeEach(() => {
+  state.city = null; state.focused = true;
+  tourAnchors.clear();
   out.tabs = { navigate: vi.fn() };
   out.goTo.mockClear();
   state.me = 'me-id';
@@ -372,14 +393,53 @@ describe('the bio, and the way to write one', () => {
     expect(screen.queryByTestId('person-bio')).toBeNull();
     // Under the head, as the bio is: the row after the picture and names.
     expect(add.compareDocumentPosition(screen.getByTestId('person-handle')) & Node.DOCUMENT_POSITION_PRECEDING).toBeTruthy();
-    // A plus and the words, both in the accent: the colour of what a tap
-    // changes, as "Add a description" wears it on a list's card.
-    const plus = add.querySelector('[data-icon="add"]')!;
-    expect([plus.getAttribute('data-size'), plus.getAttribute('data-color')]).toEqual(['18', String(colors.accent)]);
-    expect(textStyleOf(screen.getByText('Write a few words about you'))).toMatchObject({ color: colors.accent, fontSize: 14 });
+    // The bubble a bio stands in, already drawn, tail and all (owner,
+    // 21 Nov 2026): the words faint and in the bio's italic, then a small
+    // pencil in the app's gold.
+    expect(viewStyleOf(add.firstElementChild as HTMLElement)).toMatchObject({ backgroundColor: colors.surfaceGlassStrong, borderRadius: 18, flexDirection: 'row' });
+    expect(textStyleOf(screen.getByText('Write a few words about you'))).toMatchObject({ color: colors.textTertiary, fontStyle: 'italic' });
+    const pencil = add.querySelector('[data-icon="pencil"]')!;
+    expect([pencil.getAttribute('data-size'), pencil.getAttribute('data-color')]).toEqual(['15', String(colors.sun)]);
+    expect(add.querySelector('[data-icon="add"]')).toBeNull();
+    // Words first, the pencil beside them.
+    expect(screen.getByText('Write a few words about you').compareDocumentPosition(pencil) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     // It opens the profile's form with the cursor in the bio.
     fireEvent.click(add);
     expect(navigation.navigate).toHaveBeenCalledWith('EditProfile', { focus: 'bio' });
+  });
+
+  // The sign-up guide's fourth step rings the bubble (owner, 21 Nov
+  // 2026); a press on the ring is a press on the bubble.
+  it('lends the guide the empty bubble, only while the page is in front', async () => {
+    mine({ bio: null });
+    const navigation = await show();
+    const held = tourAnchors.get('bio')!;
+    const box = held.ref.current as HTMLElement;
+    const add = screen.getByTestId('person-bio-add');
+    expect(box === add || box.contains(add) || add.contains(box)).toBe(true);
+    expect(held.focused!()).toBe(true);
+    state.focused = false;
+    expect(held.focused!()).toBe(false);
+    act(() => { held.press(); });
+    expect(navigation.navigate).toHaveBeenCalledWith('EditProfile', { focus: 'bio' });
+  });
+
+  it('heads somebody else’s page with the reader’s city when no public list of theirs has a photograph', async () => {
+    state.shelf = [];
+    state.city = { hero_photo_uri: 'https://city/hanoi.jpg', hero_place_slug: null };
+    await show();
+    expect(screen.getByTestId('person-cover').querySelector('img')!.getAttribute('src')).toBe('https://city/hanoi.jpg');
+  });
+
+  it('lends the guide nothing once there is a bio, nor on somebody else’s page', async () => {
+    mine();
+    await show();
+    expect(tourAnchors.has('bio')).toBe(false);
+    cleanup(); tourAnchors.clear();
+    state.me = 'me-id';
+    state.people = { lan: { ...LAN, bio: null } };
+    await show();
+    expect(tourAnchors.has('bio')).toBe(false);
   });
 
   it('says it in Vietnamese, in the Profile tab’s own words', async () => {
@@ -1103,9 +1163,32 @@ describe('lists that are not for everybody', () => {
       expect(screen.getByTestId('person-cover').querySelector('img')!.getAttribute('src')).toBe('https://covers/open.jpg');
     });
 
-    it('wears the tint for a cover when every list you have is private', async () => {
+    // The owner's case (21 Nov 2026): one list, turned private, and the
+    // page heads itself with the city's cover rather than going bare.
+    it('wears the city’s cover when every list you have is private', async () => {
       state.shelf = [];
       state.mine = [mineList('secret', { is_public: false, cover: { photo_uri: 'https://covers/secret.jpg' } } as Partial<Collection>)];
+      state.city = { hero_photo_uri: 'https://city/hanoi.jpg', hero_place_slug: null };
+      await show('me');
+      expect(screen.getByTestId('person-cover').querySelector('img')!.getAttribute('src')).toBe('https://city/hanoi.jpg');
+      expect(screen.queryByTestId('person-cover-tint')).toBeNull();
+    });
+
+    it('keeps its own public list’s cover over the city’s', async () => {
+      state.mine = (state.mine as Collection[]).map((c) => ({
+        ...c, cover: { photo_uri: `https://covers/${c.slug}.jpg` },
+      })) as Collection[];
+      state.shelf = [(state.mine as Collection[])[2]];
+      state.city = { hero_photo_uri: 'https://city/hanoi.jpg', hero_place_slug: null };
+      await show('me');
+      expect(screen.getByTestId('person-cover').querySelector('img')!.getAttribute('src')).toBe('https://covers/open.jpg');
+    });
+
+    it('wears the tint only when the city has no photograph either', async () => {
+      state.shelf = [];
+      state.mine = [mineList('secret', { is_public: false, cover: { photo_uri: 'https://covers/secret.jpg' } } as Partial<Collection>)];
+      state.places = [];
+      state.city = { hero_photo_uri: null, hero_place_slug: null };
       await show('me');
       expect(screen.getByTestId('person-cover-tint')).toBeTruthy();
     });

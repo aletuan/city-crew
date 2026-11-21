@@ -43,11 +43,17 @@
 // owner asked. The cover is **the cover of their newest list that has
 // one** (`coverAmong`), not a picture they upload: it says where this
 // person goes, the desk has already seen it, and there is no upload to
-// build or moderate. Somebody with no list has the accent's tint for a
-// cover — the ground the Statistics row and the "add a photo" offer
-// stand on — so a page with nothing on it still reads as meant. Most
-// pages are that page today: the live project has about ninety profiles
-// and fewer public lists than that.
+// build or moderate. Somebody with no public list wearing a photograph
+// has the city's cover instead, the one Explore's hero wears for the
+// city the reader is in (`cityCoverUri`; owner, 21 Nov 2026) — on every
+// page, the reader's own and anyone else's. Most pages were bare
+// before it: about ninety profiles and fewer public lists than that,
+// each under the accent's tint, and the sign-up guide's fourth step now
+// opens a new reader's own page, which is always one of them. The
+// reader's city and not the owner's because a profile keeps no city;
+// it changes with the switcher, and a public list with a photograph
+// takes the cover back from it. The tint is left for a city with no
+// photograph at all.
 //
 // Under the app's ordinary header, as a card, and not bled to the top of
 // the screen behind floating buttons as the sketch drew it. `Screen`
@@ -145,8 +151,10 @@ import { useCardCopy } from './person/useCardCopy';
 import { OwnFace, useOwnPicture } from './person/OwnFace';
 import { Counts } from './profile/Counts';
 import { useCollections, usePlaces } from '../lib/catalog';
+import { useCurrentCity } from '../lib/city';
+import { useTourAnchor } from '../components/SignupTour';
 import {
-  type Collection, coverUriOf, type FriendProfile, membersOf, useMyListShares, useProfileByHandle, useSharedWithMe,
+  cityCoverUri, type Collection, coverUriOf, type FriendProfile, type Place, membersOf, useMyListShares, useProfileByHandle, useSharedWithMe,
 } from '../lib/data';
 import { atHandle, normalizeHandle } from '../lib/handle';
 import { useI18n } from '../lib/i18n';
@@ -154,7 +162,7 @@ import { coverAmong, IN_COMMON_ON, listsBy, listsOn, seenOn, TOP_FRIEND_ON } fro
 import { useMyLists } from '../lib/save';
 import { sharesByList } from '../lib/shares';
 import { useScheme } from '../lib/theme';
-import { bgHex, colors, display, font, radius, space, type } from '../theme';
+import { bgHex, colors, display, radius, space, type } from '../theme';
 import { toProfileRoom, type Nav, type RootRoute } from '../nav';
 
 /** The face: 80, from 88 (owner, 19 Nov 2026, after an outside review
@@ -179,9 +187,11 @@ const NAME_DROP = 6;
 const TITLE_SHRINK = 0.78;
 /** The name's line, which the role's mark after it is centred on. */
 const TITLE_LINE = 28;
-/** What "Write a few words about you" adds above and below its 24pt row to make the button
- *  scale's 44 for the thumb (`SECONDARY_CONTROL_H`). */
-const BIO_ADD_SLOP = { top: (SECONDARY_CONTROL_H - 24) / 2, bottom: (SECONDARY_CONTROL_H - 24) / 2 };
+/** The bio's bubble on one line: 9 of padding, a 21pt line, 9. */
+const BIO_ONE_LINE = 39;
+/** What the invitation's bubble adds above and below its one line to
+ *  make the button scale's 44 for the thumb (`SECONDARY_CONTROL_H`). */
+const BIO_ADD_SLOP = { top: (SECONDARY_CONTROL_H - BIO_ONE_LINE) / 2, bottom: (SECONDARY_CONTROL_H - BIO_ONE_LINE) / 2 };
 
 /** The face at the head: everyone's ringed in page; yours bare, in the
  *  level's ring, whose gap is the page (`OwnFace`, `EngagementRing`) —
@@ -230,7 +240,7 @@ export default function PersonScreen({ navigation, route, home }: {
   // `usePageLists`. The cover is asked of the second.
   const { lists, open, seenOf } = usePageLists(me, person?.id);
   const coverFor = (c: Collection) => coverUriOf(c, membersOf(c, places.data));
-  const cover = coverAmong(open, coverFor);
+  const cover = usePageCover(open, coverFor, places.data);
 
   const { friendButton, crew } = useFriendButtons(me, 'person', 'page');
   // Report, block, unblock — `usePersonMenu`.
@@ -469,8 +479,7 @@ export default function PersonScreen({ navigation, route, home }: {
  *     moment is the right one and the ask lands inside another act; left
  *     until the two doors have had time to show what they do.
  */
-function Bio({ me, person, onAdd }: { me: string | null; person: FriendProfile; onAdd: () => void }) {
-  const { t } = useI18n();
+function Bio({ me, person, onAdd, focused }: { me: string | null; person: FriendProfile; onAdd: () => void; focused: () => boolean }) {
   const { profile } = useProfile();
   const mine = !!me && person.id === me;
   const bio = (mine && profile.bio) || person.bio;
@@ -483,6 +492,31 @@ function Bio({ me, person, onAdd }: { me: string | null; person: FriendProfile; 
     );
   }
   if (!mine) return null;
+  return <BioInvite onAdd={onAdd} focused={focused} />;
+}
+
+/**
+ * Your own page with no bio: the bubble a bio will stand in, already
+ * drawn, holding the invitation, with a small yellow pencil beside the
+ * words (owner, 21 Nov 2026). It replaced a "＋ Write a few words about
+ * you" row in the accent, which read as one more button among the
+ * page's; a bubble waiting for words reads as the page's own unfinished
+ * line, and is a thing to come back to. The words faint and in the
+ * bio's italic, so nobody mistakes them for a bio. The pencil in `sun`,
+ * the app's one gold, which clears 3:1 on both grounds (see `theme`); a
+ * pen here is meant to say "edit", the reason `glyph.tsx` keeps it off
+ * rows that only hold words.
+ *
+ * Rejected the same day: a default bio written for the reader. Words
+ * nobody wrote would stand on the page as theirs, read by visitors as
+ * theirs, on 112 of 126 pages.
+ *
+ * Where the sign-up guide's fourth step rings (`SignupTour`, 'bio'): a
+ * new reader always has this bubble. Pressing the ring opens the form.
+ */
+function BioInvite({ onAdd, focused }: { onAdd: () => void; focused: () => boolean }) {
+  const { t } = useI18n();
+  const anchor = useTourAnchor('bio', onAdd, focused);
   return (
     <PressableScale
       onPress={onAdd}
@@ -490,13 +524,22 @@ function Bio({ me, person, onAdd }: { me: string | null; person: FriendProfile; 
       haptic="selection"
       hitSlop={BIO_ADD_SLOP}
       accessibilityRole="button"
-      contentStyle={s.bioAdd}
+      anchorRef={anchor}
+      contentStyle={[s.bioBubble, s.bioAdd]}
       testID="person-bio-add"
     >
-      <Glyph name="add" size={ICON.action} color={colors.accent} />
+      <View style={s.bioTail}><View style={s.bioTailFill} /></View>
       <Text style={s.bioAddText}>{t('Write a few words about you', 'Viết đôi dòng về bạn', '自分についてひとこと書く', '写几句介绍自己', '寫幾句介紹自己')}</Text>
+      <Glyph name="pencil" size={ICON.text} color={colors.sun} />
     </PressableScale>
   );
+}
+
+/** The page's cover: their newest public list's, else the city's — see
+ *  the note on the cover at the head of this file. */
+function usePageCover(open: readonly Collection[], coverFor: (c: Collection) => string | undefined, places: readonly Place[]) {
+  const { city } = useCurrentCity();
+  return coverAmong(open, coverFor) ?? cityCoverUri(city, places);
 }
 
 /**
@@ -574,7 +617,7 @@ function Head({ me, person, own, cover, ring, friend, onRowLayout, navigation }:
             : null}
           {/* What they say about themselves, as a bubble from the picture
               — `Bio`. */}
-          <Bio me={me} person={person} onAdd={() => navigation.navigate('EditProfile', { focus: 'bio' })} />
+          <Bio me={me} person={person} onAdd={() => navigation.navigate('EditProfile', { focus: 'bio' })} focused={() => navigation.isFocused()} />
         </View>
       </View>
       {/* What there is to do about this person, in a row of its own —
@@ -782,14 +825,9 @@ const s = StyleSheet.create({
     transformOrigin: 'left top', transform: [{ rotate: '-43deg' }],
   },
   bio: { color: colors.text, ...type.meta, lineHeight: 21, fontStyle: 'italic' },
-  // The invitation in the bio's place — see `Bio`. The collection card's
-  // "Add a description" (`descAdd`): an 18pt plus 4 from 14pt semibold
-  // words, in the accent, hugging its words so the row beside it is not a
-  // button.
-  // Where the bubble will stand, under the handle.
-  bioAdd: {
-    flexDirection: 'row', alignItems: 'center', gap: 4, alignSelf: 'flex-start', minHeight: 24,
-    marginTop: 4,
-  },
-  bioAddText: { color: colors.accent, fontSize: 14, fontWeight: font.semibold },
+  // The invitation in the bio's place — see `BioInvite`. The bubble's
+  // own box, its words and the pencil in a row, 6 apart; the words in
+  // the bio's type and italic, faint.
+  bioAdd: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  bioAddText: { color: colors.textTertiary, ...type.meta, lineHeight: 21, fontStyle: 'italic', flexShrink: 1 },
 });

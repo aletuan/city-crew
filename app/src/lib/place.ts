@@ -33,6 +33,38 @@ export function coverOf(p: Place): PlacePhoto | undefined {
  * set is taken only when its cover is the catalog's; until then the page
  * shows the cover alone, which is right, and the rest follow.
  */
+/** Hero photography: the city's hand-picked cover place first, then a
+ *  featured place with a views/nightlife vibe, then anything with a photo.
+ *  A pinned slug that matches nothing (unpublished, deleted, typo) falls
+ *  through to the automatic pick rather than blanking the hero. */
+export function heroPlace(places: readonly Place[], pinnedSlug?: string | null): Place | undefined {
+  const withPhoto = (p: Place) => !!coverOf(p);
+  return (
+    (pinnedSlug ? places.find((p) => p.slug === pinnedSlug && withPhoto(p)) : undefined) ??
+    places.find((p) => p.is_featured && withPhoto(p)
+      && p.vibe_tags.some((v) => v === 'views' || v === 'nightlife')) ??
+    places.find((p) => p.is_featured && withPhoto(p)) ??
+    places.find(withPhoto)
+  );
+}
+
+/**
+ * The city's cover as Explore's hero wears it: the desk's photograph of
+ * the city, else the cover of `heroPlace`'s pick — the order `Hero`
+ * reads its photograph in, for a profile page that falls back to the
+ * city (`PersonScreen`, owner, 21 Nov 2026). `Hero` is handed its pick
+ * by the screen and reads the same two in one line; a change to either
+ * order is a change to both. `undefined` when the city has
+ * no photograph at all, which is the one case either is left bare.
+ */
+export function cityCoverUri(
+  city: { hero_photo_uri?: string | null; hero_place_slug?: string | null } | null | undefined,
+  places: readonly Place[],
+): string | undefined {
+  const pick = heroPlace(places, city?.hero_place_slug);
+  return city?.hero_photo_uri ?? (pick ? coverOf(pick)?.photo_uri : undefined);
+}
+
 export function withPhotos(p: Place, all: PlacePhoto[] | undefined): Place {
   if (!all) return p;
   const theirs = photosOf({ ...p, place_photos: all })[0];

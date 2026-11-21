@@ -32,20 +32,29 @@ import { AttentionPulse, attentionRing } from './Attention';
 // on Community and rings that tab — sixty-odd real lists, where a new
 // reader's own tab is empty, and a demo of one was weighed and refused:
 // made-up lists, friends or hearts on a page are made-up news, and would
-// be gone the moment the guide closed. Step 4 rings the profile tab and
-// does not open it: an empty page teaches nothing. Step 5 opens the
+// be gone the moment the guide closed. Step 4 opens your own page and
+// rings the empty bio bubble with its pencil (`BioInvite`), whose press
+// opens the form: the page is no longer empty — the city's cover heads
+// it when no list does (`cityCoverUri`) — and the bubble is the one
+// thing on it a new reader can do something with. It rang the profile
+// tab without moving for one release that morning, and still does for a
+// reader who wrote a bio at the welcome (`FALLBACK`). Step 5 opens the
 // planner and rings its tab, so the guide ends where a reader can carry
 // on. It rang the planner's first question for one release; a ring round
 // a block of tiles lit most of the screen (owner, 21 Nov 2026).
-type Target = 'search' | 'save' | 'community' | 'profile' | 'plan';
+type Target = 'search' | 'save' | 'community' | 'bio' | 'profile' | 'plan';
 /** How far the ring stands out from the control it marks, each side;
  *  negative draws it inside. */
 type Outset = { x: number; y: number };
 type Anchor = { ref: React.RefObject<React.ComponentRef<typeof View> | null>; press: () => void; focused: () => boolean; outset: Outset };
 type Rect = { x: number; y: number; width: number; height: number };
-const targets: Target[] = ['search', 'save', 'community', 'profile', 'plan'];
-/** Where each step's target lives; null: wherever the reader is. */
-const PAGES = ['ExploreHome', 'PlaceDetail', 'CollectionsHome', null, 'IdeasHome'];
+const targets: Target[] = ['search', 'save', 'community', 'bio', 'plan'];
+/** Where a step's ring goes when its own target is not drawn: a reader
+ *  who wrote a bio at the welcome has no empty bubble, and is shown the
+ *  tab that page lives under instead. */
+const FALLBACK: Partial<Record<Target, Target>> = { bio: 'profile' };
+/** Where each step's target lives: the guide opens each of them. */
+const PAGES = ['ExploreHome', 'PlaceDetail', 'CollectionsHome', 'ProfileHome', 'IdeasHome'];
 const LAST = targets.length - 1;
 const noop = () => {};
 const always = () => true;
@@ -118,7 +127,7 @@ function words(t: ReturnType<typeof useI18n>['t']) {
   const descriptions = [t('Search by place, dish or neighbourhood.', 'Tìm theo tên quán, món ăn hay khu phố.', '店名、料理、エリアで探せます。', '按店名、菜品或街区搜索。', '按店名、菜品或街區搜尋。'),
     t('Add a place to a collection to find it again easily.', 'Thêm địa điểm vào bộ sưu tập để dễ tìm lại.', '場所をコレクションに保存して、あとで簡単に見つけましょう。', '把地点加入合集，之后就能轻松找到。', '把地點加入合集，之後就能輕鬆找到。'),
     t('Lists from everyone are under Community. The places you save are under Yours.', 'Bộ sưu tập của mọi người ở mục Cộng đồng. Những nơi bạn lưu nằm ở mục Của bạn.', 'みんなのコレクションは「みんなの」に、保存した場所は「自分の」にあります。', '大家的合集在“社区”里，你保存的地点在“我的”里。', '大家的合集在「社群」裡，你儲存的地點在「我的」裡。'),
-    t('Add friends, and see who liked or commented on your collections.', 'Kết bạn, và xem ai đã thích hay bình luận bộ sưu tập của bạn.', '友だちを追加し、コレクションへのいいねやコメントを確認できます。', '添加好友，看看谁赞了或评论了你的合集。', '新增好友，看看誰讚了或評論了你的合集。'),
+    t('Introduce yourself, add friends, and see who liked or commented on your collections.', 'Giới thiệu bản thân, kết bạn, và xem ai đã thích hay bình luận bộ sưu tập của bạn.', '自己紹介をして友だちを追加し、コレクションへのいいねやコメントを確認できます。', '介绍一下自己，添加好友，看看谁赞了或评论了你的合集。', '介紹一下自己，新增好友，看看誰讚了或評論了你的合集。'),
     t('Pick who is coming and what you are in the mood for, and City Crew suggests an outing to invite friends along.', 'Chọn đi cùng ai và bạn thích gì, City Crew sẽ gợi ý một buổi đi chơi để rủ bạn bè cùng đi.', '誰と行くか、どんな気分かを選ぶと、City Crew がお出かけを提案。友だちも誘えます。', '选好和谁去、想去哪类地方，City Crew 会推荐一次出行，约上好友一起去。', '選好和誰去、想去哪類地方，City Crew 會推薦一次出行，約上好友一起去。')];
   return { titles, descriptions };
 }
@@ -219,15 +228,12 @@ export function SignupTourProvider({ children, getRoute, onReplay = noop }: { ch
     // Re-measure while visible: scrolling, rotation, font size and the floating
     // tab bar can move the actual target. Never leave a ring at an old position.
     const measure = () => {
-      // Each target on its own page (`PAGES`); the profile tab lives in
-      // the floating bar, which is on every screen the guide passes
-      // through, so step 4 follows wherever the reader is — asking for a
-      // page there showed nothing (owner, 19 Oct 2026, of the old
-      // collections step).
-      const route = getRoute();
-      const expected = PAGES[step] ?? route;
-      if (route !== expected) { settling = null; setRect(null); return; }
-      const entries = [...(anchors.current.get(targets[step]) ?? [])].filter(a => a.ref.current && a.focused());
+      // Each target on its own page (`PAGES`), even a tab in the
+      // floating bar: the guide opens that tab's page behind its ring.
+      if (getRoute() !== PAGES[step]) { settling = null; setRect(null); return; }
+      const drawn = (id: Target | undefined) => [...(id ? anchors.current.get(id) ?? [] : [])].filter(a => a.ref.current && a.focused());
+      const own = drawn(targets[step]);
+      const entries = own.length ? own : drawn(FALLBACK[targets[step]]);
       let remaining = entries.length;
       let candidate: { anchor: Anchor; rect: Rect } | null = null;
       if (!remaining) { settling = null; setRect(null); return; }
