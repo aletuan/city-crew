@@ -145,3 +145,18 @@ Bài học cho P3 hai tài khoản: số đếm vẽ trong một nút (`collecti
 
 SQL sau hai lượt: không còn bộ "Maestro Pair", không còn bình luận nào của A và B. Có **2 báo cáo** `kind = comment`, `reason = other` của @usera8b792a2 trong hàng chờ Reports (mỗi lượt một, theo điều kiện 5): cần chủ dự án bấm "Nothing wrong" trên Data Desk.
 
+### Trên main sau #1519 và #1521 — 21/11/2026
+
+Chạy lại một lượt mỗi flow trên `73721467` (branch đã rebase lên `8d9a671`), Metro riêng `exp://127.0.0.1:8086` từ chính checkout đó.
+
+| Run ID | Flow | Kết quả | Ghi chú |
+| --- | --- | --- | --- |
+| `20261121-091356` | 25 | FAIL `person-handle` | Chạm vào mặt 0,4 s sau khi dòng Sent hiện, lúc tấm Add còn đang đóng: chạm xong, trang không mở. Sửa: chờ hoạt ảnh, `retry` tới khi thấy trang |
+| `20261121-091356` | 24 | FAIL `tab-explore` ở lần mở lại cuối | Mọi bước CM và xoá bộ đã xong (SQL xác nhận); ổ đĩa Mac đầy (còn 109 MB), Maestro không chụp được màn hình |
+| `20261121-093024` | 25 | FAIL sau 17 s | `No space left on device` |
+| — | — | — | Xoá `.smoke-local` và `~/.maestro/tests` (owner cho phép) |
+| `20261121-1044xx` | 25 | **PASS** 6m14s | |
+| `20261121-105205` | 24 | **PASS** 11m01s | |
+
+Ổ đĩa Mac vẫn gần đầy sau khi dọn (khoảng 1–2 GB trống; `CoreSimulator/Devices` 24 GB). Một lượt suite đầy đủ có thể không đủ chỗ.
+
