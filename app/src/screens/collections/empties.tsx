@@ -136,16 +136,17 @@ export function FirstCollection({ onPress }: { onPress: () => void }) {
         <Text style={s.firstTitle}>
           {t('No collections yet', 'Chưa có bộ sưu tập nào', 'コレクションはまだありません', '还没有合集', '還沒有合集')}
         </Text>
-        {/* The owner's words (25 Oct 2026), with the app's own category
-            names in place of "cafe, ăn uống, cảnh vật hay địa điểm": it
-            says what a list is for — sharing, and planning a day from it,
-            both of which the app does — where it used to give occasions. */}
+        {/* The owner's words (25 Oct 2026), made plainer on 21 Nov
+            2026: it says what a list is for — sharing, and planning an
+            outing from it, both of which the app does. The dash-led list
+            of three categories before it went: a reader who has made no
+            list yet does not need the app's categories to make one. */}
         <Text style={s.firstBody}>
           {t(
-            'Group the places you love into lists by theme — cafés, eats, views. Share them, or use one to plan a day worth having.',
-            'Nhóm địa điểm yêu thích thành bộ sưu tập theo chủ đề — cà phê, ăn uống, ngắm cảnh. Chia sẻ, hoặc dùng để lên kế hoạch cho một ngày ý nghĩa.',
-            'お気に入りのスポットをテーマ別にリストにまとめましょう — カフェ、食事、景色。シェアしたり、特別な一日のプランに使ったり。',
-            '把喜欢的地点按主题整理成清单 — 咖啡、美食、风景。分享出去，或用来规划有意义的一天。', '把喜歡的地點按主題整理成清單 — 咖啡、美食、風景。分享出去，或用來規劃有意義的一天。',
+            'Gather the places you love by theme, then share them or plan an outing from one.',
+            'Gom những nơi bạn thích theo chủ đề, rồi chia sẻ hoặc dùng để lên kế hoạch đi chơi.',
+            'お気に入りの場所をテーマ別にまとめて、シェアしたり、お出かけの計画に使ったり。',
+            '按主题收集你喜欢的地方，然后分享出去，或用来规划一次出行。', '按主題收集你喜歡的地方，然後分享出去，或用來規劃一次出行。',
           )}
         </Text>
         {/* A pill here, where the sheet's primary is a rounded rectangle:
@@ -157,10 +158,13 @@ export function FirstCollection({ onPress }: { onPress: () => void }) {
           label={t('Create your first collection', 'Tạo bộ sưu tập đầu tiên', '最初のコレクションを作る', '创建你的第一个合集', '建立你的第一個合集')}
           onPress={onPress}
         />
-        {/* Private by default, said so that it does not contradict the
-            "share" above it: it read "Only you can see your lists." */}
+        {/* Who sees a new list. It said "Only you can see them until you
+            choose to share" until 21 Nov 2026, a day after new lists began
+            to be born public (`useAudience`; the migration
+            `20261120120000_lists_born_public.sql`), which left the card
+            promising the opposite of what Save did (owner). */}
         <Text style={s.firstFoot}>
-          {t('Only you can see them until you choose to share.', 'Mặc định chỉ mình bạn thấy — chia sẻ khi bạn muốn.', '共有するまで、あなただけに表示されます。', '默认仅你可见 — 想分享时再分享。', '預設僅你可見 — 想分享時再分享。')}
+          {t('Public by default — make one private any time.', 'Mặc định công khai — chuyển sang riêng tư lúc nào cũng được.', 'デフォルトで公開 — いつでも非公開にできます。', '默认公开 — 随时可以改为私密。', '預設公開 — 隨時可以改為私密。')}
         </Text>
       </View>
     </View>
