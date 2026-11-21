@@ -97,9 +97,6 @@ export function useWall({ person, own, open, coverFor, places, reload }: {
     cover,
     /** The sheet is open on a cover that is not the saved one. */
     trying: sheet && look !== undefined && !sameWall(look, wall),
-    /** The sheet's door, for the header's camera — drawn on your own page
-     *  only, so always there for it. */
-    edit,
     /** The cover's own press: a door on your own page, nothing elsewhere. */
     onCover: own ? edit : undefined,
     sheet: own ? (

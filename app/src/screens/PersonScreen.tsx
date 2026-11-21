@@ -273,7 +273,7 @@ export default function PersonScreen({ navigation, route, home }: {
   const copyOf = useCardCopy(navigation);
   const search = () => { scroll.current?.scrollTo?.({ y: 0, animated: false }); find.open(); };
   const tools = own
-    ? <OwnTools onCover={wall.edit} onSearch={search} onActivity={() => toProfileRoom(navigation, 'Activity')} onAccount={() => toProfileRoom(navigation, 'Account')} />
+    ? <OwnTools onSearch={search} onActivity={() => toProfileRoom(navigation, 'Activity')} onAccount={() => toProfileRoom(navigation, 'Account')} />
     : <View style={s.topRight}><Search onPress={search} />{topFriend}{menu.button}</View>;
   // The tab pressed again while this is its first page: back to the top,
   // as every tab's first page does (ExploreScreen's `tabPress` note). On
@@ -597,6 +597,14 @@ function Head({ me, person, own, cover, onCover, trying, ring, friend, onRowLayo
         {cover
           ? <Image source={{ uri: cover }} style={s.coverPhoto} contentFit="cover" transition={160} />
           : <View style={[s.coverPhoto, s.tint]} testID="person-cover-tint" />}
+        {/* The cover's camera, on your own page: it says the picture is
+            a control, as the avatar's badge does, at the corner the face
+            and the trial label leave free. The whole cover is the press. */}
+        {onCover ? (
+          <View style={s.coverEdit} testID="person-cover-edit">
+            <Glyph name="camera-outline" size={ICON.meta} color="#fff" />
+          </View>
+        ) : null}
         {/* Said on the picture itself, so a look is never taken for a
             change: nobody else sees it until Save. */}
         {trying ? (
@@ -774,6 +782,12 @@ const s = StyleSheet.create({
   spinner: { marginTop: 20 },
   // The accent's tint: a cover with no photograph to wear.
   tint: { backgroundColor: colors.accentSoft },
+  // A disc of the photograph's own dark, 30pt: it reads on a light sky
+  // and a night street alike; the target is the whole cover.
+  coverEdit: {
+    position: 'absolute', right: 10, bottom: 10, width: 30, height: 30, borderRadius: 15,
+    alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(0,0,0,0.55)',
+  },
   // The cover's corner, opposite the face: what the sheet is trying on.
   trying: {
     position: 'absolute', top: 10, right: 10, paddingHorizontal: 10, paddingVertical: 4,
