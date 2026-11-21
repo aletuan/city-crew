@@ -152,6 +152,10 @@ export function newerThan(at: string, mark: string | null): boolean {
  * to answer": the same is true of a like, and the owner wanted a like to
  * be heard.
  *
+ * Trip invitations are one row too, the same way (owner, 21 Nov 2026: the
+ * bell is where a reader looks to know there is something for them, and
+ * the invitation had only the Trips tab's own badge).
+ *
  * Friend requests are one row, as Activity draws them (`requestRow`),
  * timed by the latest of them, and new by the same mark as the rest
  * (owner, the same evening). For a few hours a request counted until it
@@ -162,9 +166,12 @@ export function newerThan(at: string, mark: string | null): boolean {
  * from being forgotten is the card on your own page, which stays until
  * it is answered (`person/Requests`), not the bell.
  */
-export function freshCount(forYou: readonly { at: string }[], mark: string | null, latestRequest: string | null): number {
+export function freshCount(
+  forYou: readonly { at: string }[], mark: string | null, latestRequest: string | null, latestInvite: string | null,
+): number {
   const rows = forYou.filter((e) => newerThan(e.at, mark)).length;
-  return rows + (latestRequest !== null && newerThan(latestRequest, mark) ? 1 : 0);
+  // Each of the two kinds of ask is one row, timed by its latest.
+  return rows + [latestRequest, latestInvite].filter((at) => at !== null && newerThan(at, mark)).length;
 }
 
 /** When the latest of the friend requests waiting was sent, or null for

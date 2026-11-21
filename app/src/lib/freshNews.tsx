@@ -50,6 +50,8 @@ import { AppState } from 'react-native';
 import { useSession } from './auth';
 import { activityGroups, type CommentNews, freshCount, latestRequest, newerThan } from './commentNews';
 import { useCrew } from './crew';
+import { useInvitations } from './invitations';
+import { latestWaiting } from './invites';
 import { type Fetch, type LogNews, useCommentNewsQuery, useLogNewsQuery } from './data';
 import { buildActivity, friendsMade, splitFriendships } from './friends';
 import { shouldRefresh } from './stale';
@@ -65,6 +67,9 @@ export type FreshNews = {
   read: boolean;
   /** Likes and copies of the reader's lists over the same window. */
   log: Fetch<LogNews>;
+  /** When the newest trip invitation waiting on the reader was sent, or
+   *  null: Activity's one row for them. */
+  invited: string | null;
   /** "For you" rows later than the mark, the requests' row among them
    *  — the bell's figure and the tab's dot (`freshCount`). */
   fresh: number;
@@ -78,7 +83,7 @@ const NO_NEWS: Fetch<CommentNews[]> = {
   loading: true, loaded: false, error: null, data: [], loadedAt: null, fromCache: false, reload: () => {},
 };
 const NO_LOG: Fetch<LogNews> = { ...NO_NEWS, data: { applause: [], copies: [], since: '' } };
-const NOTHING: FreshNews = { news: NO_NEWS, log: NO_LOG, mark: null, read: false, fresh: 0, see: () => {}, freshen: () => {} };
+const NOTHING: FreshNews = { news: NO_NEWS, log: NO_LOG, mark: null, read: false, invited: null, fresh: 0, see: () => {}, freshen: () => {} };
 const Ctx = createContext<FreshNews>(NOTHING);
 
 /** A time, stored as itself. Text that is not one is not a mark: read as
@@ -97,6 +102,7 @@ export function FreshNewsProvider({ children }: { children: React.ReactNode }) {
   const news = useCommentNewsQuery(me, useFlag('comments'));
   const log = useLogNewsQuery(me);
   const { ships } = useCrew();
+  const { invites } = useInvitations();
   const [mark, remember, origin] = useStored<string | null>(markKey(me), null, MARK);
   // Signed out there is no key, and a read with no key never ends
   // (`useStored`): `read` says "somebody is signed in" as well.
@@ -120,18 +126,20 @@ export function FreshNewsProvider({ children }: { children: React.ReactNode }) {
   // friendships cut where the likes were asked from. The likes and the
   // comment news were each cut by the server at their own ask, so they
   // are not cut again here.
+  const invited = useMemo(
+    () => (me ? latestWaiting(invites.data.filter((i) => i.invitee_id === me)) : null), [me, invites.data]);
   const fresh = useMemo(() => {
     if (!read || !me) return 0;
     const items = buildActivity(log.data.applause, log.data.copies, undefined, friendsMade(ships.data, me, log.data.since));
     const { forYou } = activityGroups(items, news.data, '');
-    return freshCount(forYou, mark, latestRequest(splitFriendships(ships.data, me).incoming));
-  }, [read, me, log.data, ships.data, news.data, mark]);
-  const value = useMemo<FreshNews>(() => ({ news, log, mark, read, fresh, see, freshen }),
+    return freshCount(forYou, mark, latestRequest(splitFriendships(ships.data, me).incoming), invited);
+  }, [read, me, log.data, ships.data, news.data, invited, mark]);
+  const value = useMemo<FreshNews>(() => ({ news, log, mark, read, invited, fresh, see, freshen }),
     // Each field rather than the wrapper: a Fetch object is new every
     // render (`lib/invitations` has the same list, and why).
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [news.data, news.loading, news.loaded, news.error, news.loadedAt, news.reload,
-      log.data, log.loading, log.loaded, log.error, log.loadedAt, log.reload, mark, read, fresh, see, freshen]);
+      log.data, log.loading, log.loaded, log.error, log.loadedAt, log.reload, mark, read, invited, fresh, see, freshen]);
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }
 

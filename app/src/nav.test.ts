@@ -28,7 +28,7 @@
 // the container ref rather than a stack's navigator — see `nav.ts`.
 
 import { describe, expect, it, vi } from 'vitest';
-import { navRef, toPerson, toProfileRoom } from './nav';
+import { navRef, toPerson, toProfileRoom, toTrips } from './nav';
 import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
 
@@ -175,6 +175,22 @@ describe('toProfileRoom', () => {
     const root = vi.spyOn(navRef, 'navigate').mockImplementation(() => {});
     toProfileRoom(nav(null, null) as never, 'Account');
     expect(root).toHaveBeenCalledExactlyOnceWith('Profile', { screen: 'Account', initial: false });
+    vi.restoreAllMocks();
+  });
+});
+
+describe('toTrips', () => {
+  it('goes by the tabs, over the Trips tab’s first page', () => {
+    const tabs = { navigate: vi.fn() };
+    toTrips({ getParent: () => tabs } as never);
+    expect(tabs.navigate).toHaveBeenCalledExactlyOnceWith('Trips', { screen: 'TripsHome', initial: false });
+  });
+
+  it('goes by the container where the page has no navigator above it', () => {
+    vi.spyOn(navRef, 'isReady').mockReturnValue(true);
+    const root = vi.spyOn(navRef, 'navigate').mockImplementation(() => {});
+    toTrips({ getParent: () => null } as never);
+    expect(root).toHaveBeenCalledExactlyOnceWith('Trips', { screen: 'TripsHome', initial: false });
     vi.restoreAllMocks();
   });
 });

@@ -21,6 +21,7 @@ const world = vi.hoisted(() => ({
   applause: [] as unknown[],
   copies: [] as unknown[],
   ships: [] as unknown[],
+  invites: [] as unknown[],
 }));
 const fetchCommentNews = vi.hoisted(() => vi.fn(async (_since: string) => [...world.rows] as never[]));
 const fetchApplause = vi.hoisted(() => vi.fn(async (_since: string) => [...world.applause] as never[]));
@@ -40,6 +41,7 @@ vi.mock('./data/people', async (orig) => ({
   fetchApplause,
   fetchCopies,
 }));
+vi.mock('./invitations', () => ({ useInvitations: () => ({ invites: { data: world.invites } }) }));
 vi.mock('./crew', () => ({ useCrew: () => ({ ships: { data: world.ships } }) }));
 
 import { FreshNewsProvider, markKey, useFreshNews, useSeenThrough } from './freshNews';
@@ -55,13 +57,14 @@ const TEN = '2026-11-18T10:00:00Z';
 const ELEVEN = '2026-11-18T11:00:00Z';
 
 function Probe() {
-  const { news, mark, read, fresh, see, freshen } = useFreshNews();
+  const { news, mark, read, fresh, invited, see, freshen } = useFreshNews();
   return (
     <>
       <span data-testid="rows">{String(news.data.length)}</span>
       <span data-testid="mark">{String(mark)}</span>
       <span data-testid="read">{String(read)}</span>
       <span data-testid="fresh">{String(fresh)}</span>
+      <span data-testid="invited">{String(invited)}</span>
       <button type="button" onClick={() => see(TEN)}>see ten</button>
       <button type="button" onClick={() => see(NINE)}>see nine</button>
       <button type="button" onClick={() => freshen()}>freshen</button>
@@ -87,6 +90,7 @@ beforeEach(async () => {
   world.applause = [];
   world.copies = [];
   world.ships = [];
+  world.invites = [];
   appFlags.set('comments', true);
   await AsyncStorage.removeItem(markKey('me')!);
   await AsyncStorage.removeItem(markKey('you')!);
@@ -103,6 +107,40 @@ describe('with no provider above', () => {
     fireEvent.click(screen.getByText('see ten'));
     fireEvent.click(screen.getByText('freshen'));
     expect(text('mark')).toBe('null');
+  });
+});
+
+describe('trip invitations', () => {
+  // One row, as the friend requests are: timed by the latest unanswered
+  // one addressed to the reader, and new by the same mark (owner, 21 Nov 2026).
+  it('count one row, by the latest waiting, and are new only past the mark', async () => {
+    await AsyncStorage.setItem(markKey('me')!, TEN);
+    world.invites = [
+      { trip_id: 't1', invitee_id: 'me', inviter_id: 'u2', status: 'pending', created_at: NINE },
+      { trip_id: 't2', invitee_id: 'me', inviter_id: 'u2', status: 'pending', created_at: ELEVEN },
+      { trip_id: 't3', invitee_id: 'me', inviter_id: 'u2', status: 'accepted', created_at: ELEVEN },
+      { trip_id: 't4', invitee_id: 'u9', inviter_id: 'me', status: 'pending', created_at: ELEVEN },
+    ];
+    mount();
+    await settled();
+    expect(text('invited')).toBe(ELEVEN);
+    expect(text('fresh')).toBe('1');
+  });
+
+  it('are not counted once the mark has passed them, nor when answered', async () => {
+    await AsyncStorage.setItem(markKey('me')!, ELEVEN);
+    world.invites = [{ trip_id: 't1', invitee_id: 'me', inviter_id: 'u2', status: 'pending', created_at: TEN }];
+    mount();
+    await settled();
+    expect(text('invited')).toBe(TEN);
+    expect(text('fresh')).toBe('0');
+  });
+
+  it('are nobody’s when nobody is signed in', async () => {
+    world.session = null;
+    world.invites = [{ trip_id: 't1', invitee_id: 'me', inviter_id: 'u2', status: 'pending', created_at: TEN }];
+    mount();
+    expect(text('invited')).toBe('null');
   });
 });
 

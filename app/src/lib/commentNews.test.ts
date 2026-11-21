@@ -131,12 +131,16 @@ describe('what is new', () => {
       { at: '2026-11-18T12:00:00Z' }, { at: '2026-11-18T11:00:00Z' },
       { at: '2026-11-18T10:30:00Z' }, { at: '2026-11-18T09:00:00Z' },
     ];
-    expect(freshCount(rows, '2026-11-18T10:00:00Z', null)).toBe(3);
-    expect(freshCount(rows, null, null)).toBe(4);
-    expect(freshCount(rows, '2026-11-18T12:00:00Z', null)).toBe(0);
-    expect(freshCount(rows, '2026-11-18T12:00:00Z', '2026-11-18T13:00:00Z')).toBe(1);
-    expect(freshCount(rows, '2026-11-18T12:00:00Z', '2026-11-18T11:00:00Z')).toBe(0);
-    expect(freshCount([], null, '2026-11-18T11:00:00Z')).toBe(1);
+    expect(freshCount(rows, '2026-11-18T10:00:00Z', null, null)).toBe(3);
+    expect(freshCount(rows, null, null, null)).toBe(4);
+    expect(freshCount(rows, '2026-11-18T12:00:00Z', null, null)).toBe(0);
+    expect(freshCount(rows, '2026-11-18T12:00:00Z', '2026-11-18T13:00:00Z', null)).toBe(1);
+    expect(freshCount(rows, '2026-11-18T12:00:00Z', '2026-11-18T11:00:00Z', null)).toBe(0);
+    expect(freshCount([], null, '2026-11-18T11:00:00Z', null)).toBe(1);
+    // A trip invitation is one more row, new by the same mark.
+    expect(freshCount([], null, null, '2026-11-18T11:00:00Z')).toBe(1);
+    expect(freshCount(rows, '2026-11-18T12:00:00Z', '2026-11-18T13:00:00Z', '2026-11-18T14:00:00Z')).toBe(2);
+    expect(freshCount([], '2026-11-18T12:00:00Z', null, '2026-11-18T11:00:00Z')).toBe(0);
   });
 
   it('times the requests by the latest sent, and none by nothing', () => {

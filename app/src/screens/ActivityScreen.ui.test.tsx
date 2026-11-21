@@ -49,10 +49,17 @@ vi.mock('../lib/data', () => ({
 }));
 // The app's one copy of the comment news, and the mark — `lib/freshNews`,
 // tested there; here it is what the page reads and what the rows ask.
+// The trips the reader is asked onto: `lib/invitations`' copy.
+const trips = vi.hoisted(() => ({ rows: [] as unknown[] }));
+vi.mock('../lib/invitations', () => ({ useInvitations: () => ({ invites: { data: trips.rows } }) }));
 vi.mock('../lib/freshNews', async () => {
   const { newerThan } = await import('../lib/commentNews');
+  const { latestWaiting } = await import('../lib/invites');
   return {
-    useFreshNews: () => ({ news: data.news }),
+    useFreshNews: () => ({
+      news: data.news,
+      invited: latestWaiting((trips.rows as { invitee_id: string }[]).filter((i) => i.invitee_id === ME) as never),
+    }),
     useSeenThrough: (newest: string | null) => {
       data.seenThrough(newest);
       return (at: string) => data.before !== undefined && newerThan(at, data.before);
@@ -107,6 +114,8 @@ const person = (id: string, handle: string, full_name = '', avatar_url = ''): Fr
   ({ id, handle, full_name, avatar_url }) as FriendProfile;
 const ask = (requester: string, at = '2026-09-01'): FriendshipRow =>
   ({ requester, addressee: ME, status: 'pending', created_at: at }) as FriendshipRow;
+const invite = (inviter_id: string, created_at = '2026-09-01T10:00:00Z', status = 'pending', invitee_id = ME) =>
+  ({ trip_id: `t-${inviter_id}-${created_at}`, invitee_id, inviter_id, status, created_at });
 const col = (id: string, slug: string, title: string): Col =>
   ({ id, slug, title_en: title, title_vi: `${title} (vi)`, title_ja: `${title}（日本語）` });
 const like = (collection_id: string, liked_at: string, liker_handle: string | null = null): Applause =>
@@ -138,6 +147,7 @@ beforeEach(() => {
   crew.ships.data = [];
   crew.ships.loading = false;
   crew.people = {};
+  trips.rows = [];
   auth.me = ME;
   i18n.lang = 'en';
   data.news = { data: [], loaded: true, loading: false, reload: vi.fn() };
@@ -758,6 +768,56 @@ describe('a friendship that began', () => {
     expect(navigation.navigate).not.toHaveBeenCalled();
     expect(screen.queryByTestId('activity-empty')).toBeNull();
     expect(screen.queryByTestId('activity-tab-empty')).toBeNull();
+  });
+
+  // The bell counts a trip invitation (owner, 21 Nov 2026), so "For you"
+  // has a row for them above the friends', the way to Trips.
+  it('opens For you on one row for the trips asked onto, the latest named, and goes to Trips', async () => {
+    trips.rows = [
+      invite('u-a', '2026-09-01T10:00:00Z'), invite('u-g', '2026-09-02T10:00:00Z'),
+      invite('u-a', '2026-09-03T10:00:00Z', 'accepted'), invite('u-a', '2026-09-04T10:00:00Z', 'pending', 'someone-else'),
+    ];
+    crew.people = { 'u-g': person('u-g', 'giang', '', 'https://faces/g.jpg'), 'u-a': person('u-a', 'an') };
+    crew.ships.data = [ask('u-e')];
+    data.before = null;
+    const navigation = await renderScreen();
+    const rows = screen.getByTestId('activity-for-you').children;
+    expect(rows[0].getAttribute('data-testid')).toBe('activity-invites');
+    expect(rows[1].getAttribute('data-testid')).toBe('activity-requests');
+    expect(screen.getAllByTestId('activity-invites')).toHaveLength(1);
+    expect(rows[0].textContent).toMatch(/^@giang and 1 other invited you on trips/);
+    expect(rows[0].querySelector('[data-icon="airplane"]')).toBeTruthy();
+    expect(within(rows[0] as HTMLElement).getByTestId('row-new')).toBeTruthy();
+    expect(data.seenThrough).toHaveBeenLastCalledWith('2026-09-02T10:00:00Z');
+    fireEvent.click(screen.getByTestId('activity-tab-yours'));
+    expect(screen.queryByTestId('activity-invites')).toBeNull();
+    fireEvent.click(screen.getByTestId('activity-tab-for-you'));
+    fireEvent.click(screen.getByTestId('activity-invites'));
+    expect(tabs.navigate).toHaveBeenCalledWith('Trips', { screen: 'TripsHome', initial: false });
+    expect(navigation.navigate).not.toHaveBeenCalled();
+  });
+
+  it('names one inviter, or counts them when no profile is in yet', async () => {
+    trips.rows = [invite('u-a')];
+    crew.people = { 'u-a': person('u-a', 'an') };
+    await renderScreen();
+    expect(screen.getByTestId('activity-invites').textContent).toMatch(/^@an invited you on a trip/);
+    cleanup();
+    trips.rows = [invite('u-x'), invite('u-y')];
+    crew.people = {};
+    await renderScreen();
+    expect(screen.getByTestId('activity-invites').textContent).toMatch(/^2 trip invitations/);
+    cleanup();
+    trips.rows = [invite('u-x')];
+    await renderScreen();
+    expect(screen.getByTestId('activity-invites').textContent).toMatch(/^1 trip invitation(?!s)/);
+  });
+
+  it('is not an empty page, and opens on For you, when only an invitation waits', async () => {
+    trips.rows = [invite('u-a')];
+    await renderScreen();
+    expect(screen.queryByTestId('activity-empty')).toBeNull();
+    expect(screen.getByTestId('activity-invites')).toBeTruthy();
   });
 
   // New by the mark, as every row is (owner, 20 Nov 2026): a request the
