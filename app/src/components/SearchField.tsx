@@ -32,13 +32,22 @@
 // do something; not the accent as a fill, which in this app is a row or
 // a chip the reader has chosen (`accentSoft`).
 //
+// ── the page, through the box (owner, 21 Nov 2026) ──
+//
+// The circle is now the page's own ground, `colors.bg`, not a heavier
+// glass: a hole in the box down to the page rather than one more grey on
+// it, so the way out reads as part of the page the search sits on. Every
+// box today sits on the page (Search, Collections, Visited, a person's
+// page) — a box put on a sheet or a card would want that surface here
+// instead, or the hole shows the wrong floor. A fill, not a border, so it
+// follows the look as `src/borders.test.ts` asks.
+
 // The cross means "close the search" here, not "empty the words" as it
 // does at the end of most search boxes: there is no clear (x) beside it
 // to tell it from, and the circle, not a bare glyph, is what gives it the
 // weight of a way out. VoiceOver still hears the word ("Hủy", "Cancel").
-// On the circle's glass over the box's card over the page, the cross
-// measures 3.68:1 at its lowest (Coffee) and 9.7 at its highest (Amber),
-// over the 3:1 a glyph needs — worked out in SearchField.ui.test.tsx.
+// On the page's ground the cross measures at least 3:1 in every look, the
+// figure a glyph needs — worked out in SearchField.ui.test.tsx.
 // 34pt, not the reference's 36: the box is 44 with a 1pt hairline, and
 // the circle sits 4pt inside it on every side.
 
@@ -139,6 +148,6 @@ const s = StyleSheet.create({
   input: { flex: 1, color: colors.text, fontSize: 16, padding: 0 },
   cancel: {
     width: 34, height: 34, borderRadius: 17,
-    alignItems: 'center', justifyContent: 'center', backgroundColor: colors.surfaceGlassStrong,
+    alignItems: 'center', justifyContent: 'center', backgroundColor: colors.bg,
   },
 });
