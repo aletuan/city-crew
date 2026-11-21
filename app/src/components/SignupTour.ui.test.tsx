@@ -5,7 +5,7 @@ import { beforeEach, expect, it, vi } from 'vitest';
 import { AccessibilityInfo, Animated, type View } from 'react-native';
 import { act, fireEvent, render, screen, waitFor } from '../uitest/render';
 import { SignupTourProvider, useSignupTour, useTourAnchor } from './SignupTour';
-const state = vi.hoisted(() => ({ uid: 'new', route: 'ExploreHome', offscreen: false, y: 60, anchors: true, x: 40, w: 40, h: 40, duplicate: false, focused: true, bottom: 0, readings: [] as number[] }));
+const state = vi.hoisted(() => ({ uid: 'new', route: 'ExploreHome', offscreen: false, y: 60, anchors: true, x: 40, w: 40, h: 40, duplicate: false, focused: true, bottom: 0, readings: [] as number[], bio: true }));
 // A home indicator to measure against: the setup's insets are all zero.
 vi.mock('react-native-safe-area-context', () => ({
   SafeAreaProvider: ({ children }: { children: React.ReactNode }) => children,
@@ -21,7 +21,7 @@ vi.mock('../lib/i18n', () => ({ useI18n: () => ({ t: (_en: string, vi: string) =
 vi.mock('react-native', async orig => ({ ...(await orig<Record<string, unknown>>()), useWindowDimensions: () => ({ width: 390, height: 844, scale: 1, fontScale: 1 }) }));
 const pressed = vi.fn();
 const getRoute = () => state.route;
-function Anchor({ id }: { id: 'search' | 'save' | 'community' | 'profile' | 'plan' }) {
+function Anchor({ id }: { id: 'search' | 'save' | 'community' | 'bio' | 'profile' | 'plan' }) {
   // The profile and planner tabs ring as the tab bar asks: in from the
   // box above and below, out by nothing at the sides.
   const ref = useTourAnchor(id, pressed, id === 'search' ? () => state.focused : undefined,
@@ -36,11 +36,11 @@ function Controls() {
   return <><button onClick={() => tour.start(state.uid)}>Start</button>
     <button onClick={() => tour.setEnabled(true)}>Enable</button><button onClick={() => tour.setEnabled(false)}>Disable</button>
     <button onClick={tour.replay}>Replay</button><span data-testid="enabled">{String(tour.enabled)}</span><span data-testid="notice-top">{String(tour.noticeTop)}</span>
-    {state.anchors && <><Anchor id="search" /><Anchor id="save" /><Anchor id="community" /><Anchor id="profile" /><Anchor id="plan" />{state.duplicate && <Anchor id="search" />}</>}</>;
+    {state.anchors && <><Anchor id="search" /><Anchor id="save" /><Anchor id="community" />{state.bio && <Anchor id="bio" />}<Anchor id="profile" /><Anchor id="plan" />{state.duplicate && <Anchor id="search" />}</>}</>;
 }
 const onReplay = vi.fn();
 const tree = () => <SignupTourProvider onReplay={onReplay} getRoute={getRoute}><Controls /></SignupTourProvider>;
-beforeEach(async () => { for (const id of ['new', 'recreated', 'guest']) await AsyncStorage.removeItem(`highlight.v1:${id}`); onReplay.mockClear(); state.uid = 'new'; state.route = 'ExploreHome'; state.offscreen = false; state.y = 60; state.anchors = true; state.x = 40; state.w = 40; state.h = 40; state.duplicate = false; state.focused = true; state.bottom = 0; state.readings = []; pressed.mockClear(); });
+beforeEach(async () => { for (const id of ['new', 'recreated', 'guest']) await AsyncStorage.removeItem(`highlight.v1:${id}`); onReplay.mockClear(); state.uid = 'new'; state.route = 'ExploreHome'; state.offscreen = false; state.y = 60; state.anchors = true; state.x = 40; state.w = 40; state.h = 40; state.duplicate = false; state.focused = true; state.bottom = 0; state.readings = []; state.bio = true; pressed.mockClear(); });
 const start = async () => { fireEvent.click(screen.getByText('Start')); await screen.findByText('1/5'); };
 it('does not start on sign-in; runs five steps and finishes without a skip on the last step', async () => {
   render(tree()); expect(screen.queryByTestId('signup-tour')).toBeNull();
@@ -61,11 +61,17 @@ it('does not start on sign-in; runs five steps and finishes without a skip on th
   state.route = 'CollectionsHome';
   await screen.findByText('3/5');
   expect(screen.getByText('Bộ sưu tập của mọi người ở mục Cộng đồng. Những nơi bạn lưu nằm ở mục Của bạn.')).toBeTruthy();
-  // Step 4 is the profile tab in the floating bar, there on any page.
+  // Step 4 waits for your own page, where it rings the empty bio.
   fireEvent.click(screen.getByText('Tiếp theo'));
-  state.route = 'ExploreHome';
+  await waitFor(() => expect(screen.queryByTestId('signup-tour')).toBeNull());
+  await act(async () => { await new Promise(resolve => setTimeout(resolve, 300)); });
+  expect(screen.queryByTestId('signup-tour')).toBeNull();
+  state.route = 'ProfileHome';
   await screen.findByText('4/5');
-  expect(screen.getByText('Kết bạn, và xem ai đã thích hay bình luận bộ sưu tập của bạn.')).toBeTruthy();
+  // The bubble, a control on its page: 4 clear all round, not the tab's pill.
+  const ring = screen.getByTestId('signup-tour-target').style;
+  expect([ring.left, ring.top, ring.width, ring.height]).toEqual(['36px', '56px', '48px', '48px']);
+  expect(screen.getByText('Giới thiệu bản thân, kết bạn, và xem ai đã thích hay bình luận bộ sưu tập của bạn.')).toBeTruthy();
   expect(screen.getByText('Bỏ qua hướng dẫn')).toBeTruthy();
   // Step 5 waits for the planner.
   fireEvent.click(screen.getByText('Tiếp theo'));
@@ -94,6 +100,7 @@ it('rings the profile tab inside the bottom inset, but not once it has slid away
   fireEvent.click(screen.getByText('Tiếp theo')); await screen.findByText('2/5');
   state.route = 'CollectionsHome';
   fireEvent.click(screen.getByText('Tiếp theo')); await screen.findByText('3/5');
+  state.route = 'ProfileHome'; state.bio = false;
   state.y = 844 - 16 - 40; // foot at 828, inside the 810 the inset leaves
   fireEvent.click(screen.getByText('Tiếp theo'));
   await screen.findByText('4/5');
@@ -125,6 +132,7 @@ it('cuts the ring’s shape out of the scrim, and follows it from step to step',
   fireEvent.click(screen.getByText('Tiếp theo')); await screen.findByText('2/5');
   state.route = 'CollectionsHome';
   fireEvent.click(screen.getByText('Tiếp theo')); await screen.findByText('3/5');
+  state.route = 'ProfileHome'; state.bio = false;
   fireEvent.click(screen.getByText('Tiếp theo')); await screen.findByText('4/5');
   expect(scrim().getAttribute('d')).toBe(
     'M0 0H390V844H0Z'
@@ -390,8 +398,10 @@ it('draws the ring where the control asks, and keeps the card as clear of it', a
   fireEvent.click(screen.getByText('Tiếp theo')); await screen.findByText('3/5');
   // Community's tab, a control on its page: 4 clear all round, as search.
   expect([target().style.left, target().style.top, target().style.width, target().style.height]).toEqual(['36px', '56px', '48px', '48px']);
+  // A reader with a bio has no empty bubble: the profile tab instead,
+  // the box's width, 4 in from its top and foot.
+  state.route = 'ProfileHome'; state.bio = false;
   fireEvent.click(screen.getByText('Tiếp theo')); await screen.findByText('4/5');
-  // The profile tab: the box's width, 4 in from its top and foot.
   expect([target().style.left, target().style.top, target().style.width, target().style.height]).toEqual(['40px', '64px', '40px', '32px']);
   expect(card().style.top).toBe('108px');
   // The planner's tab: as the profile tab.

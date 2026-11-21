@@ -2330,7 +2330,7 @@ describe('signup highlight tour', () => {
   // Five steps since 21 Nov 2026, Explore driving the pages: search here,
   // a real place for save, Collections on Community, nothing for the
   // profile tab, and the planner last.
-  it('keeps search in view, opens a real place, then Collections on Community, then the planner', () => {
+  it('keeps search in view, opens a real place, then Collections on Community, your own page, then the planner', () => {
     state.places.data = [place('p1')];
     const navigation = nav();
     const view = render(<ExploreScreen navigation={navigation} />);
@@ -2347,7 +2347,8 @@ describe('signup highlight tour', () => {
     expect(spies.goTo).toHaveBeenLastCalledWith('Collections', { screen: 'CollectionsHome', params: { tab: 'community', at: expect.any(Number) } });
     spies.goTo.mockClear();
     tourState.step = 3; view.rerender(<ExploreScreen navigation={navigation} />);
-    expect(spies.goTo).not.toHaveBeenCalled();
+    expect(spies.goTo).toHaveBeenCalledExactlyOnceWith('Profile', { screen: 'ProfileHome' });
+    spies.goTo.mockClear();
     tourState.step = 4; view.rerender(<ExploreScreen navigation={navigation} />);
     expect(spies.goTo).toHaveBeenCalledExactlyOnceWith('Ideas', { screen: 'IdeasHome' });
     expect(scroll).toHaveBeenCalledTimes(1);

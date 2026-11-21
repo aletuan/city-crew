@@ -77,7 +77,7 @@ const OVERSIZE = {
   'src/components/AvatarPicker.tsx': { lines: 165 },
   'src/components/PhotoSheet.tsx': { lines: 158 },
   'src/screens/ForgotPasswordScreen.tsx': { lines: 157 },
-  'src/screens/explore/Hero.tsx': { lines: 151, complexity: 36 },
+  'src/screens/explore/Hero.tsx': { complexity: 35 },
   'src/components/CandidateRow.tsx': { complexity: 34 },
   'src/lib/planner.ts': { complexity: 26 },
 };

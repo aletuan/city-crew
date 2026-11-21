@@ -24,7 +24,7 @@ import { useDockOffer } from '../components/DockSlot';
 import { CATEGORIES, categoriesOf, categoryLabel, chosenKind, pinTint, presentCategories } from '../lib/categories';
 import { useCity } from '../lib/city';
 import { cityTz, wallClock } from '../lib/clock';
-import { fetchPlaceIndex, Place, PlaceIndexRow } from '../lib/data';
+import { fetchPlaceIndex, heroPlace, Place, PlaceIndexRow } from '../lib/data';
 import { usePlaces } from '../lib/catalog';
 import { useSession } from '../lib/auth';
 import { useSavedSlugs, useSaveActions } from '../lib/save';
@@ -50,7 +50,7 @@ import { goTo, type Nav } from '../nav';
 import { startupTrace } from '../lib/trace';
 import { launchSettled } from '../lib/launch';
 import { reportStartup } from '../lib/tracereport';
-import { heroPlace, Hero } from './explore/Hero';
+import { Hero } from './explore/Hero';
 import { CollectionShelf } from './explore/CollectionShelf';
 import { ExploreSuggestRow, ScrollNudge } from './explore/ScrollNudge';
 import { FILTER_PAD, s } from './explore/styles';
@@ -695,6 +695,8 @@ export default function ExploreScreen({ navigation }: { navigation: Nav }) {
       // Collections on Community, from the place's page, which is let go.
       navigation.popToTop();
       goTo('Collections', { screen: 'CollectionsHome', params: { tab: 'community', at: Date.now() } });
+    } else if (tour.step === 3) {
+      goTo('Profile', { screen: 'ProfileHome' });
     } else if (tour.step === 4) {
       goTo('Ideas', { screen: 'IdeasHome' });
     }

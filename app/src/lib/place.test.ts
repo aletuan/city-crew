@@ -3,7 +3,7 @@
 
 import { describe, expect, it } from 'vitest';
 import {
-  chosenCoverOf, cityOfList, coverOf, coverUriOf, fmtCount, holds, isFree, membersOf, nextSortOrder, photosOf, priceLabel, slugify, touchesCity, withPhotos,
+  chosenCoverOf, cityCoverUri, cityOfList, coverOf, coverUriOf, heroPlace, fmtCount, holds, isFree, membersOf, nextSortOrder, photosOf, priceLabel, slugify, touchesCity, withPhotos,
 } from './place';
 import type { Collection, Place, PlacePhoto } from './types';
 
@@ -78,6 +78,44 @@ describe('photosOf', () => {
 
   it('has no cover when every photo is hidden', () => {
     expect(coverOf(place({ place_photos: [photo({ is_cover: true, is_hidden: true })] }))).toBeUndefined();
+  });
+});
+
+// Explore's hero and a profile with nothing of its own read one pick.
+describe('heroPlace and cityCoverUri', () => {
+  const pic = (uri: string) => [photo({ photo_uri: uri })];
+  const plain = place({ slug: 'plain', place_photos: pic('plain.jpg') });
+  const bare = place({ slug: 'bare', is_featured: true, vibe_tags: ['views'] });
+  const featured = place({ slug: 'featured', is_featured: true, place_photos: pic('featured.jpg') });
+  const view = place({ slug: 'view', is_featured: true, vibe_tags: ['food', 'views'], place_photos: pic('view.jpg') });
+  const night = place({ slug: 'night', is_featured: true, vibe_tags: ['nightlife'], place_photos: pic('night.jpg') });
+  const pinned = place({ slug: 'pinned', place_photos: pic('pinned.jpg') });
+
+  it('takes the pinned place, then a featured view or night, then a featured one, then any with a photo', () => {
+    const all = [plain, bare, featured, view, night, pinned];
+    expect(heroPlace(all, 'pinned')).toBe(pinned);
+    expect(heroPlace(all)).toBe(view);
+    expect(heroPlace([plain, featured, night])).toBe(night);
+    expect(heroPlace([plain, bare, featured])).toBe(featured);
+    expect(heroPlace([bare, plain])).toBe(plain);
+    expect(heroPlace([bare])).toBeUndefined();
+  });
+
+  it('passes over a pinned slug that matches nothing with a photo', () => {
+    expect(heroPlace([plain, bare], 'bare')).toBe(plain);
+    expect(heroPlace([plain], 'gone')).toBe(plain);
+  });
+
+  it('wears the desk’s photograph of the city before any place’s', () => {
+    expect(cityCoverUri({ hero_photo_uri: 'city.jpg', hero_place_slug: 'pinned' }, [pinned])).toBe('city.jpg');
+    expect(cityCoverUri({ hero_photo_uri: null, hero_place_slug: 'pinned' }, [plain, pinned])).toBe('pinned.jpg');
+    expect(cityCoverUri({ hero_photo_uri: null, hero_place_slug: null }, [plain])).toBe('plain.jpg');
+  });
+
+  it('has nothing for a city with no photograph, or no city', () => {
+    expect(cityCoverUri({ hero_photo_uri: null, hero_place_slug: null }, [bare])).toBeUndefined();
+    expect(cityCoverUri(null, [])).toBeUndefined();
+    expect(cityCoverUri(undefined, [plain])).toBe('plain.jpg');
   });
 });
 

@@ -20,21 +20,6 @@ import { balanceBreak } from '../../lib/balance';
 import { colors, gradAI, onPhoto } from '../../theme';
 import { s } from './styles';
 
-/** Hero photography: the city's hand-picked cover place first, then a
- *  featured place with a views/nightlife vibe, then anything with a photo.
- *  A pinned slug that matches nothing (unpublished, deleted, typo) falls
- *  through to the automatic pick rather than blanking the hero. */
-export function heroPlace(places: Place[], pinnedSlug?: string | null): Place | undefined {
-  const withPhoto = (p: Place) => !!coverOf(p);
-  return (
-    (pinnedSlug ? places.find((p) => p.slug === pinnedSlug && withPhoto(p)) : undefined) ??
-    places.find((p) => p.is_featured && withPhoto(p)
-      && p.vibe_tags.some((v) => v === 'views' || v === 'nightlife')) ??
-    places.find((p) => p.is_featured && withPhoto(p)) ??
-    places.find(withPhoto)
-  );
-}
-
 /** The dateline and search's distance under the status bar, at rest. */
 const TOP_GAP = 6;
 /** That row's height: the search disc, the taller of its two (`heroSearch`). */
@@ -75,8 +60,9 @@ export function Hero({ place, heroH, onStart, onSearch, scrollY }: {
    * but it can only ever offer a photograph OF A SHOP, which is why Đà
    * Lạt had nothing worth showing under a line about a whole town.
    */
-  const cityPhoto = city?.hero_photo_uri ?? null;
-  const uri = cityPhoto ?? (place && coverOf(place)?.photo_uri);
+  // The order `cityCoverUri` keeps for a profile with no cover of its
+  // own; the hero has its pick already (`heroPlace`, by the screen).
+  const uri = city?.hero_photo_uri ?? (place && coverOf(place)?.photo_uri);
   // City covers never render a source handle. A remotely loaded flag
   // cannot hide it reliably on the first frame (its startup default is on).
   // The city switcher, openable from here — see the chip in heroContent.
