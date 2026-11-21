@@ -89,10 +89,8 @@
 // began below the picture's foot and beside nothing. Now a little over a
 // quarter of the picture was on the cover, the name starts just under
 // the cover's edge, and the bubble's first line stood level with the
-// picture's foot — where a tail can point at the face. Half again since
-// 22 Nov 2026 (`faceOver`), with the cover run to the screen's edges:
-// the face rises by about 20 and the bubble does not, so its tail now
-// points a little under the face's foot. Not yet seen on a phone.
+// picture's foot — where a tail can point at the face. Half again for an
+// hour on 22 Nov 2026, and back: see `FACE_OVER`.
 //
 // ── the friend button ──
 //
@@ -176,17 +174,17 @@ const FACE = 80;
  *  and the 58 of tools row over it had it. It was 170 inside the page's
  *  margins, rounded, under a row of its own for the tools. */
 const COVER_UNDER_CLOCK = 200;
-/** Across, with its ring: somebody else's face, 80 in a ring of page 4
- *  wide, and your own, 88 in the level's ring (`Face`). */
-const FACE_ACROSS = FACE + 8;
-const OWN_FACE_ACROSS = 103;
-/** How much of the ringed picture lies over the cover: half, its centre
- *  on the cover's foot (owner, 22 Nov 2026), as Facebook, X and LinkedIn
- *  set theirs. It was 26 of 88, measured on the owner's screenshot as
- *  70 of 180px — about 40%, which read as the face nearly touching the
- *  photograph rather than pinned to it. Past 55–60% the face would hide
- *  the cover and the level's ring would run on the photograph. */
-const faceOver = (own: boolean) => Math.round((own ? OWN_FACE_ACROSS : FACE_ACROSS) / 2);
+/** How much of the ringed picture lies over the cover: 26 of its 88 —
+ *  about 40% measured on the owner's screenshot (70 of 180px). Set so
+ *  the bio's bubble starts level with the picture's foot, where its tail
+ *  points at the face (see the head's note above).
+ *
+ *  Half, its centre on the cover's foot as Facebook, X and LinkedIn set
+ *  theirs, for an hour on 22 Nov 2026 (#1546): the face rose about 18
+ *  and the bubble did not, so its tail pointed under the face and the
+ *  two came apart (owner). Keeping half would mean moving the bubble, and
+ *  the name and handle with it, for 10% more overlap. */
+const FACE_OVER = 26;
 /** The name starts this far under the cover's edge. */
 const NAME_DROP = 6;
 /** How far the name shrinks to stay on its line beside the picture
@@ -648,7 +646,7 @@ function Head({ me, person, own, cover, coverH, onCover, trying, ring, friend, o
           </View>
         ) : null}
       </Pressable>
-      <View style={[s.headRow, { marginTop: -faceOver(own) }]} testID="person-head-row">
+      <View style={s.headRow} testID="person-head-row">
         {/* Your own in the level's ring — `person/OwnFace`. */}
         <Face own={own} url={person.avatar_url} ring={ring} />
         {/* The name, beside the picture, and the handle right under it
@@ -660,7 +658,7 @@ function Head({ me, person, own, cover, coverH, onCover, trying, ring, friend, o
             `PersonRole`. On the picture's corner for a day; after the
             name since 17 Nov 2026 (owner), for the reasons written
             there. */}
-        <View style={[s.names, { marginTop: faceOver(own) + NAME_DROP }]}>
+        <View style={s.names}>
           <PersonRole me={me} personId={person.id} line={TITLE_LINE}>
             {person.full_name
               ? <Text style={s.title} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={TITLE_SHRINK} testID="person-name">{person.full_name}</Text>
@@ -842,13 +840,13 @@ const s = StyleSheet.create({
   // over the cover.
   headRow: {
     flexDirection: 'row', alignItems: 'flex-start', gap: 12,
-    paddingHorizontal: space.cardPadding,
+    marginTop: -FACE_OVER, paddingHorizontal: space.cardPadding,
   },
   // The page's ground around the face, so it parts from the photograph.
   faceRing: { borderWidth: 4, borderRadius: FACE / 2 + 4 },
   // The name over the handle over the bio, one column beside the
   // picture, begun just under the cover's edge.
-  names: { flex: 1 },
+  names: { flex: 1, marginTop: FACE_OVER + NAME_DROP },
   // The display face at 22, the size the page's own Profile heads its
   // sections in. It has the row to itself beside the picture — about
   // 240pt on a 390pt phone, by arithmetic — since the friend button left
