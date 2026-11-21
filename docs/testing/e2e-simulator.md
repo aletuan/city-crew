@@ -245,6 +245,8 @@ sách toàn suite < 30 phút (xem mục 2).
 | --- | --- | --- | --- |
 | `22-profile-account` ✅ | TEST_EMAIL (@maestro), bộ Private `Maestro smoke` có sẵn; không tạo dữ liệu mới | PA-1…PA-6, gồm hai lối Activity và search/cancel | Hai lượt `20261120-181004`, `20261120-181405`; suite 22/22 `20261120-192724`, cùng `54bdd563`; đăng ký config sau nghiệm thu; sau rebase full 23/23 `20261121-003748` trên `8be85a2e` |
 | `23-comments-own` ✅ | TEST_EMAIL (@maestro), có cờ `comments`; tạo bộ Public `Maestro Comments` trong flow và xoá ở cuối | CM-1…CM-6, CM-10 (từ cấm `zzmaestroban`) | Hai lượt `20261121-045850`, `20261121-050415` trên `9fe5854` |
+| `24-comments-pair` ✅ | A và B, cả hai có cờ `comments`; bộ Public có một địa điểm, xoá ở cuối | CM-7, CM-8, CM-9, CM-11 | Hai lượt `20261121-084901`, `20261121-090058` trên `718f4a0`; mỗi lượt để lại một báo cáo trong Reports |
+| `25-friend-request` ✅ | Cặp tài khoản tạm (`TRIP_*`), flow tự huỷ kết bạn | PA-7, PA-8 | Hai lượt `20261121-083028`, `20261121-083724` trên `5d43326` |
 
 Kế hoạch còn lại giữ tại [e2e-plan.md](e2e-plan.md). P2/P3 chưa triển khai.
 

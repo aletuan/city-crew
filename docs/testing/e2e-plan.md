@@ -46,7 +46,7 @@ B = `TEST_EMAIL_2` (`@usera8b792a2`).
 | PA-7 lời mời hiện trên trang đầu | B gửi lời mời cho A (`common/open-crew.yaml`). A mở tab cuối → `person-requests` hiện, `dot-profile` trên tab bar, `friends-dot` trong Tài khoản → bấm `person-requests` → màn Kết nối bạn bè. Dọn: A từ chối. Bảo vệ luật "mọi lý do có chấm đều thấy ở trang đầu" của `docs/profile-home-plan.md`. |
 | PA-8 mặt người mở trang cá nhân (#1480) | Kết nối bạn bè → tab Lời mời → bấm `crew-request-who-0` → trang của người gửi (`person-handle`); tương tự `crew-sent-who-0`, `crew-suggestion-who-<id>`. Bấm `crew-accept-0` chỉ đồng ý, không mở trang. |
 
-PA-7 và PA-8 cần A và B **chưa** là bạn, mà `17-unfriend` để họ là bạn khi kết thúc. Hoặc flow tự huỷ kết bạn ở đầu và kết bạn lại ở cuối, hoặc dùng cặp tài khoản tạm của `maestro-trip-fixtures.mjs` (hai ca này không cần cờ `comments`).
+PA-7 và PA-8 cần A và B **chưa** là bạn, mà `17-unfriend` để họ là bạn khi kết thúc. Hoặc flow tự huỷ kết bạn ở đầu và kết bạn lại ở cuối, hoặc dùng cặp tài khoản tạm của `maestro-trip-fixtures.mjs` (hai ca này không cần cờ `comments`). **Đã chốt 21/11/2026: cặp tài khoản tạm**, xem mục Thứ tự.
 
 ## P3. Bình luận (sau cờ `comments`)
 
@@ -88,8 +88,8 @@ Không đưa vào Maestro (đã có unit test, hoặc kiểm tay): ánh sáng 1,
 
 1. **P1:** PA-1, PA-2, PA-5, PA-6 trong một flow; rồi PA-3, PA-4.
 2. **P3, một tài khoản:** CM-1 tới CM-6 và CM-10 — `23-comments-own.yaml` ✅ hai lượt xanh liền 21/11/2026 (`20261121-045850`, `20261121-050415`), xem `e2e-latest.md`.
-3. **P3, hai tài khoản:** CM-7 tới CM-9, sau khi CM-1…6 đạt hai lượt liền.
-4. **P2:** PA-7, PA-8, sau khi chốt cách giữ trạng thái kết bạn của cặp A–B.
+3. **P3, hai tài khoản:** CM-7 tới CM-9 và CM-11 — `24-comments-pair.yaml` ✅ hai lượt xanh liền 21/11/2026 (`20261121-084901`, `20261121-090058`). Bộ có một địa điểm (trang cá nhân của người khác ẩn bộ trống); B tới bộ qua bạn bè → trang của A. CM-11 báo cáo câu trả lời của A (CM-8), không đăng bình luận riêng. Số tim (`comment-likes`) và số trên chuông không đọc được bằng id; chuông đọc bằng nhãn.
+4. **P2:** PA-7, PA-8 — `25-friend-request.yaml` trên cặp tài khoản tạm (chủ dự án chọn, 21/11/2026): flow tự huỷ kết bạn cặp tạm rồi gửi lời mời bằng `TRIP_HANDLE`. ✅ hai lượt xanh liền 21/11/2026 (`20261121-083028`, `20261121-083724`). Không kiểm `friends-dot`/`dot-profile` bằng id (nằm trong nút); tab đọc bằng nhãn "1 friend request waiting". `crew-suggestion-who-*` không kiểm: phụ thuộc đồ thị bạn bè thật.
 5. CM-10 đã nằm trong `23`; CM-11 làm cùng CM-7…9 (cần hai tài khoản). Chặn không làm (điều kiện 6).
 
 Mỗi flow mới thêm vào `config.yaml` và vào bảng của `docs/testing/e2e-simulator.md`; kết quả chạy ghi vào `e2e-latest.md` (SHA, run ID, phạm vi thật).

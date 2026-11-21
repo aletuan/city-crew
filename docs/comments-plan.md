@@ -652,9 +652,12 @@ sở dữ liệu thật ngày 19/11/2026, kiểu dữ liệu đã sinh lại):*
   mọi người, `banned_words` không trống, đã tự tay gỡ thử một bình luận
   trên Data Desk). Khai báo nội dung do người dùng tạo vẫn là Yes; nhãn
   App Privacy ghi thêm bình luận vào dòng `Other User Content`.
-- [ ] **Một luồng Maestro**: mở luồng, đăng, trả lời, xoá. Chưa làm: luồng
-  phải chạy được trên simulator mới đáng merge, và tài khoản thử cần một
-  dòng `app_flag_testers` cho tới khi cờ bật.
+- [x] **Luồng Maestro, một tài khoản** (#1511): `23-comments-own` — mở
+  luồng, đăng, trả lời, từ cấm, giới hạn độ dài, tắt/bật, xoá kéo theo
+  trả lời; hai lượt xanh liền ngày 21/11/2026 trên @maestro. Hai tài
+  khoản (tag, thông báo, tim, báo cáo — CM-7…CM-9, CM-11):
+  `24-comments-pair`, hai lượt xanh liền cùng ngày. Cả hai cần dòng `app_flag_testers` của
+  @maestro và @usera8b792a2 cho tới khi cờ bật.
 
 **C10. Phát hành**
 - Bật cờ, nộp bản mới, theo dõi kết quả duyệt.
@@ -671,7 +674,8 @@ cho tất cả, có bảng `app_flag_testers` (18/11/2026): một dòng (khoá, 
 khoản) bật cờ đó riêng cho tài khoản ấy. Chỉ bật thêm được, không tắt
 bớt; chỉ sửa được trong SQL editor; mỗi người chỉ đọc được dòng của mình.
 
-Đang bật `comments` cho: **@trang**, **@tuananh**.
+Đang bật `comments` cho (kiểm bằng SQL ngày 21/11/2026): **@trang**, **@tuananh**,
+**@xitrum**, và hai tài khoản Maestro **@maestro**, **@usera8b792a2**.
 
 Thêm một người:
 

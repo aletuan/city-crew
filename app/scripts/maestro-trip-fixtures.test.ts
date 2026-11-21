@@ -27,12 +27,21 @@ describe('isolated trip fixture setup', () => {
   it('requests as A, accepts as B, then verifies the actual edge', async () => {
     const fetcher = vi.fn().mockResolvedValueOnce(session(a)).mockResolvedValueOnce(session(b))
       .mockResolvedValueOnce(response(201)).mockResolvedValueOnce(response(204))
-      .mockResolvedValueOnce(response(200, [{ requester: a.id, addressee: b.id, status: 'accepted' }]));
-    await createPair(a, b, fetcher);
+      .mockResolvedValueOnce(response(200, [{ requester: a.id, addressee: b.id, status: 'accepted' }]))
+      .mockResolvedValueOnce(response(200, [{ id: b.id, handle: 'userbbb' }, { id: a.id, handle: 'useraaa' }]));
+    // Each to its own account, whatever order the rows come back in.
+    expect(await createPair(a, b, fetcher)).toEqual({ handle: 'useraaa', handle2: 'userbbb' });
     expect(fetcher.mock.calls[2][1].headers.Authorization).toBe(`Bearer ${a.id}`);
     expect(fetcher.mock.calls[3][1].headers.Authorization).toBe(`Bearer ${b.id}`);
     expect(fetcher.mock.calls[3][1].method).toBe('PATCH');
     expect(fetcher.mock.calls[4][1].method).toBe('GET');
+  });
+  it('stops when either username is missing', async () => {
+    const fetcher = vi.fn().mockResolvedValueOnce(session(a)).mockResolvedValueOnce(session(b))
+      .mockResolvedValueOnce(response(201)).mockResolvedValueOnce(response(204))
+      .mockResolvedValueOnce(response(200, [{ requester: a.id, addressee: b.id, status: 'accepted' }]))
+      .mockResolvedValueOnce(response(200, [{ id: a.id, handle: 'useraaa' }]));
+    await expect(createPair(a, b, fetcher)).rejects.toThrow('usernames not found');
   });
   it('rejects a successful update that changed no edge under RLS', async () => {
     const fetcher = vi.fn().mockResolvedValueOnce(session(a)).mockResolvedValueOnce(session(b))

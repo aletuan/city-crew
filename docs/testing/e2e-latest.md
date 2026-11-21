@@ -123,3 +123,40 @@ Trước lượt mới kiểm SHA/working tree, chỉ một runner và cwd Metro
 Sau cả hai lượt, SQL: không còn bộ "Maestro Comments" nào của @maestro, không còn bình luận nào của @maestro. Từ `zzmaestroban` vẫn trong `banned_words`.
 
 Bài học cho P3 hai tài khoản: số đếm vẽ trong một nút (`collection-comments-count`, `comment-replies`, có lẽ cả `comment-likes`) không đọc được bằng id riêng; đọc từ nhãn của nút cha.
+
+## P2 — `25-friend-request` — 21/11/2026
+
+**Hai lượt xanh liền nhau trên `5d43326`**, bundle Metro `exp://127.0.0.1:8085` ở `f4b14b4`. Cặp tài khoản tạm của `maestro-trip-fixtures.mjs`; fixture nay ghi thêm `handle`, `handle2` (đọc từ `profiles`) và `smoke.sh` truyền `TRIP_HANDLE`, `TRIP_HANDLE_2`. Cặp tạm được dọn sau mỗi lượt (`✓ disposable trip accounts cleaned up`).
+
+| Run ID | Kết quả |
+| --- | --- |
+| `20261121-083028` | **PASS** 6m10s |
+| `20261121-083724` | **PASS** 6m09s |
+
+## P3 hai tài khoản — `24-comments-pair` — 21/11/2026
+
+**Hai lượt xanh liền nhau trên `718f4a0`**, bundle `f4b14b4` (Metro 8085). A = @maestro, B = @usera8b792a2.
+
+| Run ID | Flow SHA | Kết quả | Ghi chú |
+| --- | --- | --- | --- |
+| `20261121-084412` | `d511d59` | FAIL `.*Maestro Pair.*` | Trang của A không có bộ: trang người khác ẩn bộ trống (`person.listsOn`). Sửa: A lưu một địa điểm vào bộ |
+| `20261121-084901` | `718f4a0` | **PASS** 11m24s | |
+| `20261121-090058` | `718f4a0` | **PASS** 10m53s | |
+
+SQL sau hai lượt: không còn bộ "Maestro Pair", không còn bình luận nào của A và B. Có **2 báo cáo** `kind = comment`, `reason = other` của @usera8b792a2 trong hàng chờ Reports (mỗi lượt một, theo điều kiện 5): cần chủ dự án bấm "Nothing wrong" trên Data Desk.
+
+### Trên main sau #1519 và #1521 — 21/11/2026
+
+Chạy lại một lượt mỗi flow trên `73721467` (branch đã rebase lên `8d9a671`), Metro riêng `exp://127.0.0.1:8086` từ chính checkout đó.
+
+| Run ID | Flow | Kết quả | Ghi chú |
+| --- | --- | --- | --- |
+| `20261121-091356` | 25 | FAIL `person-handle` | Chạm vào mặt 0,4 s sau khi dòng Sent hiện, lúc tấm Add còn đang đóng: chạm xong, trang không mở. Sửa: chờ hoạt ảnh, `retry` tới khi thấy trang |
+| `20261121-091356` | 24 | FAIL `tab-explore` ở lần mở lại cuối | Mọi bước CM và xoá bộ đã xong (SQL xác nhận); ổ đĩa Mac đầy (còn 109 MB), Maestro không chụp được màn hình |
+| `20261121-093024` | 25 | FAIL sau 17 s | `No space left on device` |
+| — | — | — | Xoá `.smoke-local` và `~/.maestro/tests` (owner cho phép) |
+| `20261121-1044xx` | 25 | **PASS** 6m14s | |
+| `20261121-105205` | 24 | **PASS** 11m01s | |
+
+Ổ đĩa Mac vẫn gần đầy sau khi dọn (khoảng 1–2 GB trống; `CoreSimulator/Devices` 24 GB). Một lượt suite đầy đủ có thể không đủ chỗ.
+

@@ -38,6 +38,13 @@ export async function createPair(a, b, fetcher = fetch) {
   if (edges?.length !== 1 || edges[0].requester !== sa.user.id || edges[0].addressee !== sb.user.id || edges[0].status !== 'accepted') {
     throw new Error('Fixture friendship not verified; ledger retained');
   }
+  // The usernames `handle_new_user` gave them: a flow that sends a friend
+  // request types one (25-friend-request), and nothing else names them.
+  const rows = await api(a, `/rest/v1/profiles?select=id,handle&id=in.(${sa.user.id},${sb.user.id})`, undefined, sa.access_token, 'GET', fetcher);
+  const handleOf = (id) => rows?.find((r) => r.id === id)?.handle;
+  const handle = handleOf(sa.user.id), handle2 = handleOf(sb.user.id);
+  if (!handle || !handle2) throw new Error('Fixture usernames not found; ledger retained');
+  return { handle, handle2 };
 }
 
 // Only setup uses writes. Visibility transitions and saving remain UI actions.
@@ -94,10 +101,10 @@ async function preparePair(dir, collections) {
   const pa = await prepare(join(dir, 'a'));
   const pb = await prepare(join(dir, 'b'));
   const a = JSON.parse(await readFile(pa, 'utf8')), b = JSON.parse(await readFile(pb, 'utf8'));
-  await createPair(a, b);
+  const { handle, handle2 } = await createPair(a, b);
   const extra = collections ? await seedCollections(a) : {};
   await writeFile(join(dir, 'current.json'), JSON.stringify({
-    email: a.email, password: a.password, email2: b.email, password2: b.password, ...extra,
+    email: a.email, password: a.password, email2: b.email, password2: b.password, handle, handle2, ...extra,
   }), { mode: 0o600, flag: 'wx' });
   console.error('✓ disposable trip accounts and friendship ready');
 }
