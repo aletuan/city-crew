@@ -42,7 +42,7 @@ vi.mock('../lib/save', () => {
 import PlaceCard from './PlaceCard';
 import { CATEGORIES } from '../lib/categories';
 import { appFlags } from '../lib/flags';
-import { colors, radius } from '../theme';
+import { colors, radius, space } from '../theme';
 import { KindPill } from './KindPill';
 
 const place = (over: Partial<Place> = {}): Place => ({
@@ -492,30 +492,23 @@ describe('the card without a frame', () => {
     return probe.style.color.replace(/\s/g, '');
   };
 
-  it('draws no box round the card, rounds the photograph itself, and spaces the cards apart', () => {
+  // The box, back (owner, 21 Nov 2026): the shared card's white ground,
+  // hairline and radius round the photograph and the words, the words
+  // padded inside it, and the old gap between cards.
+  it('draws the card as a white box round the photograph and the words', () => {
     render(<PlaceCard testID="c" onPress={() => {}} place={place({ categories: ['cafes'] })} />);
     const card = css('c-card');
-    expect(['', 'rgba(0,0,0,0)', 'transparent']).toContain(card.backgroundColor.replace(/\s/g, ''));
-    expect(['', '0px']).toContain(card.borderTopWidth);
-    expect(card.marginBottom).toBe('28px');
-    const frame = css('c-frame');
-    expect(frame.borderTopLeftRadius).toBe(`${radius.card}px`);
-    expect(frame.overflowX ?? frame.overflow).toBe('hidden');
-    const body = css('c-body');
-    expect(['', '0px']).toContain(body.paddingLeft);
-    expect(body.paddingTop).toBe('10px');
-  });
-
-  // Held in a collection's drag it travels over its neighbours; without a
-  // ground its words would be drawn over theirs.
-  it('takes a ground while it is held, without moving by a point', () => {
-    render(<PlaceCard testID="c" raised onPress={() => {}} place={place({ categories: ['cafes'] })} />);
-    const card = css('c-card');
     expect(card.backgroundColor.replace(/\s/g, '')).toBe(ink(colors.surfaceCard));
-    const px = (v: string) => Number(v.replace('px', '') || 0);
-    expect(px(card.marginLeft) + px(card.paddingLeft)).toBe(22);
-    expect(px(card.marginTop) + px(card.paddingTop)).toBe(0);
-    expect(px(card.marginBottom) + px(card.paddingBottom)).toBe(28);
+    expect(card.borderTopWidth).toBe('1px');
+    expect(card.borderTopLeftRadius).toBe(`${radius.card}px`);
+    expect(card.overflowX ?? card.overflow).toBe('hidden');
+    expect(card.marginBottom).toBe(`${space.cardGap}px`);
+    const body = css('c-body');
+    expect(body.paddingLeft).toBe(`${space.cardPadding}px`);
+    expect([body.paddingTop, body.paddingBottom]).toEqual(['13px', '13px']);
+    // The photograph and the words both inside the one box.
+    const box = screen.getByTestId('c-card');
+    expect(box.contains(screen.getByTestId('c-frame')) && box.contains(screen.getByTestId('c-body'))).toBe(true);
   });
 
   it('names the kind as a dot and a word on the page, with no pill under it', () => {
