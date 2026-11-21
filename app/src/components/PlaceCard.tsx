@@ -23,12 +23,8 @@ import { KindPill } from './KindPill';
 
 export default function PlaceCard({
   place, onPress, testID, distanceKm, chip, city, onLongPress, delayLongPress, onPressOut,
-  accessibilityHint, accessibilityActions, onAccessibilityAction, inList, raised = false,
+  accessibilityHint, accessibilityActions, onAccessibilityAction, inList,
 }: {
-  /** Held in a finger and travelling over its neighbours (a collection's
-   *  drag): the card takes a ground for as long as that lasts — see
-   *  `raised` in the styles. */
-  raised?: boolean;
   place: Place;
   /** Search opened from a list to add to it: the bookmark's corner holds
    *  that list's ⊕ / ✓ instead — see `ListToggle`. */
@@ -111,8 +107,8 @@ export default function PlaceCard({
       accessibilityActions={accessibilityActions}
       onAccessibilityAction={onAccessibilityAction}
     >
-      <View style={[s.card, raised && s.raised]} testID={testID && `${testID}-card`}>
-        <View style={s.frame} testID={testID && `${testID}-frame`}>
+      <View style={s.card} testID={testID && `${testID}-card`}>
+        <View testID={testID && `${testID}-frame`}>
           {cover ? (
             <>
               <Image
@@ -487,30 +483,29 @@ export default function PlaceCard({
 }
 
 const s = StyleSheet.create({
-  // ── no frame (owner, 6 Nov 2026) ──
+  // ── the box, back (owner, 21 Nov 2026) ──
   //
-  // The card was a white box with a hairline, the photograph at its top
-  // and the words padded 16pt inside it. The owner's reference took the
-  // box away: the photograph rounds on its own and the words sit on the
-  // page under it, flush with the page margin — 32pt more line for a
-  // name, one box fewer on a page of boxes.
+  // A white box with a hairline round the photograph and the words, the
+  // shared `Card`'s ground, edge and radius, the words padded inside it
+  // as they were before 6 Nov. That day the owner's reference took the
+  // box away — the photograph rounded on its own and the words sat on
+  // the page under it, flush with the margin, 32pt more line for a name
+  // — and the card in a collection's drag had to borrow a ground for
+  // the length of the lift (`raised`, gone with this). The owner asked
+  // for it back after seeing both side by side: each place reads as one
+  // thing, as the collections on a person's page do, and where one ends
+  // is no longer said by space alone.
   //
-  // Without a frame the only thing saying where one place ends is space,
-  // so the two gaps have to differ by enough to be read: 10 from a
-  // photograph to its own name, 28 from the last line to the next
-  // photograph — near three to one, so a name never reads as the caption
-  // of the picture under it.
-  card: { marginHorizontal: space.page, marginBottom: 28 },
-  frame: { borderRadius: radius.card, overflow: 'hidden' },
-  // In a finger (a collection's drag), the card passes over the ones
-  // around it, and with no ground of its own its words would be drawn
-  // over theirs. It takes the old card's ground for the length of the
-  // lift, 10pt round its edges and the same 10 taken back out of its
-  // margins, so nothing under it moves by a point as it is picked up.
-  raised: {
-    backgroundColor: colors.surfaceCard, borderRadius: radius.card + 10,
-    marginHorizontal: space.page - 10, paddingHorizontal: 10,
-    marginTop: -10, paddingTop: 10, marginBottom: 28 - 10, paddingBottom: 10,
+  // Weighed the same evening and passed over: a ground a step darker
+  // than the page with no hairline (lighter, but neither the old card
+  // nor the profile's), a white caption panel over the photograph's foot
+  // (hides the rating and the hours ribbon), and the words over the
+  // photograph as on the community shelf (unreadable on a light
+  // photograph, and the kind's dot is lost on it).
+  card: {
+    marginHorizontal: space.page, marginBottom: space.cardGap,
+    backgroundColor: colors.surfaceCard, borderRadius: radius.card,
+    borderWidth: 1, borderColor: colors.borderGlassSoft, overflow: 'hidden',
   },
   photo: { width: '100%', aspectRatio: 16 / 10, backgroundColor: colors.surfaceGlass },
   photoFallback: { alignItems: 'center', justifyContent: 'center' },
@@ -527,7 +522,7 @@ const s = StyleSheet.create({
     textShadowColor: 'rgba(0,0,0,0.7)', textShadowRadius: 3,
   },
   // ~10% tighter than the standard card body: this is a feed, not a form.
-  body: { paddingTop: 10 },
+  body: { paddingHorizontal: space.cardPadding, paddingVertical: 13 },
   // Top-right of the image, mirroring the attribution bottom-right.
   saveSlot: { position: 'absolute', top: 10, right: 10 },
   /**
