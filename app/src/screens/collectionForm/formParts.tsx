@@ -22,15 +22,18 @@
 // So: `FieldRow` grouped and `flush`, between `FieldRule`s, under a
 // `SeenLine`.
 
-import React, { useState } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import React, { useMemo, useState } from 'react';
+import { Alert, StyleSheet, Text, View } from 'react-native';
 import ActionSheet, { SheetRows } from '../../components/ActionSheet';
+import ShareSheet from '../../components/ShareSheet';
 import { Lede } from '../../components/authUi';
 import { CHIP_H, CHIP_SLOP, PressableScale } from '../../components/ui';
 import { Glyph, ICON } from '../../components/ui/glyph';
-import { useMyListShares } from '../../lib/data';
+import { createCollection, fetchCollectionId, isNotShareable, useMyListShares, writeFriends } from '../../lib/data';
+import { useCrew } from '../../lib/crew';
 import { useI18n } from '../../lib/i18n';
 import { SEEN_GLYPH, seenGloss, seenName, sharesByList, visibilityOf, type Visibility } from '../../lib/shares';
+import { splitFriendships } from '../../lib/friends';
 import { colors, font, radius, type } from '../../theme';
 import { sendRows, ShareHead, whoHint, whoSeesRows } from '../collectionDetail/Share';
 import type { Collection } from '../../lib/types';
@@ -55,11 +58,28 @@ export function useAudience(col: Pick<Collection, 'id' | 'is_public'> | null, ui
   const start: Visibility = col ? visibilityOf(!!col.is_public, shared) : making ? 'public' : 'private';
   const [picked, set] = useState<Visibility | null>(null);
   const seen = picked ?? start;
-  const moved = seen !== start;
+  // Who the list is shared with now, and who the form means it to be: the
+  // picker's ticks wait here for Save (owner, 22 Nov 2026), as the answer
+  // does. Untouched, the ticks are the shares it has.
+  const before = useMemo(() => (col?.id ? sharesByList(shares.data)[col.id] ?? [] : []), [shares.data, col?.id]);
+  const [ticked, setTicked] = useState<ReadonlySet<string> | null>(null);
+  const picks = useMemo(() => [...(ticked ?? before)], [ticked, before]);
+  // Friends moved when the answer did or when the ticks did: the same
+  // answer with other people is a change the page's Save would have made.
+  const changed = seen === 'friends' && !!ticked && (ticked.size !== before.length || before.some((id) => !ticked.has(id)));
+  const moved = seen !== start || changed;
   /** What a rename's Save hands the list's page (`leaveForm`): only an
-   *  answer that moved. */
-  const handOn = (slug: string) => (moved ? { slug, audience: seen, renamed: true } : null);
-  return { seen, moved, set, open: !!col || making, handOn };
+   *  answer that moved, and not Friends, which the form writes itself. */
+  const handOn = (slug: string) => (moved && seen !== 'friends' ? { slug, audience: seen, renamed: true } : null);
+  /** The picker's answer: nobody ticked is Private, whose way out is the page's. */
+  const choose = (ids: ReadonlySet<string>) => { setTicked(ids); set(ids.size ? 'friends' : 'private'); };
+  return {
+    seen, moved, set, open: !!col || making, handOn, uid, picks, before, choose, history: shares.data,
+    // Friends and a list to write them to: what Save does about them.
+    friends: seen === 'friends' && moved && picks.length > 0,
+    wasPublic: !!col?.is_public,
+    reload: shares.reload,
+  };
 }
 
 /**
@@ -100,9 +120,11 @@ export function useAudience(col: Pick<Collection, 'id' | 'is_public'> | null, ui
  * one press away, and the pill is a value, not a sentence. VoiceOver
  * still hears both.
  *
- * Making a list, Friends says when the friends are chosen — once it is
- * made, on its page — and the sheet has no "Send a link": there is no
- * list to send yet.
+ * Friends opens the picker at once (owner, 22 Nov 2026), for a list being
+ * made as for one being edited; the ticks wait for Save with the answer.
+ * It had said "once it is made, you choose who" and opened the picker on
+ * the list's page afterwards. The sheet has no "Send a link" while making:
+ * there is no list to send yet.
  */
 export function SeenLine({ aud, making }: {
   aud: ReturnType<typeof useAudience>;
@@ -110,6 +132,9 @@ export function SeenLine({ aud, making }: {
 }) {
   const { t } = useI18n();
   const [open, setOpen] = useState(false);
+  const [picking, setPicking] = useState(false);
+  const { ships, blocks, people } = useCrew();
+  const friendIds = useMemo(() => (aud.uid ? splitFriendships(ships.data, aud.uid).friends : []), [ships.data, aud.uid]);
   // The row the answer stands in (owner, 22 Nov 2026): its name and the
   // question on the left, the answer on the right, under the fields it
   // is about rather than over them.
@@ -146,22 +171,39 @@ export function SeenLine({ aud, making }: {
         testID="collection-form-seen"
       >
         <Glyph name={SEEN_GLYPH[aud.seen]} size={ICON.text} color={colors.text} />
-        <Text style={s.pillText} numberOfLines={1}>{seenName(aud.seen, t)}</Text>
+        <Text style={s.pillText} numberOfLines={1}>
+          {seenName(aud.seen, t) + (aud.seen === 'friends' && aud.picks.length ? ` · ${aud.picks.length}` : '')}
+        </Text>
         <Glyph name="chevron-down" size={ICON.text} color={colors.textSecondary} />
       </PressableScale>
       <ActionSheet visible={open} onClose={close} header={<ShareHead />}>
         <SheetRows
           actions={whoSeesRows(t, {
             seen: aud.seen,
-            friendsDesc: making
-              ? t('Once it is made, you choose who', 'Lưu xong, bạn chọn những người được xem', '作成したら、見られる人を選びます', '创建后，你来选择谁能看', '建立後，你來選擇誰能看')
-              : undefined,
-            onChoose: aud.set,
+            // Friends is choosing which, here and now (owner, 22 Nov 2026):
+            // the ticks wait for Save with the rest of the form.
+            onChoose: (v) => (v === 'friends' ? setPicking(true) : aud.set(v)),
           })}
           onClose={close}
         />
         {making ? null : <SheetRows actions={sendRows(t)} onClose={close} />}
       </ActionSheet>
+      <ShareSheet
+        open={picking}
+        later
+        isPublic={aud.wasPublic}
+        friendIds={friendIds}
+        blocked={blocks.data}
+        people={people}
+        shared={aud.picks}
+        history={aud.history}
+        sending={false}
+        onClose={() => setPicking(false)}
+        onSave={(add, remove) => {
+          aud.choose(new Set([...aud.picks.filter((id) => !remove.includes(id)), ...add]));
+          setPicking(false);
+        }}
+      />
     </>,
   );
 }
@@ -190,6 +232,57 @@ export function SaveHint({ kind }: { kind: 'copy' | 'place' | null }) {
         '起个名字，你刚保存的地点会排在第一个。', '起個名字，你剛儲存的地點會排在第一個。',
       )}</Lede>
   );
+}
+
+/**
+ * Save's second step for Friends: the picker's ticks, written now that the
+ * list is there (owner, 22 Nov 2026). True when they landed. When they did
+ * not — a friend gone from the crew since it was read, or the network —
+ * the list is already made and the words say so; the caller leaves the
+ * form the old way, by the list's page and its picker, which is where the
+ * ticks can be tried again. Staying here would put a second Save under a
+ * thumb that would make a second list.
+ */
+export async function shareChosen(
+  aud: ReturnType<typeof useAudience>, list: { id: string; slug: string }, t: (en: string, vi: string, ja: string, zh: string, hant?: string) => string,
+): Promise<boolean> {
+  try {
+    await writeFriends(list, aud.picks, aud.before, aud.wasPublic);
+    aud.reload();
+    return true;
+  } catch (e) {
+    Alert.alert(
+      t('Saved, but not shared', 'Đã lưu, chưa chia sẻ được', '保存しましたが共有できませんでした', '已保存，但未能分享', '已儲存，但未能分享'),
+      isNotShareable(e)
+        ? t(
+          'Someone you ticked is no longer in your crew. Choose your friends again on the collection\'s page.',
+          'Có người bạn chọn không còn trong nhóm. Hãy chọn lại bạn bè ở trang bộ sưu tập.',
+          '選んだ人の中に、もう仲間ではない人がいます。コレクションのページで選び直してください。',
+          '你勾选的人中有人已不在你的好友里。请在合集页面重新选择。', '你勾選的人中有人已不在你的好友裡。請在合集頁面重新選擇。',
+        )
+        : t(
+          'Choose your friends again on the collection\'s page.',
+          'Hãy chọn lại bạn bè ở trang bộ sưu tập.',
+          'コレクションのページで友だちを選び直してください。',
+          '请在合集页面重新选择好友。', '請在合集頁面重新選擇好友。',
+        ),
+    );
+    return false;
+  }
+}
+
+/**
+ * A new list, and its friends when the form chose some. Written, the
+ * list lands as any private one does — the answer handed on is Private,
+ * not Friends, which would have the page open a picker for ticks already
+ * made.
+ */
+export async function createList(
+  aud: ReturnType<typeof useAudience>, args: Parameters<typeof createCollection>[0], t: Parameters<typeof shareChosen>[2],
+): Promise<{ slug: string; audience: Visibility }> {
+  const slug = await createCollection(args);
+  const shared = aud.friends && await shareChosen(aud, { id: await fetchCollectionId(slug), slug }, t);
+  return { slug, audience: shared ? 'private' : aud.seen };
 }
 
 /** Whether the form is making a list of your own: not a rename, not a

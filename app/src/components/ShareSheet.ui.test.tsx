@@ -63,6 +63,25 @@ const ticked = () => [0, 1, 2]
 
 beforeEach(() => { onSave.mockClear(); goTo.mockClear(); });
 
+// Inside a form that has not been saved (owner, 22 Nov 2026) the press
+// writes nothing, so the button must not say it shares.
+describe('later', () => {
+  it('says Done, with the count, and still hands the ticks to onSave', () => {
+    show({ later: true });
+    fireEvent.click(screen.getByTestId('share-friend-0'));
+    fireEvent.click(screen.getByTestId('share-friend-1'));
+    expect(cta().textContent).toBe('Done · 2');
+    fireEvent.click(cta());
+    expect(onSave).toHaveBeenCalledWith(expect.any(Array), []);
+  });
+
+  it('keeps its other words: Keep private, and Find friends with nobody to pick', () => {
+    show({ later: true, shared: ['lan'] });
+    fireEvent.click(screen.getByTestId('share-friend-0'));
+    expect(cta().textContent).toBe('Keep private');
+  });
+});
+
 describe('the list', () => {
   it('names each friend under their face, says the handle to VoiceOver, and asks for a tick', () => {
     show();

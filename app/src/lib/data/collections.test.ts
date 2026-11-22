@@ -18,7 +18,7 @@ vi.mock('../supabase', async () => {
 
 import {
   addPlaceToCollection, copyCollection, createCollection, deleteCollection, fetchCollections,
-  fetchLikeCounts, fetchMyCollections, fetchMyLikes, fetchSharedWithMe, likeCollection, removePlaceFromCollection,
+  fetchCollectionId, fetchLikeCounts, fetchMyCollections, fetchMyLikes, fetchSharedWithMe, likeCollection, removePlaceFromCollection,
   reorderCollection, setCollectionCover, setCollectionPublic, unlikeCollection, updateCollection,
 } from './collections';
 
@@ -107,6 +107,21 @@ describe('createCollection', () => {
     fake().replies({ error: { message: 'new row violates row-level security policy', code: '42501' } });
     await expect(createCollection(input)).rejects.toThrow('daily_limit');
     expect(fake().log).toHaveLength(1);
+  });
+});
+
+describe('fetchCollectionId', () => {
+  it('reads the one id the slug names', async () => {
+    fake().replies({ data: { id: 'c9' }, error: null });
+    expect(await fetchCollectionId('night-bar')).toBe('c9');
+    const [call] = fake().log;
+    expect([call.table, call.op, call.filters]).toEqual(['collections', 'select', [['slug', 'night-bar']]]);
+    expect(call.single).toBe(true);
+  });
+
+  it('throws what the database said', async () => {
+    fake().replies({ data: null, error: { message: 'no rows' } });
+    await expect(fetchCollectionId('gone')).rejects.toThrow('no rows');
   });
 });
 

@@ -34,17 +34,9 @@ import { createClient } from "npm:@supabase/supabase-js@2";
 import Anthropic from "npm:@anthropic-ai/sdk@0.70.1";
 import { opsOrEditor } from "../_shared/gate.ts";
 import { ATTRS, type Answer, DEFINITIONS, SCHEMA, SCORER, VERSION, toSignals } from "../_shared/photoLabels.ts";
+import { http } from "../_shared/http.ts";
 
-const CORS = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-ops-token",
-  "Access-Control-Allow-Methods": "POST, OPTIONS",
-};
-const json = (body: unknown, status = 200) =>
-  new Response(JSON.stringify(body), {
-    status,
-    headers: { ...CORS, "Content-Type": "application/json" },
-  });
+const { CORS, json } = http({ opsToken: true });
 
 /** Which model answers. Opus 5.5 by default; the measurement on round 2
  *  and round 3 runs the same photographs through each of these, and which

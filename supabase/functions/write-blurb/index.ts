@@ -174,17 +174,9 @@ import { createClient } from "npm:@supabase/supabase-js@2";
 import Anthropic from "npm:@anthropic-ai/sdk@0.70.1";
 import { opsOrEditor } from "../_shared/gate.ts";
 import { type Chinese, chineseNames, namesLost } from "../_shared/latinNames.ts";
+import { http } from "../_shared/http.ts";
 
-const CORS = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-ops-token",
-  "Access-Control-Allow-Methods": "POST, OPTIONS",
-};
-const json = (body: unknown, status = 200) =>
-  new Response(JSON.stringify(body), {
-    status,
-    headers: { ...CORS, "Content-Type": "application/json" },
-  });
+const { CORS, json } = http({ opsToken: true });
 
 /** Haiku, as `plan-assist` runs on since 11 Oct 2026: two short
  *  paragraphs from a page of facts is the size of job it was moved for. */

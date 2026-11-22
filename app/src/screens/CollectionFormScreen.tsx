@@ -25,13 +25,13 @@ import { successHaptic } from '../components/ui';
 import { useSession } from '../lib/auth';
 import { useCollections } from '../lib/catalog';
 import { useCurrentCity } from '../lib/city';
-import { addPlaceToCollection, copyCollection, createCollection, updateCollection } from '../lib/data';
+import { addPlaceToCollection, copyCollection, updateCollection } from '../lib/data';
 import { DAILY_CAPS, isDailyLimit } from '../lib/quota';
 import { useI18n } from '../lib/i18n';
 import { useMyLists } from '../lib/save';
 import { useNoteEvent } from '../lib/tasteProfile';
 import { goTo, type Nav, type RootRoute } from '../nav';
-import { FieldRule, leaveForm, makingOwn, SaveHint, SeenLine, useAudience } from './collectionForm/formParts';
+import { createList, FieldRule, leaveForm, makingOwn, SaveHint, SeenLine, shareChosen, useAudience } from './collectionForm/formParts';
 
 /** Long enough for a real name, short enough to stay on one line in a row. */
 const MAX_TITLE = 60;
@@ -64,11 +64,9 @@ export default function CollectionFormScreen({ navigation, route }: {
   const failText = useFailText();
   const [error, setError] = useState<string | null>(null);
   const note = useNoteEvent();
-
   const uid = session?.user?.id;
 
-  // No cover here (owner, 22 Nov 2026): it is chosen from the camera on
-  // the list's own page, so a new list and an old one share this form.
+  // No cover here (owner, 22 Nov 2026): the list page's camera chooses it.
   const col = editing ? mine.data.find((c) => c.slug === editing) ?? null : null;
   // Who sees it, kept for Save like the fields (`formParts`).
   const aud = useAudience(col, uid, makingOwn(editing, copyFrom));
@@ -157,7 +155,7 @@ export default function CollectionFormScreen({ navigation, route }: {
       }
       if (editing) {
         await updateCollection(editing, { title: name, desc });
-        made = aud.handOn(editing);
+        made = aud.friends && !(await shareChosen(aud, { id: col!.id as string, slug: editing }, t)) ? { slug: editing, audience: 'friends', renamed: true } : aud.handOn(editing);
         // A public list is drawn from the catalog's copy too — the
         // Community tab, Explore's shelf, Ideas — and that copy refreshes
         // only on a pull or a stale foreground. A rename went unseen there
@@ -167,7 +165,7 @@ export default function CollectionFormScreen({ navigation, route }: {
         // change nothing anyone sees. A copy needs none; it is private.
         if (col?.is_public) cols.reload();
       } else {
-        made = { slug: await createCollection({ ownerId: uid, cityId: city.id, title: name, desc, isPublic: aud.seen === 'public' }), audience: aud.seen };
+        made = await createList(aud, { ownerId: uid, cityId: city.id, title: name, desc, isPublic: aud.seen === 'public' }, t);
         // Reached from a place's bookmark with nowhere to put it: the list
         // arrives holding the place that prompted it, rather than empty
         // with the save silently dropped on the way here.
@@ -186,9 +184,8 @@ export default function CollectionFormScreen({ navigation, route }: {
       // sheet keeps the list it fetched on launch, and a collection made
       // here never appears as somewhere to save to.
       mine.reload();
-      // Back to the list, where the collection is now the first row of your
-      // own section. Opening a new one instead would land on an empty screen
-      // — unless Friends was chosen, when it opens to choose them.
+      // Back to the list, where the collection is now the first row of your own
+      // section — unless Friends could not be written: then its page opens the picker.
       leaveForm(navigation, saved, made, cols.reload);
     } catch (e) {
       // The daily cap — twenty lists, three hundred saves — is the one

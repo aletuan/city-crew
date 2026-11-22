@@ -60,7 +60,7 @@ import { goTo } from '../nav';
 import FriendPicker from './FriendPicker';
 
 export default function ShareSheet({
-  open, isPublic, friendIds, blocked, people, shared, history, sending, onClose, onSave,
+  open, isPublic, friendIds, blocked, people, shared, history, sending, later, onClose, onSave,
 }: {
   open: boolean;
   /** Whether the list is public now: sharing it makes it private, and the
@@ -77,6 +77,9 @@ export default function ShareSheet({
    *  faces is worked out from (`shareRows`). */
   history: readonly ShareRow[];
   sending: boolean;
+  /** Nothing is written by the press: the collection's form keeps the ticks
+   *  until its own Save (owner, 22 Nov 2026), and the button says "Done". */
+  later?: boolean;
   onClose: () => void;
   onSave: (add: string[], remove: string[]) => void;
 }) {
@@ -109,6 +112,8 @@ export default function ShareSheet({
       icon: cta.kind === 'private' ? 'lock-closed-outline' as const : 'people-outline' as const,
       label: sending
         ? t('Saving…', 'Đang lưu…', '保存中…', '保存中…', '儲存中…')
+        : cta.kind === 'share' && later
+          ? t(`Done · ${cta.n}`, `Xong · ${cta.n} người`, `完了 · ${cta.n}人`, `完成 · ${cta.n} 人`, `完成 · ${cta.n} 人`)
         : cta.kind === 'share'
           ? t(
             `Share with ${cta.n} ${cta.n === 1 ? 'person' : 'people'}`,

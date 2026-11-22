@@ -17,6 +17,21 @@ import { DAILY_LIMIT } from '../lib/quota';
 const createCollection = vi.hoisted(() => vi.fn(async () => 'new-list'));
 const addPlaceToCollection = vi.hoisted(() => vi.fn(async () => {}));
 const updateCollection = vi.hoisted(() => vi.fn(async () => {}));
+// Friends is written by Save, after the list is there: `writeFriends` and
+// the id lookup are pinned by their own tests in `lib/data`.
+const fetchCollectionId = vi.hoisted(() => vi.fn(async () => 'new-id'));
+const writeFriends = vi.hoisted(() => vi.fn(async (_list: unknown, _picks: readonly string[], _before: readonly string[], _wasPublic: boolean) => {}));
+const sharesReload = vi.hoisted(() => vi.fn());
+// Three friends of u1, as `useCrew` answers.
+const crew = vi.hoisted(() => ({
+  ships: { data: ['lan', 'minh', 'ha'].map((id, i) => ({ requester: 'u1', addressee: id, status: 'accepted', created_at: `2026-11-0${i + 1}T00:00:00Z` })) },
+  blocks: { data: [] as string[] },
+  people: {
+    lan: { id: 'lan', handle: 'lanphuong', full_name: 'Lan Phương', avatar_url: '' },
+    minh: { id: 'minh', handle: 'minhdi', full_name: 'Minh Đỗ', avatar_url: '' },
+    ha: { id: 'ha', handle: 'hamy', full_name: 'Hà My', avatar_url: '' },
+  } as Record<string, unknown>,
+}));
 const copyCollection = vi.hoisted(() => vi.fn(async () => 'copied-list'));
 const goTo = vi.hoisted(() => vi.fn());
 const note = vi.hoisted(() => vi.fn());
@@ -58,6 +73,7 @@ const lang = vi.hoisted(() => ({ now: 'en' as 'en' | 'vi' }));
 vi.mock('../lib/i18n', () => ({
   useI18n: () => ({ lang: lang.now, setLang: () => {}, t: (en: string, vi?: string) => (lang.now === 'vi' ? vi ?? en : en) }),
 }));
+vi.mock('../lib/crew', () => ({ useCrew: () => crew }));
 vi.mock('../lib/catalog', () => ({
   usePlaces: () => catalog,
   useCollections: () => ({ data: [], reload: colsReload }),
@@ -75,9 +91,11 @@ vi.mock('../lib/data', async (orig) => ({
   createCollection,
   addPlaceToCollection,
   updateCollection,
+  fetchCollectionId,
+  writeFriends,
   copyCollection,
   usePlacePhotos: (slugs: string[] | null) => { photos.asked.push(slugs); return { data: photos.data }; },
-  useMyListShares: (owner: string | null | undefined) => { shares.asked.push(owner); return { data: shares.data }; },
+  useMyListShares: (owner: string | null | undefined) => { shares.asked.push(owner); return { data: shares.data, reload: sharesReload }; },
 }));
 // `goTo` reaches for the container ref, which no test mounts; the rest of
 // `nav` — `leaveAuth`, the types — stays real.
@@ -87,6 +105,7 @@ vi.mock('../nav', async (orig) => ({
 }));
 
 import CollectionFormScreen from './CollectionFormScreen';
+import { NOT_SHAREABLE } from '../lib/data/shares';
 import { colors } from '../theme';
 import { CHIP_SLOP } from '../components/ui';
 
@@ -133,6 +152,19 @@ const propsWhere = (match: (p: Record<string, unknown>) => boolean): Record<stri
   throw new Error('no matching element in the committed tree');
 };
 
+/** Friends, chosen in the picker the row opens: the friends ticked by
+ *  their place in the list, then Done. The pill takes its words from the
+ *  ticks, so the wait is on them. */
+const tickFriends = async (...rows: number[]) => {
+  fireEvent.click(screen.getByTestId('collection-form-seen'));
+  fireEvent.click(screen.getByTestId('sheet-action-friends'));
+  await waitFor(() => expect(screen.getByTestId('share-friend-0')).toBeTruthy(), { timeout: 3000 });
+  for (const i of rows) fireEvent.click(screen.getByTestId(`share-friend-${i}`));
+  fireEvent.click(screen.getByTestId('share-save'));
+  await waitFor(() => expect(screen.getByTestId('collection-form-seen').textContent!.startsWith('Friends')).toBe(true), { timeout: 3000 });
+  await act(async () => {});
+};
+
 const pick = async (v: 'public' | 'friends' | 'private') => {
   fireEvent.click(screen.getByTestId('collection-form-seen'));
   fireEvent.click(screen.getByTestId(`sheet-action-${v}`));
@@ -160,6 +192,10 @@ beforeEach(() => {
   createCollection.mockClear();
   addPlaceToCollection.mockClear();
   updateCollection.mockClear();
+  fetchCollectionId.mockClear();
+  writeFriends.mockClear();
+  sharesReload.mockClear();
+  crew.blocks.data = [];
   copyCollection.mockClear();
   goTo.mockClear();
   note.mockClear();
@@ -219,22 +255,61 @@ describe('creating a collection from a bookmark', () => {
     expect(goTo).not.toHaveBeenCalled();
   });
 
-  // Friends is choosing which: the list is made private, and opens with
-  // the picker up — it becomes Friends when somebody is ticked there.
-  it('makes a list for friends private and opens it to choose them', async () => {
+  // Friends is chosen in the form (owner, 22 Nov 2026): the picker opens
+  // at once, Done keeps the ticks, and Save makes the list private and
+  // writes them. The page after it is the ordinary one, no picker.
+  it('makes a list for friends private, then shares it with the ones ticked', async () => {
     const navigation = nav();
     render(<CollectionFormScreen navigation={navigation} route={routeWith({ addPlaceSlug: 'pho-10' })} />);
-    await pick('friends');
+    await tickFriends(0, 2);
+    expect(writeFriends).not.toHaveBeenCalled();
+    expect(createCollection).not.toHaveBeenCalled();
+    create('For the crew');
+    await waitFor(() => expect(navigation.goBack).toHaveBeenCalled());
+    expect(createCollection).toHaveBeenCalledWith(expect.objectContaining({ isPublic: false }));
+    expect(fetchCollectionId).toHaveBeenCalledWith('new-list');
+    expect(writeFriends).toHaveBeenCalledWith({ id: 'new-id', slug: 'new-list' }, expect.arrayContaining(['ha', 'lan']), [], false);
+    expect(writeFriends.mock.calls[0][1]).toHaveLength(2);
+    expect(sharesReload).toHaveBeenCalled();
+    // Written: it lands as any private list does, on the list of lists.
+    expect(goTo).not.toHaveBeenCalled();
+    expect(navigation.dispatch).not.toHaveBeenCalled();
+    expect(addPlaceToCollection).toHaveBeenCalledWith('new-list', 'pho-10', 0);
+  });
+
+  // The list is made, the friends are not: the form closes, says so, and
+  // the page's picker is where to try again. A form left open would make
+  // a second list on the next Save.
+  it('closes onto the list’s own picker when the friends could not be written', async () => {
+    writeFriends.mockRejectedValueOnce(new Error('offline'));
+    const navigation = nav();
+    render(<CollectionFormScreen navigation={navigation} route={routeWith()} />);
+    await tickFriends(1);
     create('For the crew');
     await waitFor(() => expect(goTo).toHaveBeenCalled());
-    expect(createCollection).toHaveBeenCalledWith(expect.objectContaining({ isPublic: false }));
-    expect(navigation.goBack).toHaveBeenCalled();
+    expect(Alert.alert).toHaveBeenCalledWith('Saved, but not shared', 'Choose your friends again on the collection\'s page.');
     expect(goTo).toHaveBeenCalledWith('Collections', { screen: 'CollectionDetail', initial: false, params: { slug: 'new-list', seen: 'friends' } });
-    // A list just made is no rename: nothing is set on the route under.
-    expect(navigation.dispatch).not.toHaveBeenCalled();
-    // Into the list it just made, the place it was made for included.
-    expect(addPlaceToCollection).toHaveBeenCalledWith('new-list', 'pho-10', 0);
-    expect(colsReload).not.toHaveBeenCalled();
+    expect(sharesReload).not.toHaveBeenCalled();
+  });
+
+  it('says so when someone ticked has left the crew', async () => {
+    writeFriends.mockRejectedValueOnce(new Error(NOT_SHAREABLE));
+    render(<CollectionFormScreen navigation={nav()} route={routeWith()} />);
+    await tickFriends(0);
+    create('For the crew');
+    await waitFor(() => expect(Alert.alert).toHaveBeenCalled());
+    expect(Alert.alert).toHaveBeenCalledWith('Saved, but not shared', expect.stringContaining('no longer in your crew'));
+  });
+
+  // Nobody ticked is not an answer: the button is dimmed, and the line
+  // stays where it was.
+  it('does not take Friends with nobody ticked', async () => {
+    render(<CollectionFormScreen navigation={nav()} route={routeWith()} />);
+    fireEvent.click(screen.getByTestId('collection-form-seen'));
+    fireEvent.click(screen.getByTestId('sheet-action-friends'));
+    await waitFor(() => expect(screen.getByTestId('share-save')).toBeTruthy(), { timeout: 3000 });
+    expect(screen.getByTestId('share-save').getAttribute('aria-disabled')).toBe('true');
+    expect(screen.getByTestId('collection-form-seen').textContent).toBe('Public');
   });
 
   it('records no save for a plain new collection', async () => {
@@ -333,7 +408,7 @@ describe('what stops a submit before it writes', () => {
     fireEvent.click(line);
     expect(screen.getByText('Who can see your list?')).toBeTruthy();
     expect(['public', 'friends', 'private'].map((k) => screen.getByTestId(`sheet-action-${k}`).getAttribute('aria-selected'))).toEqual(['true', 'false', 'false']);
-    expect(screen.getByTestId('sheet-action-friends').textContent).toBe('FriendsOnce it is made, you choose who');
+    expect(screen.getByTestId('sheet-action-friends').textContent).toBe('FriendsOnly the friends you choose');
     expect(screen.getByTestId('sheet-action-public').textContent).toBe('PublicShown in Explore and in search');
     expect(screen.queryByTestId('collection-send-link')).toBeNull();
     // A list not yet made has no shares to read.
@@ -342,8 +417,16 @@ describe('what stops a submit before it writes', () => {
 
   it('moves the line to the answer chosen, and the sheet’s tick with it', async () => {
     render(<CollectionFormScreen navigation={nav()} route={routeWith()} />);
-    await pick('friends');
-    expect(screen.getByTestId('collection-form-seen').textContent).toBe('Friends');
+    await pick('private');
+    expect(screen.getByTestId('collection-form-seen').textContent).toBe('Private');
+    fireEvent.click(screen.getByTestId('collection-form-seen'));
+    expect(screen.getByTestId('sheet-action-private').getAttribute('aria-selected')).toBe('true');
+  });
+
+  it('counts the friends ticked in the line, and keeps them when it is opened again', async () => {
+    render(<CollectionFormScreen navigation={nav()} route={routeWith()} />);
+    await tickFriends(0, 1);
+    expect(screen.getByTestId('collection-form-seen').textContent).toBe('Friends · 2');
     expect(screen.getByTestId('collection-form-seen').querySelector('[data-icon="people-outline"]')).toBeTruthy();
     fireEvent.click(screen.getByTestId('collection-form-seen'));
     expect(screen.getByTestId('sheet-action-friends').getAttribute('aria-selected')).toBe('true');
@@ -516,7 +599,7 @@ describe('renaming a list', () => {
     it('says a list shared with friends is the friends’', () => {
       shares.data = shared('c1');
       const line = seenAs({ is_public: false });
-      expect(line.textContent).toBe('Friends');
+      expect(line.textContent).toBe('Friends · 1');
       expect(line.querySelector('[data-icon="people-outline"]')).toBeTruthy();
     });
 
@@ -594,14 +677,55 @@ describe('renaming a list', () => {
       expect(navigation.dispatch).not.toHaveBeenCalled();
     });
 
-    // Friends on a rename is the page's picker, as on a new list.
-    it('hands Friends to the page under it, which opens the picker', async () => {
+    // Friends on a rename is chosen in the form and written by Save,
+    // beside the rename; the page is told nothing.
+    it('writes the friends ticked with the rename, and hands the page nothing', async () => {
       const navigation = renameOver(false);
-      await pick('friends');
+      await tickFriends(0);
+      expect(saveButton().getAttribute('aria-disabled')).not.toBe('true');
       fireEvent.click(saveButton());
       await waitFor(() => expect(navigation.goBack).toHaveBeenCalled());
-      expect(navigation.dispatch).toHaveBeenCalledWith(expect.objectContaining({ payload: { params: { seen: 'friends' } } }));
+      expect(updateCollection).toHaveBeenCalled();
+      expect(writeFriends).toHaveBeenCalledWith({ id: 'c1', slug: 'night-bar' }, ['ha'], [], false);
+      expect(navigation.dispatch).not.toHaveBeenCalled();
       expect(goTo).not.toHaveBeenCalled();
+    });
+
+    // A public list becomes private in the same step, which `writeFriends`
+    // does after the shares are in.
+    it('tells the write a public list was public', async () => {
+      renameOver(true);
+      await tickFriends(1);
+      fireEvent.click(saveButton());
+      await waitFor(() => expect(writeFriends).toHaveBeenCalled());
+      expect(writeFriends).toHaveBeenCalledWith({ id: 'c1', slug: 'night-bar' }, ['minh'], [], true);
+      expect(colsReload).toHaveBeenCalled();
+    });
+
+    it('hands the page its picker when the rename saved and the friends did not', async () => {
+      writeFriends.mockRejectedValueOnce(new Error('offline'));
+      const navigation = renameOver(false);
+      await tickFriends(0);
+      fireEvent.click(saveButton());
+      await waitFor(() => expect(navigation.goBack).toHaveBeenCalled());
+      expect(Alert.alert).toHaveBeenCalledWith('Saved, but not shared', expect.any(String));
+      expect(navigation.dispatch).toHaveBeenCalledWith(expect.objectContaining({ payload: { params: { seen: 'friends' } } }));
+    });
+
+    it('changing who a shared list is shared with is a change to save', async () => {
+      shares.data = [{ collection_id: 'c1', user_id: 'lan', created_at: '2026-11-14T00:00:00Z' }];
+      renameOver(false);
+      expect(saveButton().getAttribute('aria-disabled')).toBe('true');
+      fireEvent.click(screen.getByTestId('collection-form-seen'));
+      fireEvent.click(screen.getByTestId('sheet-action-friends'));
+      await waitFor(() => expect(screen.getByTestId('share-friend-0')).toBeTruthy(), { timeout: 3000 });
+      fireEvent.click(screen.getByTestId('share-friend-1'));
+      fireEvent.click(screen.getByTestId('share-save'));
+      await waitFor(() => expect(saveButton().getAttribute('aria-disabled')).not.toBe('true'), { timeout: 3000 });
+      fireEvent.click(saveButton());
+      await waitFor(() => expect(writeFriends).toHaveBeenCalled());
+      expect(writeFriends.mock.calls[0][2]).toEqual(['lan']);
+      expect([...writeFriends.mock.calls[0][1]].sort()).toEqual(['ha', 'lan']);
     });
   });
 
