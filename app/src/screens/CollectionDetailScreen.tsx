@@ -7,6 +7,7 @@ import {
 } from 'react-native';
 import { Glyph, ICON } from '../components/ui/glyph';
 import MoreText from '../components/MoreText';
+import CollectionHero from '../components/CollectionHero';
 import { KindPills } from '../components/KindPill';
 import {
   AmbientWarmth, Avatar, CHIP_SLOP, Card, Empty, PressableScale, Screen,
@@ -1810,12 +1811,14 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
                       cardEnd.current = y + height;
                     }}
                   >
+                    <CollectionHero list={col} members={members} from={route.params.from} />
                     {introCard}
                   </View>
                 )}
                 {adding && !grid && addCell()}
               </>
             ) : undefined}
+            ListHeaderComponentStyle={s.headerAbove}
             contentContainerStyle={{ paddingTop: 8, paddingBottom: tabClearance }}
             showsVerticalScrollIndicator={false}
           />
@@ -1825,9 +1828,7 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
       <ActionSheet
         visible={menu}
         onClose={() => setMenu(false)}
-        header={
-          <Text style={s.sheetTitle} numberOfLines={2} accessibilityRole="header">{title}</Text>
-        }
+        header={<Text style={s.sheetTitle} numberOfLines={2} accessibilityRole="header">{title}</Text>}
       >
         {menuSheet}
       </ActionSheet>
