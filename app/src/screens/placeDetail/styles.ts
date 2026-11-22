@@ -248,7 +248,10 @@ export const s = StyleSheet.create({
   // fill rather than the filter's bare outline, because these are facts
   // to read, not controls to press, and the fill is what says so.
 
-  desc: { color: colors.textSecondary, ...type.body, lineHeight: 24 },
+  // Justified, as a collection's description and a role's sentence are
+  // (#1250, #1399; owner, 22 Nov 2026): a paragraph of prose in a card,
+  // read as one block. The last line stays left, as justify leaves it.
+  desc: { color: colors.textSecondary, ...type.body, lineHeight: 24, textAlign: 'justify' },
   // The mark sits in its own disc so the label and the text share one
   // left edge: a glyph inline with the heading would put the paragraph
   // under the heading and the heading beside the glyph, which is two
