@@ -12,6 +12,32 @@
 //
 // One function so the two jobs cannot drift on what "allowed" means.
 
+/** Who is calling: the session's account, its email lower-cased, and
+ *  whether that email is on the `editors` allow-list. Null when the
+ *  request carries no live session. The one place the editor rule is
+ *  written: `fetch-place`, `scan-city` and `suspend-user` each had their
+ *  own copy of these steps until 22 Nov 2026, and `opsOrEditor` below a
+ *  fifth. */
+export type Caller = { uid: string; email: string; editor: boolean };
+
+async function sessionOf(admin: any, req: Request): Promise<{ uid?: string; email: string } | null> {
+  const jwt = req.headers.get("Authorization")?.replace("Bearer ", "") ?? "";
+  const { data: userData } = await admin.auth.getUser(jwt);
+  const email = userData?.user?.email?.toLowerCase();
+  return email ? { uid: userData.user.id, email } : null;
+}
+
+async function onEditorList(admin: any, email: string): Promise<boolean> {
+  const { data: editor } = await admin.from("editors").select("email").eq("email", email).maybeSingle();
+  return !!editor;
+}
+
+export async function callerOf(admin: any, req: Request): Promise<Caller | null> {
+  const session = await sessionOf(admin, req);
+  if (!session?.uid) return null;
+  return { uid: session.uid, email: session.email, editor: await onEditorList(admin, session.email) };
+}
+
 /** True when the request carries a live ops token for `tokenName`, or
  *  an editor's session. */
 export async function opsOrEditor(admin: any, req: Request, tokenName: string): Promise<boolean> {
@@ -21,10 +47,8 @@ export async function opsOrEditor(admin: any, req: Request, tokenName: string): 
       .select("token, expires_at").eq("name", tokenName).maybeSingle();
     return !!row && row.token === opsToken && new Date(row.expires_at) > new Date();
   }
-  const jwt = req.headers.get("Authorization")?.replace("Bearer ", "") ?? "";
-  const { data: userData } = await admin.auth.getUser(jwt);
-  const email = userData?.user?.email?.toLowerCase();
-  if (!email) return false;
-  const { data: editor } = await admin.from("editors").select("email").eq("email", email).maybeSingle();
-  return !!editor;
+  // The email is what the list holds; a batch caller's session needs no
+  // account id, which is why this does not go through `callerOf`.
+  const session = await sessionOf(admin, req);
+  return !!session && await onEditorList(admin, session.email);
 }

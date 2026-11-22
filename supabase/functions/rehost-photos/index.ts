@@ -29,17 +29,9 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { opsOrEditor } from "../_shared/gate.ts";
 import { rehostPhoto } from "../_shared/rehost.ts";
+import { http } from "../_shared/http.ts";
 
-const CORS = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-ops-token",
-  "Access-Control-Allow-Methods": "POST, OPTIONS",
-};
-const json = (body: unknown, status = 200) =>
-  new Response(JSON.stringify(body), {
-    status,
-    headers: { ...CORS, "Content-Type": "application/json" },
-  });
+const { CORS, json } = http({ opsToken: true });
 
 /** Per call. Each photo is one Google media call plus one upload, and a
  *  function invocation has a wall-clock budget; twenty fits with room. */

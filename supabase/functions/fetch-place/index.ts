@@ -33,17 +33,10 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { cityBias, importPlace, resolveCity } from "../_shared/import-place.ts";
 import { REVERSE_TYPES, reverseName } from "./geocode.ts";
+import { http } from "../_shared/http.ts";
+import { callerOf } from "../_shared/gate.ts";
 
-const CORS = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-  "Access-Control-Allow-Methods": "POST, OPTIONS",
-};
-const json = (body: unknown, status = 200) =>
-  new Response(JSON.stringify(body), {
-    status,
-    headers: { ...CORS, "Content-Type": "application/json" },
-  });
+const { CORS, json } = http();
 
 const MAX_API_CALLS = 20; // per request: 1 search or 1 details + ≤6 photo lookups
 
@@ -127,14 +120,9 @@ Deno.serve(async (req) => {
   );
 
   // ── who is calling ──
-  const token = req.headers.get("Authorization")?.replace("Bearer ", "") ?? "";
-  const { data: userData } = await admin.auth.getUser(token);
-  const uid = userData?.user?.id;
-  const email = userData?.user?.email?.toLowerCase();
-  if (!uid || !email) return json({ error: "not signed in" }, 401);
-  const { data: editor } = await admin
-    .from("editors").select("email").eq("email", email).maybeSingle();
-  const isEditor = !!editor;
+  const caller = await callerOf(admin, req);
+  if (!caller) return json({ error: "not signed in" }, 401);
+  const { uid, email, editor: isEditor } = caller;
 
   let apiCalls = 0;
   const gapi = async (url: string, init?: RequestInit) => {

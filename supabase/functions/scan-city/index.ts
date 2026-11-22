@@ -12,17 +12,10 @@
 
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { cityBias, importPlace, resolveCity, SCAN_CATEGORIES } from "../_shared/import-place.ts";
+import { http } from "../_shared/http.ts";
+import { callerOf } from "../_shared/gate.ts";
 
-const CORS = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-  "Access-Control-Allow-Methods": "POST, OPTIONS",
-};
-const json = (body: unknown, status = 200) =>
-  new Response(JSON.stringify(body), {
-    status,
-    headers: { ...CORS, "Content-Type": "application/json" },
-  });
+const { CORS, json } = http();
 
 // Worst case: 1 search + 8 places × (1 details + 3 photo lookups) = 33.
 const MAX_API_CALLS = 45;
@@ -44,14 +37,10 @@ Deno.serve(async (req) => {
   );
 
   // ── editor gate: valid session + email on the allow-list ──
-  const token = req.headers.get("Authorization")?.replace("Bearer ", "") ?? "";
-  const { data: userData } = await admin.auth.getUser(token);
-  const uid = userData?.user?.id;
-  const email = userData?.user?.email?.toLowerCase();
-  if (!uid || !email) return json({ error: "not signed in" }, 401);
-  const { data: editor } = await admin
-    .from("editors").select("email").eq("email", email).maybeSingle();
-  if (!editor) return json({ error: `${email} is not on the editors list` }, 403);
+  const caller = await callerOf(admin, req);
+  if (!caller) return json({ error: "not signed in" }, 401);
+  const { uid, email } = caller;
+  if (!caller.editor) return json({ error: `${email} is not on the editors list` }, 403);
 
   let apiCalls = 0;
   const gapi = async (url: string, init?: RequestInit) => {

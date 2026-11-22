@@ -44,17 +44,9 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { opsOrEditor } from "../_shared/gate.ts";
 import { BUCKET } from "../_shared/rehost.ts";
+import { http } from "../_shared/http.ts";
 
-const CORS = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-ops-token",
-  "Access-Control-Allow-Methods": "POST, OPTIONS",
-};
-const json = (body: unknown, status = 200) =>
-  new Response(JSON.stringify(body), {
-    status,
-    headers: { ...CORS, "Content-Type": "application/json" },
-  });
+const { CORS, json } = http({ opsToken: true });
 
 const TOKEN_NAME = "prune-photos";
 /** Storage's `remove` takes a list; this keeps one call's list — and the

@@ -25,17 +25,10 @@
 // can ban another; see the notes where each is done.
 
 import { createClient } from "npm:@supabase/supabase-js@2";
+import { http } from "../_shared/http.ts";
+import { callerOf } from "../_shared/gate.ts";
 
-const CORS = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-  "Access-Control-Allow-Methods": "POST, OPTIONS",
-};
-const json = (body: unknown, status = 200) =>
-  new Response(JSON.stringify(body), {
-    status,
-    headers: { ...CORS, "Content-Type": "application/json" },
-  });
+const { CORS, json } = http();
 
 /** A hundred years, which is what Supabase's API takes for "until we
  *  say otherwise" — there is no unbounded ban, so this is the idiom. */
@@ -50,14 +43,10 @@ Deno.serve(async (req) => {
     Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
   );
 
-  const token = req.headers.get("Authorization")?.replace("Bearer ", "") ?? "";
-  const { data: userData } = await admin.auth.getUser(token);
-  const uid = userData?.user?.id;
-  const email = userData?.user?.email?.toLowerCase();
-  if (!uid || !email) return json({ error: "not signed in" }, 401);
-  const { data: editor } = await admin
-    .from("editors").select("email").eq("email", email).maybeSingle();
-  if (!editor) return json({ error: `${email} is not on the editors list` }, 403);
+  const caller = await callerOf(admin, req);
+  if (!caller) return json({ error: "not signed in" }, 401);
+  const { uid, email } = caller;
+  if (!caller.editor) return json({ error: `${email} is not on the editors list` }, 403);
 
   const body = await req.json().catch(() => ({}));
   const target = String(body.user_id ?? "");
