@@ -110,16 +110,28 @@ export function SeenLine({ aud, making }: {
 }) {
   const { t } = useI18n();
   const [open, setOpen] = useState(false);
+  // The row the answer stands in (owner, 22 Nov 2026): its name and the
+  // question on the left, the answer on the right, under the fields it
+  // is about rather than over them.
+  const row = (answer: React.ReactNode) => (
+    <View style={s.access}>
+      <View style={s.accessText}>
+        <Text style={s.accessName}>{t('Access', 'Quyền truy cập', 'アクセス', '访问权限', '存取許可權')}</Text>
+        <Text style={s.accessAsk}>{t('Who can see this collection?', 'Ai có thể xem bộ sưu tập này?', 'このコレクションを見られる人', '谁可以查看此合集？', '誰可以檢視此合集？')}</Text>
+      </View>
+      {answer}
+    </View>
+  );
   if (!aud.open) {
-    return (
+    return row(
       <View style={s.seen} testID="collection-form-seen">
         <Glyph name={SEEN_GLYPH[aud.seen]} size={ICON.text} color={colors.textTertiary} />
         <Text style={s.seenText} numberOfLines={1}>{`${seenName(aud.seen, t)} · ${seenGloss(aud.seen, t)}`}</Text>
-      </View>
+      </View>,
     );
   }
   const close = () => setOpen(false);
-  return (
+  return row(
     <>
       <PressableScale
         style={s.pillAt}
@@ -150,7 +162,7 @@ export function SeenLine({ aud, making }: {
         />
         {making ? null : <SheetRows actions={sendRows(t)} onClose={close} />}
       </ActionSheet>
-    </>
+    </>,
   );
 }
 
@@ -237,8 +249,16 @@ const s = StyleSheet.create({
   // 15pt glyph in the tertiary ink, the meta face. Secondary for the
   // words, not the page's tertiary: there they sit under a name, here
   // they are the only line between the title and the fields.
-  seen: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  seenText: { flex: 1, color: colors.textSecondary, ...type.meta },
+  seen: { flexShrink: 1, flexDirection: 'row', alignItems: 'center', gap: 6 },
+  seenText: { flexShrink: 1, color: colors.textSecondary, ...type.meta },
+  // One stack with the fields, so the screen's own gap does not add to the
+  // air: the row's own, the fields' (`fieldFlush`): 20 over and 22 under
+  // so the hairline above and the one below stand as far off as they do
+  // from the name and the description.
+  access: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingTop: 20, paddingBottom: 22 },
+  accessText: { flex: 1 },
+  accessName: { color: colors.text, fontSize: 17 },
+  accessAsk: { color: colors.textTertiary, ...type.meta, marginTop: 5 },
   // The app's chip in its chosen state (`ui/controls`' `chip`, `chipOn`),
   // at the left: a pill as wide as its answer, not the row.
   pillAt: { alignSelf: 'flex-start' },

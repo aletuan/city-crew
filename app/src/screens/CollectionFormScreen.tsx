@@ -19,7 +19,7 @@
 // alternative is a second set that drifts from the first.
 
 import React, { useEffect, useRef, useState } from 'react';
-import { Alert } from 'react-native';
+import { Alert, StyleSheet, View } from 'react-native';
 import { AuthHeader, AuthScreen, FieldRow, FormError, useFailText } from '../components/authUi';
 import { successHaptic } from '../components/ui';
 import { useSession } from '../lib/auth';
@@ -257,16 +257,13 @@ export default function CollectionFormScreen({ navigation, route }: {
       />
       {/* Beside the Save that raised it, rather than under the cover grid. */}
       {error ? <FormError>{failText(error)}</FormError> : null}
-      {/* Who can see it, in a line that opens the plane's sheet (owner,
-          16 and 20 Nov 2026): `SeenLine`. */}
-      <SeenLine aud={aud} making={makingOwn(editing, copyFrom)} />
       <SaveHint kind={copyFrom ? 'copy' : addPlaceSlug ? 'place' : null} />
       {/* The fields on the page itself, between hairlines, with no box and
           no glyph (owner, 16 Nov 2026) — see `collectionForm/formParts`. */}
+      <View>
       <FieldRule />
       <FieldRow
-        grouped
-        flush
+        grouped flush
         // "Collection name", not "Name": with the glyph gone the label is
         // all that says what the line is, and it is the small half now.
         label={t('Collection name', 'Tên bộ sưu tập', 'コレクション名', '合集名称', '合集名稱')}
@@ -284,16 +281,19 @@ export default function CollectionFormScreen({ navigation, route }: {
           that can go unanswered. */}
       <FieldRule />
       <FieldRow
-        grouped
-        flush
+        grouped flush
         label={t('Description', 'Mô tả', '説明', '简介', '簡介')}
         placeholder={t('What ties these together?', 'Điều gì gắn kết những nơi này?', '共通点は何ですか？', '这些地点有什么共同点？', '這些地點有什麼共同點？')}
         value={desc}
         onChangeText={setDesc}
         multiline
+        style={fieldStyles.desc}
         returnKeyType="done"
       />
       <FieldRule />
+      <SeenLine aud={aud} making={makingOwn(editing, copyFrom)} />
+      <FieldRule />
+      </View>
       {/* No chips here (owner, 16 Nov 2026). The list's kinds were shown
           between the description and the cover from 15 Oct, each a toggle
           that hid it from the list's page; they are worked out from the
@@ -303,3 +303,5 @@ export default function CollectionFormScreen({ navigation, route }: {
   );
 }
 
+// The note's lines 24 apart at 16: a paragraph of 1.5 reads as a paragraph, not a stack.
+const fieldStyles = StyleSheet.create({ desc: { lineHeight: 24 } });

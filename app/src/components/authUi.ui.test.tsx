@@ -185,7 +185,8 @@ describe('a grouped row laid on the page', () => {
     render(<FieldRow grouped flush label="Collection name" value="x" testID="flush" onChangeText={() => {}} />);
     // `data-size`, not `data-icon`: a glyph drawn with no name has a size.
     expect(document.querySelector('[data-size]')).toBeNull();
-    expect(pad(rowOf('flush'))).toEqual(['0px', '0px', '0px', '0px']);
+    // No sides, but air over and under (owner, 22 Nov 2026): 22 and 20.
+    expect(pad(rowOf('flush'))).toEqual(['0px', '0px', '22px', '20px']);
     expect(screen.getByText('Collection name')).toBeTruthy();
 
     render(<FieldRow grouped label="In a card" value="x" testID="carded" onChangeText={() => {}} />);
@@ -204,7 +205,9 @@ describe('a grouped row laid on the page', () => {
   // page, one line or many (owner, 16 Nov 2026): at the box's 2 a label
   // with marks under it all but met a value with marks over it. A boxed
   // field keeps its 2.
-  it('stands the label 6 over the value, where a boxed field keeps 2', () => {
+  // On the page itself it is 10 (owner, 22 Nov 2026): between hairlines
+  // with room to spend, the label wants more than it does in a card.
+  it('stands the label 6 over the value in a card, 10 on the page, where a boxed field keeps 2', () => {
     lang = 'en';
     const gapOver = (id: string) => {
       const c = getComputedStyle(screen.getByTestId(id).parentElement as HTMLElement);
@@ -214,7 +217,7 @@ describe('a grouped row laid on the page', () => {
     render(<FieldRow grouped label="Name" value="x" testID="in-card" onChangeText={() => {}} />);
     render(<FieldRow grouped flush multiline label="Words" value="x" testID="many-lines" onChangeText={() => {}} />);
     render(<FieldRow icon="mail-outline" label="Email" value="x" testID="in-box" onChangeText={() => {}} />);
-    expect(['on-page', 'in-card', 'many-lines', 'in-box'].map(gapOver)).toEqual(['6px', '6px', '6px', '2px']);
+    expect(['on-page', 'in-card', 'many-lines', 'in-box'].map(gapOver)).toEqual(['10px', '6px', '10px', '2px']);
   });
 
   // A glyph is asked for only where it is drawn (19 Nov 2026): a grouped
