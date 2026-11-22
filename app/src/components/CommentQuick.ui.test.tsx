@@ -68,10 +68,11 @@ describe('quickOrThread', () => {
     expect(quickOrThread({ ...known, loading: true })).toBe('thread');
   });
 
-  it('opens the thread on a closed one, and for the list\'s owner, whose switch is there', () => {
+  // Your own list writes here too since 22 Nov 2026: its switch is in
+  // the list's ⋯ menu as well. A closed thread still opens its page.
+  it('opens the thread on a closed one only', () => {
     expect(quickOrThread({ ...known, off: true })).toBe('thread');
-    expect(quickOrThread({ ...known, mine: true })).toBe('thread');
-    expect(quickOrThread({ ...known, off: false, mine: false })).toBe('quick');
+    expect(quickOrThread({ ...known, off: false })).toBe('quick');
   });
 });
 
