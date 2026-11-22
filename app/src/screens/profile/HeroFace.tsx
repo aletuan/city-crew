@@ -68,7 +68,7 @@
 
 import React, { useCallback, useEffect, useState } from 'react';
 import { ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
-import ActionSheet, { sheetBody, sheetTitleRow, sheetTitleText } from '../../components/ActionSheet';
+import ActionSheet, { sheetPart } from '../../components/ActionSheet';
 import BadgeShelf from '../../components/BadgeShelf';
 import EngagementRing from '../../components/EngagementRing';
 import { Glyph, ICON } from '../../components/ui/glyph';
@@ -113,15 +113,13 @@ export function HeroFace({ saved, size, answers = true, children }: {
         visible={open}
         onClose={close}
         header={(
-          // What the sheet is about, on nothing, as a sheet's title is:
-          // the level's card and the badges' are under it, and it is
-          // neither's — see `Level`.
-          <View style={sheetTitleRow} testID="badge-sheet-head">
-            <Glyph name="ribbon-outline" size={ICON.nav} color={colors.textSecondary} />
-            <Text style={sheetTitleText} accessibilityRole="header">
-              {t('Achievements', 'Thành tích', '実績', '成就', '成就')}
-            </Text>
-          </View>
+          // No title on the sheet (owner, 22 Nov 2026): it is opened from
+          // the level's own badge, and "Level 52" under the grabber says
+          // what it is. "Achievements" with a ribbon headed it until then,
+          // over a card for the level and a card for the badges — a box in
+          // a box, on a sheet that is its own ground. The name stays for
+          // VoiceOver, which has no grabber and no badge to have pressed.
+          <View testID="badge-sheet-head" accessible accessibilityRole="header" accessibilityLabel={t('Achievements', 'Thành tích', '実績', '成就', '成就')} />
         )}
       >
         {/* Two cards, and a scroll for the phone they do not fit.
@@ -134,6 +132,9 @@ export function HeroFace({ saved, size, answers = true, children }: {
           bounces={false}
         >
         <Level saved={saved} />
+        {/* The level and the badges on the sheet itself, a hairline
+            between them where each had a card's edge. */}
+        <View style={h.rule} testID="badge-sheet-rule" />
         <BadgeShelf />
         </ScrollView>
       </ActionSheet>
@@ -166,7 +167,7 @@ export function Level({ saved }: { saved: number }) {
   const words = levelWords(saved, t);
   const steps = levelSteps(saved);
   return (
-    <View style={sheetBody} testID="badge-sheet-body">
+    <View style={sheetPart} testID="badge-sheet-body">
       <View style={h.level}>
         <View style={h.mark}>
           <Glyph name="trophy-outline" size={ICON.nav} color={colors.accent} />
@@ -216,7 +217,8 @@ const ROOM = 0.7;
 
 const h = StyleSheet.create({
   // The cards' own gap, as between the header and the first.
-  cards: { gap: 12 },
+  cards: { gap: 16 },
+  rule: { height: StyleSheet.hairlineWidth, backgroundColor: colors.borderGlass },
   // The steps, on a tint of the accent — the reader's look, as the
   // Statistics well on the Activity page is. A count's pill in shape.
   steps: {

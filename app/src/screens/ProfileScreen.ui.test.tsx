@@ -1061,16 +1061,16 @@ describe('the level ring', () => {
     expect(screen.queryByTestId('badge-sheet-head')).toBeNull();
     fireEvent.click(screen.getByTestId('ring-explain'));
     expect(alert).not.toHaveBeenCalled();
-    // The header is the sheet's — the level and the badges are both
-    // under it — on nothing, as other sheets' titles are.
+    // No title drawn (22 Nov 2026): "Level 2" under the grabber says
+    // what the sheet is. The name is kept for VoiceOver.
     const head = screen.getByTestId('badge-sheet-head');
-    expect(head.textContent).toBe('Achievements');
-    expect(head.querySelector('[data-icon="ribbon-outline"]')).toBeTruthy();
-    expect([viewStyleOf(head).borderWidth, viewStyleOf(head).backgroundColor]).toEqual([undefined, undefined]);
+    expect(head.textContent).toBe('');
+    expect(head.getAttribute('aria-label')).toBe('Achievements');
+    expect(head.getAttribute('role')).toBe('heading');
     // Six distinct places: level 2, one of its five, four to go — and
-    // no third line saying the total.
+    // no third line saying the total. On the sheet itself, no card.
     const body = screen.getByTestId('badge-sheet-body');
-    expect(viewStyleOf(body).borderWidth).toBe(1);
+    expect([viewStyleOf(body).borderWidth, viewStyleOf(body).backgroundColor]).toEqual([undefined, undefined]);
     expect(body.textContent).toBe('Level 2' + '1 / 5' + 'Save 4 more places to reach Level 3.');
     expect(screen.getByTestId('level-steps').textContent).toBe('1 / 5');
     expect(body.querySelector('[data-icon="trophy-outline"]')).toBeTruthy();
@@ -1111,7 +1111,7 @@ describe('the level ring', () => {
     state.lang = 'vi';
     draw();
     fireEvent.click(screen.getByTestId('ring-explain'));
-    expect(screen.getByTestId('badge-sheet-head').textContent).toBe('Thành tích');
+    expect(screen.getByTestId('badge-sheet-head').getAttribute('aria-label')).toBe('Thành tích');
     expect(screen.getByTestId('badge-sheet-body').textContent)
       .toBe('Level 1' + '0 / 5' + 'Lưu thêm 5 địa điểm để đạt Level 2.');
   });
@@ -1132,7 +1132,7 @@ describe('the level ring', () => {
     expect(screen.getByTestId('badge-sheet-body').textContent).toContain('Level 1');
     await shut();
     fireEvent.click(screen.getByTestId('ring-explain'));
-    expect(screen.getByTestId('badge-sheet-head').textContent).toBe('Achievements');
+    expect(screen.getByTestId('badge-sheet-head').getAttribute('aria-label')).toBe('Achievements');
   });
 
   it('starts a new account at level 1', () => {
@@ -1175,8 +1175,13 @@ describe('the badges, under the level', () => {
     expect(screen.getAllByRole('button', { name: /, earned$/ })).toHaveLength(2);
     // The level's card is still the level's alone.
     expect(level.contains(shelf)).toBe(false);
-    // Twelve between the two, as between the header and the first.
-    expect(viewStyleOf(level.parentElement!).gap).toBe(12);
+    // No card round either (22 Nov 2026): a hairline between the two,
+    // 16 either side of it.
+    expect([viewStyleOf(shelf).borderWidth, viewStyleOf(shelf).backgroundColor]).toEqual([undefined, undefined]);
+    const rule = screen.getByTestId('badge-sheet-rule');
+    expect(level.nextElementSibling).toBe(rule);
+    expect(rule.nextElementSibling).toBe(shelf);
+    expect(viewStyleOf(level.parentElement!).gap).toBe(16);
   });
 
   // A phone too short for both cards scrolls them, and leaves the page
