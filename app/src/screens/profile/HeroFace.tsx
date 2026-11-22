@@ -112,6 +112,10 @@ export function HeroFace({ saved, size, answers = true, children }: {
       <ActionSheet
         visible={open}
         onClose={close}
+        // Nothing under the badges but the phone's inset: each name keeps
+        // two lines' room (`BadgeShelf`), so the last row already ends on
+        // a line of space — see `foot`.
+        foot={0}
         header={(
           // No title on the sheet (owner, 22 Nov 2026): it is opened from
           // the level's own badge, and "Level 52" under the grabber says
