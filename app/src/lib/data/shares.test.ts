@@ -17,7 +17,7 @@ vi.mock('../supabase', async () => {
 });
 const fake = () => h.fake!;
 
-import { fetchMyListShares, isNotShareable, NOT_SHAREABLE, setShares } from './shares';
+import { fetchMyListShares, isNotShareable, NOT_SHAREABLE, setShares, writeFriends } from './shares';
 import { PAGE_ROWS } from './pages';
 
 beforeEach(() => fake().reset());
@@ -112,5 +112,27 @@ describe('isNotShareable', () => {
     expect(isNotShareable(new Error(NOT_SHAREABLE))).toBe(true);
     expect(isNotShareable(new Error('offline'))).toBe(false);
     expect(isNotShareable(NOT_SHAREABLE)).toBe(false);
+  });
+});
+
+describe('writeFriends', () => {
+  it('writes the difference against the list as it was, and leaves a private list private', async () => {
+    await writeFriends({ id: 'c1', slug: 'night-bar' }, ['lan', 'ha'], ['lan', 'minh'], false);
+    expect(fake().log.map((q) => [q.table, q.op])).toEqual([['collection_shares', 'insert'], ['collection_shares', 'delete']]);
+    expect(fake().log[0].payload).toEqual([{ collection_id: 'c1', user_id: 'ha' }]);
+    expect(fake().log[1].filters).toEqual([['collection_id', 'c1'], ['user_id', ['minh']]]);
+  });
+
+  it('takes a public list private after the shares, not before', async () => {
+    await writeFriends({ id: 'c1', slug: 'night-bar' }, ['lan'], [], true);
+    expect(fake().log.map((q) => [q.table, q.op])).toEqual([['collection_shares', 'insert'], ['collections', 'update']]);
+    expect(fake().log[1].payload).toEqual({ is_public: false });
+    expect(fake().log[1].filters).toEqual([['slug', 'night-bar']]);
+  });
+
+  it('does not touch the list when the shares were refused', async () => {
+    fake().replies({ error: { message: 'new row violates row-level security policy', code: '42501' } });
+    await expect(writeFriends({ id: 'c1', slug: 'night-bar' }, ['lan'], [], true)).rejects.toThrow(NOT_SHAREABLE);
+    expect(fake().log.map((q) => q.table)).toEqual(['collection_shares']);
   });
 });
