@@ -30,16 +30,16 @@
 // this counts one, and the field goes away. The reader stays where they
 // were; the comment is a press on that bubble away.
 
-import React, { createContext, useCallback, useContext, useState } from 'react';
-import { KeyboardAvoidingView, Modal, Platform, Pressable, StyleSheet, View } from 'react-native';
+import React, { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
+import { Animated, Easing, Keyboard, Modal, Platform, Pressable, StyleSheet, View, type KeyboardEvent } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import CommentComposer from './CommentComposer';
-import { useKeyboardUp } from './keyboard';
 import { useProfile, useSession } from '../lib/auth';
 import type { Mention, Subject } from '../lib/comments';
 import { commentsChanged } from '../lib/commentsChanged';
 import { postComment, useTaggableQuery } from '../lib/data';
 import { useI18n } from '../lib/i18n';
+import { colors } from '../theme';
 
 /**
  * Whether a press on a bubble writes here or opens the thread.
@@ -72,7 +72,7 @@ export default function CommentQuick({ target, onClose }: { target: Target | nul
   const { profile } = useProfile();
   const { session } = useSession();
   const insets = useSafeAreaInsets();
-  const typing = useKeyboardUp();
+  const ride = useRide(insets.bottom);
 
   // Whom and what "@" offers: asked when a target is set, not before.
   const taggable = useTaggableQuery(target ? target.subject : null, session?.user?.id);
@@ -92,15 +92,11 @@ export default function CommentQuick({ target, onClose }: { target: Target | nul
         accessibilityLabel={t('Close', 'Đóng', '閉じる', '关闭', '關閉')}
         testID="comment-quick-close"
       />
-      {/* The field rides the keyboard, as on the thread's page; touches
-          above it fall through to the dim. */}
-      <KeyboardAvoidingView
-        style={s.dock}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-        pointerEvents="box-none"
-      >
+      {/* The field rides the keyboard — see `useRide`. Touches above it
+          fall through to the dim. */}
+      <View style={s.dock} pointerEvents="box-none">
         {target ? (
-          <View testID="comment-quick">
+          <Animated.View style={{ transform: [{ translateY: ride }] }} testID="comment-quick">
             <CommentComposer
               avatarUrl={profile?.avatar_url}
               replyTo={null}
@@ -108,14 +104,67 @@ export default function CommentQuick({ target, onClose }: { target: Target | nul
               onSend={send}
               autoFocus
               taggable={taggable.data}
-              bottomInset={typing ? 0 : insets.bottom}
+              bottomInset={insets.bottom}
             />
-          </View>
+            {/* The field's own ground carried on down under the keyboard,
+                so what shows round its rounded top corners, and in the
+                instant before it lands, is this and not the dim. */}
+            <View style={s.under} pointerEvents="none" testID="comment-quick-under" />
+          </Animated.View>
         ) : null}
-      </KeyboardAvoidingView>
+      </View>
     </Modal>
   );
 }
+
+/**
+ * How far the field stands above the screen's foot: by the keyboard's
+ * height, less the home indicator's margin the field keeps under its
+ * row, which the keyboard then covers (owner, 22 Nov 2026).
+ *
+ * It was a `KeyboardAvoidingView`, and the field came up after the
+ * keyboard rather than with it. The field is focused as it mounts, so
+ * iOS sends `keyboardWillShow` while the `Modal` is still coming in and
+ * the view has not been laid out; with no frame of its own it reckons
+ * the overlap as nothing, stands still, and only moves when its layout
+ * arrives — a beat late, for the keyboard's whole duration, behind two
+ * `await`s on the way (React Native 0.88, `_relativeKeyboardHeight`).
+ * The margin went in a render of its own besides (`useKeyboardUp`), a
+ * jump on top of the late slide.
+ *
+ * So the field is moved here, on the native driver, from the same event
+ * and for its duration, on the keyboard's own curve: it needs no layout
+ * and crosses no bridge to start. iOS alone: Android sends no `Will`,
+ * and its window gives way to the keyboard itself.
+ *
+ * Rejected the same day: focusing only once the `Modal` has shown (the
+ * keyboard would come up a quarter-second late, and the `await`s stay),
+ * and `react-native-keyboard-controller`, which follows the keyboard
+ * frame by frame but is a native module — a new binary through
+ * TestFlight for one field.
+ */
+export function useRide(margin: number): Animated.Value {
+  const ride = useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+    if (Platform.OS !== 'ios') return undefined;
+    const to = (y: number, e: KeyboardEvent) => Animated.timing(ride, {
+      toValue: y,
+      duration: e.duration || KEYBOARD_MS,
+      easing: KEYBOARD_CURVE,
+      useNativeDriver: true,
+    }).start();
+    const up = Keyboard.addListener('keyboardWillShow', (e) => to(Math.min(0, margin - e.endCoordinates.height), e));
+    const down = Keyboard.addListener('keyboardWillHide', (e) => to(0, e));
+    return () => { up.remove(); down.remove(); };
+  }, [ride, margin]);
+  return ride;
+}
+
+/** The keyboard's own run when an event leaves it out: iOS's 250ms. */
+const KEYBOARD_MS = 250;
+/** The keyboard's curve (UIKit's private curve 7), as it is commonly
+ *  drawn: quick away, long settle. */
+const KEYBOARD_CURVE = Easing.bezier(0.17, 0.59, 0.4, 0.77);
 
 type Quick = (subject: Subject, about?: string) => void;
 const Ctx = createContext<Quick | null>(null);
@@ -168,4 +217,7 @@ const s = StyleSheet.create({
   // over the page" in the app.
   backdrop: { ...StyleSheet.absoluteFill, backgroundColor: 'rgba(6,5,8,0.62)' },
   dock: { flex: 1, justifyContent: 'flex-end' },
+  // The field's ground (`CommentComposer`'s bar) below it, deeper than
+  // any keyboard.
+  under: { position: 'absolute', top: '100%', left: 0, right: 0, height: 600, backgroundColor: colors.bg },
 });
