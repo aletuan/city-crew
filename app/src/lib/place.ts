@@ -7,6 +7,7 @@
 // one runtime import of `./supabase` and the whole of React Native comes
 // with it.
 
+import { stripMarks } from './text';
 import type { Collection, Place, PlacePhoto } from './types';
 
 /** Visible photos, cover first. */
@@ -167,14 +168,12 @@ export function fmtCount(n: number | null | undefined): string {
  * both of which NFD silently dropped.
  */
 export function slugify(title: string): string {
-  const stem = title
-    // Order matters, and it was wrong. Lowercasing first meant anything
-    // NFKD handed back as a capital arrived after the only step that
-    // could lower it, and the `[^a-z0-9]` sweep then threw it away — so
-    // `𝐂𝐫𝐮𝐦𝐛𝐬` came out `rumbs`, missing exactly its first letter.
-    // Normalise, strip, fold `đ`, and lowercase last.
-    .normalize('NFKD').replace(/[\u0300-\u036f]/g, '')
-    .replace(/đ/gi, 'd')
+  // Order matters, and it was wrong. Lowercasing first meant anything
+  // NFKD handed back as a capital arrived after the only step that
+  // could lower it, and the `[^a-z0-9]` sweep then threw it away — so
+  // `𝐂𝐫𝐮𝐦𝐛𝐬` came out `rumbs`, missing exactly its first letter.
+  // Normalise, strip, fold `đ`, and lowercase last.
+  const stem = stripMarks(title)
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, '-')
     .replace(/^-+|-+$/g, '')

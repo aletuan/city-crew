@@ -40,7 +40,9 @@
 // keep the full string, because both leave the phone, and a message
 // arriving in another country needs the country on it.
 //
-// Plain TypeScript with no imports, tested from `address.test.ts`.
+// One import, `text`, itself import-free; tested from `address.test.ts`.
+
+import { stripMarks } from './text';
 
 /** Folded country names an address may end with. */
 const COUNTRY = new Set(['vietnam', 'viet nam']);
@@ -61,10 +63,7 @@ const CITIES = new Set([
 ]);
 
 /** Case- and accent-insensitive form for comparing two Vietnamese names. */
-export const fold = (s: string) => s
-  .normalize('NFKD')
-  .replace(/[̀-ͯ]/g, '')
-  .replace(/đ/gi, 'd')
+export const fold = (s: string) => stripMarks(s)
   .toLowerCase()
   .trim();
 

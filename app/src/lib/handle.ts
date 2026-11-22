@@ -6,7 +6,10 @@
 // `profiles.handle`. What this buys is a legible message before a round
 // trip, not safety.
 //
-// No imports, so it runs in a plain Node test.
+// One import, `text`, which has none itself — so this still runs in a
+// plain Node test.
+
+import { stripMarks } from './text';
 
 export const HANDLE_MIN = 3;
 export const HANDLE_MAX = 20;
@@ -68,13 +71,7 @@ export function handleProblem(input: string): HandleProblem {
  * and an empty box beats a handle of underscores.
  */
 export function suggestHandle(name: string): string {
-  const ascii = name
-    .normalize('NFD')
-    // The combining marks NFD just split off. Escaped rather than typed:
-    // a range written as literal combining characters is invisible in a
-    // diff and one keystroke from being wrong.
-    .replace(/[\u0300-\u036f]/g, '')
-    .replace(/đ/gi, 'd');
+  const ascii = stripMarks(name);
   const h = normalizeHandle(ascii).replace(/[^a-z0-9]/g, '');
   return h.length >= HANDLE_MIN ? h.slice(0, HANDLE_MAX) : '';
 }

@@ -34,7 +34,7 @@ import { answerInvite } from '../lib/data';
 import { startMinOf } from '../lib/remind';
 import { scheduleTripReminder } from '../lib/reminders';
 import { useMyTrips } from '../lib/mytrips';
-import { clockOf, dateline, fmtMinutes } from '../lib/format';
+import { clockOf, dateline, fmtMinutes, fmtVnd } from '../lib/format';
 import { fmtDistance } from '../lib/geo';
 import { useI18n } from '../lib/i18n';
 import { localized } from '../lib/localized';
@@ -43,10 +43,6 @@ import { spendVnd } from '../lib/trips';
 import { legsOf } from '../lib/travel';
 import { colors, font, radius, space, type } from '../theme';
 import type { Nav, RootRoute } from '../nav';
-
-const money = (vnd: number) => (vnd >= 1_000_000
-  ? `${Math.round(vnd / 100_000) / 10}M ₫`
-  : `${Math.round(vnd / 1000)}k ₫`);
 
 export default function TripInvitationScreen({ navigation, route }: {
   navigation: Nav;
@@ -217,7 +213,7 @@ export default function TripInvitationScreen({ navigation, route }: {
                 t(`${stops.length} stop${stops.length === 1 ? '' : 's'}`,
                   `${stops.length} điểm dừng`, `${stops.length}か所`, `${stops.length} 个地点`, `${stops.length} 個地點`),
                 window,
-                spend > 0 ? t(`~${money(spend)} / person`, `~${money(spend)} / người`, `~${money(spend)} / 人`, `~${money(spend)} / 人`, `~${money(spend)} / 人`) : null,
+                spend > 0 ? t(`~${fmtVnd(spend)} / person`, `~${fmtVnd(spend)} / người`, `~${fmtVnd(spend)} / 人`, `~${fmtVnd(spend)} / 人`, `~${fmtVnd(spend)} / 人`) : null,
               ].filter(Boolean).join(' · ')}
             </Text>
           </View>

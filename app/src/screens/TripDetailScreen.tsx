@@ -53,7 +53,7 @@ import StopGallery from '../components/StopGallery';
 import TripCrew from '../components/TripCrew';
 import TripReminderNote from '../components/TripReminderNote';
 import { cancelTripReminder } from '../lib/reminders';
-import { clockOf, dateline, fmtMinutes, openLabel } from '../lib/format';
+import { clockOf, dateline, fmtMinutes, fmtVnd, openLabel } from '../lib/format';
 import {  } from '../lib/geo';
 import { useI18n } from '../lib/i18n';
 import { mapsRouteUrl, routeMode } from '../lib/maps';
@@ -62,10 +62,6 @@ import { legsOf } from '../lib/travel';
 import { spendVnd, tripCover } from '../lib/trips';
 import { colors, font, radius, space, type } from '../theme';
 import type { Nav, RootRoute } from '../nav';
-
-const money = (vnd: number) => (vnd >= 1_000_000
-  ? `${Math.round(vnd / 100_000) / 10}M ₫`
-  : `${Math.round(vnd / 1000)}k ₫`);
 
 export default function TripDetailScreen({ navigation, route }: {
   navigation: Nav;
@@ -506,18 +502,18 @@ export default function TripDetailScreen({ navigation, route }: {
           <Text style={s.spendTitle}>{t('Roughly', 'Ước chừng', 'おおよそ', '大约', '大約')}</Text>
           <View style={s.spendRow}>
             <Text style={s.spendKey}>{t('Food and drink', 'Ăn uống', '飲食', '餐饮', '餐飲')}</Text>
-            <Text style={s.spendVal}>{money(food)}</Text>
+            <Text style={s.spendVal}>{fmtVnd(food)}</Text>
           </View>
           <View style={s.spendRow}>
             <Text style={s.spendKey}>{t('Everything else', 'Phần còn lại', 'その他', '其他', '其他')}</Text>
-            <Text style={s.spendVal}>{money(doing)}</Text>
+            <Text style={s.spendVal}>{fmtVnd(doing)}</Text>
           </View>
           <View style={s.divider} />
           <View style={s.spendRow}>
             <Text style={[s.spendKey, s.spendTotalKey]}>
               {summaryLine([stopCount(stops.length, t), t('per person', 'mỗi người', '1人あたり', '每人', '每人')])}
             </Text>
-            <Text style={[s.spendVal, s.spendTotalVal]}>{`~${money(spend)}`}</Text>
+            <Text style={[s.spendVal, s.spendTotalVal]}>{`~${fmtVnd(spend)}`}</Text>
           </View>
           {/* Transport is in the total and not in either line above it: the
               planner charges a ride per hop and it belongs to no stop. Said

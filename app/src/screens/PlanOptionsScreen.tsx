@@ -45,7 +45,7 @@ import { DEFAULT_TZ } from '../lib/clock';
 import { useCollections, usePlaces } from '../lib/catalog';
 import { useCurrentCity } from '../lib/city';
 import { addDays, clampDay, fromISO, todayISO } from '../lib/day';
-import { dateline } from '../lib/format';
+import { dateline, fmtVnd } from '../lib/format';
 import { useI18n } from '../lib/i18n';
 import { planSub, planTitle } from '../lib/planHeading';
 import { planTrips, type LensKey, type TripPlan } from '../lib/planner';
@@ -77,15 +77,6 @@ const BADGE: Record<LensKey, { en: string; vi: string; ja: string; zh: string; h
   iconic: { en: 'Iconic views', vi: 'Nổi tiếng', ja: '定番', zh: '经典景点', hant: '經典景點' },
   lowkey: { en: 'Low-key', vi: 'Nhẹ nhàng', ja: '控えめ', zh: '低调小众', hant: '低調小眾' },
 };
-
-/** "~420k ₫". Per person — see the note under the cards. */
-function money(vnd: number): string {
-  if (vnd >= 1_000_000) {
-    const m = Math.round(vnd / 100_000) / 10;
-    return `${m % 1 === 0 ? m.toFixed(0) : m.toFixed(1)}M ₫`;
-  }
-  return `${Math.round(vnd / 1000)}k ₫`;
-}
 
 export default function PlanOptionsScreen({ navigation, route }: {
   navigation: Nav;
@@ -662,7 +653,7 @@ function PlanCard({ plan, name, why, listed, nth, onPress }: {
                   somewhere. The price is all that is left here, and it
                   waits on its switch; with it off, the foot is the way
                   in alone. */}
-              {showPrice && total > 0 && <Text style={s.summary}>{`~${money(total)}`}</Text>}
+              {showPrice && total > 0 && <Text style={s.summary}>{`~${fmtVnd(total)}`}</Text>}
               {/* The way in, said. The card was a button only VoiceOver
                   could hear: a border, a picture and a list, and nothing
                   that looked pressable. The footnote that used to say
