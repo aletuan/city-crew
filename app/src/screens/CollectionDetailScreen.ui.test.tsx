@@ -568,8 +568,10 @@ describe('the ⋯ in the card', () => {
       const row = rowOf(more);
       expect(row.contains(screen.getByTestId('collection-curator'))).toBe(true);
       expect(row.lastElementChild).toBe(more);
-      // The face's row is the card's first.
-      expect(card().firstElementChild).toBe(row);
+      // The face's row is the first of the words' block, the card's last
+      // child since the cover became the card's head (22 Nov 2026).
+      expect(row.parentElement).toBe(card().lastElementChild);
+      expect(row.parentElement!.firstElementChild).toBe(row);
       cleanup();
     }
   });

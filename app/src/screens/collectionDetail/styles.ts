@@ -202,7 +202,11 @@ export const s = StyleSheet.create({
   // `ROW_AIR` lower in it and `ROW_AIR` higher off the bottom: both
   // paddings round it give that back, 16 − 7 = 9, and the heart's ink
   // keeps its 20.5 and its 20.
-  descCard: {
+  // The card itself holds only the cover and the words' block under it;
+  // the padding the card had is the block's (`descIn`), so the cover can
+  // run to the card's edges.
+  descCard: {},
+  descIn: {
     gap: 14, padding: space.cardPadding, paddingTop: space.cardPadding + 4,
     paddingBottom: space.cardPadding - ROW_AIR,
   },

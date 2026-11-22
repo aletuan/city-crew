@@ -19,7 +19,7 @@ vi.mock('../supabase', async () => {
 import {
   addPlaceToCollection, copyCollection, createCollection, deleteCollection, fetchCollections,
   fetchLikeCounts, fetchMyCollections, fetchMyLikes, fetchSharedWithMe, likeCollection, removePlaceFromCollection,
-  reorderCollection, setCollectionPublic, unlikeCollection, updateCollection,
+  reorderCollection, setCollectionCover, setCollectionPublic, unlikeCollection, updateCollection,
 } from './collections';
 
 const dup = { message: 'duplicate key value violates unique constraint', code: '23505' };
@@ -110,6 +110,25 @@ describe('createCollection', () => {
   });
 });
 
+describe('setCollectionCover', () => {
+  it('writes the photograph alone, scoped to one slug', async () => {
+    await setCollectionCover('quan-ca-phe-cu', 'ph-9');
+    const [call] = fake().log;
+    expect(call.payload).toEqual({ cover_photo_id: 'ph-9' });
+    expect(call.filters).toEqual([['slug', 'quan-ca-phe-cu']]);
+  });
+
+  it('writes null for the first place\'s own', async () => {
+    await setCollectionCover('quan-ca-phe-cu', null);
+    expect(fake().log[0].payload).toEqual({ cover_photo_id: null });
+  });
+
+  it('throws what the database said', async () => {
+    fake().replies({ error: { message: 'no such collection' } });
+    await expect(setCollectionCover('gone', 'x')).rejects.toThrow('no such collection');
+  });
+});
+
 describe('updateCollection', () => {
   it('renames all three columns and scopes the write to one slug', async () => {
     await updateCollection('quan-ca-phe-cu', { title: ' Mới ', desc: '' });
@@ -119,18 +138,11 @@ describe('updateCollection', () => {
     expect(call.payload).toEqual({
       title_en: 'Mới', title_vi: 'Mới', title_ja: 'Mới',
       desc_en: null, desc_vi: null, desc_ja: null,
-      // No pick sent: the cover clears to the fallback, not to whatever
-      // happened to be there.
-      cover_photo_id: null,
     });
+    // A rename leaves the cover alone: the form no longer holds it, and
+    // writing null here would clear the one the page's camera chose.
+    expect(call.payload).not.toHaveProperty('cover_photo_id');
     expect(call.filters).toEqual([['slug', 'quan-ca-phe-cu']]);
-  });
-
-  it('writes the chosen cover photograph when one is picked', async () => {
-    await updateCollection('quan-ca-phe-cu', { title: 'Mới', coverPhotoId: 'ph-9' });
-
-    const [call] = fake().log;
-    expect(call.payload).toMatchObject({ cover_photo_id: 'ph-9' });
   });
 
   it('throws what the database said', async () => {

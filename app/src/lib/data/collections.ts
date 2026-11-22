@@ -418,22 +418,31 @@ export async function createCollection(input: {
 /** Rename one of the user's own lists. RLS scopes this to rows they own. */
 export async function updateCollection(
   slug: string,
-  input: { title: string; desc?: string; coverPhotoId?: string | null },
+  input: { title: string; desc?: string },
 ): Promise<void> {
   const title = input.title.trim();
   const desc = input.desc?.trim() || null;
   // All three language columns again, for the same reason as on create.
-  // The cover is written every save like the rest: the form seeds its
-  // pick from the row, so an untouched cover round-trips, and null means
-  // the tile falls back to the first place's own photograph.
+  // Not the cover: it is changed from the collection's page
+  // (`setCollectionCover`), and a rename that wrote it would put back
+  // whatever the form last knew — null, once the form stopped holding it.
   const { error } = await supabase
     .from('collections')
     .update({
       title_en: title, title_vi: title, title_ja: title,
       desc_en: desc, desc_vi: desc, desc_ja: desc,
-      cover_photo_id: input.coverPhotoId ?? null,
     })
     .eq('slug', slug);
+  if (error) throw new Error(error.message);
+}
+
+/**
+ * The photograph a list wears as its cover, or null for the first place's
+ * own (owner, 22 Nov 2026). Its own write, from the camera on the list's
+ * page: the form that used to carry it with every rename no longer does.
+ */
+export async function setCollectionCover(slug: string, photoId: string | null): Promise<void> {
+  const { error } = await supabase.from('collections').update({ cover_photo_id: photoId }).eq('slug', slug);
   if (error) throw new Error(error.message);
 }
 

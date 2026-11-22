@@ -1,4 +1,14 @@
-// A collection's cover, across the top of its page.
+// A collection's cover, the head of its card.
+//
+// One block with the words under it (owner, 22 Nov 2026): it stood above
+// the card with 12pt between, and drew narrower than the card and the
+// tiles under it — two things side by side where there was one. Now it is
+// the card's first child, the card's width and its top corners, and the
+// face and the note follow it without a gap.
+//
+// On your own list it carries the camera of the person page's cover, and
+// the cover itself is the press: they open `CollectionCoverSheet`, whose
+// taps are tried on this very picture ("Trying it") until Save.
 //
 // Opened from a tile, the cover grows out of it: a copy of the tile's
 // picture is drawn at the tile's own place and grown into the cover's, over
@@ -17,23 +27,48 @@
 // tile's caption fades with the tile.
 
 import React, { type ComponentRef, useEffect, useRef, useState } from 'react';
-import { Animated, Easing, StyleSheet, View } from 'react-native';
+import { Alert, Animated, Easing, Pressable, StyleSheet, Text, View } from 'react-native';
 import { Image } from 'expo-image';
-import { coverUriOf } from '../lib/place';
+import { setCollectionCover } from '../lib/data';
+import { useI18n } from '../lib/i18n';
 import type { Collection, Place } from '../lib/types';
 import { MORPH_MS, measureWindow, usableRect, type CoverFrom, type Rect } from '../lib/coverMorph';
-import { radius, space } from '../theme';
+import { font, radius } from '../theme';
+import { CollectionCoverSheet } from './CollectionCoverSheet';
+import { useCoverTrial } from './useCoverTrial';
+import { Glyph, ICON } from './ui/glyph';
 import { useReducedMotion } from './ui/motion';
 
 /** Wide, as the tile's own photograph is on a place's card (`StopHero`). */
 export const HERO_ASPECT = 2;
 
-export default function CollectionHero({ list, members, from }: {
+export default function CollectionHero({ list, members, from, owned, onChanged }: {
   list: Collection | undefined;
   members: readonly Place[];
   from?: CoverFrom;
+  /** Your own list: the camera, and the cover as a door to the sheet. */
+  owned?: boolean;
+  /** The cover was saved: the page reads the list again. */
+  onChanged?: () => void;
 }) {
-  const uri = list ? coverUriOf(list, members) : undefined;
+  const { t } = useI18n();
+  const [sheet, setSheet] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const trial = useCoverTrial(list, members, !!owned && sheet);
+  const { picked, trying, uri } = trial;
+  const close = () => { setSheet(false); trial.reset(); };
+  const save = async () => {
+    setBusy(true);
+    try {
+      await setCollectionCover(list!.slug, picked);
+      close();
+      onChanged?.();
+    } catch {
+      Alert.alert(t('Couldn\'t save the cover. Try again.', 'Chưa lưu được ảnh bìa. Thử lại nhé.', 'カバーを保存できませんでした。もう一度お試しください。', '未能保存封面，请重试。', '未能儲存封面，請重試。'));
+    } finally {
+      setBusy(false);
+    }
+  };
   const still = useReducedMotion();
   const box = useRef<ComponentRef<typeof View>>(null);
   const grow = useRef(new Animated.Value(0)).current;
@@ -64,12 +99,21 @@ export default function CollectionHero({ list, members, from }: {
       style={s.hero}
       testID="collection-hero"
     >
-      <Image
-        source={{ uri }}
-        contentFit="cover"
-        style={[s.image, live && s.hidden]}
-        testID="collection-hero-image"
-      />
+      <Pressable
+        onPress={owned ? () => setSheet(true) : undefined}
+        disabled={!owned}
+        accessibilityRole={owned ? 'button' : undefined}
+        accessibilityLabel={owned ? t('Change cover', 'Đổi ảnh bìa', 'カバーを変更', '更换封面', '更換封面') : undefined}
+        style={StyleSheet.absoluteFill}
+        testID="collection-hero-press"
+      >
+        <Image
+          source={{ uri }}
+          contentFit="cover"
+          style={[s.image, live && s.hidden]}
+          testID="collection-hero-image"
+        />
+      </Pressable>
       {live && from && to ? (
         <Animated.View
           pointerEvents="none"
@@ -84,13 +128,49 @@ export default function CollectionHero({ list, members, from }: {
           <Image source={{ uri: from.uri }} contentFit="cover" style={StyleSheet.absoluteFill} />
         </Animated.View>
       ) : null}
+      {/* The person page's camera, in the same glass: it says the
+          picture is a control. The whole cover is the press. */}
+      {owned ? (
+        <View style={s.camera} pointerEvents="none" testID="collection-hero-camera">
+          <Glyph name="camera-outline" size={ICON.meta} color="#fff" />
+        </View>
+      ) : null}
+      {trying ? (
+        <View style={s.trying} pointerEvents="none" testID="collection-hero-trying">
+          <Text style={s.tryingText}>{t('Trying it', 'Đang xem thử', '試しに表示中', '预览中', '預覽中')}</Text>
+        </View>
+      ) : null}
+      {owned ? (
+        <CollectionCoverSheet
+          visible={sheet}
+          onClose={close}
+          choices={trial.choices}
+          opened={trial.opened}
+          picked={picked}
+          autoUri={trial.autoUri}
+          onPick={trial.pick}
+          onSave={save}
+          busy={busy}
+        />
+      ) : null}
     </View>
   );
 }
 
 const s = StyleSheet.create({
-  hero: { marginHorizontal: space.page, marginBottom: 12, aspectRatio: HERO_ASPECT },
-  image: { ...StyleSheet.absoluteFill, borderRadius: radius.image },
+  // The card's own width: the card clips the corners, so the picture is
+  // square-cornered and flush with all three edges it shares.
+  hero: { aspectRatio: HERO_ASPECT },
+  image: { ...StyleSheet.absoluteFill },
   hidden: { opacity: 0 },
   grow: { position: 'absolute', borderRadius: radius.image, overflow: 'hidden' },
+  camera: {
+    position: 'absolute', right: 10, bottom: 10, width: 30, height: 30, borderRadius: 15,
+    alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(0,0,0,0.55)',
+  },
+  trying: {
+    position: 'absolute', bottom: 13, left: 10, paddingHorizontal: 10, paddingVertical: 4,
+    borderRadius: 999, backgroundColor: 'rgba(0,0,0,0.55)',
+  },
+  tryingText: { color: '#fff', fontSize: 12, fontWeight: font.medium },
 });

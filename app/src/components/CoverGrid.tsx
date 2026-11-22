@@ -1,5 +1,7 @@
-// The collection form's cover picker: every photograph the list's places
-// hold, three to a line, one of them ringed.
+// A collection's cover picker: every photograph the list's places hold,
+// three to a line, one of them ringed. It stood in the collection's form
+// until 22 Nov 2026, when the camera on the list's page took it over
+// (`CollectionCoverSheet`) and the form stopped carrying a cover.
 //
 // Moved out of `CollectionFormScreen` on 16 Nov 2026, whole, when it next
 // had to grow: the form's one function stood at its ceiling
@@ -11,12 +13,12 @@
 import React from 'react';
 import { StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import { Image } from 'expo-image';
-import { Glyph, ICON } from '../../components/ui/glyph';
-import { PressableScale } from '../../components/ui';
-import { useI18n } from '../../lib/i18n';
-import { localized } from '../../lib/localized';
-import { colors, font, radius, space } from '../../theme';
-import type { Place, PlacePhoto } from '../../lib/types';
+import { Glyph, ICON } from './ui/glyph';
+import { PressableScale } from './ui';
+import { useI18n } from '../lib/i18n';
+import { localized } from '../lib/localized';
+import { colors, font, radius, space } from '../theme';
+import type { Place, PlacePhoto } from '../lib/types';
 
 /**
  * The cover picker's shape: three tiles to a line.
@@ -150,7 +152,6 @@ export function CoverGrid({ choices, opened, picked, autoUri, onPick }: {
   const offered = lead ? [lead, ...choices.filter((c) => c !== lead)] : choices;
   return (
     <View style={s.coverBlock}>
-      <Text style={s.coverLabel}>{t('COVER', 'ẢNH BÌA', 'カバー写真', '封面', '封面')}</Text>
       <View style={s.coverGrid}>
         {!lead && (
           <PressableScale
@@ -214,11 +215,7 @@ export function CoverGrid({ choices, opened, picked, autoUri, onPick }: {
 }
 
 const s = StyleSheet.create({
-  coverBlock: { marginTop: space.cardGap },
-  coverLabel: {
-    color: colors.textTertiary, fontSize: 11, fontWeight: font.bold,
-    letterSpacing: 1.1, marginBottom: 8,
-  },
+  coverBlock: {},
   // The tiles size themselves off the window — see `tile` — so the grid
   // only has to wrap them and space them. `gap` does both axes, which is
   // what keeps the rows as far apart as the columns.
