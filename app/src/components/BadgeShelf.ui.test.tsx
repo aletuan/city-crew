@@ -171,13 +171,17 @@ describe('the line under the grid', () => {
     expect(face('firstFind').backgroundColor).toBeUndefined();
   });
 
-  it('says nothing under the grid once all nine are held, until one is pressed', () => {
+  // The line is always there in two lines' room, so a press never grows
+  // the sheet under the finger (owner, 22 Nov 2026).
+  it('says all nine are held until one is pressed, in the same room either way', () => {
     state.facts = { saved: 1, publicLists: 1, checkins: 3, cities: 3, friends: 1, trips: 1, submitted: 1, likes: 5, copies: 1 };
     expect(earnedBadges(state.facts)).toHaveLength(9);
     render(<BadgeShelf />);
-    expect(screen.queryByTestId('badge-about')).toBeNull();
+    expect(about().textContent).toBe('All nine badges are yours.');
+    expect(textStyleOf(about())).toMatchObject({ minHeight: 38, lineHeight: 19 });
     fireEvent.click(cell('traveller'));
     expect(about().textContent).toBe('Check in across 3 cities.');
+    expect(textStyleOf(about())).toMatchObject({ minHeight: 38 });
   });
 
   it('says it in Vietnamese', () => {
