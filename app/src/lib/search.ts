@@ -18,6 +18,7 @@
 // The same rule governs the synonyms below: one flat list per concept,
 // languages mixed, never three lists behind a language switch.
 
+import { stripMarks } from './text';
 import { CATEGORIES, categoriesOf } from './categories';
 import { type I18nDoc, allLocalized } from './localized';
 
@@ -43,10 +44,7 @@ import { type I18nDoc, allLocalized } from './localized';
  *  one: the name on the sign really is styled, and search is what has to
  *  see past it. */
 export function fold(s: string | null | undefined): string {
-  return (s ?? '')
-    .normalize('NFKD')
-    .replace(/[̀-ͯ]/g, '')
-    .replace(/đ/gi, 'd')
+  return stripMarks(s ?? '')
     // Every dash is one dash. The catalog writes an en dash between a
     // name and its suffix (`docs/place-naming.md`), and no phone keyboard
     // offers one without a long press: a reader types "lertermer - ham

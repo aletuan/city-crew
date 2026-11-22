@@ -107,7 +107,7 @@ import { clampDay, fromISO, todayISO } from '../lib/day';
 import { saveTrip, usePlacePhotos, withPhotos } from '../lib/data';
 import { reviewAfterTripSaved } from '../lib/askReview';
 import { spendVnd } from '../lib/trips';
-import { clockOf, dateline } from '../lib/format';
+import { clockOf, dateline, fmtVnd } from '../lib/format';
 import { fmtDistance } from '../lib/geo';
 import { modeIcon, overallMode } from '../lib/travel';
 import { useI18n } from '../lib/i18n';
@@ -138,10 +138,6 @@ function Fact({ icon, text }: { icon: string; text: string }) {
     </View>
   );
 }
-
-const money = (vnd: number) => (vnd >= 1_000_000
-  ? `${Math.round(vnd / 100_000) / 10}M ₫`
-  : `${Math.round(vnd / 1000)}k ₫`);
 
 export default function PlanEditScreen({ navigation, route }: {
   navigation: Nav;
@@ -532,7 +528,7 @@ export default function PlanEditScreen({ navigation, route }: {
           )}
           {company && <Fact icon={company.icon} text={t(company.en, company.vi, company.ja, company.zh, company.hant)} />}
           {showPrice && spend > 0 && (
-            <Fact icon="wallet-outline" text={`~${money(spend)} / ${t('person', 'người', '人', '人', '人')}`} />
+            <Fact icon="wallet-outline" text={`~${fmtVnd(spend)} / ${t('person', 'người', '人', '人', '人')}`} />
           )}
         </View>
 

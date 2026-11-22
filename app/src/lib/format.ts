@@ -781,3 +781,29 @@ export function sashLabel(
 export function openLabel(name: string, t: (en: string, vi: string, ja: string, zh?: string, hant?: string) => string): string {
   return t(`Open ${name}`, `Mở ${name}`, `${name}を開く`, `打开${name}`, `開啟${name}`);
 }
+
+/**
+ * A sum of đồng as the trip screens print it: "420k ₫", "1.5M ₫", "2M ₫".
+ *
+ * One copy (22 Nov 2026). TripDetail, TripInvitation, PlanEdit and
+ * PlanOptions each carried their own — three identical, one written
+ * differently to the same effect — outside the 100% floor `lib` is held
+ * to, and all four shared a seam: the branch was chosen on the raw sum
+ * and the rounding done after, so 999,500 to 999,999 rounded *up* to
+ * "1000k ₫" inside the thousands branch. The branch is chosen on the
+ * rounded thousands here, so that band reads "1M ₫" as the next đồng up
+ * does.
+ *
+ * Tenths of a million, not hundredths: the figures are an estimate per
+ * person built from Google's four price levels (`PRICE_LEVEL_VND`), and a
+ * second decimal would claim a precision the inputs never had.
+ *
+ * `lib/place`'s "70k₫", with no space, is a different string on purpose:
+ * it is one place's price on a card that sets it tight against a chip,
+ * and was left as it is.
+ */
+export function fmtVnd(vnd: number): string {
+  const k = Math.round(vnd / 1000);
+  if (k < 1000) return `${k}k ₫`;
+  return `${Math.round(vnd / 100_000) / 10}M ₫`;
+}

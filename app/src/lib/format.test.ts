@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { CLOSING_SOON_MIN, MINUTES_IN_DAY, clockOf, dateline, dayline, fmtDuration, fmtMinutes, groupHours, numericDate, numericDateWithYear, openFragment, openLabel, openState, sashLabel, shutLabel, splitHours } from './format';
+import { CLOSING_SOON_MIN, MINUTES_IN_DAY, clockOf, dateline, dayline, fmtDuration, fmtMinutes, fmtVnd, groupHours, numericDate, numericDateWithYear, openFragment, openLabel, openState, sashLabel, shutLabel, splitHours } from './format';
 import { instantOn } from './clock';
 import { fmtDistance } from './geo';
 
@@ -886,5 +886,27 @@ describe('in Traditional Chinese', () => {
     expect(openFragment({ open: true, untilMin: 1320, closesInMin: 45 }, hant)).toBe('營業至 22:00');
     expect(shutLabel({ open: false, opensAtMin: 480 }, hant)).toBe('已打烊 · 08:00 開門');
     expect(openLabel('Ơ Kìa', hant)).toBe('開啟Ơ Kìa');
+  });
+});
+
+describe('fmtVnd', () => {
+  it('prints thousands below a million', () => {
+    expect(fmtVnd(0)).toBe('0k ₫');
+    expect(fmtVnd(420_000)).toBe('420k ₫');
+    expect(fmtVnd(149_400)).toBe('149k ₫');
+    expect(fmtVnd(149_500)).toBe('150k ₫');
+  });
+
+  it('prints tenths of a million from a million up, with no trailing .0', () => {
+    expect(fmtVnd(1_000_000)).toBe('1M ₫');
+    expect(fmtVnd(1_500_000)).toBe('1.5M ₫');
+    expect(fmtVnd(1_960_000)).toBe('2M ₫');
+    expect(fmtVnd(12_340_000)).toBe('12.3M ₫');
+  });
+
+  it('never prints 1000k: the band that rounds up to a million reads as one', () => {
+    expect(fmtVnd(999_499)).toBe('999k ₫');
+    expect(fmtVnd(999_500)).toBe('1M ₫');
+    expect(fmtVnd(999_999)).toBe('1M ₫');
   });
 });
