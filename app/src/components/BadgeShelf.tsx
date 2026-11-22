@@ -23,6 +23,9 @@
 // says "two more places", and this says the same kind of thing about
 // the badges without being asked.
 //
+// With all nine held it says so, and it keeps its room either way, so a
+// press never moves the sheet (owner, 22 Nov 2026) — see `About`.
+//
 // The sentence alone, centred under the grid (owner, 20 Nov 2026). It
 // had the badge's name over it, with "1 / 5" or "Earned" across: the
 // name is under the tinted cell already, which says which badge the
@@ -106,15 +109,28 @@ export default function BadgeShelf() {
           );
         })}
       </View>
-      {about ? <About id={about} /> : null}
+      <About id={about} />
     </View>
   );
 }
 
-/** What earns the badge the grid has tinted. */
-function About({ id }: { id: BadgeId }) {
+/**
+ * What earns the badge the grid has tinted — or, with all nine held and
+ * none pressed, that they are (owner, 22 Nov 2026).
+ *
+ * The line is always there, in two lines' room. It used to be drawn only
+ * while there was a badge to talk about, and the sheet stands on the
+ * bottom of the screen: the first press on a grid with all nine held
+ * grew it by a line, and the whole sheet jumped up under the finger
+ * (owner). A sentence of one line and one of two did the same by one.
+ */
+function About({ id }: { id: BadgeId | null }) {
   const { t } = useI18n();
-  return <Text style={s.how} testID="badge-about">{badgeHow(id, t)}</Text>;
+  return (
+    <Text style={s.how} testID="badge-about">
+      {id ? badgeHow(id, t) : t('All nine badges are yours.', 'Bạn đã có đủ cả chín huy hiệu.', '9つのバッジをすべて獲得しました。', '九枚徽章已全部集齐。', '九枚徽章已全部集齊。')}
+    </Text>
+  );
 }
 
 const s = StyleSheet.create({
@@ -145,5 +161,7 @@ const s = StyleSheet.create({
     color: colors.text, fontSize: 12, lineHeight: NAME_LINE, fontWeight: font.medium, textAlign: 'center',
   },
   nameOff: { color: colors.textTertiary },
-  how: { color: colors.textSecondary, fontSize: 14, lineHeight: 19, textAlign: 'center' },
+  // Two lines' room whatever it says, so the sheet never changes height
+  // under a press — see `About`.
+  how: { color: colors.textSecondary, fontSize: 14, lineHeight: 19, minHeight: 19 * 2, textAlign: 'center' },
 });
