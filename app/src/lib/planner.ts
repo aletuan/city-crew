@@ -841,8 +841,10 @@ function buildPlan(
   draft: TripDraft, opts: PlanOptions, used: ReadonlySet<string>,
   usedBrands: ReadonlySet<string>, rnd: () => number,
   start: number, origin: Point | null,
+  // The city's clock, resolved once by `planTrips`: the pool and every slot
+  // must read opening hours on the same one.
+  tz: string,
 ): Place[] {
-  const tz = opts.tz ?? DEFAULT_TZ;
   const taken = new Set<string>();
   // Within one day the brand rule is hard where the cross-plan one is
   // soft: two branches of one chain are the same place twice, not two
@@ -1058,7 +1060,7 @@ export function planTrips(
   const holdsOne = (slugs: readonly string[]) => slugs.some((s) => fromList.has(s));
 
   for (const lens of LENSES) {
-    const picked = buildPlan(lens, slots, pool, pinnedOk, draft, opts, used, usedBrands, rnd, start, origin);
+    const picked = buildPlan(lens, slots, pool, pinnedOk, draft, opts, used, usedBrands, rnd, start, origin, tz);
     if (!picked.length) continue;
 
     // A list goes on as many cards as it has places for, and no further

@@ -597,6 +597,25 @@ describe('planTrips with a collection to build from', () => {
     ]));
   });
 
+  // Opening hours are read on the city's clock, `opts.tz`, which the three
+  // planning screens pass as `city.tz`. Wall time goes to an instant and
+  // back in the same zone, so the zone changes nothing on an ordinary day:
+  // only a night the clocks jump can tell it apart, which is why no test
+  // had noticed when the planner ignored it (mutation sample, 22 Nov 2026).
+  // Melbourne goes from 2:00 to 3:00 AM on 4 Oct 2026, so a bar open only
+  // 2–3 AM is never open that night. 0:55 puts the pool's middle at 2:30.
+  it('reads opening hours on the city’s clock, the night the clocks jump too', () => {
+    const late = place({ slug: 'two-to-three', categories: ['nightlife'], opening_hours: week('2:00 AM – 3:00 AM') });
+    const night: TripDraft = { ...EVENING, date: '2026-10-04' };
+    const dropped = (date: string, tz: string) =>
+      planTrips({ ...night, date }, CATALOG, 'hanoi', { seed: 1, startMin: 55, pinned: [late], tz })[0].pinnedDropped;
+
+    expect(dropped('2026-10-04', 'Australia/Melbourne')).toEqual([{ slug: 'two-to-three', reason: 'closed' }]);
+    // The same hour on a clock that does not jump, and in Melbourne a week on.
+    expect(dropped('2026-10-04', 'Asia/Ho_Chi_Minh')).toEqual([]);
+    expect(dropped('2026-10-11', 'Australia/Melbourne')).toEqual([]);
+  });
+
   it('still plans when every saved place was dropped', () => {
     const shut = place({ slug: 'day-cafe', categories: ['cafes'], opening_hours: week('7:00 AM – 5:00 PM') });
     const plans = planTrips(EVENING, CATALOG, 'hanoi', { seed: 1, pinned: [shut] });

@@ -198,7 +198,30 @@ const NATIVE_ONLY = [
   // dropped it — see the file. A native gesture recogniser: jsdom has no
   // thumb, and the screen's test stands it in, as it did the package's.
   'src/components/Swipeable.tsx',
+  // The three requires `PlacesMap` reads, in a `.ts` of their own. Outside
+  // the gate by accident until the helpers came in (below); outside it now
+  // on purpose, for the reason `MiniMap` is.
+  'src/components/mapsModule.ts',
 ];
+
+// ── the helpers' floor ──
+//
+// The `.ts` files beside the screens and components — hooks like
+// `useAddPhoto` and `useCardCopy`, `nav.ts`, `theme.ts` — were measured by
+// nothing until 22 Nov 2026. Not by decision: the include named `*.tsx`
+// there and `src/lib/*.ts` here, and no glob reached them. A side run with
+// the include widened read `useAddPhoto` at 87% lines and 66% functions,
+// the upload path for a guide's photographs, with nothing to turn red if it
+// fell further. It got tests of its own (`useAddPhoto.ui.test.tsx`) and
+// the three directories came in under one floor: today's weakest file in
+// each column, rounded down, as the others are.
+//
+// `theme.ts` sets three of the four (99.32% lines, 83.33% branches): its
+// gap is the iOS side of `dyn`, `DynamicColorIOS`, which no test under the
+// web alias can take. `useAddPhoto` stands at 100% lines and functions and
+// 95.45% branches; the two branches left are a guard `refusePhoto` makes
+// unreachable and a non-`Error` the batch has already wrapped.
+const HELPERS_FLOOR = { lines: 99, statements: 99, branches: 83, functions: 100 };
 
 // `IMPURE` — the impure `lib/*.ts` files — is in `impure.js`, because
 // lint reads the same list; see the note there.
@@ -294,7 +317,7 @@ export default defineConfig({
       // `src/components` carries its own floor — see "the components'
       // floor" above.
       allowExternal: true,
-      include: ['src/lib/*.ts', 'src/lib/data/*.ts', 'src/screens/*.tsx', 'src/screens/*/*.tsx', 'src/components/*.tsx', 'src/components/ui/*.tsx', 'src/lib/*.tsx', '../supabase/functions/*/*.ts'].map(at),
+      include: ['src/lib/*.ts', 'src/lib/data/*.ts', 'src/screens/*.tsx', 'src/screens/*/*.tsx', 'src/components/*.tsx', 'src/components/ui/*.tsx', 'src/lib/*.tsx', 'src/*.ts', 'src/components/*.ts', 'src/screens/*/*.ts', '../supabase/functions/*/*.ts'].map(at),
       exclude: ['src/**/*.test.ts', 'src/**/*.test.tsx', ...IMPURE, ...NATIVE_ONLY].map(at),
       thresholds: {
         // Each file on its own — see "per file, not on average" above. The
@@ -321,6 +344,10 @@ export default defineConfig({
         'src/components/ui/*.tsx': COMPONENTS_FLOOR,
         // The contexts — see "the providers' floor".
         'src/lib/*.tsx': PROVIDERS_FLOOR,
+        // The helpers — see "the helpers' floor".
+        'src/*.ts': HELPERS_FLOOR,
+        'src/components/*.ts': HELPERS_FLOOR,
+        'src/screens/*/*.ts': HELPERS_FLOOR,
         // `_shared/*.ts` and every function's own files — see "the Edge
         // Functions' floor".
         '../supabase/functions/*/*.ts': FUNCTIONS_FLOOR,
