@@ -248,13 +248,10 @@ describe('creating a collection from a bookmark', () => {
   });
 });
 
-// ── the cover picker ──
+// ── the places a rename starts from ──
 //
-// Four tiles to a line, one per place. The grid itself is geometry —
-// `tile` off the window, `flexWrap` — and geometry is the one thing this
-// runner cannot see: jsdom lays nothing out. What is testable is the
-// rule that decides WHICH tiles exist, which is where the old behaviour
-// was actually wrong.
+// The cover picker that stood here moved to the list's page on 22 Nov
+// 2026 (`CollectionHero.ui.test`); the helpers stay, for the renames.
 
 const photo = (id: string, n = id) => ({ id, photo_uri: `https://x/${n}.jpg`, is_hidden: false });
 
@@ -279,169 +276,13 @@ const openRename = (members: Place[], cover: object | null = null) => {
 const HEIM = withPhotos('heim', 'Heim', ['h1', 'h2', 'h3', 'h4']);
 const SAM = withPhotos('sam', 'SÂM Saigon', ['s1', 's2', 's3']);
 
-describe('the cover picker', () => {
-  const sel = (name: string) => screen.getByRole('button', { name }).getAttribute('aria-selected');
-  /** The grid's tiles by name, in the order drawn. */
-  const tiles = () => [...document.querySelectorAll('[role="button"]')]
-    .map((b) => b.getAttribute('aria-label') ?? '')
-    .filter((l) => /^(Auto|Heim|SÂM Saigon)/.test(l));
-  /** The tiles wearing the tick. */
-  const ticked = () => screen.queryAllByTestId('cover-tick').map((m) => m.closest('[role="button"]')!.getAttribute('aria-label'));
-  const IN_ORDER = [
-    'Heim, photo 1 of 4', 'Heim, photo 2 of 4', 'Heim, photo 3 of 4', 'Heim, photo 4 of 4',
-    'SÂM Saigon, photo 1 of 3', 'SÂM Saigon, photo 2 of 3', 'SÂM Saigon, photo 3 of 3',
-  ];
-
-  it('offers every photograph of every place', () => {
-    // Seven photographs between two places, and all seven on offer: the
-    // best picture of a bar is often not the one the catalog marked as
-    // that bar's cover, and one tile apiece hid it with no way through.
-    openRename([HEIM, SAM]);
-
-    expect(screen.getAllByRole('button', { name: /^Heim/ })).toHaveLength(4);
-    expect(screen.getAllByRole('button', { name: /^SÂM Saigon/ })).toHaveLength(3);
-  });
-
-  // Your own lists carry one photograph a member too (owner, 30 Oct
-  // 2026): the picker asks for the rest, and offers the covers meanwhile.
-  it('asks for the rest of each member’s photographs, offering covers until they come', () => {
-    const coverOnly = (p: Place) => ({ ...p, place_photos: p.place_photos.slice(0, 1) });
-    openRename([coverOnly(HEIM), coverOnly(SAM)]);
-    expect(photos.asked.at(-1)).toEqual(['heim', 'sam']);
-    expect(screen.getByRole('button', { name: 'Heim' })).toBeTruthy();
-
-    cleanup();
-    photos.data = { heim: HEIM.place_photos, sam: SAM.place_photos };
-    openRename([coverOnly(HEIM), coverOnly(SAM)]);
-    expect(screen.getAllByRole('button', { name: /^Heim/ })).toHaveLength(4);
-    expect(screen.getAllByRole('button', { name: /^SÂM Saigon/ })).toHaveLength(3);
-  });
-
-  it('asks nothing for a brand-new list, which has no places to picture', () => {
-    render(<CollectionFormScreen navigation={nav()} route={routeWith()} />);
-    expect(photos.asked.every((a) => a === null)).toBe(true);
-  });
-
-  it('numbers the tiles within a place, which a flat list of photos could not', () => {
-    // Before this, every tile reached VoiceOver as an unnamed button —
-    // a photograph out of a flat list of photographs has nothing to be
-    // called. "Heim" four times over would be no better.
-    openRename([HEIM, SAM]);
-    expect(screen.getByRole('button', { name: 'SÂM Saigon, photo 1 of 3' })).toBeTruthy();
-    expect(screen.getByRole('button', { name: 'Heim, photo 4 of 4' })).toBeTruthy();
-  });
-
-  it('names a lone photograph after its place, with no number to give', () => {
-    openRename([withPhotos('solo', 'Solo', ['x1'])]);
-    expect(screen.getByRole('button', { name: 'Solo' })).toBeTruthy();
-  });
-
-  // No cover chosen: Auto leads, ringed and ticked, and the photographs
-  // follow in the list's own order.
-  it('starts on Auto when no cover has been picked', () => {
-    openRename([HEIM, SAM]);
-    expect(tiles()).toEqual(['Auto', ...IN_ORDER]);
-    expect(sel('Auto')).toBe('true');
-    expect(sel('Heim, photo 1 of 4')).toBe('false');
-    expect(ticked()).toEqual(['Auto']);
-    // The tick: a filled button's pair, the accent's fill under its ink,
-    // in the tile's corner.
-    const tick = screen.getByTestId('cover-tick');
-    const mark = tick.querySelector('[data-icon="checkmark"]')!;
-    expect([mark.getAttribute('data-size'), mark.getAttribute('data-color')]).toEqual(['15', String(colors.accentInk)]);
-    const probe = document.createElement('div');
-    probe.style.backgroundColor = String(colors.accentFill);
-    const drawn = getComputedStyle(tick);
-    expect(drawn.backgroundColor).toBe(probe.style.backgroundColor);
-    expect([drawn.position, drawn.top, drawn.right, drawn.width, drawn.height]).toEqual(['absolute', '6px', '6px', '22px', '22px']);
-  });
-
-  it('rings the photograph that is the cover, not merely its place', () => {
-    openRename([HEIM, SAM], photo('s2'));
-    expect(sel('SÂM Saigon, photo 2 of 3')).toBe('true');
-    expect(sel('SÂM Saigon, photo 1 of 3')).toBe('false');
-    expect(ticked()).toEqual(['SÂM Saigon, photo 2 of 3']);
-  });
-
-  // The owner opened a list of eleven places whose cover was deep in the
-  // grid and saw nothing ringed (16 Nov 2026). The cover the form opens
-  // with is the first tile, taken out of its place's run; and with a
-  // cover chosen there is no Auto to stand in front of it.
-  it('leads with the cover the list has, and offers no Auto beside it', () => {
-    openRename([HEIM, SAM], photo('s2'));
-    expect(tiles()).toEqual(['SÂM Saigon, photo 2 of 3', ...IN_ORDER.filter((l) => l !== 'SÂM Saigon, photo 2 of 3')]);
-    expect(screen.queryByRole('button', { name: 'Auto' })).toBeNull();
-  });
-
-  it("keeps a cover that is not the place's first photograph", () => {
-    // What narrowing the choices put at risk, and what showing all of
-    // them settles: a cover picked deep in one place's photographs is
-    // simply on offer like any other, and the ring sits on it.
-    openRename([HEIM, SAM], photo('h3'));
-
-    expect(sel('Heim, photo 3 of 4')).toBe('true');
-    expect(tiles()[0]).toBe('Heim, photo 3 of 4');
-  });
-
-  it('moves the ring and the tick when a tile is tapped', () => {
-    openRename([HEIM, SAM]);
-    fireEvent.click(screen.getByRole('button', { name: 'SÂM Saigon, photo 3 of 3' }));
-
-    expect(sel('SÂM Saigon, photo 3 of 3')).toBe('true');
-    expect(sel('Auto')).toBe('false');
-    expect(ticked()).toEqual(['SÂM Saigon, photo 3 of 3']);
-  });
-
-  // The order is the order the form opened in. A tile that jumped to the
-  // front when tapped would move every tile after it under the finger.
-  it('moves no tile when one is tapped, with Auto or with a cover leading', () => {
-    openRename([HEIM, SAM]);
-    fireEvent.click(screen.getByRole('button', { name: 'SÂM Saigon, photo 3 of 3' }));
-    // Auto was there when the form opened, so it stays: the way back.
-    expect(tiles()).toEqual(['Auto', ...IN_ORDER]);
-    fireEvent.click(screen.getByRole('button', { name: 'Auto' }));
-    expect(ticked()).toEqual(['Auto']);
-
-    cleanup();
-    openRename([HEIM, SAM], photo('s2'));
-    const opened = tiles();
-    fireEvent.click(screen.getByRole('button', { name: 'Heim, photo 1 of 4' }));
-    expect(tiles()).toEqual(opened);
-    expect(ticked()).toEqual(['Heim, photo 1 of 4']);
-    expect(screen.queryByRole('button', { name: 'Auto' })).toBeNull();
-  });
-
-  // A cover with no tile to lead with — the rest of a place's photographs
-  // still on their way, or one hidden since — would leave a grid with no
-  // ring and no way to say "none of these". Auto stands first there,
-  // unringed; and gives its slot to the cover when the photographs land.
-  it('offers Auto, unringed, while the chosen photograph is not on offer', () => {
-    const coverOnly = (p: Place) => ({ ...p, place_photos: p.place_photos.slice(0, 1) });
-    openRename([coverOnly(HEIM), coverOnly(SAM)], photo('s2'));
-    expect(tiles()).toEqual(['Auto', 'Heim', 'SÂM Saigon']);
-    expect(sel('Auto')).toBe('false');
-    expect(ticked()).toEqual([]);
-
-    cleanup();
-    photos.data = { heim: HEIM.place_photos, sam: SAM.place_photos };
-    openRename([coverOnly(HEIM), coverOnly(SAM)], photo('s2'));
-    expect(tiles()[0]).toBe('SÂM Saigon, photo 2 of 3');
-    expect(screen.queryByRole('button', { name: 'Auto' })).toBeNull();
-  });
-
-  it('offers no picker at all for a brand-new list', () => {
-    render(<CollectionFormScreen navigation={nav()} route={routeWith()} />);
-    expect(screen.queryByText('COVER')).toBeNull();
-  });
-});
-
 // ── the two guards, and the third verb ──
 //
 // The bookmark path above is one of three ways out of `submit`. Rename
 // and copy were the other two, and neither had a test: the write each
-// one makes, what a chosen cover adds to it, and where the screen goes
-// afterwards. The refusals — an empty name, no session, the daily cap,
-// the server saying no — were untested on all three.
+// one makes and where the screen goes afterwards. The refusals — an empty
+// name, no session, the daily cap, the server saying no — were untested
+// on all three.
 
 const alerted = () => vi.mocked(Alert.alert).mock.calls.map(([title, body]) => [title, body]);
 
@@ -749,53 +590,23 @@ describe('renaming a list', () => {
     expect(screen.queryByText(/optional/i)).toBeNull();
   });
 
-  it('writes the name, the description and the cover that was picked', async () => {
+  it('writes the name and the description, and no cover', async () => {
     openRename([HEIM, SAM]);
     fireEvent.change(screen.getByPlaceholderText('Weekend coffee'), { target: { value: ' Late bars ' } });
     fireEvent.change(screen.getByPlaceholderText('What ties these together?'), { target: { value: 'After midnight' } });
-    fireEvent.click(screen.getByRole('button', { name: 'SÂM Saigon, photo 2 of 3' }));
     save();
 
-    // Trimmed: the name is what was typed, not the spaces around it.
+    // Trimmed: the name is what was typed, not the spaces around it. No
+    // cover in it: that is the page's camera now, and a rename that sent
+    // one would write over what the camera chose.
     await waitFor(() => expect(updateCollection).toHaveBeenCalledWith('night-bar', {
-      title: 'Late bars', desc: 'After midnight', coverPhotoId: 's2',
+      title: 'Late bars', desc: 'After midnight',
     }));
     expect(createCollection).not.toHaveBeenCalled();
   });
 
-  it('sends the current cover back when nothing was picked', async () => {
-    // Not `null`: a save that touched only the name must not silently
-    // drop the cover the reader chose last week.
-    openRename([HEIM, SAM], photo('h3'));
-    fireEvent.change(screen.getByPlaceholderText('Weekend coffee'), { target: { value: 'Night bar' } });
-    save();
 
-    await waitFor(() => expect(updateCollection).toHaveBeenCalledWith('night-bar', expect.objectContaining({ coverPhotoId: 'h3' })));
-  });
 
-  it('finds a cover the cache knew only by its picture', async () => {
-    // A row hydrated from a launch cache written before covers carried
-    // their id arrives with the uri alone; the ring still has to sit on
-    // the real cover, and the save still has to name it.
-    openRename([HEIM, SAM], { photo_uri: 'https://x/s3.jpg' });
-    expect(screen.getByRole('button', { name: 'SÂM Saigon, photo 3 of 3' }).getAttribute('aria-selected')).toBe('true');
-
-    fireEvent.change(screen.getByPlaceholderText('Weekend coffee'), { target: { value: 'Night bar' } });
-    save();
-    await waitFor(() => expect(updateCollection).toHaveBeenCalledWith('night-bar', expect.objectContaining({ coverPhotoId: 's3' })));
-  });
-
-  it('falls back to Auto for a cover whose picture no member holds any more', async () => {
-    // The place that carried it left the list, or its photograph was
-    // hidden: nothing on offer matches, so the ring sits on Auto and a
-    // save writes no cover rather than an id it cannot know.
-    openRename([HEIM, SAM], { photo_uri: 'https://x/gone.jpg' });
-    expect(screen.getByRole('button', { name: 'Auto' }).getAttribute('aria-selected')).toBe('true');
-
-    fireEvent.change(screen.getByPlaceholderText('Weekend coffee'), { target: { value: 'Night bar' } });
-    save();
-    await waitFor(() => expect(updateCollection).toHaveBeenCalledWith('night-bar', expect.objectContaining({ coverPhotoId: null })));
-  });
 
   it('opens with no picker when the list is not among mine', () => {
     // A slug the saved lists do not know — a row deleted on another
@@ -808,34 +619,8 @@ describe('renaming a list', () => {
     expect(screen.queryByText('COVER')).toBeNull();
   });
 
-  // A cover that names a photograph no tile holds — hidden by the desk
-  // since — leaves Auto on offer, and Auto is the way back from it.
-  it('returns to Auto from a cover that is not on offer', async () => {
-    openRename([HEIM, SAM], photo('hidden-since'));
-    expect(screen.getByRole('button', { name: 'Auto' }).getAttribute('aria-selected')).toBe('false');
-    fireEvent.click(screen.getByRole('button', { name: 'Auto' }));
-    fireEvent.change(screen.getByPlaceholderText('Weekend coffee'), { target: { value: 'Night bar' } });
-    save();
 
-    await waitFor(() => expect(updateCollection).toHaveBeenCalledWith('night-bar', expect.objectContaining({ coverPhotoId: null })));
-  });
 
-  // The chosen photograph's place was taken out of the list: the cover
-  // reads as none (`chosenCoverOf`), so the form opens on Auto, ringed,
-  // and a save writes that down rather than the id it was handed.
-  it('opens on Auto for a cover whose place has left the list, and saves it so', async () => {
-    openRename([HEIM, SAM], { ...photo('z9'), place: { slug: 'left-the-list' } });
-    expect(screen.getByRole('button', { name: 'Auto' }).getAttribute('aria-selected')).toBe('true');
-    fireEvent.change(screen.getByPlaceholderText('Weekend coffee'), { target: { value: 'Night bar' } });
-    save();
-    await waitFor(() => expect(updateCollection).toHaveBeenCalledWith('night-bar', expect.objectContaining({ coverPhotoId: null })));
-  });
-
-  it('keeps a cover whose place is still in the list', async () => {
-    openRename([HEIM, SAM], { ...photo('s2'), place: { slug: 'sam' } });
-    expect(screen.getByRole('button', { name: 'SÂM Saigon, photo 2 of 3' }).getAttribute('aria-selected')).toBe('true');
-    expect(screen.queryByRole('button', { name: 'Auto' })).toBeNull();
-  });
 
   it('refreshes the shared list and goes back once saved', async () => {
     const navigation = nav();
@@ -861,11 +646,11 @@ describe('renaming a list', () => {
       catalog.data = [HEIM, SAM];
       saved.data = [{ ...(listOf([HEIM, SAM]) as object), is_public: isPublic }];
       render(<CollectionFormScreen navigation={navigation} route={routeWith({ slug: 'night-bar', title: 'Night bar' })} />);
-      fireEvent.click(screen.getByRole('button', { name: 'SÂM Saigon, photo 2 of 3' }));
+      fireEvent.change(screen.getByPlaceholderText('Weekend coffee'), { target: { value: 'Late bars' } });
       return navigation;
     };
 
-    it('is refetched once a public list’s new cover is saved, and not before', async () => {
+    it('is refetched once a public list’s rename is saved, and not before', async () => {
       let done!: () => void;
       updateCollection.mockImplementationOnce(() => new Promise<void>((r) => { done = r; }));
       const navigation = edit(true);
@@ -907,7 +692,7 @@ describe('renaming a list', () => {
     expect(button().getAttribute('aria-disabled')).not.toBe('true');
     fireEvent.change(screen.getByPlaceholderText('What ties these together?'), { target: { value: '' } });
     expect(button().getAttribute('aria-disabled')).toBe('true');
-    fireEvent.click(screen.getByRole('button', { name: /^Heim, photo 2/ }));
+    fireEvent.change(screen.getByPlaceholderText('Weekend coffee'), { target: { value: 'Late bars' } });
     expect(button().getAttribute('aria-disabled')).not.toBe('true');
   });
 
@@ -930,24 +715,7 @@ describe('renaming a list', () => {
     expect(leave()).toBe(false);
   });
 
-  it('shows the Auto tile as the picture Auto would use', () => {
-    // The chip wears the first place's own cover, so "what is the cover
-    // right now" has a visible answer before anything is picked.
-    openRename([HEIM, SAM]);
-    const auto = screen.getByRole('button', { name: 'Auto' });
-    expect(auto.querySelector('img')?.getAttribute('src')).toBe('https://x/h1.jpg');
-  });
 
-  it('leaves the Auto tile bare when the first place has no photograph', () => {
-    // Nothing to preview, so the glass chip and the word — and no
-    // picker at all would be wrong: the second place's pictures are
-    // still on offer.
-    const bare = withPhotos('bare', 'Bare', []);
-    openRename([bare, SAM]);
-    const auto = screen.getByRole('button', { name: 'Auto' });
-    expect(auto.querySelector('img')).toBeNull();
-    expect(screen.getAllByRole('button', { name: /^SÂM Saigon/ })).toHaveLength(3);
-  });
 
   it('names the failure as a rename, in place and in a dialog', async () => {
     updateCollection.mockRejectedValueOnce(new Error('row is locked'));
@@ -1010,23 +778,6 @@ describe('saving a copy of somebody else’s list', () => {
     expect(screen.getByRole('button', { name: 'Save the copy' }).getAttribute('aria-disabled')).not.toBe('true');
   });
 
-  // The catalog carries one photograph a place (owner, 29 Oct 2026), and
-  // a copy's members come from the catalog: the picker offers the covers
-  // until the rest arrive, then every photograph, as it always did.
-  it('offers every photograph of the copied places once they come, the covers until then', () => {
-    const coverOnly = (p: Place) => ({ ...p, place_photos: p.place_photos.slice(0, 1) });
-    catalog.data = [coverOnly(HEIM), coverOnly(SAM)];
-    render(<CollectionFormScreen navigation={nav()} route={routeWith({ copyFrom: SOURCE })} />);
-    expect(photos.asked.at(-1)).toEqual(['sam', 'heim']);
-    expect(screen.getByRole('button', { name: 'Heim' })).toBeTruthy();
-    expect(screen.getByRole('button', { name: 'SÂM Saigon' })).toBeTruthy();
-
-    cleanup();
-    photos.data = { heim: HEIM.place_photos, sam: SAM.place_photos };
-    render(<CollectionFormScreen navigation={nav()} route={routeWith({ copyFrom: SOURCE })} />);
-    expect(screen.getAllByRole('button', { name: /^Heim/ })).toHaveLength(4);
-    expect(screen.getAllByRole('button', { name: /^SÂM Saigon/ })).toHaveLength(3);
-  });
 
   it('opens prefilled with its provenance, as a suggestion in an editable field', () => {
     openCopy();
@@ -1043,15 +794,6 @@ describe('saving a copy of somebody else’s list', () => {
     expect((screen.getByPlaceholderText('Weekend coffee') as HTMLInputElement).value).toHaveLength(60);
   });
 
-  it('offers the source’s places as covers, in the source’s order', () => {
-    // The members come from the route's slugs against the catalog — the
-    // source belongs to somebody else, so "mine" cannot know it — and
-    // the first of them is what Auto shows.
-    openCopy();
-    expect(screen.getAllByRole('button', { name: /^SÂM Saigon/ })).toHaveLength(3);
-    expect(screen.getAllByRole('button', { name: /^Heim/ })).toHaveLength(4);
-    expect(screen.getByRole('button', { name: 'Auto' }).querySelector('img')?.getAttribute('src')).toBe('https://x/s1.jpg');
-  });
 
   it('is born on save, and lands on itself in the Collections tab', async () => {
     const navigation = openCopy();
@@ -1073,17 +815,6 @@ describe('saving a copy of somebody else’s list', () => {
     });
   });
 
-  it('writes a chosen cover onto the copy in a second step', async () => {
-    openCopy();
-    fireEvent.click(screen.getByRole('button', { name: 'Heim, photo 2 of 4' }));
-    save();
-
-    await waitFor(() => expect(updateCollection).toHaveBeenCalledWith('copied-list', {
-      title: 'Copy of Hanoi by night', desc: 'By @linh', coverPhotoId: 'h2',
-    }));
-    // In that order: the row has to exist before a cover can be put on it.
-    expect(copyCollection.mock.invocationCallOrder[0]).toBeLessThan(updateCollection.mock.invocationCallOrder[0]);
-  });
 
   it('names the failure as a copy', async () => {
     copyCollection.mockRejectedValueOnce(new Error('offline'));
@@ -1117,8 +848,10 @@ describe('the categories', () => {
     expect(screen.queryByText('CATEGORIES')).toBeNull();
     expect(screen.queryByText('Cafés')).toBeNull();
     expect(screen.queryByText('Nightlife')).toBeNull();
-    // The cover picker, which stood under them, is still there.
-    expect(screen.getByText('COVER')).toBeTruthy();
+    // Nor the cover picker, which moved to the list's page (22 Nov 2026):
+    // not a heading, and not a tile, though both places hold photographs.
+    expect(screen.queryByText('COVER')).toBeNull();
+    expect(screen.queryByRole('button', { name: /^Heim/ })).toBeNull();
   });
 
   // A row that still holds a kind hidden on an older build is saved
@@ -1129,7 +862,7 @@ describe('the categories', () => {
     fireEvent.change(screen.getByPlaceholderText('Weekend coffee'), { target: { value: 'Late bars' } });
     fireEvent.click(screen.getByRole('button', { name: 'Save changes' }));
     await waitFor(() => expect(updateCollection).toHaveBeenCalled());
-    expect(updateCollection.mock.calls[0]).toEqual(['night-bar', { title: 'Late bars', desc: '', coverPhotoId: null }]);
+    expect(updateCollection.mock.calls[0]).toEqual(['night-bar', { title: 'Late bars', desc: '' }]);
   });
 });
 

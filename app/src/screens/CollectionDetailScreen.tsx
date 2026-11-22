@@ -1504,10 +1504,9 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
   );
   const introCard = col ? (
     <View style={s.descWrap}>
-      <Card
-        style={s.descCard}
-        testID={desc || !owned ? 'collection-desc' : 'collection-desc-empty'}
-      >
+      <Card style={s.descCard} testID={desc || !owned ? 'collection-desc' : 'collection-desc-empty'}>
+        <CollectionHero list={col} members={members} from={route.params.from} owned={owned} onChanged={() => { mine.reload(); if (col?.is_public) cols.reload(); }} />
+        <View style={s.descIn}>
         {/* The face's row, drawn whenever the card is: the ⋯ is always
             in it. It was skipped when it held nothing — a list lent to
             you whose owner had no handle — so the words opened the card
@@ -1562,6 +1561,7 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
         ) : null}
         {kindRow}
         {activity}
+        </View>
       </Card>
     </View>
   ) : null;
@@ -1811,7 +1811,6 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
                       cardEnd.current = y + height;
                     }}
                   >
-                    <CollectionHero list={col} members={members} from={route.params.from} />
                     {introCard}
                   </View>
                 )}

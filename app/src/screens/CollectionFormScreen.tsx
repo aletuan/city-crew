@@ -23,17 +23,14 @@ import { Alert } from 'react-native';
 import { AuthHeader, AuthScreen, FieldRow, FormError, useFailText } from '../components/authUi';
 import { successHaptic } from '../components/ui';
 import { useSession } from '../lib/auth';
-import { useCollections, usePlaces } from '../lib/catalog';
+import { useCollections } from '../lib/catalog';
 import { useCurrentCity } from '../lib/city';
-import { addPlaceToCollection, copyCollection, createCollection, updateCollection, usePlacePhotos } from '../lib/data';
+import { addPlaceToCollection, copyCollection, createCollection, updateCollection } from '../lib/data';
 import { DAILY_CAPS, isDailyLimit } from '../lib/quota';
 import { useI18n } from '../lib/i18n';
-import { chosenCoverOf, coverOf, membersOf, photosOf, withPhotos } from '../lib/place';
 import { useMyLists } from '../lib/save';
 import { useNoteEvent } from '../lib/tasteProfile';
-import type { Place } from '../lib/types';
 import { goTo, type Nav, type RootRoute } from '../nav';
-import { CoverGrid } from './collectionForm/CoverGrid';
 import { FieldRule, leaveForm, makingOwn, SaveHint, SeenLine, useAudience } from './collectionForm/formParts';
 
 /** Long enough for a real name, short enough to stay on one line in a row. */
@@ -70,79 +67,11 @@ export default function CollectionFormScreen({ navigation, route }: {
 
   const uid = session?.user?.id;
 
-  // The cover, chosen from the photographs the list already holds. A
-  // cover is a claim about the list, and the honest claims are the
-  // pictures its own places carry — so the choices are exactly those, in
-  // the list's own order, and a brand-new list (no places yet) offers no
-  // picker at all. "Auto" is the null pick: the tile keeps falling back
-  // to the first place's own cover, which is what every list did before
-  // this row existed.
-  const { data: places } = usePlaces();
+  // No cover here (owner, 22 Nov 2026): it is chosen from the camera on
+  // the list's own page, so a new list and an old one share this form.
   const col = editing ? mine.data.find((c) => c.slug === editing) ?? null : null;
   // Who sees it, kept for Save like the fields (`formParts`).
   const aud = useAudience(col, uid, makingOwn(editing, copyFrom));
-  // A copy's members come from the route's slugs resolved against the
-  // catalog — the source list belongs to somebody else, so no query of
-  // "mine" can know it. Everything downstream (choices, Auto) is the
-  // same either way.
-  //
-  // Both carry one photograph a place — the catalog since #1221, your own
-  // lists since the step after — so the picker below asks for the rest,
-  // and offers the covers until they come.
-  const listed = copyFrom
-    ? copyFrom.placeSlugs.map((slug) => places.find((p) => p.slug === slug)).filter((p): p is Place => !!p)
-    : col ? membersOf(col, places) : [];
-  const allPhotos = usePlacePhotos(listed.length ? listed.map((p) => p.slug) : null);
-  const members = listed.map((p) => withPhotos(p, allPhotos.data[p.slug]));
-  // Every photograph of every place, not one apiece.
-  //
-  // One apiece was the rule for a day, and the reasoning was sound on
-  // paper: what a cover claims is *which place stands for this list*,
-  // nine places is a choice between nine things, and fifty-four chips is
-  // fourteen rows on a form the keyboard already takes half of.
-  //
-  // It was wrong about what the reader is doing. They are not naming a
-  // representative; they are looking for the one picture that makes the
-  // list worth opening, and the best picture of a bar is often not the
-  // one the catalog happened to mark as that bar's cover. Narrowing to
-  // one apiece hid the picture they were after and offered no way to
-  // reach it — the owner asked for all of them back.
-  //
-  // The rows are the price, and they are affordable for the same reason
-  // the wider tiles were: the screen scrolls.
-  //
-  // Each entry carries the place it came from and its number within that
-  // place, which is what lets a tile say its own name — every one of
-  // these was a bare button to VoiceOver when they were a flat list of
-  // photographs, and "Heim" four times over would be no better.
-  const choices = members.flatMap((p) => {
-    const shots = photosOf(p).filter((ph): ph is typeof ph & { id: string } => !!ph.id);
-    return shots.map((ph, i) => ({ ph, place: p, n: i + 1, of: shots.length }));
-  });
-  // What "Auto" actually resolves to — the first place's own cover, the
-  // exact fallback every renderer draws when nothing is picked. Shown on
-  // the chip itself, so the current cover is always visible as a
-  // picture rather than a word (the owner asked to see it).
-  const autoUri = members[0] ? coverOf(members[0])?.photo_uri : undefined;
-  // Held as "chosen or not" beside the id, so the row's current cover
-  // shows as selected until the reader actually picks — seeding state
-  // from a fetch that may land after the first render would either lose
-  // their tap or resurrect the old cover over it.
-  const [pick, setPick] = useState<{ chosen: boolean; id: string | null }>({ chosen: false, id: null });
-  // The cover is matched by id or by uri further down: a row hydrated
-  // from a launch cache written before the cover carried its id arrives
-  // with only the uri, and the ring has to sit on the real current cover
-  // rather than drift to Auto until the refresh lands. No exception list
-  // any more — every photograph a member holds is already on offer.
-  //
-  // A cover whose place has left the list is no cover (`chosenCoverOf`,
-  // 16 Nov 2026): the form opens on Auto, as the list's card already
-  // draws it, and a save writes that down.
-  const current = col ? chosenCoverOf(col) : null;
-  const startCover = current
-    ? current.id ?? choices.find((c) => c.ph.photo_uri === current.photo_uri)?.ph.id ?? null
-    : null;
-  const coverId = pick.chosen ? pick.id : startCover;
 
   // Whether the form now says something it did not say on opening — the
   // one question both the ✓ and the discard guard ask, so the two can
@@ -153,7 +82,7 @@ export default function CollectionFormScreen({ navigation, route }: {
   // copy need only a name — the copy is born on submit, so submitting
   // its prefilled suggestion unchanged is the whole point of the button.
   // Who sees it counts since 20 Nov 2026 (`useAudience`).
-  const changed = [title.trim() !== start.title.trim(), desc.trim() !== start.desc.trim(), coverId !== startCover, aud.moved].includes(true);
+  const changed = [title.trim() !== start.title.trim(), desc.trim() !== start.desc.trim(), aud.moved].includes(true);
 
   // Leaving with changes asks first — header Back and iOS's swipe alike,
   // both of which go through `beforeRemove`. A form that has just saved
@@ -214,10 +143,6 @@ export default function CollectionFormScreen({ navigation, route }: {
           // the copy the way they hear about a like (7 Oct 2026).
           copiedFrom: copyFrom.sourceId,
         });
-        // A chosen cover rides a second write: `copyCollection` stays the
-        // create-and-fill it was, and Auto — the common case — needs no
-        // write at all.
-        if (coverId) await updateCollection(slug, { title: name, desc, coverPhotoId: coverId });
         successHaptic();
         mine.reload();
         saved.current = true;
@@ -231,15 +156,15 @@ export default function CollectionFormScreen({ navigation, route }: {
         return;
       }
       if (editing) {
-        await updateCollection(editing, { title: name, desc, coverPhotoId: coverId });
+        await updateCollection(editing, { title: name, desc });
         made = aud.handOn(editing);
         // A public list is drawn from the catalog's copy too — the
         // Community tab, Explore's shelf, Ideas — and that copy refreshes
-        // only on a pull or a stale foreground. A new cover went unseen
-        // there until one came (owner, 5 Nov 2026). Only when public: a
-        // private list is not in that copy, and refetching the whole
-        // catalog for it would change nothing anyone sees. A copy needs
-        // none either way; it is born private.
+        // only on a pull or a stale foreground. A rename went unseen there
+        // until one came (owner, 5 Nov 2026, of a cover; the cover is the
+        // page's own save now). Only when public: a private list is not
+        // in that copy, and refetching the whole catalog for it would
+        // change nothing anyone sees. A copy needs none; it is private.
         if (col?.is_public) cols.reload();
       } else {
         made = { slug: await createCollection({ ownerId: uid, cityId: city.id, title: name, desc, isPublic: aud.seen === 'public' }), audience: aud.seen };
@@ -374,17 +299,6 @@ export default function CollectionFormScreen({ navigation, route }: {
           that hid it from the list's page; they are worked out from the
           places now and the owner has no say — see `lib/collectionKinds`
           for the count that settled it. */}
-      {/* `choices` is only ever non-empty when there are members to draw
-          from — a rename or a copy; a brand-new list offers no picker. */}
-      {choices.length > 0 ? (
-        <CoverGrid
-          choices={choices}
-          opened={startCover}
-          picked={coverId}
-          autoUri={autoUri}
-          onPick={(id) => setPick({ chosen: true, id })}
-        />
-      ) : null}
     </AuthScreen>
   );
 }
