@@ -1182,6 +1182,11 @@ describe('the badges, under the level', () => {
     expect(level.nextElementSibling).toBe(rule);
     expect(rule.nextElementSibling).toBe(shelf);
     expect(viewStyleOf(level.parentElement!).gap).toBe(16);
+    // And nothing under the badges but the phone's inset (none here):
+    // the names' two-line room already ends the last row on a space.
+    let sheet: HTMLElement | null = shelf;
+    while (sheet && viewStyleOf(sheet).paddingBottom === undefined) sheet = sheet.parentElement;
+    expect(viewStyleOf(sheet!).paddingBottom).toBe(0);
   });
 
   // A phone too short for both cards scrolls them, and leaves the page
