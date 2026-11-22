@@ -11,7 +11,8 @@
 
 import { supabase } from '../supabase';
 import { refusedByPolicy } from '../quota';
-import type { ShareRow } from '../shares';
+import { diffShares, type ShareRow } from '../shares';
+import { setCollectionPublic } from './collections';
 import { everyPage } from './pages';
 
 /**
@@ -118,4 +119,26 @@ export async function setShares(
       .in('user_id', [...remove]);
     if (error) throw new Error(error.message);
   }
+}
+
+/**
+ * What the collection form's Save does about Friends (owner, 22 Nov
+ * 2026): the picker's ticks were kept in the form and are written now,
+ * against the list as it was (`before`), and a public list that has been
+ * shared goes private — after the shares, for the reason `setShares`
+ * gives. The list's page does the same two writes from its own picker
+ * (`saveShares`); this is the form's copy, which has no page to be on.
+ *
+ * Nobody ticked is Private, which the form never asks of this: it
+ * writes that as a `Private` answer, whose way is the page's.
+ */
+export async function writeFriends(
+  list: { id: string; slug: string },
+  picks: readonly string[],
+  before: readonly string[],
+  wasPublic: boolean,
+): Promise<void> {
+  const { add, remove } = diffShares(before, new Set(picks));
+  await setShares(list.id, add, remove);
+  if (wasPublic) await setCollectionPublic(list.slug, false);
 }

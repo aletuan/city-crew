@@ -415,6 +415,20 @@ export async function createCollection(input: {
   throw new Error(collision);
 }
 
+/**
+ * The id of a list by its slug, for the one write that is filed by id: the
+ * shares (`setShares`). The form that makes a list has only the slug
+ * `createCollection` hands back, and chooses its friends in the same Save
+ * (owner, 22 Nov 2026); the page it used to hand the list to had the id
+ * already. RLS scopes the read to lists the caller may see, which a list
+ * they have just made is.
+ */
+export async function fetchCollectionId(slug: string): Promise<string> {
+  const { data, error } = await supabase.from('collections').select('id').eq('slug', slug).single();
+  if (error) throw new Error(error.message);
+  return (data as { id: string }).id;
+}
+
 /** Rename one of the user's own lists. RLS scopes this to rows they own. */
 export async function updateCollection(
   slug: string,
