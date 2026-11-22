@@ -89,8 +89,13 @@ export type SheetAction = {
   onPress: () => void;
 };
 
-export default function ActionSheet({ visible, header, actions, children, onClose }: {
+export default function ActionSheet({ visible, header, actions, children, onClose, foot = 16 }: {
   visible: boolean;
+  /** What the sheet leaves under its last line, over the phone's own
+   *  inset at the bottom. 16 for a menu, whose rows end on a card's
+   *  edge; the achievements sheet, whose badges end on their names'
+   *  two-line room, takes none (owner, 22 Nov 2026). */
+  foot?: number;
   /** What the menu is about, drawn above the rows. */
   header: React.ReactNode;
   actions?: SheetAction[];
@@ -114,7 +119,7 @@ export default function ActionSheet({ visible, header, actions, children, onClos
       <Pressable style={s.backdrop} onPress={onClose} accessibilityLabel={t('Close', 'Đóng', '閉じる', '关闭', '關閉')} />
       <Animated.View
         style={[s.sheet, {
-          paddingBottom: insets.bottom + 16,
+          paddingBottom: insets.bottom + foot,
           transform: [{ translateY: rise.interpolate({ inputRange: [0, 1], outputRange: [0, 360] }) }],
         }]}
       >
