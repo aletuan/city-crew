@@ -29,6 +29,13 @@
 // is used for elsewhere: a failure, and a question before something that
 // cannot be taken back.
 //
+// And in the list's own ⋯ menu as well, since 22 Nov 2026 (owner): a
+// setting of the list among the list's other settings, which is also
+// how the owner reaches it while the thread is empty — a press on the
+// bubble then raises the field over the page for the owner as for
+// anybody (`quickOrThread`), and never opens this page. Both places
+// open the same sheet on the same state; neither moved.
+//
 // ── what the others see ──
 //
 // Where the field would be, a line: comments are off. No field to type
@@ -117,6 +124,9 @@ export function useThreadOwner(
         <Glyph name="ellipsis-horizontal" size={ICON.nav} color={colors.text} />
       </PressableScale>
     ) : undefined,
+    /** Opens the owner's sheet from elsewhere: the list's own ⋯ menu
+     *  (`collectionDetail/CommentsSetting`). */
+    show: () => setOpen(true),
     /** The owner's sheet. Drawn for anybody, opened only by the ⋯, which
      *  only the owner has. */
     node: (

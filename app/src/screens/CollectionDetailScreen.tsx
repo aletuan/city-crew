@@ -50,6 +50,7 @@ import { DraggableCard, DraggableTile, LiftCell, LiftedCard, StillCard, StillTil
 import { OwnEmpty } from './collectionDetail/OwnEmpty';
 import { ReaderSeen, readerWord, sendRows, ShareButton, ShareHead, whoHint, whoSeesRows } from './collectionDetail/Share';
 import { CommentsDoor } from './collectionDetail/CommentsDoor';
+import { useCommentsSetting } from './collectionDetail/CommentsSetting';
 import { CopyDoor } from './collectionDetail/CopyDoor';
 import { ACT_GLYPH, ACTIVITY_CHEVRON, BYLINE_SLOP, FACE, GRID_GAP, s } from './collectionDetail/styles';
 import { useKindFilter } from './collectionDetail/useKindFilter';
@@ -155,6 +156,9 @@ function useReloadFigures() {
   const { reload: reloadCopies } = useCopyCountsQuery();
   return () => { reloadLikes(); askCommentsAgain(); reloadCopies(); };
 }
+
+/** A menu's rows, less the ones that do not apply here. */
+const present = (rows: (SheetAction | null | false)[]) => rows.filter((r): r is SheetAction => !!r);
 
 export default function CollectionDetailScreen({ navigation, route }: { navigation: Nav; route: RootRoute<'CollectionDetail'> }) {
   const { t, lang } = useI18n();
@@ -1651,7 +1655,7 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
     onPress: plan,
     testID: 'collection-menu-plan',
   } : null;
-  const present = (rows: (SheetAction | null | false)[]) => rows.filter((r): r is SheetAction => !!r);
+  const commentsSetting = useCommentsSetting(col, owned);
   const [actsBefore, actsAfter]: SheetAction[][] = owned
     ? [
       present([
@@ -1670,6 +1674,7 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
           onPress: edit,
           testID: 'collection-menu-edit',
         },
+        commentsSetting.row,
       ]),
       [
         {
@@ -1713,8 +1718,7 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
       title={title}
       onBack={() => navigation.goBack()}
       backTestID="collection-back"
-      backBare
-      compactTitle
+      backBare compactTitle
     >
       <AmbientWarmth />
       {loading && members.length === 0 && <ActivityIndicator color={colors.accent} style={{ marginTop: 48 }} />}
@@ -1881,6 +1885,7 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
         <SheetRows actions={whoSees3} onClose={() => setWhoSees(false)} />
         <SheetRows actions={sendRows(t)} onClose={() => setWhoSees(false)} />
       </ActionSheet>
+      {commentsSetting.node}
     </Screen>
   );
 }

@@ -47,8 +47,8 @@ export function useCardComments(
     // A thread closed with nothing in it has no way in from a card: there
     // is nothing to read and nothing may be written. The bubble is still
     // drawn, dimmed — taken away, the card's foot shifted (owner, 19 Nov
-    // 2026). (Its owner reaches the switch from the list's own page —
-    // `CommentsDoor`.)
+    // 2026). (Its owner reaches the switch from the list's own ⋯ menu —
+    // `collectionDetail/CommentsSetting`.)
     if (comments?.off && comments.n === 0) return { comments, commentsOff: true };
     return {
       comments,

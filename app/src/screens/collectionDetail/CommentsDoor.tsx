@@ -10,7 +10,9 @@
 //
 // A press on it opens the thread — or, while nobody has commented yet,
 // raises the field over this page so the first comment is written here
-// (`components/CommentQuick`, owner, 18 Nov 2026).
+// (`components/CommentQuick`, owner, 18 Nov 2026); on your own list as
+// on anybody's since 22 Nov, the switch that closes the thread being in
+// the list's ⋯ menu too (`CommentsSetting`).
 //
 // It draws itself or nothing, so the page that holds it does not grow a
 // branch: nothing while the `comments` flag is off, and nothing on a
@@ -64,7 +66,7 @@ export function CommentsDoor({ list, about, onPress }: {
   // way to open the thread again is on its page.
   const shut = off && n === 0 && !mine;
   const press = () => (quick && quickOrThread({
-    me, n, loaded: previews.loaded, loading: previews.loading, off, mine,
+    me, n, loaded: previews.loaded, loading: previews.loading, off,
   }) === 'quick'
     ? quick({ kind: 'collection', id: listId }, about)
     : onPress(listId));

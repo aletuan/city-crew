@@ -96,18 +96,27 @@ describe('CommentsDoor', () => {
     expect(screen.queryByTestId('comment-quick')).toBeNull();
   });
 
-  it('opens the thread for the owner of an open, empty one too, and the field for anybody else', async () => {
+  // The owner as anybody since 22 Nov 2026: the switch is in the list's
+  // ⋯ menu as well (`CommentsSetting`), so this is not the way to it.
+  it('raises the field on an open, empty one for its owner and for anybody else alike', async () => {
     appFlags.set('comments', true);
+    for (const owner of ['me', 'them']) {
+      show({ id: 'c1', is_public: true, owner_id: owner });
+      await flush();
+      fireEvent.click(door()!);
+      expect(onPress).not.toHaveBeenCalled();
+      expect(screen.getByTestId('comment-quick')).toBeTruthy();
+      cleanup();
+    }
+  });
+
+  it('still opens a closed, empty one for its owner, where nothing can be written', async () => {
+    appFlags.set('comments', true);
+    data.fetchPreviews.mockImplementation(async () => ({ c1: { n: 0, latest: [], off: true } }));
     show({ id: 'c1', is_public: true, owner_id: 'me' });
     await flush();
     fireEvent.click(door()!);
     expect(onPress).toHaveBeenCalledExactlyOnceWith('c1');
-    cleanup(); onPress.mockClear();
-    show({ id: 'c1', is_public: true, owner_id: 'them' });
-    await flush();
-    fireEvent.click(door()!);
-    expect(onPress).not.toHaveBeenCalled();
-    expect(screen.getByTestId('comment-quick')).toBeTruthy();
   });
 
   it('is nobody\'s own for a guest, whatever the list says', async () => {
