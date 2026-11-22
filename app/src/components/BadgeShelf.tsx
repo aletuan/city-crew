@@ -42,7 +42,7 @@
 import React, { useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { Image } from 'expo-image';
-import { sheetBody } from './ActionSheet';
+import { sheetPart } from './ActionSheet';
 import { BADGE_IMAGES } from './badgeImages';
 import { PressableScale } from './ui';
 import { BADGES, badgeHow, badgeName, nextBadge, type BadgeId } from '../lib/badges';
@@ -70,7 +70,7 @@ export default function BadgeShelf() {
   const about = picked ?? nextBadge(facts);
 
   return (
-    <View style={sheetBody} testID="badge-shelf">
+    <View style={sheetPart} testID="badge-shelf">
       <View style={s.grid}>
         {BADGES.map((id) => {
           const has = earned.includes(id);

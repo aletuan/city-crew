@@ -270,6 +270,11 @@ export const sheetTitleText = {
 /** The card a sheet's own body is drawn on, where it is words and not
  *  rows (the level's and the roles' sheets, 16 Nov 2026): the rows'
  *  card, with the header's padding. */
+/** A part of a sheet's body on the sheet itself, with no card of its
+ *  own: the achievements sheet's level and badges (owner, 22 Nov 2026),
+ *  where a card on the sheet's own ground was a box in a box. */
+export const sheetPart = { gap: 12 } as const;
+
 export const sheetBody = {
   gap: 12, padding: space.cardPadding,
   backgroundColor: colors.surfaceCard,
