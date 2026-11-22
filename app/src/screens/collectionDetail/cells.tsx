@@ -2,7 +2,8 @@
 // and dragged on your own list, still on anybody else's.
 
 import React, { createContext, memo, useContext } from 'react';
-import { type AccessibilityActionEvent, Animated, StyleProp, View, ViewStyle } from 'react-native';
+import { type AccessibilityActionEvent, Animated, StyleProp, ViewStyle } from 'react-native';
+import { useRowArrival } from '../../components/Arrive';
 import PlaceCard from '../../components/PlaceCard';
 import PlaceTile from '../../components/PlaceTile';
 import { LIFT_AFTER_MS, useListDrag } from '../../components/useListDrag';
@@ -22,6 +23,8 @@ export const LiftedCard = createContext(-1);
  * inline on the list: an inline component is a new type every render, and
  * every lift and every slot passed is a render, so each one remounted
  * every card, the one in the finger with its gesture.
+ *
+ * It is also what arrives when a page opens: see `Arrive`.
  */
 export function LiftCell({ index, style, children, ...cell }: {
   index: number;
@@ -29,7 +32,8 @@ export function LiftCell({ index, style, children, ...cell }: {
   children?: React.ReactNode;
 }) {
   const lifted = useContext(LiftedCard);
-  return <View {...cell} style={[style, lifted === index && s.arrangeCellLifted]}>{children}</View>;
+  const arrival = useRowArrival(index);
+  return <Animated.View {...cell} style={[style, arrival, lifted === index && s.arrangeCellLifted]}>{children}</Animated.View>;
 }
 
 /**

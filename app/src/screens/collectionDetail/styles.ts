@@ -166,6 +166,9 @@ export const s = StyleSheet.create({
   // The page's margins outside, the card's padding inside; the text keeps
   // the body size and line height it had bare, so nothing reflows but
   // the inset. The ⋯ hangs at the top right, on the face's row.
+  // Above the places, so the cover growing out of its tile is not drawn over
+  // by the cells it crosses (`CollectionHero`).
+  headerAbove: { zIndex: 2 },
   descWrap: { paddingHorizontal: space.page, paddingBottom: 14 },
   // ── the card's rhythm, measured in ink (owner, 13 Nov 2026) ──
   // Read off a 2x render of a visitor's card, ink to ink, before and
