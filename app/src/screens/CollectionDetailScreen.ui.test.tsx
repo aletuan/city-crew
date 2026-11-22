@@ -4383,6 +4383,38 @@ describe('the way into the comments', () => {
     show();
     expect(door()).toBeNull();
   });
+
+  // The switch in your own list's ⋯ menu as well as on its thread
+  // (owner, 22 Nov 2026) — `collectionDetail/CommentsSetting`.
+  it('offers the owner of a public list the comments switch in the list\'s own menu', async () => {
+    appFlags.set('comments', true);
+    state.mine = [collection({ is_public: true })];
+    show();
+    await act(async () => { await Promise.resolve(); await Promise.resolve(); });
+    openMenu();
+    expect(menuTitles()).toEqual([
+      'Add place', 'Plan a trip', 'Edit collection', 'Comments', 'Grid', 'List', 'Delete collection',
+    ]);
+    expect(menuRow('Comments').textContent).toContain('On');
+    // It opens the thread's own sheet, the two states with a tick.
+    pick('Comments');
+    expect(screen.getByText('Who can comment on your collection?')).toBeTruthy();
+    expect(screen.getByText('Comments off')).toBeTruthy();
+  });
+
+  it('keeps it off a private list, off the menu with the flag off, and off somebody else\'s', () => {
+    for (const set of [
+      () => { appFlags.set('comments', true); state.mine = [collection({ is_public: false })]; },
+      () => { appFlags.reset(); state.mine = [collection({ is_public: true })]; },
+      () => { appFlags.set('comments', true); state.mine = []; state.cols = [theirs({ is_public: true })]; },
+    ]) {
+      set();
+      show();
+      openMenu();
+      expect(menuTitles()).not.toContain('Comments');
+      cleanup();
+    }
+  });
 });
 
 // The copy button in the activity row, with how many people copied the

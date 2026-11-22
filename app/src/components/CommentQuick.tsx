@@ -56,12 +56,12 @@ export function quickOrThread(at: {
   me: string | null; n: number; loaded: boolean; loading: boolean;
   /** The owner has closed the thread: nothing can be written anywhere. */
   off?: boolean;
-  /** The list is the reader's own: its thread's page is where the
-   *  switch that closes and opens it lives (`useThreadOwner`), and on a
-   *  thread with nothing in it this press is the only way there. */
-  mine?: boolean;
 }): 'quick' | 'thread' {
-  return at.me && at.loaded && !at.loading && at.n === 0 && !at.off && !at.mine ? 'quick' : 'thread';
+  // Your own list too, since 22 Nov 2026 (owner): the switch that closes
+  // its thread is in the list's own ⋯ menu as well as on the thread's
+  // page (`collectionDetail/CommentsSetting`), so this press is no longer
+  // the owner's only way to it, and the two bubbles behave alike.
+  return at.me && at.loaded && !at.loading && at.n === 0 && !at.off ? 'quick' : 'thread';
 }
 
 type Target = { subject: Subject; about?: string };
