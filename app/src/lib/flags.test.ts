@@ -30,6 +30,22 @@ describe('flagsStore', () => {
     expect(flagsStore().get('comments')).toBe(false);
   });
 
+  // Every default at once, written out. A default is what every phone
+  // runs before `app_flags` answers, and what it keeps when the read
+  // fails, so flipping one in code ships it to everyone on the next EAS
+  // Update. `place_price` had no pin of its own: turning it on survived
+  // every test (mutation sample, 22 Nov 2026). Exact, so a new flag fails
+  // here until someone writes down what it ships as.
+  it('ships every flag at the default written here', () => {
+    expect(FLAG_DEFAULTS).toEqual({
+      photo_attribution: true,
+      place_price: false,
+      place_checkin: false,
+      city_place_counts: false,
+      comments: false,
+    });
+  });
+
   it('takes a row from the table over the default', async () => {
     const fake = fakeSupabase();
     fake.replies({ data: [{ key: 'photo_attribution', enabled: false }] });
