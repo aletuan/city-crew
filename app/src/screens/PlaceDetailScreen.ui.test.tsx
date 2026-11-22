@@ -1986,6 +1986,8 @@ describe('PlaceDetailScreen — what is this place, said without interruption', 
     const head = screen.getByText('Highlights').parentElement!;
     const desc = screen.getByTestId('detail-desc');
     expect(head.contains(desc)).toBe(false);
+    // Justified, as a collection's description is (owner, 22 Nov 2026).
+    expect(getComputedStyle(desc).textAlign).toBe('justify');
     expect(head.textContent).toContain('\u201C');
     // A bare mark, no disc and no box: the first thing on the row is the
     // glyph itself, on the word's baseline, 6pt from it.
