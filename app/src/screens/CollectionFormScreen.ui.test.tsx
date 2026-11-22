@@ -367,17 +367,40 @@ describe('what stops a submit before it writes', () => {
     expect(screen.getByText('Description')).toBeTruthy();
     for (const icon of ['bookmark-outline', 'text-outline']) expect(document.querySelector(`[data-icon="${icon}"]`)).toBeNull();
     const rules = screen.getAllByTestId('collection-form-rule');
-    expect(rules).toHaveLength(3);
-    // In order down the page: who sees it, a rule, the name, a rule, the
-    // description, a rule.
+    expect(rules).toHaveLength(4);
+    // In order down the page: a rule, the name, a rule, the description, a
+    // rule, who sees it (owner, 22 Nov 2026: it stood over the fields), a
+    // rule.
     const before = (a: Element, b: Element) => !!(a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING);
     const name = screen.getByPlaceholderText('Weekend coffee');
     const words = screen.getByPlaceholderText('What ties these together?');
-    const order = [screen.getByTestId('collection-form-seen'), rules[0], name, rules[1], words, rules[2]];
+    const order = [rules[0], name, rules[1], words, rules[2], screen.getByTestId('collection-form-seen'), rules[3]];
     order.slice(1).forEach((el, i) => expect([i, before(order[i], el)]).toEqual([i, true]));
     // No box: the row has no padding of its own, and no border.
     const row = name.parentElement!.parentElement as HTMLElement;
     expect([getComputedStyle(row).paddingLeft, getComputedStyle(row).borderTopWidth]).toEqual(['0px', '0px']);
+    // Air: 22 over, 20 under (owner, 22 Nov 2026), from none.
+    expect([getComputedStyle(row).paddingTop, getComputedStyle(row).paddingBottom]).toEqual(['22px', '20px']);
+  });
+
+  it('asks who can see it in a row under the fields: its name and question over the answer', () => {
+    render(<CollectionFormScreen navigation={nav()} route={routeWith()} />);
+    const name = screen.getByText('Access');
+    const ask = screen.getByText('Who can see this collection?');
+    const answer = screen.getByTestId('collection-form-seen');
+    const words = screen.getByPlaceholderText('What ties these together?');
+    const after = (a: Element, b: Element) => !!(a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING);
+    expect([after(words, name), after(name, ask), after(ask, answer)]).toEqual([true, true, true]);
+    // One row: the answer is beside the name, not a line of its own.
+    expect(name.parentElement!.parentElement).toBe(answer.parentElement);
+  });
+
+  it('keeps the row when the answer cannot be changed, with the answer as words', () => {
+    render(<CollectionFormScreen navigation={nav()} route={routeWith({ copyFrom: {
+      sourceId: 'c-src', title: 'Theirs', desc: '', cityId: 'hanoi', placeSlugs: ['heim'],
+    } })} />);
+    expect(screen.getByText('Access')).toBeTruthy();
+    expect(screen.getByTestId('collection-form-seen').getAttribute('role')).not.toBe('button');
   });
 
   // A plain new list is told nothing more than who can see it.

@@ -269,7 +269,7 @@ export function FieldRow({ icon, label, secure, strength, error, invalid, groupe
             two signals agreeing is what makes the field findable in a
             scroll. */}
         {icon ? <Glyph name={icon} size={ICON.nav} color={error ? colors.bad : colors.accent} /> : null}
-        <View style={[s.fieldText, grouped && s.fieldTextGrouped]}>
+        <View style={[s.fieldText, grouped && s.fieldTextGrouped, grouped && flush && s.fieldTextFlush]}>
           {/* Grouped, the label is the smaller half: there is no glyph to
               find the row by, so the label is what names it and the value
               is what the reader came to read. Boxed, the two are peers.
@@ -817,7 +817,12 @@ const s = StyleSheet.create({
   // profile's card wears the same label over the same value.
   fieldTextGrouped: { gap: 6 },
   // The grouped row with no card to sit in — see `flush`.
-  fieldFlush: { paddingHorizontal: 0, paddingVertical: 0 },
+  // Air between the hairlines (owner, 22 Nov 2026): 22 over a field and 20
+  // under, from none, and the label 10 off its value, from 6. A form that
+  // is only a name and a note has room to spend, and a line that is crowded
+  // between its rules reads as a table's.
+  fieldFlush: { paddingHorizontal: 0, paddingTop: 22, paddingBottom: 20 },
+  fieldTextFlush: { gap: 10 },
   fieldErrorFlush: { paddingHorizontal: 0 },
   fieldLabelSmall: {
     color: colors.textTertiary, fontSize: 12, fontWeight: font.semibold, letterSpacing: 0.3,
