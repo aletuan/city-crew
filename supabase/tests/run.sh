@@ -818,3 +818,9 @@ for f in "$ROOT"/supabase/migrations/*_category_terms.sql; do
   run "$DB" -f "$f" >/dev/null
 done
 run "$DB" -f "$HERE/category_terms_rls_test.sql"
+
+# The last two closed tables, tried as a client (22 Nov 2026): desk history
+# no client reaches, and reserved handles anyone reads and nobody frees.
+# Nothing to apply: both migrations ran in the editorial blocks above.
+echo "→ closed tables, as a client"
+run "$DB" -f "$HERE/closed_tables_test.sql"
