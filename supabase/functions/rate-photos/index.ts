@@ -23,17 +23,9 @@ import Anthropic from "npm:@anthropic-ai/sdk@0.70.1";
 import { opsOrEditor } from "../_shared/gate.ts";
 import { SCORER as LABELS } from "../_shared/photoLabels.ts";
 import { type Answer, type BeautyKind, SCHEMA, VERSION, instructions, isBeautyKind } from "../_shared/photoBeauty.ts";
+import { http } from "../_shared/http.ts";
 
-const CORS = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-ops-token",
-  "Access-Control-Allow-Methods": "POST, OPTIONS",
-};
-const json = (body: unknown, status = 200) =>
-  new Response(JSON.stringify(body), {
-    status,
-    headers: { ...CORS, "Content-Type": "application/json" },
-  });
+const { CORS, json } = http({ opsToken: true });
 
 /** Which model answers. Haiku by default, because it is the model the
  *  catalog's labels run on and the one a catalog-wide score would be

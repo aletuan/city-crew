@@ -67,17 +67,9 @@
 
 import { createClient } from "npm:@supabase/supabase-js@2";
 import Anthropic from "npm:@anthropic-ai/sdk@0.70.1";
+import { http } from "../_shared/http.ts";
 
-const CORS = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-  "Access-Control-Allow-Methods": "POST, OPTIONS",
-};
-const json = (body: unknown, status = 200) =>
-  new Response(JSON.stringify(body), {
-    status,
-    headers: { ...CORS, "Content-Type": "application/json" },
-  });
+const { CORS, json } = http();
 
 /** A day out is five stops and an evening is three; eight leaves room for a
  *  plan the reader has added to without letting one request grow unbounded. */
