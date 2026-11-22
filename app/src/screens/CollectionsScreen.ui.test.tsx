@@ -355,11 +355,14 @@ describe('CollectionsScreen — as a guest', () => {
     expect(navigation.parentNavigate).toHaveBeenCalledWith('Explore');
   });
 
-  it('a tile is a button named by its title, and opens its collection by slug', () => {
+  it('a tile is a button named by its title, and opens its collection by slug', async () => {
     state.cols.data = [col('here', ['a'])];
     const { navigation } = show();
     fireEvent.click(screen.getByRole('button', { name: 'List here' }));
-    expect(navigation.navigate).toHaveBeenCalledWith('CollectionDetail', { slug: 'here' });
+    // After the tile is measured, so the page can grow its cover from it.
+    // jsdom lays nothing out, so the measurement is unusable and the page
+    // opens as it always did: by slug alone.
+    await waitFor(() => expect(navigation.navigate).toHaveBeenCalledWith('CollectionDetail', { slug: 'here' }));
   });
 
   it('lays the cover scrim the Explore shelf wears under a tile’s words', async () => {
@@ -1567,7 +1570,7 @@ describe('CollectionsScreen — Mosaic', () => {
     }));
   };
 
-  it('opens Community in Mosaic, preserving order and navigation without tile actions or place counts', () => {
+  it('opens Community in Mosaic, preserving order and navigation without tile actions or place counts', async () => {
     state.uid = 'u1';
     seed();
     const { navigation } = show({ tab: 'community' });
@@ -1580,7 +1583,7 @@ describe('CollectionsScreen — Mosaic', () => {
     expect(screen.queryByRole('button', { name: /like this collection/i })).toBeNull();
     expect(screen.queryByTestId('collection-tile-count')).toBeNull();
     fireEvent.click(screen.getByTestId('collection-card-3'));
-    expect(navigation.navigate).toHaveBeenCalledWith('CollectionDetail', { slug: 'mosaic-3' });
+    await waitFor(() => expect(navigation.navigate).toHaveBeenCalledWith('CollectionDetail', { slug: 'mosaic-3' }));
   });
 
   // The Mosaic's byline as the tile's (owner, 14 Nov 2026): the handle

@@ -52,6 +52,7 @@ import { isNewList } from '../lib/newest';
 import { leadingCity, mosaicCaption, mosaicGroups, mosaicRows, type MosaicEntry, type MosaicRow } from '../lib/collectionMosaic';
 import { derivedKinds } from '../lib/collectionKinds';
 import NewBadge from '../components/NewBadge';
+import { useCoverOpen } from '../lib/useCoverOpen';
 import { COLLECTION_RECENTS_KEY, RECENTS_SHOWN, rememberSearch } from '../lib/recents';
 import { NO_RECENTS, oneOf, RECENTS, useStored } from '../lib/stored';
 import { cityInQuery, collectionKinds, siftCollections, type SiftMember } from '../lib/search';
@@ -296,6 +297,7 @@ export default function CollectionsScreen({ navigation, route }: {
   const community = cols.data.filter((c) => membersOf(c, places).length > 0);
 
   const coverFor = (c: Collection) => coverUriOf(c, membersOf(c, places));
+  const cover = useCoverOpen((slug, from) => navigation.navigate('CollectionDetail', from ? { slug, from } : { slug }));
 
   // The faces behind the community tiles, fetched once per catalog load
   // through the same batched lookup the Crew screen uses. A miss leaves
@@ -1026,12 +1028,12 @@ export default function CollectionsScreen({ navigation, route }: {
       <PressableScale
         key={c.slug}
         contentStyle={[s.mosaicCard, { width, height }]}
-        onPress={() => { noteSearch(); navigation.navigate('CollectionDetail', { slug: c.slug }); }}
+        onPress={() => { noteSearch(); cover.open(c.slug, uri); }}
         testID={`collection-card-${at}`}
         accessibilityRole="button"
         accessibilityLabel={`${title}${fresh ? `, ${newWord}` : ''}${author ? `, ${author}` : ''}`}
       >
-        <View style={s.mosaicPhoto} testID={`collection-mosaic-${c.slug}-${caption}`}>
+        <View ref={cover.ref(c.slug)} style={s.mosaicPhoto} testID={`collection-mosaic-${c.slug}-${caption}`}>
           {uri
             ? <Image source={{ uri }} style={StyleSheet.absoluteFill} contentFit="cover" />
             : <EmptyCover />}
@@ -1172,7 +1174,7 @@ export default function CollectionsScreen({ navigation, route }: {
                       <PressableScale
                         key={c.slug}
                         contentStyle={[s.gcard, { width: gcardW, height: gcardH }]}
-                        onPress={() => { noteSearch(); navigation.navigate('CollectionDetail', { slug: c.slug }); }}
+                        onPress={() => { noteSearch(); cover.open(c.slug, uri); }}
                         testID={item.own ? undefined : `${section.shared ? 'collection-shared' : 'collection-card'}-${item.at + j}`}
                         accessibilityRole="button"
                         // A shared tile says whose it is, as the heading
@@ -1183,9 +1185,11 @@ export default function CollectionsScreen({ navigation, route }: {
                           ? `${t(c.title_en, c.title_vi, c.title_ja)}${fresh ? `, ${newWord}` : ''}, ${visibilityOf(c)}`
                           : `${t(c.title_en, c.title_vi, c.title_ja)}${fresh ? `, ${newWord}` : ''}${section.shared && c.curator_handle ? `, ${normalizeHandle(c.curator_handle)}` : ''}`}
                       >
-                        {uri
-                          ? <Image source={{ uri }} style={StyleSheet.absoluteFill} contentFit="cover" transition={200} />
-                          : <View style={[StyleSheet.absoluteFill, { backgroundColor: colors.bgElevated }]} />}
+                        <View ref={cover.ref(c.slug)} style={StyleSheet.absoluteFill} pointerEvents="none">
+                          {uri
+                            ? <Image source={{ uri }} style={StyleSheet.absoluteFill} contentFit="cover" transition={200} />
+                            : <View style={[StyleSheet.absoluteFill, { backgroundColor: colors.bgElevated }]} />}
+                        </View>
                         {/* The Explore shelf's scrim, the one `coverScrim`
                             — same object, same card language, second
                             surface. It began at 55% here once, to give the

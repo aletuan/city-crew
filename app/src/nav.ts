@@ -1,3 +1,4 @@
+import type { CoverFrom } from './lib/coverMorph';
 import type { WhereKind } from './lib/planHeading';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { createNavigationContainerRef, type RouteProp } from '@react-navigation/native';
@@ -118,7 +119,7 @@ export type RootStackParamList = {
    *  on arrival as the page's own sheet does it — Friends opens "Share
    *  with friends", whose friends are chosen here (owner, 20 Nov 2026;
    *  `collectionForm/formParts`' `leaveForm`). */
-  CollectionDetail: { slug: string; seen?: Visibility };
+  CollectionDetail: { slug: string; seen?: Visibility; from?: CoverFrom };
   /** Who liked and who copied one of your lists, all time — the card's
    *  "View activity ›". By slug, like the page it opens from: the row is
    *  already in memory among your own lists, so only the key travels. */
