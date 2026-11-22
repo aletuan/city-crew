@@ -6,7 +6,7 @@
 // words; and that the dim behind it puts it away having sent nothing.
 
 import React from 'react';
-import { Keyboard, StyleSheet, Text, View } from 'react-native';
+import { Animated, Keyboard, Platform, Text, View } from 'react-native';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { act, cleanup, fireEvent, render, screen } from '../uitest/render';
 import { changes } from '../lib/commentsChanged';
@@ -99,33 +99,73 @@ describe('the field over the page', () => {
     expect(screen.getByTestId('composer-field')).toBeTruthy();
   });
 
-  it('gives the home indicator\'s margin up to the keyboard', () => {
-    const heard: Record<string, (() => void)[]> = {};
-    vi.spyOn(Keyboard, 'addListener').mockImplementation(((event: string, cb: () => void) => {
-      (heard[event] ??= []).push(cb);
-      return { remove: () => {} };
-    }) as never);
-    render(<CommentQuick target={{ subject: SUBJECT }} onClose={onClose} />);
-    // Off the committed tree, not the element's own fiber, which can be a render behind.
-    const pad = () => {
-      type Fiber = { child: Fiber | null; sibling: Fiber | null; memoizedProps: Record<string, unknown> | null };
-      const found: number[] = [];
-      for (const host of [...document.body.children] as unknown as Record<string, { stateNode: { current: Fiber } }>[]) {
-        const key = Object.keys(host).find((k) => k.startsWith('__reactContainer'));
-        if (!key) continue;
-        const stack: Fiber[] = [host[key].stateNode.current];
-        while (stack.length) {
-          const fb = stack.pop()!;
-          if (fb.memoizedProps?.testID === 'composer') found.push((StyleSheet.flatten(fb.memoizedProps.style as never) as { paddingBottom: number }).paddingBottom);
-          if (fb.sibling) stack.push(fb.sibling);
-          if (fb.child) stack.push(fb.child);
-        }
-      }
-      return found[0];
-    };
-    expect(pad()).toBe(42);
-    act(() => heard.keyboardWillShow.forEach((f) => f()));
-    expect(pad()).toBe(8);
+  describe('riding the keyboard', () => {
+    const heard: Record<string, ((e: unknown) => void)[]> = {};
+    let removed = 0;
+    let os: string;
+    beforeEach(() => {
+      for (const k of Object.keys(heard)) delete heard[k];
+      removed = 0;
+      os = Platform.OS;
+      vi.spyOn(Keyboard, 'addListener').mockImplementation(((event: string, cb: (e: unknown) => void) => {
+        (heard[event] ??= []).push(cb);
+        return { remove: () => { removed += 1; } };
+      }) as never);
+    });
+    afterEach(() => { (Platform as { OS: string }).OS = os; });
+    const timing = () => vi.spyOn(Animated, 'timing').mockImplementation((() => ({ start: () => {} })) as never);
+    const ios = () => { (Platform as { OS: string }).OS = 'ios'; };
+
+    it('keeps the home indicator\'s margin under the field, up or down', () => {
+      ios();
+      timing();
+      render(<CommentQuick target={{ subject: SUBJECT }} onClose={onClose} />);
+      const pad = () => getComputedStyle(screen.getByTestId('composer')).paddingBottom;
+      expect(pad()).toBe('42px');
+      act(() => heard.keyboardWillShow.forEach((f) => f({ duration: 310, endCoordinates: { height: 336 } })));
+      expect(pad()).toBe('42px');
+    });
+
+    it('rises by the keyboard less that margin, on its run and on the native driver, and comes back down', () => {
+      ios();
+      const run = timing();
+      render(<CommentQuick target={{ subject: SUBJECT }} onClose={onClose} />);
+      act(() => heard.keyboardWillShow.forEach((f) => f({ duration: 310, endCoordinates: { height: 336 } })));
+      expect(run).toHaveBeenCalledOnce();
+      expect(run.mock.calls[0][1]).toMatchObject({ toValue: -302, duration: 310, useNativeDriver: true });
+      act(() => heard.keyboardWillHide.forEach((f) => f({ duration: 0, endCoordinates: { height: 0 } })));
+      // An event with no run of its own takes the keyboard's.
+      expect(run.mock.calls[1][1]).toMatchObject({ toValue: 0, duration: 250 });
+    });
+
+    it('never sinks below the foot for a keyboard shorter than the margin', () => {
+      ios();
+      const run = timing();
+      render(<CommentQuick target={{ subject: SUBJECT }} onClose={onClose} />);
+      act(() => heard.keyboardWillShow.forEach((f) => f({ duration: 250, endCoordinates: { height: 20 } })));
+      expect(run.mock.calls[0][1]).toMatchObject({ toValue: 0 });
+    });
+
+    it('stops listening when it goes', () => {
+      ios();
+      timing();
+      const { unmount } = render(<CommentQuick target={{ subject: SUBJECT }} onClose={onClose} />);
+      unmount();
+      expect(removed).toBe(2);
+    });
+
+    it('leaves the keyboard to the window off iOS', () => {
+      (Platform as { OS: string }).OS = 'android';
+      render(<CommentQuick target={{ subject: SUBJECT }} onClose={onClose} />);
+      expect(heard.keyboardWillShow).toBeUndefined();
+    });
+
+    it('carries the field\'s own ground on down under it', () => {
+      render(<CommentQuick target={{ subject: SUBJECT }} onClose={onClose} />);
+      const under = getComputedStyle(screen.getByTestId('comment-quick-under'));
+      expect(under.top).toBe('100%');
+      expect(under.backgroundColor).toBe(getComputedStyle(screen.getByTestId('composer')).backgroundColor);
+    });
   });
 
   it('posts a comment that answers nobody, tells the app, and goes away', async () => {
