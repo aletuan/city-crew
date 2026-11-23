@@ -106,6 +106,6 @@ describe('planSub: with whom, and where', () => {
 
   it('speaks each language', () => {
     expect(sub({ company: 'couple', whereKind: 'near' }, 'en')).toBe('For two · near you');
-    expect(sub({ company: 'friends', whereKind: 'near' }, 'ja')).toBe('友だちと · 近く');
+    expect(sub({ company: 'friends', whereKind: 'near' }, 'ja')).toBe('友達と · 近く');
   });
 });

@@ -155,7 +155,7 @@ function company(key: string | null, t: T): string | null {
   switch (key) {
     case 'solo': return t('On your own', 'Một mình', 'ひとりで', '一个人', '一個人');
     case 'couple': return t('For two', 'Cùng người ấy', 'ふたりで', '两个人', '兩個人');
-    case 'friends': return t('With friends', 'Cùng hội bạn', '友だちと', '和朋友', '和朋友');
+    case 'friends': return t('With friends', 'Cùng hội bạn', '友達と', '和朋友', '和朋友');
     case 'family': return t('With family', 'Cùng cả nhà', '家族で', '和家人', '和家人');
     default: return null;
   }

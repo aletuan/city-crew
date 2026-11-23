@@ -450,7 +450,7 @@ export default function PlanEditScreen({ navigation, route }: {
       navigation.getParent()?.navigate('Trips');
     } catch (e) {
       Alert.alert(
-        t('Could not save', 'Chưa lưu được', '保存できませんでした', '无法保存', '無法儲存'),
+        t('Could not save', 'Không lưu được', '保存できませんでした', '无法保存', '無法儲存'),
         e instanceof Error ? e.message : String(e),
       );
     } finally {

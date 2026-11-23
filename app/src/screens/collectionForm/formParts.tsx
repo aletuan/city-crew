@@ -263,7 +263,7 @@ export async function shareChosen(
         : t(
           'Choose your friends again on the collection\'s page.',
           'Hãy chọn lại bạn bè ở trang bộ sưu tập.',
-          'コレクションのページで友だちを選び直してください。',
+          'コレクションのページで友達を選び直してください。',
           '请在合集页面重新选择好友。', '請在合集頁面重新選擇好友。',
         ),
     );

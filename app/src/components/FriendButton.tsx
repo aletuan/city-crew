@@ -144,7 +144,7 @@ export function useFriendButtons(me: string | null, prefix: string, size: 'row' 
         />
         <Text style={[s.quietText, page && s.quietTextOnPage]}>
           {state === 'friends'
-            ? t('Friends', 'Bạn bè', '友だち', '好友', '好友')
+            ? t('Friends', 'Bạn bè', '友達', '好友', '好友')
             : t('Requested', 'Đã gửi', '送信済み', '已发送', '已傳送')}
         </Text>
       </View>

@@ -415,7 +415,7 @@ export default function SearchScreen({ navigation, route }: { navigation: Nav; r
           placeholder={adding
             ? t('Search places', 'Tìm địa điểm', 'スポットを検索', '搜索地点', '搜尋地點')
             : t('Search places and collections', 'Tìm địa điểm và bộ sưu tập', 'スポットやコレクションを検索', '搜索地点和合集', '搜尋地點和合集')}
-          cancel={{ shown: true, label: t('Cancel', 'Hủy', 'キャンセル', '取消', '取消'), onPress: () => navigation.goBack() }}
+          cancel={{ shown: true, label: t('Cancel', 'Huỷ', 'キャンセル', '取消', '取消'), onPress: () => navigation.goBack() }}
         />
       </View>
       {/* Where a ⊕ puts a place, said once under the box rather than on
@@ -497,9 +497,9 @@ export default function SearchScreen({ navigation, route }: { navigation: Nav; r
                     scaleTo={0.92}
                     hitSlop={{ top: 10, bottom: 10, left: 12, right: 12 }}
                     accessibilityRole="button"
-                    accessibilityLabel={t('Clear recent searches', 'Xóa tìm kiếm gần đây', '最近の検索を消去', '清除最近搜索', '清除最近搜尋')}
+                    accessibilityLabel={t('Clear recent searches', 'Xoá tìm kiếm gần đây', '最近の検索を消去', '清除最近搜索', '清除最近搜尋')}
                   >
-                    <Text style={s.clear}>{t('Clear', 'Xóa', '消去', '清除', '清除')}</Text>
+                    <Text style={s.clear}>{t('Clear', 'Xoá', '消去', '清除', '清除')}</Text>
                   </PressableScale>
                 ) : null}
               </View>

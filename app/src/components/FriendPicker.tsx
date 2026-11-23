@@ -175,7 +175,7 @@ export default function FriendPicker({
         />
 
         <PressableScale onPress={onClose} accessibilityRole="button" contentStyle={s.later}>
-          <Text style={s.laterText}>{t('Not now', 'Để sau', 'あとで', '暂不', '暫不')}</Text>
+          <Text style={s.laterText}>{t('Not now', 'Để sau', 'あとで', '以后再说', '以後再說')}</Text>
         </PressableScale>
       </Animated.View>
     </Modal>

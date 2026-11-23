@@ -43,10 +43,10 @@ describe('SearchField', () => {
   it('puts Cancel inside the box, a cross in the accent on the page\u2019s own ground, and runs it on a tap', () => {
     const onPress = vi.fn();
     render(<SearchField value="hanoi" onChangeText={() => {}} placeholder="p"
-      cancel={{ shown: true, label: 'Hủy', onPress }} />);
+      cancel={{ shown: true, label: 'Huỷ', onPress }} />);
     const button = screen.getByTestId('search-cancel');
     expect(button.getAttribute('role')).toBe('button');
-    expect(button.getAttribute('aria-label')).toBe('Hủy');
+    expect(button.getAttribute('aria-label')).toBe('Huỷ');
     const box = screen.getByTestId('search-input').parentElement!;
     expect(box.contains(button)).toBe(true);
     expect(button.textContent).toBe('');

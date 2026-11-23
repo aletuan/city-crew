@@ -145,7 +145,7 @@ export function ShareButton({ seen, friends, onPress }: {
 export function readerWord(kind: ReaderMark | null, t: T): string {
   if (!kind) return '';
   return kind === 'lent'
-    ? t('Shared with you', 'Chia sẻ với bạn', 'あなたに共有', '与你分享', '與你分享')
+    ? t('Shared with you', 'Chia sẻ với bạn', 'あなたに共有', '与你共享', '與你共享')
     : seenName('public', t);
 }
 
@@ -206,7 +206,7 @@ export function whoSeesRows(t: T, { seen, publicDesc, friendsDesc, onChoose }: {
       key: 'friends',
       icon: SEEN_GLYPH.friends,
       title: seenName('friends', t),
-      desc: friendsDesc ?? t('Only the friends you choose', 'Chỉ những bạn bè bạn chọn', '選んだ友だちだけが見られます', '仅你选择的好友可见', '僅你選擇的好友可見'),
+      desc: friendsDesc ?? t('Only the friends you choose', 'Chỉ những bạn bè bạn chọn', '選んだ友達だけが見られます', '仅你选择的好友可见', '僅你選擇的好友可見'),
       selected: seen === 'friends',
       onPress: () => onChoose('friends'),
     },

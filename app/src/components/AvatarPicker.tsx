@@ -224,7 +224,7 @@ export default function AvatarPicker({ size = 88, showCamera = true }: {
           {/* Nothing to remove until there is something there. */}
           {profile.avatar_url ? (
             <PressableScale onPress={remove} accessibilityRole="button" contentStyle={s.remove}>
-              <Text style={s.removeText}>{t('Remove photo', 'Xóa ảnh', '写真を削除', '移除头像', '移除大頭貼')}</Text>
+              <Text style={s.removeText}>{t('Remove photo', 'Xoá ảnh', '写真を削除', '移除头像', '移除大頭貼')}</Text>
             </PressableScale>
           ) : null}
         </View>

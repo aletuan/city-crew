@@ -569,7 +569,7 @@ export default function CollectionsScreen({ navigation, route }: {
   // glyph is not read out.
   const visibilityOf = (c: { id?: string; is_public?: boolean | null }) => ({
     public: t('Public', 'Công khai', '公開', '公开', '公開'),
-    friends: t('Friends', 'Bạn bè', '友だち', '好友', '好友'),
+    friends: t('Friends', 'Bạn bè', '友達', '好友', '好友'),
     private: t('Private', 'Riêng tư', '非公開', '私密', '私密'),
   })[seenFor(c)];
   const reasonFor = (slug: string) => shelfReason(hitBy.get(slug), chosen, t);
@@ -937,7 +937,7 @@ export default function CollectionsScreen({ navigation, route }: {
             // Inside the box, while the panel is up or anything it chose
             // is still on — see `SearchField`.
             // Always, while it is open: Cancel is how it is put away.
-            cancel={{ shown: true, label: t('Cancel', 'Hủy', 'キャンセル', '取消', '取消'), onPress: cancel }}
+            cancel={{ shown: true, label: t('Cancel', 'Huỷ', 'キャンセル', '取消', '取消'), onPress: cancel }}
           />
         </View>
       )}
@@ -956,9 +956,9 @@ export default function CollectionsScreen({ navigation, route }: {
                   scaleTo={0.92}
                   hitSlop={{ top: 10, bottom: 10, left: 12, right: 12 }}
                   accessibilityRole="button"
-                  accessibilityLabel={t('Clear suggestions', 'Xóa gợi ý', '候補を消去', '清除推荐', '清除推薦')}
+                  accessibilityLabel={t('Clear suggestions', 'Xoá gợi ý', '候補を消去', '清除推荐', '清除推薦')}
                 >
-                  <Text style={s.clear}>{t('Clear', 'Xóa', '消去', '清除', '清除')}</Text>
+                  <Text style={s.clear}>{t('Clear', 'Xoá', '消去', '清除', '清除')}</Text>
                 </PressableScale>
               </View>
               {suggestions.map((term) => (

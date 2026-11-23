@@ -133,7 +133,7 @@ export function Counts({ navigation }: { navigation: Nav }) {
         <View style={s.statDivider} />
         <StatTile n={ships.loaded ? friends : null} label={t('Friends', 'Bạn bè', '友達', '好友', '好友')} onPress={() => toProfileRoom(navigation, 'Crew')} />
         <View style={s.statDivider} />
-        <StatTile n={trips.loaded ? trips.data.length : null} label={t('Trips', 'Chuyến đi', 'トリップ', '行程', '行程')} onPress={() => hop('Trips', 'TripsHome')} />
+        <StatTile n={trips.loaded ? trips.data.length : null} label={t('Trips', 'Chuyến đi', '旅程', '行程', '行程')} onPress={() => hop('Trips', 'TripsHome')} />
       </View>
       {/* A dash that stays a dash is a question the screen cannot answer,
           and it says so — only for a count still unknown: a fetch that

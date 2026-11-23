@@ -28,7 +28,7 @@
 // accent. Both are the theme's, so they follow the look chosen in
 // Profile; the reference it came from drew them as fixed hex (a #E8E8E8
 // disc, a #C34A3B cross), which would have been a pale grey disc on every
-// dark look. The accent is the ink "Xóa" and "Bỏ lọc" wear as words that
+// dark look. The accent is the ink "Xoá" and "Bỏ lọc" wear as words that
 // do something; not the accent as a fill, which in this app is a row or
 // a chip the reader has chosen (`accentSoft`).
 //
@@ -45,7 +45,7 @@
 // The cross means "close the search" here, not "empty the words" as it
 // does at the end of most search boxes: there is no clear (x) beside it
 // to tell it from, and the circle, not a bare glyph, is what gives it the
-// weight of a way out. VoiceOver still hears the word ("Hủy", "Cancel").
+// weight of a way out. VoiceOver still hears the word ("Huỷ", "Cancel").
 // On the page's ground the cross measures at least 3:1 in every look, the
 // figure a glyph needs — worked out in SearchField.ui.test.tsx.
 // 34pt, not the reference's 36: the box is 44 with a 1pt hairline, and

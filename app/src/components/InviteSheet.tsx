@@ -162,7 +162,7 @@ export default function InviteSheet({
         ? t('A couple’s evening — pick who joins.', 'Buổi tối hai người — chọn người đi cùng.', 'ふたりの夜 — 誰を誘う？', '两人的夜晚 — 选择同行的人。', '兩人的夜晚 — 選擇同行的人。')
         : company === 'family'
           ? t('A family day — pick who joins.', 'Ngày của gia đình — chọn người đi cùng.', '家族の日 — 誰を誘う？', '家庭日 — 选择同行的人。', '家庭日 — 選擇同行的人。')
-          : t('A friends day — pick who joins.', 'Ngày với bạn bè — chọn người đi cùng.', '友だちとの日 — 誰を誘う？', '朋友聚会日 — 选择同行的人。', '朋友聚會日 — 選擇同行的人。')}
+          : t('A friends day — pick who joins.', 'Ngày với bạn bè — chọn người đi cùng.', '友達との日 — 誰を誘う？', '朋友聚会日 — 选择同行的人。', '朋友聚會日 — 選擇同行的人。')}
       // Greyed once the seats are spoken for: an unticked row on a full
       // sheet cannot be picked, and it says so by standing down rather
       // than by a checkbox that ignores the tap. A locked row wears the
@@ -196,7 +196,7 @@ export default function InviteSheet({
       none={t(
         'You have no friends here yet. Add one, then come back to invite.',
         'Bạn chưa có bạn bè nào. Thêm bạn rồi quay lại mời nhé.',
-        'まだ友だちがいません。友だちを追加してから招待しましょう。',
+        'まだ友達がいません。友達を追加してから招待しましょう。',
         '你还没有好友。添加好友后再回来邀请吧。', '你還沒有好友。新增好友後再回來邀請吧。',
       )}
       note={{ icon: 'time-outline', text: note }}
