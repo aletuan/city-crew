@@ -233,6 +233,17 @@ describe('MapPlaceCard', () => {
     alert.mockRestore();
   });
 
+  // Arranged as the owner chose (24 Nov 2026): the kind centred on the
+  // photograph's foot, the route a disc with the arrow alone.
+  it('captions the photograph at its foot, centred, and draws the route as an arrow on a disc', () => {
+    render(<MapPlaceCard place={place()} distanceKm={null} kind={null} now={NOON} onPress={() => {}} />);
+    const row = getComputedStyle(screen.getByTestId('place-kind').parentElement!);
+    expect([row.position, row.bottom, row.alignItems]).toEqual(['absolute', '6px', 'center']);
+    const route = screen.getByRole('button', { name: 'Directions' });
+    expect(route.textContent).toBe('');
+    expect(route.querySelector('[data-icon="navigate-outline"]')!.getAttribute('data-size')).toBe('18');
+  });
+
   it('offers no route to a place it cannot place', () => {
     render(<MapPlaceCard place={place({ lat: null, lng: null })} distanceKm={null} kind={null} now={NOON} onPress={() => {}} />);
     expect(screen.queryByRole('button', { name: 'Directions' })).toBeNull();
