@@ -37,66 +37,30 @@ là nói dối reviewer — và cả hai đều đã từng sai trong chính fil
 ## Notes (dán nguyên văn)
 
 ```
-Thank you for reviewing City Crew. Free app: no in-app purchases,
-subscriptions or paid content (confirmed in our 2.1(b) reply on 1.0 (6)).
+Thank you for reviewing City Crew. Free app: no in-app purchases, subscriptions or paid content.
 
-SIGN-IN: Every content screen (Places, Collections, place pages, Search,
-the map) works signed out. An account adds saving, collections, trip plans,
-check-ins and friends. Accounts are an email address and a password; the credentials
-in the Sign-In Information fields above are a working account with saved
-places, collections and a trip. Sign-up creates the account at the end of
-a short form; addresses are auto-confirmed, so no emailed code is needed.
-If the account gives you any trouble: anhlt1983@gmail.com.
+SIGN-IN: Every content screen (Places, Collections, place pages, Search, the map) works signed out. An account adds saving, collections, trip plans, check-ins and friends. Accounts are an email address and a password; the credentials in the Sign-In Information fields above are a working account with saved places, collections and a trip. Sign-up creates the account at the end of a short form; addresses are auto-confirmed, so no emailed code is needed. If the account gives you any trouble: anhlt1983@gmail.com.
 
-CHECK-IN: The Check in button on a place page records a visit to the
-signed-in account: which place, and when. It is a tap, not a location
-check; the device's position is never read or sent for it. The history is
-at Profile > Check-ins, where any visit can be removed; check-ins are in
-Download your data and are deleted with the account.
+CHECK-IN: The Check in button on a place page records a visit to the signed-in account: which place, and when. It is a tap, not a location check; the device's position is never read or sent for it. The history is at Profile > Account > Check-ins, where any visit can be removed; check-ins are in Download your data and are deleted with the account.
 
-LOCATION: Requested once. On the device it opens the nearest supported
-city, sorts places by distance ("nearest first") and centres the maps.
-On the trip start sheet, when no pin has been dropped, the position is
-sent through our own server to Google Geocoding and Places, to name the
-street and rank search results near the user; our server relays it and
-stores nothing. Denying it is fine — the app falls back to Ho Chi Minh
-City, and the city is changed by hand at Profile > Current city. The
-position is never stored, by us or with a saved trip.
+LOCATION: Requested once. On the device it opens the nearest supported city, sorts places by distance ("nearest first") and centres the maps. On the trip start sheet, when no pin has been dropped, the position is sent through our own server to Google Geocoding and Places, to name the street and rank search results near the user; our server relays it and stores nothing. Denying it is fine — the app falls back to Ho Chi Minh City, and the city is changed by hand at Profile > Account > Current city. The position is never stored, by us or with a saved trip.
 
-MAPS: Google Maps SDK draws the maps (the Places tab's map, place pages,
-the trip start sheet) and shows the user's position on them. Google Places
-and Geocoding are called from our own server, for the start sheet only,
-with the search text and a point to search near: a dropped pin, a picked
-area, or — when neither is set — the user's position (see LOCATION).
+MAPS: Google Maps SDK draws the maps and shows the user's position on them. Google Places and Geocoding are called from our own server, for the trip start sheet only (see LOCATION).
 
-PRICES: Places carry a typical spend for information (what the venue
-charges, not us). In this build the price row is hidden by default behind
-a server-side flag, so you may not see one.
+AI: Plan titles and the one-line note under each stop are written by a language model (Anthropic's Claude) from our own server. The model never chooses a place: it receives the stops our algorithm already selected from the editor-approved catalog, and its output is restricted to exactly those places. No personal data is sent — no name, email, account id or location. Disclosed in our privacy policy.
 
-AI: Plan titles and the one-line note under each stop are written by a
-language model (Anthropic's Claude) from our own server. The model never
-chooses a place: it receives the stops our algorithm already selected from
-the editor-approved catalog, and its output is restricted to exactly those
-places. No personal data is sent — no name, email, account id or location.
-Disclosed in our privacy policy.
+USER-GENERATED CONTENT (guideline 1.2): Every catalog place is approved by our editorial desk before publication. Some place descriptions quote a sentence or two from a public post about that place; the author's name and a link to the post are shown with the quote. "Local guides" — accounts our desk has individually granted the role, per city — can add photos to places they submitted, and only to those; the desk can hide any photo and the guide cannot unhide it. User-published collections and profiles carry in-app Report actions; users can block other users; any user may upload a photo as their profile cover, which our desk can remove from a profile report; reports go to our moderation desk, which can unpublish content and action accounts. Account deletion is in-app at Profile > Account > Delete account; the same screen offers Download your data (a JSON file handed to the system share sheet).
 
-USER-GENERATED CONTENT (guideline 1.2): Every catalog place is approved by
-our editorial desk before publication. Some place descriptions quote a
-sentence or two from a public post about that place; the author's name and
-a link to the post are shown with the quote. "Local guides" — accounts our
-desk has individually granted the role, per city — can add photos to
-places they submitted, and only to those; the desk can hide any photo and
-the guide cannot unhide it. User-published collections and profiles carry
-in-app Report actions; users can block other users; reports go to our
-moderation desk, which can unpublish content and action accounts. Account
-deletion is in-app at Profile > Delete account; the same screen offers
-Download your data (a JSON file handed to the system share sheet).
+COMMENTS (guideline 1.2): signed-in users can comment on public collections, reply, tag friends and places, and like a comment; open any public collection and tap the speech bubble. (1) Filter: each comment is checked on our server against a banned-word list and refused if it matches; 500 characters max, 30 per user per day. (2) Report: every comment's "..." menu has Report, with a reason. (3) Block: users block each other from a profile; across a block neither sees the other's comments. (4) Action: reports reach our moderation desk, which aims to act within 24 hours and can remove the comment and suspend the account. A collection's owner can delete any comment on it and turn comments off. Our Terms and Privacy Policy cover all of this.
 
-The app is available in English, Vietnamese and Japanese; it opens in
-English and the language is changed at Profile > Language.
+The app is available in English, Vietnamese and Japanese; it opens in English and the language is changed at Profile > Account > Language.
 ```
 
 ## Đoạn bình luận: chỉ dán vào bản nộp bật cờ `comments` (C10)
+
+**Đã gộp vào khối Notes ở trên từ 1.0.18** (bản rút gọn, vì ô Notes của App
+Store Connect giới hạn 4000 ký tự — cũng vì thế mà đoạn PRICES đã bỏ). Phần
+dưới giữ lại làm lịch sử và điều kiện.
 
 Bình luận làm sau cờ `comments` (`docs/comments-plan.md`). Đoạn dưới đây
 **khẳng định bốn thứ của guideline 1.2 cho bình luận**, nên chỉ dán khi cả

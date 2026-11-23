@@ -1068,6 +1068,49 @@ production. Không nhắc ở đây: Maestro, test, chỉnh icon, cỡ chữ, kh
 • コレクションにコピーした人数を表示します。人のページをリストやスポットで検索できます。
 ```
 
+## Release notes v1.0.19 (What's New)
+
+Viết từ các PR merge sau tag v1.0.18 (6d83a4e, #1527): #1528 → #1563.
+1.0.18 đã được duyệt nên app.json nâng lên 1.0.19 ở PR này. Không đổi
+package.json: không có native mới, mọi thay đổi dưới đây đã tới máy 1.0.10
+trở lên qua EAS Update. Hai migration (profile_wall, reports_queue_wall) đã có
+trên production. Ảnh bìa tự tải lên (Wall W3) là nội dung người dùng mới, nên
+ghi chú App Review thêm một câu vào đoạn USER-GENERATED CONTENT (xem
+`review-notes.md`). Không nhắc ở đây: test, Edge Functions, chỉnh khoảng cách.
+
+### EN
+
+```
+• Choose the cover of your page: a city, one of your public collections, or a photo of your own.
+• A collection's cover now heads its card. On your own list, tap the camera to pick another photo from its places.
+• Trip reminders: a short explanation before your phone asks, and a switch for them in Account.
+• Share a new collection with friends right from the form.
+• Turn comments on or off from your collection's ⋯ menu.
+• Trip invitations show who is still waiting and who has said yes.
+```
+
+### VI
+
+```
+• Chọn ảnh bìa cho trang của bạn: một thành phố, một bộ sưu tập công khai của bạn, hoặc ảnh của chính bạn.
+• Ảnh bìa bộ sưu tập giờ nằm ở đầu thẻ. Với bộ sưu tập của bạn, chạm vào biểu tượng máy ảnh để chọn ảnh khác từ các địa điểm trong đó.
+• Nhắc chuyến đi: có lời giải thích ngắn trước khi điện thoại hỏi quyền, và công tắc bật tắt trong Tài khoản.
+• Chia sẻ bộ sưu tập mới với bạn bè ngay trong lúc tạo.
+• Bật hoặc tắt bình luận từ menu ⋯ của bộ sưu tập.
+• Lời mời chuyến đi cho biết ai còn đang chờ và ai đã đồng ý.
+```
+
+### JA
+
+```
+• 自分のページのカバーを選べます：都市、公開中の自分のコレクション、または自分の写真。
+• コレクションのカバーがカードの一番上に表示されます。自分のリストではカメラをタップして、スポットの写真から選び直せます。
+• 旅程のリマインダー：スマホが許可を求める前に短い説明を表示し、アカウントにオン・オフのスイッチを追加しました。
+• 新しいコレクションを、作成画面からそのまま友だちと共有できます。
+• コレクションの ⋯ メニューからコメントのオン・オフを切り替えられます。
+• 旅程の招待で、返事待ちの人と参加する人が分かります。
+```
+
 ## Phạm vi phủ — kiểm lại trước mỗi lần nộp
 
 Description và release notes nói về số thành phố, nên chúng là metadata có thể
