@@ -20,13 +20,12 @@
 // go on to correct.
 
 import React, {
-  createContext, useCallback, useContext, useEffect, useMemo, useRef,
+  createContext, useCallback, useContext, useMemo,
 } from 'react';
-import { AppState } from 'react-native';
 import { useSession } from './auth';
 import { CACHE_CATALOG, cacheKey } from './data/cache';
 import { fetchMyTrips, usePersistedFetch, type Fetch, type Trip } from './data';
-import { shouldRefresh } from './stale';
+import { useRefreshOnForeground } from './useRefreshOnForeground';
 
 const NO_FETCH: Fetch<Trip[]> = {
   loading: true, loaded: false, error: null, data: [], loadedAt: null, fromCache: false, reload: () => {},
@@ -56,16 +55,7 @@ export function MyTripsProvider({ children }: { children: React.ReactNode }) {
   // a trip in this list without this device doing anything — the same
   // reason the invitations refresh on return, and the trips should agree
   // with the rail beside them.
-  const latest = useRef(trips);
-  latest.current = trips;
-  useEffect(() => {
-    const sub = AppState.addEventListener('change', (next) => {
-      if (next !== 'active') return;
-      const f = latest.current;
-      if (!f.loading && shouldRefresh(f.loadedAt, Date.now())) f.reload();
-    });
-    return () => sub.remove();
-  }, []);
+  useRefreshOnForeground(trips);
 
   // Each field rather than the wrapper: a Fetch object is new every
   // render, so depending on it would re-render every consumer on renders

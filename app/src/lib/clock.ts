@@ -34,10 +34,13 @@
 // eight cities — is still read exactly right, and Melbourne is three hours
 // off the way it was before this file existed. Wrong hours beat no app.
 //
-// No React and no imports, so the plain Node runner reaches all of it —
+// No React, and one import that has none either (`day`), so the plain Node
+// runner reaches all of it —
 // and so does the timezone the suite is *also* run under (`test:tz`,
 // New York), which is what proves none of this leans on the device's own
 // offset.
+
+import { parseISODay } from './day';
 
 /** The zone every city had before any city had one. Also what a city row
  *  hydrated from a launch cache written before `cities.tz` existed reads
@@ -158,13 +161,9 @@ export function offsetMin(tz: string, at: Date): number {
  * which is where a phone alarm set for it goes too.
  */
 export function instantOn(day: string, minutes: number, tz: string): Date | null {
-  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(day.trim());
-  if (!m) return null;
-  const [y, mo, d] = [Number(m[1]), Number(m[2]), Number(m[3])];
-  const probe = new Date(Date.UTC(y, mo - 1, d));
-  if (probe.getUTCFullYear() !== y || probe.getUTCMonth() !== mo - 1 || probe.getUTCDate() !== d) {
-    return null;
-  }
+  const p = parseISODay(day);
+  if (!p) return null;
+  const { y, mo, d } = p;
   // The wall time as if it were UTC, then the zone's offset taken off.
   // Two passes: the offset is read at the guessed instant, and the guess
   // moves the instant, which can move the offset — on the day the clocks

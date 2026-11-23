@@ -25,6 +25,35 @@ export function toISO(d: Date): string {
 }
 
 /**
+ * `YYYY-MM-DD` as its three numbers, or null when it is not a real day.
+ *
+ * The one place the shape is read. It used to be read three times — here,
+ * in `clock.instantOn` and in `remind` — and only two of the three asked
+ * whether the day existed, so "2026-02-30" was refused by the clock, kept
+ * by the reminder and rolled into the 2nd of March there. A reminder for a
+ * day the plan could never have is not a harmless disagreement.
+ *
+ * The month comes back 1 to 12, as written, not as `Date` counts it:
+ * callers that build a `Date` subtract one themselves, and the one place
+ * the subtraction lives is the place it is easiest to forget.
+ *
+ * The check runs through UTC, which has no daylight saving to move a day
+ * by an hour, and reads the result back: the constructor rolls overflow
+ * forward instead of refusing it, so asking what the day became is the
+ * only way to know it was real.
+ */
+export function parseISODay(s: string): { y: number; mo: number; d: number } | null {
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(s.trim());
+  if (!m) return null;
+  const [y, mo, d] = [Number(m[1]), Number(m[2]), Number(m[3])];
+  const probe = new Date(Date.UTC(y, mo - 1, d));
+  if (probe.getUTCFullYear() !== y || probe.getUTCMonth() !== mo - 1 || probe.getUTCDate() !== d) {
+    return null;
+  }
+  return { y, mo, d };
+}
+
+/**
  * `YYYY-MM-DD` back to local noon.
  *
  * Noon rather than midnight, and not for tidiness: a date built at
@@ -36,14 +65,8 @@ export function toISO(d: Date): string {
  * which every naive parser happily turns into the 2nd of March.
  */
 export function fromISO(s: string): Date | null {
-  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(s.trim());
-  if (!m) return null;
-  const [y, mo, d] = [Number(m[1]), Number(m[2]), Number(m[3])];
-  const out = new Date(y, mo - 1, d, 12, 0, 0, 0);
-  // The constructor rolls overflow forward instead of refusing it, so the
-  // only way to know the day was real is to ask what it became.
-  if (out.getFullYear() !== y || out.getMonth() !== mo - 1 || out.getDate() !== d) return null;
-  return out;
+  const p = parseISODay(s);
+  return p ? new Date(p.y, p.mo - 1, p.d, 12, 0, 0, 0) : null;
 }
 
 /**
