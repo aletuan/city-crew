@@ -33,7 +33,7 @@
 // No ordering, no tags, no captions, no crop. Version one is the desk's
 // three verbs and nothing the desk cannot do yet.
 
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import {
   ActivityIndicator, Alert, ScrollView, StyleSheet, Text, useWindowDimensions, View,
 } from 'react-native';
@@ -45,20 +45,20 @@ import PhotoSheet from '../components/PhotoSheet';
 import { HeaderAdd } from '../components/add';
 import { ScoreBadge, ScoreGlyph, ScoredCard, ScoringDialog, tenText } from '../components/PhotoScore';
 import {
-  Card, Empty, PressableScale, Screen, SECONDARY_CONTROL_H, successHaptic, useTabBarClearance,
+  Card, Empty, PressableScale, Screen, SECONDARY_CONTROL_H, useTabBarClearance,
 } from '../components/ui';
 import { useAddPhoto } from '../components/useAddPhoto';
 import { useSession } from '../lib/auth';
 import { useCollections, usePlaces } from '../lib/catalog';
-import { fetchGallery, fetchPlaceId, fetchSearchPlaces, removePlacePhotos, savePhotoScore, setCover, setHidden, usePlaceBySlug } from '../lib/data';
+import { fetchSearchPlaces, usePlaceBySlug } from '../lib/data';
 import {
-  applyEdit, canKeepGallery, galleryActions, galleryOrder, type GalleryAction, type GalleryEdit, type GalleryPhoto,
+  canKeepGallery, galleryActions, type GalleryAction, type GalleryPhoto,
 } from '../lib/gallery';
 import { MAX_PER_PLACE } from '../lib/guide';
 import { useI18n } from '../lib/i18n';
 import { localized } from '../lib/localized';
 import { splitName } from '../lib/name';
-import { SHOWN, bestOf, needsScore, scoreAll, toTen, type PhotoScorer } from '../lib/photoScore';
+import { SHOWN, bestOf, needsScore, toTen } from '../lib/photoScore';
 import { photoScorer } from '../lib/photoScoreNative';
 import { useMyCheckins } from '../lib/checkins';
 import { useMyTrips } from '../lib/mytrips';
@@ -67,10 +67,10 @@ import { refreshInSearchIndex } from '../lib/searchIndex';
 import { useIsEditor, useIsGuide } from '../lib/useGuideGrant';
 import { colors, font, onPhoto, radius, space } from '../theme';
 import type { Nav, RootRoute } from '../nav';
+import { useGalleryWrites } from './gallery/useGalleryWrites';
 
 type Mode = 'view' | 'pick';
 
-const nextFrame = () => new Promise<void>((r) => { requestAnimationFrame(() => r()); });
 
 const COLS = 3;
 const GAP = 6;
@@ -123,8 +123,6 @@ export default function GalleryScreen({ navigation, route }: { navigation: Nav; 
   const me = useMemo(() => ({ uid, granted, editor }), [uid, granted, editor]);
   const mayKeep = place ? canKeepGallery(place, me) : false;
 
-  const [placeId, setPlaceId] = useState<string | null>(null);
-  const [photos, setPhotos] = useState<GalleryPhoto[] | null>(null);
   const [mode, setMode] = useState<Mode>('view');
   // The draft choice, meaningful in pick mode only.
   const [picked, setPicked] = useState<string[]>([]);
@@ -136,100 +134,19 @@ export default function GalleryScreen({ navigation, route }: { navigation: Nav; 
   // swiped to, when the guide swiped.
   const [lastOpened, setLastOpened] = useState<string | null>(null);
   const open = (p: GalleryPhoto) => { setOpenId(p.id); setLastOpened(p.id); };
-  // A run of the scorer: how far it has got while it runs, and what it
-  // came to once it has finished, until the card is closed.
-  const [scoring, setScoring] = useState<{ done: number; total: number; stopping?: boolean } | null>(null);
-  const [scored, setScored] = useState<{ scored: number; failed: number } | null>(null);
-  const stop = useRef(false);
+  // The gallery's own read and every write to it — cover, hide, delete,
+  // score — drawn at once and read back: `useGalleryWrites` (23 Nov 2026).
+  const {
+    placeId, photos, load, fail, markDirty, makeCover, hide, removePhotos,
+    scoring, scored, setScored, startScoring, stopScoring,
+  } = useGalleryWrites({ slug, mayKeep, navigation, reloadCatalog, t });
 
-  const fail = useCallback((e: unknown) => {
-    Alert.alert(
-      t('That did not work', 'Chưa làm được', 'うまくいきませんでした', '操作未成功', '操作未成功'),
-      e instanceof Error ? e.message : String(e),
-    );
-  }, [t]);
-
-  // Taps drawn on the grid since it was last read, counted so a read that
-  // left before the latest tap does not draw over it (`load`), and the
-  // writes still out, so the gallery is read back once, after the last.
-  const drawn = useRef(0);
-  const writing = useRef(0);
-
-  // Its own read, hidden rows included — see `fetchGallery` for why the
-  // catalog's embed will not do. The id is looked up once and kept: every
-  // write after this one names the place by it. An answer to a question
-  // asked before the guide's latest tap is not the gallery any more, and
-  // is dropped: the read after that tap's write is on its way.
-  const load = useCallback(async () => {
-    const asked = drawn.current;
-    const id = placeId ?? await fetchPlaceId(slug);
-    if (!id) { setPhotos([]); return; }
-    setPlaceId(id);
-    const rows = galleryOrder(await fetchGallery(id));
-    if (asked === drawn.current) setPhotos(rows);
-  }, [placeId, slug]);
-
-  // ── the catalog, once, on the way out (owner, 23 Oct 2026) ──
-  //
-  // Every write used to reload the city's whole catalog, its public lists
-  // and the reader's own, to change one place's photographs: 1.3 MB of
-  // JSON for Hanoi's 384 places and 440 kB for the owner's lists,
-  // measured that day, parsed, written to the cache and drawn again on
-  // every screen holding the catalog — the stall a moment after each
-  // change. Nothing on this screen reads the catalog, so it waits until
-  // the guide leaves, and five changes cost one reload. Leaving is a pop
-  // back to the place, which unmounts this, or a tab, which blurs it.
-  const dirty = useRef(false);
-  const flush = useRef(() => {});
-  flush.current = () => {
-    if (!dirty.current) return;
-    dirty.current = false;
-    reloadCatalog();
-  };
-  useEffect(() => {
-    const off = navigation.addListener('blur', () => flush.current());
-    return () => { off(); flush.current(); };
-  }, [navigation]);
-
-  useEffect(() => {
-    if (!mayKeep) return;
-    load().catch(fail);
-    // Once, when the boundary opens. `load` changes when the id lands and
-    // that is not a reason to read again.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [mayKeep]);
-
-  // Every write, the same way: draw it on the grid at once (`applyEdit`),
-  // do it, and read the gallery back once the last write is in. Reading
-  // back is what keeps this screen honest about the desk: whatever the
-  // desk did in between arrives with the answer, and so does the server's
-  // word on a write that failed. The grid is never locked while a write is
-  // out — a second tap draws over the first and is written after it.
-  const run = async (edit: GalleryEdit, job: () => Promise<void>) => {
-    const before = photos;
-    drawn.current += 1;
-    writing.current += 1;
-    setPhotos((was) => (was ? applyEdit(was, edit) : was));
-    try {
-      await job();
-      dirty.current = true;
-      successHaptic();
-    } catch (e) {
-      // Alone, it goes back to what was there; under other taps, the
-      // read-back after them says what the server holds.
-      if (writing.current === 1) setPhotos(before);
-      fail(e);
-    } finally {
-      writing.current -= 1;
-    }
-    if (writing.current === 0) await load().catch(fail);
-  };
 
   const adder = useAddPhoto({
     place: place ?? { slug },
     placeId,
     count: photos?.length ?? 0,
-    onAdded: () => { load().catch(fail); dirty.current = true; },
+    onAdded: () => { load().catch(fail); markDirty(); },
   });
 
   const name = place ? splitName(localized(place, 'name', lang)).title : '';
@@ -260,8 +177,7 @@ export default function GalleryScreen({ navigation, route }: { navigation: Nav; 
         onPress: () => {
           // The paths from the rows on screen, so the files go with the
           // rows — see `removePlacePhotos` for why the rows go first.
-          const gone = ids.map((id) => ({ id, storage_path: photos?.find((p) => p.id === id)?.storage_path ?? null }));
-          void run({ kind: 'delete', ids }, () => removePlacePhotos(gone));
+          removePhotos(ids);
           setMode('view');
           setPicked([]);
         },
@@ -285,21 +201,21 @@ export default function GalleryScreen({ navigation, route }: { navigation: Nav; 
         desc: t('The picture that stands for the place, first wherever it appears.', 'Ảnh đại diện cho địa điểm, đứng đầu ở mọi nơi.', 'この場所を代表する写真になり、どこでも先頭に出ます。', '代表这个地点的照片，在任何地方都排在第一张。', '代表這個地點的照片，在任何地方都排在第一張。'),
       }),
       short: t('Cover', 'Ảnh bìa', 'カバー', '封面', '封面'),
-      onPress: () => { void run({ kind: 'cover', id: photo.id }, () => setCover(photo.id)); },
+      onPress: () => makeCover(photo.id),
     },
     hide: {
       key: a, icon: 'eye-off-outline' as const,
       title: t('Hide it', 'Ẩn ảnh', '非表示にする', '隐藏', '隱藏'),
       short: t('Hide', 'Ẩn', '非表示', '隐藏', '隱藏'),
       desc: t('Readers stop seeing it. You can show it again.', 'Người xem không thấy nữa. Bạn hiện lại được.', '読者には見えなくなります。再表示できます。', '其他人将看不到它。你可以重新显示。', '其他人將看不到它。你可以重新顯示。'),
-      onPress: () => { void run({ kind: 'hide', id: photo.id, hidden: true }, () => setHidden(photo.id, true)); },
+      onPress: () => hide(photo.id, true),
     },
     unhide: {
       key: a, icon: 'eye-outline' as const,
       title: t('Show it again', 'Hiện lại', '再表示する', '重新显示', '重新顯示'),
       short: t('Show', 'Hiện lại', '再表示', '显示', '顯示'),
       desc: t('Back on the place for everyone.', 'Trở lại địa điểm với mọi người.', 'この場所に再び表示されます。', '重新对所有人显示。', '重新對所有人顯示。'),
-      onPress: () => { void run({ kind: 'hide', id: photo.id, hidden: false }, () => setHidden(photo.id, false)); },
+      onPress: () => hide(photo.id, false),
     },
     delete: {
       key: a, icon: 'trash-outline' as const, destructive: true,
@@ -318,28 +234,6 @@ export default function GalleryScreen({ navigation, route }: { navigation: Nav; 
   const anyScored = unscored.length < shown.length;
   const best = bestOf(shown);
 
-  const startScoring = async (scorer: PhotoScorer, me: string) => {
-    stop.current = false;
-    setScored(null);
-    setScoring({ done: 0, total: unscored.length });
-    // Two frames, so the dialog is on screen and its bars are moving
-    // before the first photograph is handed over: the reading can keep
-    // the JS side busy, and the bars' loops are started from there.
-    await nextFrame();
-    await nextFrame();
-    const result = await scoreAll(unscored, {
-      read: (uri) => scorer.read(uri),
-      save: (id, reading) => savePhotoScore(id, scorer, reading, me),
-      onStep: (done) => setScoring((was) => ({ ...was, done, total: unscored.length })),
-      stopped: () => stop.current,
-    });
-    // Read back before the dialog goes, so the badges and the card's
-    // "best" arrive with it rather than a beat after.
-    await load().catch(fail);
-    setScoring(null);
-    setScored(result);
-    if (result.scored) successHaptic();
-  };
 
   // ── modes ──
 
@@ -406,7 +300,7 @@ export default function GalleryScreen({ navigation, route }: { navigation: Nav; 
                 label={anyScored
                   ? t(`Score ${unscored.length} new`, `Chấm ${unscored.length} ảnh mới`, `新しい${unscored.length}枚を採点`, `为 ${unscored.length} 张新照片评分`, `為 ${unscored.length} 張新照片評分`)
                   : t('Score photos', 'Chấm ảnh', '写真を採点', '为照片评分', '為照片評分')}
-                onPress={() => { void startScoring(photoScorer!, uid); }}
+                onPress={() => { void startScoring(photoScorer!, uid, unscored); }}
                 testID="gallery-score"
               />
             )}
@@ -561,7 +455,7 @@ export default function GalleryScreen({ navigation, route }: { navigation: Nav; 
         done={scoring?.done ?? 0}
         total={scoring?.total ?? 0}
         stopping={scoring?.stopping ?? false}
-        onCancel={() => { stop.current = true; setScoring((was) => was && { ...was, stopping: true }); }}
+        onCancel={stopScoring}
       />
     </Screen>
   );
