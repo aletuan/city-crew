@@ -250,7 +250,7 @@ export default function WelcomeSheet() {
           />
           <Row
             icon="people-outline"
-            title={t('Share with friends', 'Chia sẻ cùng bạn bè', '友達と共有する', '与好友分享', '與好友分享')}
+            title={t('Share with friends', 'Chia sẻ với bạn bè', '友達と共有', '与好友分享', '與好友分享')}
             body={t(
               'Share your plan, invite friends, and decide together.',
               'Chia sẻ kế hoạch, mời bạn bè và cùng nhau lựa chọn.',

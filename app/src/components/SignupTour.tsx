@@ -120,7 +120,7 @@ export function useTourAnchor(id: Target, press: () => void, focused: () => bool
 /** Each step's title and line, in step order (`targets`). */
 function words(t: ReturnType<typeof useI18n>['t']) {
   const titles = [t('Find a place', 'Tìm nơi bạn muốn đến', '行きたい場所を探す', '寻找地点', '尋找地點'),
-    t('Save places you love', 'Lưu nơi bạn thích', '好きな場所を保存', '保存喜欢的地点', '儲存喜歡的地點'),
+    t('Save places you love', 'Lưu địa điểm yêu thích', 'お気に入りのスポットを保存', '收藏喜欢的地点', '收藏喜歡的地點'),
     t('Collections', 'Bộ sưu tập', 'コレクション', '合集', '合集'),
     t('Your page', 'Trang của bạn', 'あなたのページ', '你的主页', '你的主頁'),
     t('Plan an outing', 'Lên kế hoạch', 'お出かけを計画', '规划出行', '規劃出行')];
@@ -340,7 +340,7 @@ export function SignupTourProvider({ children, getRoute, onReplay = noop }: { ch
             <View style={s.actions}>
               {step < LAST && <Pressable onPress={dismiss} accessibilityRole="button" style={s.skip}><Text style={s.skipText}>{t('Skip guide', 'Bỏ qua hướng dẫn', 'ガイドをスキップ', '跳过新手引导', '跳過新手引導')}</Text></Pressable>}
               <Pressable onPress={next} accessibilityRole="button" testID="signup-tour-next" style={s.next}>
-                <LinearGradient {...gradAI} style={s.nextFill}><Text style={s.nextText}>{step === LAST ? t('Done', 'Hoàn tất', '完了', '完成', '完成') : t('Next', 'Tiếp theo', '次へ', '下一步', '下一步')}</Text></LinearGradient>
+                <LinearGradient {...gradAI} style={s.nextFill}><Text style={s.nextText}>{step === LAST ? t('Done', 'Xong', '完了', '完成', '完成') : t('Next', 'Tiếp theo', '次へ', '下一步', '下一步')}</Text></LinearGradient>
               </Pressable>
             </View>
           </ScrollView>

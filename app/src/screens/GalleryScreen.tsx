@@ -364,7 +364,7 @@ export default function GalleryScreen({ navigation, route }: { navigation: Nav; 
                   {p.is_cover && (
                     <View style={s.badge} testID="gallery-cover">
                       <Glyph name="star" size={ICON.tiny} color={onPhoto.accent} />
-                      <Text style={s.badgeText}>{t('Cover', 'Bìa', 'カバー', '封面', '封面')}</Text>
+                      <Text style={s.badgeText}>{t('Cover', 'Ảnh bìa', 'カバー', '封面', '封面')}</Text>
                     </View>
                   )}
 

@@ -3694,7 +3694,7 @@ describe('the head of the card', () => {
     state.mine = [];
     state.shared = [collection({ owner_id: 'lan-id', curator_handle: 'lan', created_at: ago(5 * MIN) })];
     show();
-    expect(meta().textContent).toBe('5p·Chia sẻ với bạn');
+    expect(meta().textContent).toBe('5p·Được chia sẻ với bạn');
   });
 
   // The editorial lists share one `created_at`, the instant the column was

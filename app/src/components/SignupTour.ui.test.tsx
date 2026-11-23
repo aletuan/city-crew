@@ -51,7 +51,7 @@ it('does not start on sign-in; runs five steps and finishes without a skip on th
   await waitFor(() => expect(screen.queryByTestId('signup-tour')).toBeNull());
   state.route = 'PlaceDetail';
   await screen.findByText('2/5');
-  expect(screen.getByText('Lưu nơi bạn thích')).toBeTruthy();
+  expect(screen.getByText('Lưu địa điểm yêu thích')).toBeTruthy();
   // Step 3 waits for Collections, where it rings Community.
   fireEvent.click(screen.getByText('Tiếp theo'));
   await waitFor(() => expect(screen.queryByTestId('signup-tour')).toBeNull());
@@ -84,7 +84,7 @@ it('does not start on sign-in; runs five steps and finishes without a skip on th
   expect(screen.getByText('Lên kế hoạch')).toBeTruthy();
   expect(screen.getByText('Chọn đi cùng ai và bạn thích gì, City Crew sẽ gợi ý một buổi đi chơi để rủ bạn bè cùng đi.')).toBeTruthy();
   expect(screen.queryByText('Bỏ qua hướng dẫn')).toBeNull();
-  fireEvent.click(screen.getByText('Hoàn tất'));
+  fireEvent.click(screen.getByText('Xong'));
   await waitFor(() => expect(screen.queryByTestId('signup-tour')).toBeNull());
   fireEvent.click(screen.getByText('Start'));
   expect(screen.queryByTestId('signup-tour')).toBeNull();
