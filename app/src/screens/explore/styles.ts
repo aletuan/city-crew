@@ -280,8 +280,11 @@ export const s = StyleSheet.create({
   // this React Native, and a style travels with the element it is on.
   // Both edges, so the toast in it has a width to shrink inside; the
   // row between and around its children stays the map's to pan.
+  // Its right edge stops short of the zoom controls in the other corner
+  // (`MapControls`, 42 wide) and a 10pt gap, so the toast that grows in
+  // it never runs under them.
   mapQuick: {
-    position: 'absolute', left: space.page, right: space.page, top: 12, zIndex: 5,
+    position: 'absolute', left: space.page, right: space.page + 52, top: 12, zIndex: 5,
     flexDirection: 'row', alignItems: 'center', gap: 10, pointerEvents: 'box-none',
   },
 });

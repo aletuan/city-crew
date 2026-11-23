@@ -1362,7 +1362,10 @@ describe('the map', () => {
     await waitFor(() => expect(screen.getByTestId('places-map')).toBeTruthy());
     expect(document.querySelectorAll('[data-stub="Marker"]')).toHaveLength(2);
     fireEvent.click(screen.getByText('Cafés'));
-    expect(document.querySelectorAll('[data-stub="Marker"]')).toHaveLength(1);
+    // The pin the set lost fades for a tenth of a second (`pinFade`), as
+    // `gone-b`; what is pinned is everything else.
+    expect([...document.querySelectorAll('[data-stub="Marker"]')].map((m) => m.getAttribute('data-slug'))).toEqual(['a', 'gone-b']);
+    await waitFor(() => expect(document.querySelectorAll('[data-stub="Marker"]')).toHaveLength(1));
   });
 
   // What a chip means on the map: every pin in it is that kind of place,
@@ -1621,7 +1624,8 @@ describe('the map’s quick filters', () => {
     await waitFor(() => expect(screen.getByTestId('places-map')).toBeTruthy());
     expect(document.querySelectorAll('[data-stub="Marker"]')).toHaveLength(2);
     await act(async () => { fireEvent.click(screen.getByRole('button', { name: /opening hours/i })); });
-    expect(document.querySelectorAll('[data-stub="Marker"]')).toHaveLength(1);
+    // Once the closed one has faded out (`pinFade`).
+    await waitFor(() => expect([...document.querySelectorAll('[data-stub="Marker"]')].map((m) => m.getAttribute('data-slug'))).toEqual(['open']));
   });
 
   // Both what a screen reader hears — the row's `aria-checked`, which it

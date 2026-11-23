@@ -32,6 +32,9 @@ import { chosenKind } from '../lib/categories';
 import { canDrawMap } from './MiniMap';
 import { MapView, Marker, PROVIDER_GOOGLE } from './mapsModule';
 import MapBoundary from './MapBoundary';
+import MapControls from './MapControls';
+import { usePinFade } from './pinFade';
+import { useReducedMotion } from './ui';
 
 /** How long a bubble is redrawn as it moves before it is frozen. A custom
  *  marker view that is frozen from its first frame comes out blank on
@@ -64,6 +67,68 @@ function spokenCount(n: number, t: (en: string, vi: string, ja?: string, zh?: st
 }
 
 type Pinned = Place & { lat: number; lng: number };
+
+/**
+ * Show all the pins, and show them again whenever the set changes; and
+ * hand back the fit, for the button that asks for it again.
+ *
+ * The first fit lands at once — the map opens on its pins — and so does
+ * a refit for padding measured late. A new set glides there (owner, 23
+ * Nov 2026), which is most of what reads as motion when a chip is
+ * tapped; it used to jump. See `pinFade` for the pins' half of it.
+ */
+function useFit(
+  ref: React.RefObject<any>,
+  pins: readonly Pinned[],
+  key: string,
+  ready: boolean,
+  edgePadding: { top: number; right: number; bottom: number; left: number },
+  still: boolean,
+) {
+  const fittedKey = useRef<string | null>(null);
+  const fitAll = (animated: boolean) => ref.current?.fitToCoordinates(
+    pins.map((p) => ({ latitude: p.lat, longitude: p.lng })),
+    { edgePadding, animated },
+  );
+  useEffect(() => {
+    if (!ready || !pins.length) return;
+    fitAll(!still && fittedKey.current != null && fittedKey.current !== key);
+    fittedKey.current = key;
+  // The set is the honest dependency; a re-sort must not snap the map back.
+  // The four padding numbers are primitives, so listing them costs nothing,
+  // and a measured inset that arrives after the map is already ready — the
+  // header's `onLayout` firing late — must still trigger one refit.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [key, ready, edgePadding.top, edgePadding.right, edgePadding.bottom, edgePadding.left]);
+  return fitAll;
+}
+
+/**
+ * The pins the set just lost, fading for a tenth of a second before they
+ * go (`pinFade`) — drawn apart from the clusters, which are cut from the
+ * set that stays, and not to be tapped on the way out. The same picture
+ * they wore, unchosen: a chosen place that leaves the set stops being
+ * chosen with it.
+ */
+function Leaving({ pins, categories, opacity }: { pins: readonly Pinned[]; categories: readonly string[]; opacity: (slug: string) => number }) {
+  return (
+    <>
+      {pins.map((p) => (
+        <Marker
+          key={`gone-${p.slug}`}
+          identifier={`gone-${p.slug}`}
+          coordinate={{ latitude: p.lat, longitude: p.lng }}
+          image={pinImage(p, chosenKind(p, categories), false)}
+          anchor={{ x: 0.5, y: 1 }}
+          zIndex={0}
+          tracksViewChanges={false}
+          opacity={opacity(p.slug)}
+          tappable={false}
+        />
+      ))}
+    </>
+  );
+}
 const pinned = (places: readonly Place[]): Pinned[] =>
   places.filter((p): p is Pinned => p.lat != null && p.lng != null);
 
@@ -123,20 +188,9 @@ export default function PlacesMap({ places, selectedSlug, onSelect, categories, 
   // `settled` flips is a memo in name only.
   const pins = useMemo(() => pinned(places), [places]);
 
-  // Show all the pins, and show them again whenever the set changes.
   const key = pins.map((p) => p.slug).sort().join('|');
-  useEffect(() => {
-    if (!ready || !pins.length) return;
-    ref.current?.fitToCoordinates(
-      pins.map((p) => ({ latitude: p.lat, longitude: p.lng })),
-      { edgePadding, animated: false },
-    );
-  // The set is the honest dependency; a re-sort must not snap the map back.
-  // The four padding numbers are primitives, so listing them costs nothing,
-  // and a measured inset that arrives after the map is already ready — the
-  // header's `onLayout` firing late — must still trigger one refit.
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [key, ready, edgePadding.top, edgePadding.right, edgePadding.bottom, edgePadding.left]);
+  const still = useReducedMotion();
+  const fitAll = useFit(ref, pins, key, ready, edgePadding, still);
 
   // How wide a stretch of the world is on screen — which is the zoom, and
   // so the size of the cells the pins are gathered into. Until the map
@@ -149,6 +203,7 @@ export default function PlacesMap({ places, selectedSlug, onSelect, categories, 
     [key, span.latitudeDelta, span.longitudeDelta, selectedSlug],
   );
   const at = useMemo(() => new Map(pins.map((p) => [p.slug, p])), [pins]);
+  const fade = usePinFade(pins, still);
 
   // A custom marker view frozen from its first frame comes out blank on
   // iOS; one that is never frozen redraws on every pan. So each new set of
@@ -316,10 +371,12 @@ export default function PlacesMap({ places, selectedSlug, onSelect, categories, 
             // invisible. Put the chosen pin on top.
             zIndex={p.slug === selectedSlug ? 1 : 0}
             tracksViewChanges={false}
+            opacity={fade.opacity(p.slug)}
             onPress={() => tapPin(p.slug)}
           />
           );
         })}
+        <Leaving pins={fade.leaving} categories={categories} opacity={fade.opacity} />
         {cities.filter((c) => c.count != null).map((c) => (
           <Marker
             key={`city-${c.id}`}
@@ -342,6 +399,7 @@ export default function PlacesMap({ places, selectedSlug, onSelect, categories, 
           </Marker>
         ))}
       </MapView>
+      {pins.length ? <MapControls map={ref} still={still} onFit={() => fitAll(!still)} /> : null}
     </MapBoundary>
   );
 }

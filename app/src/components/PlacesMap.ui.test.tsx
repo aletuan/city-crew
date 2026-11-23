@@ -13,7 +13,9 @@ import { act, fireEvent, render } from '../uitest/render';
 import type { Place } from '../lib/data';
 import { pinImage } from './mapPins';
 
-const spies = vi.hoisted(() => ({ fitToCoordinates: vi.fn() }));
+const spies = vi.hoisted(() => ({ fitToCoordinates: vi.fn(), still: false }));
+// Less motion, asked for by the reader's settings — read through `./ui`.
+vi.mock('./ui', async (orig) => ({ ...(await orig<typeof import('./ui')>()), useReducedMotion: () => spies.still }));
 
 // `MiniMap` pulls in `expo-constants`, which cannot be imported in jsdom
 // (see `uitest/setup.tsx` on `expo-updates` for the same failure). The
@@ -26,7 +28,7 @@ vi.mock('./mapsModule', async () => {
   // a click on a marker (which sits inside the map) must not bubble up
   // and be mistaken for `onMapReady`.
   const MapView = R.forwardRef((p: any, ref: any) => {
-    R.useImperativeHandle(ref, () => ({ fitToCoordinates: spies.fitToCoordinates }));
+    R.useImperativeHandle(ref, () => ({ fitToCoordinates: spies.fitToCoordinates, getCamera: async () => ({ zoom: 12 }), animateCamera: () => {} }));
     return R.createElement('div', {
       'data-stub': 'MapView', 'data-user': String(!!p.showsUserLocation),
       'data-poi-icons': String(!(p.customMapStyle ?? []).some((r: any) => r.featureType === 'poi' && r.elementType === 'labels.icon' && r.stylers?.[0]?.visibility === 'off')),
@@ -49,6 +51,7 @@ vi.mock('./mapsModule', async () => {
     'data-anchor': p.anchor ? `${p.anchor.x},${p.anchor.y}` : '',
     'data-label': p.accessibilityLabel ?? '',
     'data-tracks': String(!!p.tracksViewChanges), onClick: p.onPress,
+    'data-opacity': String(p.opacity ?? 1), 'data-tappable': String(p.tappable ?? true),
   }, p.children);
   return { MapView, Marker, PROVIDER_GOOGLE: 'google' };
 });
@@ -61,6 +64,7 @@ import PlacesMap from './PlacesMap';
 // one test below flips it.
 beforeEach(() => {
   spies.fitToCoordinates.mockClear();
+  spies.still = false;
   verdict.canDrawMap = true;
 });
 
@@ -165,12 +169,63 @@ describe('PlacesMap', () => {
       expect.objectContaining({ animated: false }),
     );
 
+    // A new set glides there; only the first fit lands at once.
     rerender(<PlacesMap places={[place('a', 21, 105)]} selectedSlug={null} onSelect={() => {}} categories={[]} origin={null} cities={[]} onPickCity={() => {}} fallback={HANOI} />);
     expect(spies.fitToCoordinates).toHaveBeenCalledTimes(2);
     expect(spies.fitToCoordinates).toHaveBeenLastCalledWith(
       [{ latitude: 21, longitude: 105 }],
-      expect.objectContaining({ animated: false }),
+      expect.objectContaining({ animated: true }),
     );
+  });
+
+  it('lands a new set at once for a reader who asked for less motion', () => {
+    spies.still = true;
+    const { rerender } = render(<PlacesMap places={[place('a', 21, 105), place('b', 21.1, 105.1)]} selectedSlug={null} onSelect={() => {}} categories={[]} origin={null} cities={[]} onPickCity={() => {}} fallback={HANOI} />);
+    markMapReady();
+    rerender(<PlacesMap places={[place('a', 21, 105)]} selectedSlug={null} onSelect={() => {}} categories={[]} origin={null} cities={[]} onPickCity={() => {}} fallback={HANOI} />);
+    expect(spies.fitToCoordinates).toHaveBeenLastCalledWith(expect.anything(), expect.objectContaining({ animated: false }));
+    expect(markers().map((m) => m.getAttribute('data-slug'))).toEqual(['a']);
+  });
+
+  // The pins' half of a change (`pinFade`): the one that left stays a
+  // moment, fading and untappable; the one that came is held back.
+  it('fades out the pins a new set lost and holds back the ones it gained', () => {
+    vi.useFakeTimers();
+    try {
+      const { rerender } = render(<PlacesMap places={[place('a', 21, 105), place('b', 21.1, 105.1)]} selectedSlug={null} onSelect={() => {}} categories={[]} origin={null} cities={[]} onPickCity={() => {}} fallback={HANOI} />);
+      markMapReady();
+      rerender(<PlacesMap places={[place('a', 21, 105), place('c', 21.2, 105.2)]} selectedSlug={null} onSelect={() => {}} categories={[]} origin={null} cities={[]} onPickCity={() => {}} fallback={HANOI} />);
+      const bySlug = (slug: string) => markers().find((m) => m.getAttribute('data-slug') === slug);
+      expect(bySlug('gone-b')!.getAttribute('data-tappable')).toBe('false');
+      expect(bySlug('gone-b')!.getAttribute('data-opacity')).toBe('1');
+      expect(bySlug('c')!.getAttribute('data-opacity')).toBe('0');
+      expect(bySlug('a')!.getAttribute('data-opacity')).toBe('1');
+      act(() => { vi.advanceTimersByTime(600); });
+      expect(bySlug('gone-b')).toBeUndefined();
+      expect(bySlug('c')!.getAttribute('data-opacity')).toBe('1');
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  // The fit, again, on request — gliding — and the controls only when
+  // there are pins to fit.
+  it('fits every pin again from its control, and has none with nothing to fit', () => {
+    const { rerender } = render(<PlacesMap places={[place('a', 21, 105)]} selectedSlug={null} onSelect={() => {}} categories={[]} origin={null} cities={[]} onPickCity={() => {}} fallback={HANOI} />);
+    markMapReady();
+    spies.fitToCoordinates.mockClear();
+    fireEvent.click(document.querySelector('[data-testid="map-fit"]')!);
+    expect(spies.fitToCoordinates).toHaveBeenCalledWith([{ latitude: 21, longitude: 105 }], expect.objectContaining({ animated: true }));
+    rerender(<PlacesMap places={[]} selectedSlug={null} onSelect={() => {}} categories={[]} origin={null} cities={[]} onPickCity={() => {}} fallback={HANOI} />);
+    expect(document.querySelector('[data-testid="map-fit"]')).toBeNull();
+  });
+
+  it('refits for padding measured late without gliding', () => {
+    const { rerender } = render(<PlacesMap places={[place('a', 21, 105)]} selectedSlug={null} onSelect={() => {}} categories={[]} origin={null} cities={[]} onPickCity={() => {}} fallback={HANOI} />);
+    markMapReady();
+    rerender(<PlacesMap places={[place('a', 21, 105)]} selectedSlug={null} onSelect={() => {}} categories={[]} origin={null} cities={[]} onPickCity={() => {}} fallback={HANOI} edgePadding={{ top: 90, right: 64, bottom: 200, left: 40 }} />);
+    expect(spies.fitToCoordinates).toHaveBeenCalledTimes(2);
+    expect(spies.fitToCoordinates).toHaveBeenLastCalledWith(expect.anything(), expect.objectContaining({ animated: false }));
   });
 
   it('does not refit when the same pins reappear in a different order', () => {
