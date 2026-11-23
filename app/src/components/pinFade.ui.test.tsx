@@ -34,7 +34,8 @@ describe('fadeAt', () => {
     expect(fadeAt(FADE_OUT_MS * 3, 'leaving')).toBe(0);
   });
 
-  it('holds an arriving pin back until the camera is nearly there, then brings it in', () => {
+  it('brings an arriving pin in the moment the leaving ones have gone', () => {
+    expect(FADE_IN_AT).toBe(FADE_OUT_MS);
     expect(fadeAt(FADE_IN_AT - 1, 'arriving')).toBe(0);
     expect(fadeAt(FADE_IN_AT + FADE_IN_MS / 2, 'arriving')).toBe(0.5);
     expect(fadeAt(FADE_IN_AT + FADE_IN_MS * 2, 'arriving')).toBe(1);
@@ -64,12 +65,10 @@ describe('usePinFade', () => {
     expect(seen().opacity.a).toBeCloseTo(1 - TICK_MS / FADE_OUT_MS);
     expect(seen().opacity.c).toBe(0);
 
+    // The leaving set gone, and the arriving one already on its way:
+    // nothing on the map is empty between the two.
     step(FADE_OUT_MS);
     expect(seen().leaving).toEqual([]);
-
-    step(FADE_IN_AT + TICK_MS - FADE_OUT_MS - 2 * TICK_MS);
-    expect(seen().opacity.c).toBe(0);
-    step(TICK_MS);
     expect(seen().opacity.c).toBeGreaterThan(0);
     expect(seen().opacity.c).toBeLessThan(1);
 

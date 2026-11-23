@@ -182,3 +182,46 @@ export function clusterSkin(count: number): ClusterSkin {
   if (count >= 10) return { fill: '#857F6F', ink: '#17150F' };
   return { fill: '#B9B5AC', ink: '#17150F' };
 }
+
+/**
+ * The region a fit to `points` will land on, worked out before the map
+ * gets there — so the pins can be cut into cells at the zoom they are
+ * going to, rather than at the one the camera is leaving (owner's
+ * recording, 23 Nov 2026).
+ *
+ * Without it the cells are the old view's until the glide ends and the
+ * map reports where it stopped: from a street-level view out to the city,
+ * a few hundred pins were drawn one by one, piled on each other, for the
+ * glide's half second, and gathered into bubbles only when it ended.
+ *
+ * The arithmetic is the fit's own, near enough for a grid of eight: the
+ * box the points span, in the screen less the padding, by whichever side
+ * fills first. A degree of longitude and one of latitude are the same
+ * width on screen times the cosine of the latitude, which over the few
+ * kilometres of a city is one number. The map's own report at the end of
+ * the glide still re-cuts the grid to the exact region, so an error here
+ * costs one regrouping, which is what every glide cost before.
+ *
+ * Null when there is nothing to measure: no points, a view with no room
+ * left inside the padding, or points on one spot, where Google zooms in
+ * as far as it goes and no grid is needed.
+ */
+export function fitSpan(
+  points: readonly { lat: number; lng: number }[],
+  view: { width: number; height: number },
+  pad: { top: number; right: number; bottom: number; left: number },
+): { latitudeDelta: number; longitudeDelta: number } | null {
+  if (!points.length) return null;
+  const lats = points.map((p) => p.lat);
+  const lngs = points.map((p) => p.lng);
+  const latBox = Math.max(...lats) - Math.min(...lats);
+  const lngBox = Math.max(...lngs) - Math.min(...lngs);
+  const w = view.width - pad.left - pad.right;
+  const h = view.height - pad.top - pad.bottom;
+  if (w <= 0 || h <= 0) return null;
+  const cos = Math.cos((((Math.max(...lats) + Math.min(...lats)) / 2) * Math.PI) / 180);
+  // Degrees of longitude per point, by the side that fills first.
+  const perPoint = Math.max(lngBox / w, latBox / cos / h);
+  if (!(perPoint > 0)) return null;
+  return { latitudeDelta: perPoint * view.height * cos, longitudeDelta: perPoint * view.width };
+}

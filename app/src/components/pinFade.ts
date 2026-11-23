@@ -16,13 +16,20 @@
 // new pins fade in as it arrives:
 //
 //     leaving    1 → 0      0–120 ms
-//     camera     glides     from 60 ms, for as long as Google takes
-//     arriving   0 → 1      260–460 ms
+//     arriving   0 → 1      120–320 ms
+//     camera     glides     as soon as it is asked, for as long as Google takes
 //
 // Leaving first and quickly, so the two sets are never on screen as one;
-// arriving late, so a pin appears where it will stay rather than sliding
-// in with the camera. The figures were set in a mockup shown to the owner
-// the same day, and the camera's own length is Google's, not ours —
+// arriving the moment they have gone, with nothing between. The first
+// figures held the arrivals back to 260 ms so that a pin would appear
+// where it was going to stay rather than slide in with the camera; the
+// owner's recording that evening showed what that cost. Where the camera
+// hardly moves — a chip whose places are spread like the last one's —
+// the map stood empty for a seventh of a second between the two sets,
+// which read as a blink, not a pause. And where it does move, it set off
+// 150–200 ms after the tap, so holding the arrivals for it bought little.
+// A pin that drifts the last few points with the camera is the lesser of
+// the two. The camera's own length is Google's, not ours —
 // `fitToCoordinates` takes no duration.
 //
 // In steps of `TICK_MS`, because each step is a render that hands every
@@ -34,7 +41,7 @@
 import { useEffect, useState } from 'react';
 
 export const FADE_OUT_MS = 120;
-export const FADE_IN_AT = 260;
+export const FADE_IN_AT = FADE_OUT_MS;
 export const FADE_IN_MS = 200;
 export const TICK_MS = 40;
 const DONE_AT = FADE_IN_AT + FADE_IN_MS;
