@@ -17,12 +17,11 @@
 // ever name a friend.
 
 import React, {
-  createContext, useCallback, useContext, useEffect, useMemo, useRef, useState,
+  createContext, useCallback, useContext, useEffect, useMemo, useState,
 } from 'react';
-import { AppState } from 'react-native';
 import { type Fetch, fetchCrewCounts, fetchInvites, useFetch } from './data';
 import { useSession } from './auth';
-import { shouldRefresh } from './stale';
+import { useRefreshOnForeground } from './useRefreshOnForeground';
 import { waitingCount, type InviteRow } from './invites';
 
 type Invitations = {
@@ -65,16 +64,7 @@ export function InvitationsProvider({ children }: { children: React.ReactNode })
   // one that arrived while the phone was in a pocket, should not wait for
   // a pull nobody thinks to do — and this is the one list in the app whose
   // contents another person changes.
-  const latest = useRef(invites);
-  latest.current = invites;
-  useEffect(() => {
-    const sub = AppState.addEventListener('change', (next) => {
-      if (next !== 'active') return;
-      const f = latest.current;
-      if (!f.loading && shouldRefresh(f.loadedAt, Date.now())) f.reload();
-    });
-    return () => sub.remove();
-  }, []);
+  useRefreshOnForeground(invites);
 
   const mine = useMemo(
     () => (meId ? invites.data.filter((i) => i.invitee_id === meId) : []),

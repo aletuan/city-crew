@@ -36,6 +36,7 @@
 // itself is in the same column as the reminder, and fixing one without
 // the other would only move the disagreement.
 
+import { parseISODay } from './day';
 import { clockOf } from './format';
 
 export const REMINDER_HOUR = 20;
@@ -49,9 +50,12 @@ export const DAY_OF_EARLIEST_HOUR = 7;
 export type ReminderKind = 'eve' | 'today';
 export const REMINDER_KINDS: readonly ReminderKind[] = ['eve', 'today'];
 
+// A real day or nothing: the shape and the calendar are read in lib/day,
+// so a reminder cannot be set for a day the plan could not have. The month
+// is counted from 0 here, as `Date` counts it.
 const parseDay = (dayISO: string) => {
-  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(dayISO);
-  return m ? { y: Number(m[1]), mo: Number(m[2]) - 1, d: Number(m[3]) } : null;
+  const p = parseISODay(dayISO);
+  return p && { y: p.y, mo: p.mo - 1, d: p.d };
 };
 
 /**

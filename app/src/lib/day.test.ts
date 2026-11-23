@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { addDays, clampDay, daysBetween, fromISO, minutesOf, toISO, todayISO } from './day';
+import { addDays, clampDay, daysBetween, fromISO, minutesOf, parseISODay, toISO, todayISO } from './day';
 
 describe('toISO', () => {
   // The bug this file exists to prevent. `toISOString()` converts to UTC
@@ -166,5 +166,37 @@ describe('minutesOf', () => {
     const late = new Date(2026, 7, 17, 23, 30);
     expect(toISO(late)).toBe('2026-08-17');
     expect(minutesOf(late)).toBeGreaterThan(0);
+  });
+});
+
+// Read once, here. `clock.instantOn` and `remind` each had their own copy of
+// the pattern, and the reminder's did not ask whether the day existed.
+describe('parseISODay', () => {
+  it('gives the three numbers, the month as written (1 to 12)', () => {
+    expect(parseISODay('2026-08-16')).toEqual({ y: 2026, mo: 8, d: 16 });
+    expect(parseISODay('2026-01-05')).toEqual({ y: 2026, mo: 1, d: 5 });
+  });
+
+  it('forgives the whitespace a pasted value carries', () => {
+    expect(parseISODay(' 2026-08-16\n')).toEqual({ y: 2026, mo: 8, d: 16 });
+  });
+
+  it('refuses a day the calendar does not have, rather than rolling it forward', () => {
+    expect(parseISODay('2026-02-30')).toBeNull();
+    expect(parseISODay('2026-13-01')).toBeNull();
+    expect(parseISODay('2026-00-10')).toBeNull();
+    expect(parseISODay('2026-04-31')).toBeNull();
+  });
+
+  it('knows a leap year', () => {
+    expect(parseISODay('2028-02-29')).toEqual({ y: 2028, mo: 2, d: 29 });
+    expect(parseISODay('2027-02-29')).toBeNull();
+    expect(parseISODay('1900-02-29')).toBeNull();
+  });
+
+  it('refuses anything that is not the shape', () => {
+    for (const s of ['', '2026-8-16', '16-08-2026', '2026/08/16', '2026-08-16T10:00', 'tomorrow']) {
+      expect(parseISODay(s)).toBeNull();
+    }
   });
 });

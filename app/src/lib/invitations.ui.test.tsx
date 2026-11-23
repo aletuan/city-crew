@@ -90,6 +90,19 @@ describe('who is asking', () => {
     await waitFor(() => expect(screen.getByTestId('rows').textContent).toBe('0'));
     expect(fetchInvites).not.toHaveBeenCalled();
   });
+
+  // Decided, and the answer is nobody: an empty list that *did* load, so a
+  // signed-out reader is not stuck on a spinner, and nothing is asked of
+  // the server on behalf of no one.
+  it('answers an empty list, and asks nothing, once auth says there is no one', async () => {
+    world.session = null;
+    mount();
+    await waitFor(() => expect(screen.getByTestId('rows').textContent).toBe('0'));
+    expect(fetchInvites).not.toHaveBeenCalled();
+    expect(fetchCrewCounts).not.toHaveBeenCalled();
+    expect(screen.getByTestId('waiting').textContent).toBe('0');
+    expect(screen.getByTestId('counts').textContent).toBe('{}');
+  });
 });
 
 describe('the batch', () => {
