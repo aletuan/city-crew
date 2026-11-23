@@ -36,6 +36,7 @@ import { useCityList } from '../lib/city';
 import { cityTz } from '../lib/clock';
 import { openFragment, openState, shutLabel } from '../lib/format';
 import { fmtDistance } from '../lib/geo';
+import { shortAddress } from '../lib/address';
 import { useI18n } from '../lib/i18n';
 import { localized } from '../lib/localized';
 import { splitName } from '../lib/name';
@@ -70,12 +71,23 @@ export default function MapPlaceCard({ place, distanceKm, tint, now, onPress }: 
   // is silent otherwise. Shut: `shutLabel`. One of the two is null by
   // construction, so at most one fact about hours reaches the line —
   // the same split `PlaceCard` makes.
-  const state = openState(place.opening_hours, now, cityTz(useCityList().cities, place.city_id));
+  const cities = useCityList().cities;
+  const state = openState(place.opening_hours, now, cityTz(cities, place.city_id));
+  // The street under the name, as the detail screen prints it — street
+  // and ward, without the city, postal code and country (`shortAddress`),
+  // with the place's own city's names so one the module has never heard
+  // of is cut too (owner, 23 Nov 2026). The pin says where on the map;
+  // this says where to tell a driver, and lets two branches of one brand
+  // be told apart without opening either. A place with no address falls
+  // back to its ward, then to nothing.
+  const home = cities.find((c) => c.id === place.city_id);
+  const address = shortAddress(place.address, home ? [home.name_vi, home.name_en, home.short_vi, home.short_en].filter((n): n is string => !!n) : [])
+    ?? (place.neighborhood_en ? localized(place, 'neighborhood', lang) : null);
   const hours = state?.open ? openFragment(state, t) : shutLabel(state, t);
   // The brand alone, as `PlaceCard` prints it. The suffix the catalog
   // hangs after the dash is the branch's ward, and this strip sits under
-  // the pin that is standing in it — the map says where better than a
-  // word in the name line could. Spoken the same way: a listener walking
+  // the pin that is standing in it, and the address line under the name
+  // says it with the street besides. Spoken the same way: a listener walking
   // the pins hears one name per pin, not a name and a ward per pin.
   const name = splitName(localized(place, 'name', lang)).title;
   const ratingFact = place.rating ? `${place.rating.toFixed(1)}${place.rating_count ? ` (${fmtCount(place.rating_count)})` : ''}` : null;
@@ -99,6 +111,7 @@ export default function MapPlaceCard({ place, distanceKm, tint, now, onPress }: 
   // rating, distance, and hours without that confusing symbol.
   const spoken = [
     name,
+    address,
     ratingFact ? t(`rated ${ratingFact}`, `đánh giá ${ratingFact}`, `評価 ${ratingFact}`, `评分 ${ratingFact}`, `評分 ${ratingFact}`) : null,
     distanceFact,
     hours,
@@ -115,6 +128,7 @@ export default function MapPlaceCard({ place, distanceKm, tint, now, onPress }: 
           {tint ? <View testID="place-tint" style={[s.dot, { backgroundColor: tint }]} /> : null}
           <Text style={s.name} numberOfLines={2}>{name}</Text>
         </View>
+        {address ? <Text style={s.address} numberOfLines={1} testID="place-address">{address}</Text> : null}
         {ratingFact || facts.length ? (
           <Text style={s.facts} numberOfLines={1}>
             {/* The star the detail screen this strip opens draws its
@@ -173,6 +187,9 @@ const s = StyleSheet.create({
   body: { flex: 1, gap: 4, paddingTop: 2 },
   // The dot keeps to the first line of a name that wraps.
   line: { flexDirection: 'row', alignItems: 'flex-start', gap: 7 },
+  // The facts' size and ink: a line to read when wanted, not a second
+  // heading under the name.
+  address: { color: colors.textSecondary, fontSize: 13, fontWeight: font.regular },
   visited: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   // The photograph disc's size and reach (`PHOTO_DISC`), on the page's
   // well rather than a scrim, since there is no photograph under it.
