@@ -75,7 +75,7 @@ describe('what the button promises', () => {
     // 'lan' is already invited, so opening pre-ticks her — and pressing
     // Send with only her ticked would send nothing.
     show({ invites: [inv({ invitee_id: 'lan' })] });
-    expect(screen.getByText('Send invites')).toBeTruthy();
+    expect(screen.getByText('Sent — waiting for an answer')).toBeTruthy();
 
     fireEvent.click(screen.getByText('Minh Đỗ'));
     expect(screen.getByText('Send 1 invite')).toBeTruthy();
@@ -125,11 +125,64 @@ describe('what the button promises', () => {
   });
 });
 
+// Asked, not answered (owner, 23 Nov 2026). It wore the same coral tick
+// as a friend picked a moment ago and as one who said yes, and on a
+// couple's evening an invitation nobody had answered read as a yes.
+describe('an unanswered invitation', () => {
+  const face = (i: number) => screen.getByTestId(`invite-friend-${i}`);
+
+  it('wears a clock and says it is waiting, not the tick of a yes', () => {
+    show({ invites: [inv({ invitee_id: 'lan' })] });
+    expect(screen.getByText('Waiting')).toBeTruthy();
+    expect(face(0).querySelector('[data-testid="picker-waiting"]')).not.toBeNull();
+    expect(face(0).querySelector('[data-testid="picker-yes"]')).toBeNull();
+    expect(face(0).querySelector('[data-testid="picker-on"]')).toBeNull();
+  });
+
+  it('names who is waiting, says how to take it back, and does not offer to send again', () => {
+    show({ company: 'couple', invites: [inv({ invitee_id: 'lan' })] });
+    expect(screen.getByText('Lan Phương is invited and hasn’t answered yet. Tap them to take it back.')).toBeTruthy();
+    const cta = screen.getByRole('button', { name: 'Sent — waiting for an answer' });
+    expect(cta.getAttribute('aria-disabled')).toBe('true');
+    expect(cta.querySelector('[data-icon="time-outline"]')).not.toBeNull();
+  });
+
+  it('counts when more than one is waiting', () => {
+    show({ invites: [inv({ invitee_id: 'lan' }), inv({ invitee_id: 'ha' })] });
+    expect(screen.getByText('2 invited and not answered yet. Tap one to take it back.')).toBeTruthy();
+    expect(screen.getAllByText('Waiting')).toHaveLength(2);
+  });
+
+  it('tells a fresh tick from a sent one', () => {
+    show({ invites: [inv({ invitee_id: 'lan' })] });
+    fireEvent.click(screen.getByText('Minh Đỗ'));
+    expect(screen.getByText('To invite')).toBeTruthy();
+    expect(face(1).querySelector('[data-testid="picker-on"]')).not.toBeNull();
+    // Something moved, so the button sends again and the waiting note
+    // gives way to the usual one.
+    expect(screen.getByText('Send 1 invite')).toBeTruthy();
+    expect(screen.queryByText(/hasn’t answered yet/)).toBeNull();
+  });
+
+  it('drops the word and the clock once untapped, and the button offers to take it back', () => {
+    show({ invites: [inv({ invitee_id: 'lan' })] });
+    fireEvent.click(screen.getByText('Lan Phương'));
+    expect(screen.queryByText('Waiting')).toBeNull();
+    expect(face(0).querySelector('[data-testid="picker-waiting"]')).toBeNull();
+    expect(screen.getByText('Take back 1')).toBeTruthy();
+  });
+
+  it('names a friend the crew copy has not loaded by nothing rather than undefined', () => {
+    show({ people: {}, invites: [inv({ invitee_id: 'lan' })] });
+    expect(screen.queryByText(/undefined/)).toBeNull();
+  });
+});
+
 describe('an answered invitation', () => {
   it('wears the answer under the name, ticked for a yes', () => {
     show({ invites: [inv({ invitee_id: 'lan', status: 'accepted' })] });
     expect(screen.getByText('Accepted')).toBeTruthy();
-    expect(screen.getByTestId('invite-friend-0').querySelector('[data-testid="picker-on"]')).not.toBeNull();
+    expect(screen.getByTestId('invite-friend-0').querySelector('[data-testid="picker-yes"]')).not.toBeNull();
   });
 
   // The sheet opened with her ticked and "Answered" under her, which read
@@ -297,7 +350,7 @@ describe('closed, and opened again', () => {
     );
     expect(screen.getByText('Who’s coming?')).toBeTruthy();
     // Lan opens ticked — what is already sent — so a bare press sends nothing.
-    expect(screen.getByText('Send invites')).toBeTruthy();
+    expect(screen.getByText('Sent — waiting for an answer')).toBeTruthy();
     fireEvent.click(screen.getByText('Lan Phương'));
     expect(screen.getByText('Take back 1')).toBeTruthy();
   });
