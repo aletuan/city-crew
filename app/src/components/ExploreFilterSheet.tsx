@@ -370,7 +370,7 @@ export default function ExploreFilterSheet({
             "Bookmarked only" rather than naming the section twice: the
             heading says what the block is about, so the row is free to
             say what the switch does. */}
-        <Text style={s.legend}>{t('Saved places', 'Địa điểm đã lưu', '保存済み', '已保存的地点', '已儲存的地點')}</Text>
+        <Text style={s.legend}>{t('Saved places', 'Địa điểm đã lưu', '保存した場所', '已保存的地点', '已儲存的地點')}</Text>
         <Card>
         <PressableScale
           onPress={() => {

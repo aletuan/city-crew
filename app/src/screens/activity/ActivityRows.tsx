@@ -342,7 +342,7 @@ const NEWS_BADGE: Record<CommentNews['kind'], Glyphs> = {
  * plan).
  */
 function newsLine(n: CommentNews, by: string | null, title: string, t: Translate): string {
-  const who = by ?? t('Someone', 'Ai đó', '誰か', '有人', '有人');
+  const who = by ?? t('Someone', 'Ai đó', '誰か', '某人', '某人');
   switch (n.kind) {
     case 'tag':
       return t(`${who} mentioned you`, `${who} đã nhắc tới bạn`, `${who} があなたをメンションしました`, `${who} 提到了你`, `${who} 提到了你`);
@@ -372,7 +372,7 @@ function lineOf(item: ActivityItem, by: string | null, shown: string, t: Transla
   switch (item.kind) {
     case 'applause':
     case 'copy':
-      return praiseLine(item.kind, by ?? t('Someone', 'Ai đó', '誰か', '有人', '有人'), item.others, shown, t);
+      return praiseLine(item.kind, by ?? t('Someone', 'Ai đó', '誰か', '某人', '某人'), item.others, shown, t);
     case 'liked':
       return by
         ? t(`You liked ${by}’s “${shown}”`, `Bạn đã thích “${shown}” của ${by}`, `${by} の「${shown}」にいいねしました`, `你点赞了 ${by} 的“${shown}”`, `你按讚了 ${by} 的「${shown}」`)
