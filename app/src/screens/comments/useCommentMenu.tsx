@@ -57,7 +57,7 @@ export function useCommentMenu(
   const { report, node: reportSheet } = useReport();
   const [about, setAbout] = useState<Placed | null>(null);
 
-  const nameOf = (c: Placed) => (c.handle ? normalizeHandle(c.handle) : c.full_name || t('Someone', 'Ai đó', '誰か', '有人', '有人'));
+  const nameOf = (c: Placed) => (c.handle ? normalizeHandle(c.handle) : c.full_name || t('Someone', 'Ai đó', '誰か', '某人', '某人'));
 
   const remove = (c: Placed) => Alert.alert(
     t('Delete this comment?', 'Xoá bình luận này?', 'このコメントを削除しますか？', '删除这条评论？', '刪除這條評論？'),

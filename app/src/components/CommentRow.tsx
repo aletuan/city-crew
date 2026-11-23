@@ -80,7 +80,7 @@ export default function CommentRow({ comment, when, onPerson, onPlace, onReply, 
   const indent = { marginLeft: INDENT[comment.level] };
 
   const handle = comment.handle ? normalizeHandle(comment.handle) : '';
-  const who = handle || comment.full_name || t('Someone', 'Ai đó', '誰か', '有人', '有人');
+  const who = handle || comment.full_name || t('Someone', 'Ai đó', '誰か', '某人', '某人');
   const size = comment.level === 0 ? FACE : FACE_REPLY;
   const { body, under } = comment;
   const reply = t(`Reply to ${who}`, `Trả lời ${who}`, `${who}さんに返信`, `回复 ${who}`, `回覆 ${who}`);

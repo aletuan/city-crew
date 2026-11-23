@@ -335,7 +335,7 @@ export default function CollectionActivityScreen({ navigation, route }: {
     </View>
   ) : null;
 
-  const someone = t('Someone', 'Ai đó', '誰か', '有人', '有人');
+  const someone = t('Someone', 'Ai đó', '誰か', '某人', '某人');
   const row = (item: ListAct, index: number) => {
     /* Who, handle first (owner, 15 Nov 2026): the handle on top, bare and
        in the strong ink, with the age beside it; the real name under it,

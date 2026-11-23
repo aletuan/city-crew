@@ -54,6 +54,11 @@ and commit what it writes. `scripts/chinese.test.ts` fails until you do,
 and a Traditional word to change is changed in `scripts/hant.ts`, never
 in the call.
 
+The same English string must carry the same translation everywhere:
+`scripts/translations.test.ts` fails on a second Vietnamese, Japanese or
+Chinese line for a string already written, unless the string is listed there
+as meaning two things, with the reason.
+
 **A function has a ceiling**: 150 lines of code and a complexity of 25
 (`app/oversize.js`). The 32 files already over it are listed there, each
 at the size it stood at, and lint is red the moment one grows. Bring a
