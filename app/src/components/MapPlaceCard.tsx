@@ -1,18 +1,25 @@
 // The one place the map is talking about, in a strip along its bottom
 // edge, laid out after a reference the owner chose on 23 Nov 2026:
 //
-//     [photo + kind]  [open · until 22:00]  1.2 km  ✓
-//                     Name
-//                     Street, ward
-//                     ★ 4.6 (920)                         [Directions]
+//     [photo      ]  [open · until 22:00]  1.2 km  ✓         (➤)
+//     [           ]  Name
+//     [   kind    ]  Street, ward
+//                    ★ 4.6 (920)
 //
-// The kind rides the photograph's corner in its pin's colour, where the
-// dot before the name used to stand for it: the same echo of the pin,
-// now one that says which kind it is in words. The hours lead, in a pill
+// The kind rides the foot of the photograph, centred, in its pin's
+// colour, where the dot before the name used to stand for it: the same
+// echo of the pin, now one that says which kind it is in words. Centred
+// and low (owner, 24 Nov 2026) rather than in the top corner, where it
+// stood level with the hours pill and the route's disc — three coloured
+// things on one line; at the foot it reads as the photograph's caption. The hours lead, in a pill
 // of their state's colour, because "can I go now" is the question a map
 // is asked; the distance beside them is the other half of it. The rating
-// and a route to the place share the last row, as they do on the detail
-// screen, whose Directions this is (`mapsRouteUrl`, one stop, driving).
+// has the last row to itself. The route to the place — the detail
+// screen's Directions (`mapsRouteUrl`, one stop, driving) — is a disc in
+// the top-right corner with the arrow alone (owner, 24 Nov 2026): it was
+// a chip with its word at the end of the rating's row, and the arrow is
+// the mark every map app uses for the act, so the word bought nothing
+// the label read aloud does not still say.
 //
 // Neither a bookmark nor a check-in. The bookmark was here for an
 // afternoon and went that evening (owner, 23 Nov 2026): the map is for
@@ -56,7 +63,8 @@ import { mapsRouteUrl } from '../lib/maps';
 import { CATEGORIES, categoryLabel, pinCategory } from '../lib/categories';
 import { splitName } from '../lib/name';
 import { colors, font, radius, space } from '../theme';
-import { CHIP_H, PressableScale } from './ui';
+import { PressableScale } from './ui';
+import { PHOTO_DISC, PHOTO_SLOP } from './ui/controls';
 
 /**
  * The hours, on a line of their own and always (owner, 23 Nov 2026): the
@@ -121,12 +129,12 @@ function Directions({ place, t }: { place: Place; t: T }) {
       haptic="selection"
       accessibilityRole="button"
       accessibilityLabel={label}
-      hitSlop={6}
+      hitSlop={PHOTO_SLOP}
+      style={s.routeSlot}
       contentStyle={s.route}
       testID="map-card-route"
     >
-      <Text style={s.routeText}>{label}</Text>
-      <Glyph name="navigate-outline" size={ICON.meta} color={colors.accent} />
+      <Glyph name="navigate-outline" size={ICON.action} color={colors.accent} />
     </PressableScale>
   );
 }
@@ -197,9 +205,11 @@ export default function MapPlaceCard({ place, distanceKm, kind, now, onPress }: 
           ? <Image source={{ uri: cover.photo_uri }} style={StyleSheet.absoluteFill} contentFit="cover" />
           : null}
         {key ? (
-          <Text testID="place-kind" style={[s.kind, { backgroundColor: CATEGORIES[key].color }]} numberOfLines={1}>
-            {categoryLabel(key, t)}
-          </Text>
+          <View style={s.kindRow}>
+            <Text testID="place-kind" style={[s.kind, { backgroundColor: CATEGORIES[key].color }]} numberOfLines={1}>
+              {categoryLabel(key, t)}
+            </Text>
+          </View>
         ) : null}
       </View>
       <View style={s.body}>
@@ -212,17 +222,15 @@ export default function MapPlaceCard({ place, distanceKm, kind, now, onPress }: 
         </View>
         <Text style={s.name} numberOfLines={1}>{name}</Text>
         {address ? <Text style={s.facts} numberOfLines={1} testID="place-address">{address}</Text> : null}
-        <View style={s.foot}>
-          {ratingFact ? (
-            <Text style={s.rating} numberOfLines={1}>
-              <Text testID="place-star" style={{ color: colors.accent }}>★ </Text>
-              {place.rating!.toFixed(1)}
-              {place.rating_count ? <Text style={s.facts}>{` (${fmtCount(place.rating_count)})`}</Text> : null}
-            </Text>
-          ) : <View />}
-          <Directions place={place} t={t} />
-        </View>
+        {ratingFact ? (
+          <Text style={s.rating} numberOfLines={1}>
+            <Text testID="place-star" style={{ color: colors.accent }}>★ </Text>
+            {place.rating!.toFixed(1)}
+            {place.rating_count ? <Text style={s.facts}>{` (${fmtCount(place.rating_count)})`}</Text> : null}
+          </Text>
+        ) : null}
       </View>
+      <Directions place={place} t={t} />
     </PressableScale>
   );
 }
@@ -244,27 +252,30 @@ const s = StyleSheet.create({
   thumb: { width: 88, height: 88, borderRadius: radius.card - 4, overflow: 'hidden', backgroundColor: colors.surfaceGlass },
   // On the photograph, in the pin's own colour: every category colour
   // carries a white glyph on the pin, so white words on it read as well.
+  // A row across the photograph's foot that centres what it holds; the
+  // label inside keeps its own width.
+  kindRow: { position: 'absolute', left: 6, right: 6, bottom: 6, alignItems: 'center' },
   kind: {
-    position: 'absolute', top: 6, left: 6, maxWidth: 76,
+    maxWidth: 76,
     paddingHorizontal: 6, paddingVertical: 2, borderRadius: 6, overflow: 'hidden',
     color: '#FFFFFF', fontSize: 11, fontWeight: font.semibold,
   },
   body: { flex: 1, gap: 3, minWidth: 0 },
-  status: { flexDirection: 'row', alignItems: 'center', gap: 6, minHeight: 22 },
+  // Clear of the route's disc in the top-right corner (36 and a 4pt gap).
+  status: { flexDirection: 'row', alignItems: 'center', gap: 6, minHeight: 22, paddingRight: 40 },
   pill: {
     flexShrink: 1, paddingHorizontal: 8, paddingVertical: 3, borderRadius: radius.pill, overflow: 'hidden',
     fontSize: 12, fontWeight: font.semibold,
   },
   name: { color: colors.text, fontSize: 16, lineHeight: 21, fontWeight: font.semibold },
   facts: { color: colors.textSecondary, fontSize: 13, fontWeight: font.regular },
-  foot: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 2 },
-  rating: { color: colors.text, fontSize: 13, fontWeight: font.semibold, flexShrink: 1 },
-  // The accent's own wash and ink, as an on-chip wears them: the one
-  // action on the strip besides opening it. A chip's height (`CHIP_H`),
-  // the scale's smallest, reached to 44 by its slop.
+  rating: { color: colors.text, fontSize: 13, fontWeight: font.semibold, marginTop: 2 },
+  // The photograph disc's size and reach (`PHOTO_DISC`, `PHOTO_SLOP`),
+  // in the accent's own wash and ink as an on-chip wears them: the one
+  // act on the strip besides opening it.
+  routeSlot: { position: 'absolute', top: 10, right: 10 },
   route: {
-    flexDirection: 'row', alignItems: 'center', gap: 4,
-    height: CHIP_H, paddingHorizontal: 10, borderRadius: radius.pill, backgroundColor: colors.accentSoft,
+    width: PHOTO_DISC, height: PHOTO_DISC, borderRadius: PHOTO_DISC / 2,
+    alignItems: 'center', justifyContent: 'center', backgroundColor: colors.accentSoft,
   },
-  routeText: { color: colors.accent, fontSize: 13, fontWeight: font.semibold },
 });

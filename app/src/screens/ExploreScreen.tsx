@@ -1060,15 +1060,16 @@ export default function ExploreScreen({ navigation }: { navigation: Nav }) {
                 onPickCity={setCity}
                 // The map's box already starts under the bar (`marginTop`
                 // above), so the top inset is only breathing room; the
-                // bottom clears the strip and the tab bar beneath it: 140,
-                // the strip's 124 (four lines beside the photograph, the
-                // last a 32pt Directions chip, and its 10pt padding, since
-                // 23 Nov 2026) and the 12 it stands off the bar, rounded
-                // up. It was 100 for the 84pt strip, 124 for the 108. The
+                // bottom clears the strip and the tab bar beneath it: 124,
+                // the strip's 108 (an 88pt photograph and its 10pt padding;
+                // four short lines beside it since the route became a disc
+                // in its corner, 24 Nov 2026) and the 12 it stands off the
+                // bar, rounded up. It was 140 while the route was a 32pt
+                // chip on a line of its own. The
                 // right is 64, not 40, since the zoom controls took that
                 // corner (`MapControls`, 42 wide at the page's gutter): a
                 // fitted pin should not land under them.
-                edgePadding={{ top: 24, right: 64, bottom: tabClearance + 140, left: 40 }}
+                edgePadding={{ top: 24, right: 64, bottom: tabClearance + 124, left: 40 }}
               />
               {selected ? (
                 <View style={[s.mapStrip, { bottom: tabClearance + 12 }]}>
