@@ -1,33 +1,23 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import {
-  ActivityIndicator, FlatList,
-  type NativeScrollEvent,
-  type NativeSyntheticEvent, Pressable, Text, useWindowDimensions, View,
-} from 'react-native';
-import { Glyph, ICON } from '../components/ui/glyph';
-import { KindPills } from '../components/KindPill';
+import { ActivityIndicator, FlatList, useWindowDimensions, View } from 'react-native';
 import {
   AmbientWarmth, Empty, Screen,
   fireHaptic, useTabBarClearance,
 } from '../components/ui';
 import { useEdgeSwipeBack, useListDrag } from '../components/useListDrag';
-import { useDuckOnScroll, useTabBarDucked } from '../components/tabBarDuck';
-import { DockOffer, DockSlot, useDockOffer } from '../components/DockSlot';
-import { AddCell, AddPill } from '../components/add';
+import { useDuckOnScroll } from '../components/tabBarDuck';
+import { AddCell } from '../components/add';
 import { useProfile, useSession } from '../lib/auth';
-import { categoriesOf } from '../lib/categories';
 import { narrowTo } from '../lib/collectionKinds';
-import { useCollections, useCuratorAvatar, useLikes, usePlaces } from '../lib/catalog';
+import { useCollections, useLikes, usePlaces } from '../lib/catalog';
 import { askCommentsAgain } from '../lib/commentsChanged';
 import {
   membersOf, unseenMembers, useCopyCountsQuery, useCountView, usePrefetchOwnListActivity,
-  useProfileByHandle, useSharedWithMe,
+  useSharedWithMe,
 } from '../lib/data';
 import ShareSheet from '../components/ShareSheet';
-import { normalizeHandle } from '../lib/handle';
 import { useCurrentCity } from '../lib/city';
 import { useReport } from '../components/reportFlow';
-import ActionSheet, { SheetRows } from '../components/ActionSheet';
 import { useMyLists, useSaveActions } from '../lib/save';
 import { readerKey, COLLECTION_VIEW_KEY } from '../lib/readerPrefs';
 import { oneOf, useStored } from '../lib/stored';
@@ -35,10 +25,8 @@ import { useNoteEvent } from '../lib/tasteProfile';
 import { useI18n } from '../lib/i18n';
 import { colors, space } from '../theme';
 import type { Place } from '../lib/types';
-import { goTo, type Nav, type RootRoute } from '../nav';
-import { DraggableCard, DraggableTile, LiftCell, LiftedCard, StillCard, StillTile } from './collectionDetail/cells';
-import { OwnEmpty } from './collectionDetail/OwnEmpty';
-import { sendRows, ShareHead } from './collectionDetail/Share';
+import type { Nav, RootRoute } from '../nav';
+import { LiftCell, LiftedCard } from './collectionDetail/cells';
 import { GRID_GAP, s } from './collectionDetail/styles';
 import { useKindFilter } from './collectionDetail/useKindFilter';
 import { useReorderDraft } from './collectionDetail/useReorderDraft';
@@ -46,6 +34,9 @@ import { useListVisibility } from './collectionDetail/useListVisibility';
 import { useCopyRemove } from './collectionDetail/useCopyRemove';
 import { useListMenu } from './collectionDetail/useListMenu';
 import { ListCurator, ListFoot, ListHead, ownTagOf } from './collectionDetail/head';
+import { chipFor, KindRow, ListDock, ListEmpty, MenuSheet, placeCell, WhoSeesSheet } from './collectionDetail/body';
+import { useCuratorFace } from './collectionDetail/useCuratorFace';
+import { usePlanDock } from './collectionDetail/usePlanDock';
 
 
 /**
@@ -230,48 +221,8 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
   } = useListVisibility({
     col, uid, owned, isPublic, mine, cols, unseen, navigation, t, arrived: route.params.seen,
   });
-  /**
-   * The curator's face, for a list somebody else made.
-   *
-   * `normalizeHandle` before the lookup, and it is not belt-and-braces:
-   * `profileByHandle` matches with `ilike`, and the editorial rows were
-   * seeded with the `@` written into the value — `@hanoicrew` — so the
-   * raw column would find nothing and find it silently. `lib/handle`
-   * states the rule this follows: never trust the stored form.
-   *
-   * Null for your own list, which is not an optimisation but the correct
-   * answer: the byline below says nothing about you either, and asking
-   * would spend a request to be told what `useAuth` already holds.
-   *
-   * Nothing here has a failure state to draw. A handle with no profile
-   * behind it is the normal case, not an error — every editorial list is
-   * one, their handles living in `reserved_handles` with no `profiles`
-   * row anywhere — and a request that fails leaves the byline exactly as
-   * it reads today. So the face is the only thing conditional on this,
-   * and it simply does not appear.
-   */
-  const curatorHandle = !owned && col?.curator_handle
-    ? normalizeHandle(col.curator_handle) || null
-    : null;
-  /*
-   * The shelf already fetched this, so the common path spends no request
-   * at all and the face is there on the first paint. The lookup stays for
-   * the cold one — a deep link into a list whose shelf has not loaded —
-   * and is skipped entirely when the map already answered.
-   */
-  const cachedAvatar = useCuratorAvatar(curatorHandle);
-  const lookup = useProfileByHandle(cachedAvatar ? null : curatorHandle);
-  const curatorAvatar = cachedAvatar ?? (lookup.data?.avatar_url || null);
-  /*
-   * Whether the byline holds a place for a face.
-   *
-   * While the answer is still coming, yes — so the line is laid out once
-   * and the face lands in a slot that was already there, rather than
-   * pushing the handle sideways as it arrives. Once the lookup has come
-   * back empty, no: an editorial handle has no person behind it, and a
-   * permanent grey disc there would be the screen inventing one.
-   */
-  const holdForFace = !!curatorAvatar || (!!curatorHandle && !cachedAvatar && lookup.loading);
+  // The curator's face, for a list somebody else made: `useCuratorFace`.
+  const { curatorAvatar, holdForFace, found } = useCuratorFace(owned, col);
   const liked = !!col?.id && myLikes.includes(col.id);
   // The write, the refetch, and the in-flight guard all live on the
   // provider now — a like taken from the shelf has to show here too, and
@@ -303,89 +254,13 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
   const desc = col ? t(col.desc_en, col.desc_vi, col.desc_ja) : '';
   // The list's chips and the one the reader has narrowed to: `useKindFilter`.
   const { kinds, filters, chosen, narrowed, pick, kept, setPicked } = useKindFilter(members);
-  /* ── the count, at the end of the kinds' row (owner, 13 Nov 2026) ──
-     How many places, beside what kinds they are: the two say what is in
-     the list, so they share a row, the count fixed at its right edge and
-     the kinds wrapping in the column to its left — a fourth kind goes to
-     a second line under the first, never under the count. One place for
-     the figure, for the owner and a visitor alike: it had been the foot's
-     on somebody else's list and the "Add place" cell's corner on yours,
-     and the foot is now the activity row, the heart and, on your own
-     list, the way to its activity (`activity`).
-
-     The list's whole count, whatever a chip has narrowed it to: the grid
-     shows what the chip kept, and the line under the row says "4 of 11"
-     while one is chosen. Its box is a pill's box — the same rule, clear,
-     when the kinds are a filter — so the figure sits on the first line's
-     baseline by construction rather than by a guessed offset.
-
-     Its pin and figure, never the word (owner, 31 Oct 2026); a screen
-     reader hears the word. On a list with no places there is no count:
-     "Nothing here yet" is the card's whole answer.
-
-     A faint upright hairline before the pin, while there are kinds
-     beside it (owner, 13 Nov 2026). The kinds say what is in the list
-     and, with two or more, are a filter; the figure counts and is not
-     pressed. Air alone left the figure reading as one more kind once the
-     kinds reached across the row. The rule is a place card's own
-     separator ("4.5 ★ | $$ | 1.2 km"), not the "·" this card uses to
-     join two of a kind ("12/11 · Private", "4 of 11 · Clear"), which
-     would have made the count one more item of the kinds. Inside the
-     count's own box, so it centres on the count's line — the kinds'
-     first — however many lines the kinds wrap to; and not drawn when
-     the count stands alone, with nothing to be told apart from. */
-  const placesWord = t(members.length === 1 ? 'place' : 'places', 'địa điểm', 'スポット', '个地点', '個地點');
-  const placeCount = members.length > 0 ? (
-    <View
-      style={[s.placeCount, filters && s.placeCountRule]}
-      accessible
-      accessibilityLabel={`${members.length} ${placesWord}`}
-      testID="collection-count"
-    >
-      {kinds.length > 0 ? <View style={s.countRule} testID="collection-count-rule" /> : null}
-      <Glyph name="location-outline" size={ICON.meta} color={colors.textTertiary} />
-      <Text style={s.placeCountText}>{members.length}</Text>
-    </View>
-  ) : null;
-  const kindRow = kinds.length > 0 || placeCount ? (
-    <View style={s.kindsBlock}>
-      <View style={s.kindsLine}>
-        <View style={s.kindsLeft}>
-          {kinds.length > 0 ? (
-            <KindPills
-              kinds={kinds}
-              chosen={chosen}
-              onPick={filters ? pick : undefined}
-              bare
-              testID="collection-kinds"
-            />
-          ) : null}
-        </View>
-        {placeCount}
-      </View>
-      {narrowed ? (
-        <View style={s.filterCount}>
-          <Text style={s.filterCountText} testID="collection-filter-count">
-            {t(
-              `${kept} of ${members.length} places`,
-              `${kept} trên ${members.length} địa điểm`,
-              `${members.length}件中${kept}件`,
-              `${members.length} 个地点中的 ${kept} 个`, `${members.length} 個地點中的 ${kept} 個`,
-            )}
-          </Text>
-          <Text style={s.filterCountText}>·</Text>
-          <Pressable
-            onPress={() => setPicked([])}
-            hitSlop={12}
-            accessibilityRole="button"
-            testID="collection-filter-clear"
-          >
-            <Text style={s.filterClear}>{t('Clear', 'Bỏ lọc', '解除', '清除', '清除')}</Text>
-          </Pressable>
-        </View>
-      ) : null}
-    </View>
-  ) : null;
+  // The kinds, the count, and "4 of 11 · Clear" under them: `KindRow`.
+  const kindRow = (
+    <KindRow
+      members={members} kinds={kinds} filters={filters} chosen={chosen}
+      narrowed={narrowed} pick={pick} kept={kept} setPicked={setPicked}
+    />
+  );
   // Whether the ⋯'s sheet is up — see `menuSheet`.
   const [menu, setMenu] = useState(false);
   const [view, pickView] = useStored<'list' | 'grid'>(
@@ -473,91 +348,17 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
 
 
 
-  /* ── the list's two actions: the dock, and the menu ──
-     (owner, 16 Oct 2026). Planning a trip from the list is what a reader
-     does with it once read, owner or not; adding a place is the owner's
-     everyday edit. Both were out of reach: Plan at the very end of the
-     list, under every photograph, and Add only in the ⋯ menu.
-
-     For a build they also ended the intro card. The owner took them out
-     again the same evening: the card introduces the list — whose it is,
-     what it is, how it is doing — and a pair of buttons there made it a
-     toolbar. So the two live where a reader is when they want them:
-
-     - In the dock, once the card has scrolled away and the tab bar has
-       ducked — `DockSlot`, the slot Explore lends "Not finding it?" — in
-       thumb reach however deep the list goes.
-     - In the ⋯ menu, always: Add place as before, and Plan a trip beside
-       it. That row is not a second door for its own sake. A list of two
-       or three places is too short to scroll, so the bar never ducks and
-       the dock never comes; without the row, Plan would be on no screen
-       at all for a short list.
-
-     Plan only once there is a list to plan from: an empty one seeds
-     nothing, and its own card is already asking for the first place.
-     The planner decides the city (see IdeasScreen's `from`); `at` makes a
-     second press on the same list a new ask. The paw is the planner's own
-     mark. Add, until the in-place picker exists, goes to Explore, where
-     saving a place already offers this list by name.
-
-     ── the dock, as Explore's (owner, 17 Oct 2026) ──
-     The two docks are one design now. Explore's says what it offers in a
-     glyph and two lines, the whole island answering to that, and the
-     gradient "+ Địa điểm" at its right end. Here the sentence is the
-     plan — the paw, "Lên kế hoạch", and what it is for — and the pill is
-     the second act: "+ Địa điểm" for the owner, "Lưu bản sao" for a
-     visitor, so there is always one gradient pill, at the right,
-     whoever is reading.
-
-     It undoes a call of 16 Oct, and says why. Plan was the gradient and
-     Add the quiet glass beside it, on the reading that the gradient
-     belongs to what the list exists for; as a sentence that fills the
-     island, Plan is no smaller than it was, and the owner wanted one
-     dock to learn, not two.
-
-     The pill's word is the noun on both docks (owner, 17 Oct 2026).
-     The first cut said "Thêm", Explore's word then; beside a sentence
-     about planning, "Thêm" alone read as "add to the plan", and the
-     owner moved both docks to "+ Địa điểm" rather than let them differ.
-     The glyph says add; the word says what. VoiceOver hears the whole
-     "Thêm địa điểm", which is what the ⋯ menu's row says too.
-
-     Explore's pill became "+ Tạo mới" on 25 Oct 2026, the word for a
-     pill that makes something. This one stays the noun: it puts a place
-     the catalog already has into the list, and "Tạo mới" beside "Lên kế
-     hoạch" would read as "a new plan".
-
-     A list with no city has no copy to offer (see the ⋯ menu), and a
-     friend's list shared with you offers none (`sharedToMe`), so a
-     visitor's dock there is the sentence alone. */
-  const plan = () => {
-    if (!col) return;
-    goTo('Ideas', { screen: 'IdeasHome', params: { from: col.slug, at: Date.now() } });
-  };
-  const canPlan = !!col && members.length > 0;
+  // Planning a trip from the list, and the dock that offers it once the
+  // card has scrolled away: `usePlanDock`, which has the argument.
+  const { plan, canPlan, dock, onListScroll, onCardLayout } = usePlanDock({
+    col, members, navigation, duckScroll, onScrolled, lift,
+  });
   // The ⋯'s sheet: its rows, the two views, and the presses only it and
   // the card make (Add place, Edit). `useListMenu`, the second step of F1.
   const { viewRows, addPlace, edit, actsBefore, actsAfter, commentsSetting } = useListMenu({
     col, owned, sharedToMe, grid, pickView, title, desc, navigation, t,
     canPlan, plan, canCopy, copy, remove, canReport, report,
   });
-  // Where the card ends in the list's content, measured, so the dock waits
-  // until it has actually gone rather than guessing from a row count.
-  const cardEnd = useRef(Number.POSITIVE_INFINITY);
-  const [pastCard, setPastCard] = useState(false);
-  const pastRef = useRef(false);
-  const onListScroll = (e: NativeSyntheticEvent<NativeScrollEvent>) => {
-    duckScroll?.(e);
-    onScrolled(e.nativeEvent);
-    const past = e.nativeEvent.contentOffset.y > cardEnd.current;
-    if (past !== pastRef.current) {
-      pastRef.current = past;
-      setPastCard(past);
-    }
-  };
-  const ducked = useTabBarDucked();
-  // Not while a card is held: the dock would rise under the finger.
-  const dock = useDockOffer(canPlan && ducked && pastCard && !lift, navigation);
 
   /* ── the description, in a card ──
       It was bare grey body text under the header, and read as one
@@ -652,7 +453,7 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
       curator={(
         <ListCurator
           col={col} owned={owned} profile={profile} curatorAvatar={curatorAvatar} holdForFace={holdForFace}
-          found={!!lookup.data} seen={seen} seenWord={seenWord} onWhoSees={() => setWhoSees(true)} navigation={navigation}
+          found={found} seen={seen} seenWord={seenWord} onWhoSees={() => setWhoSees(true)} navigation={navigation}
         />
       )}
       foot={(
@@ -663,17 +464,6 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
         />
       )}
     />
-  );
-
-  const menuSheet = (
-    <>
-      <SheetRows actions={actsBefore} onClose={() => setMenu(false)} />
-      <Text style={s.menuSection} accessibilityRole="header">
-        {t('View', 'Chế độ xem', '表示', '视图', '檢視')}
-      </Text>
-      <SheetRows actions={viewRows} onClose={() => setMenu(false)} />
-      <SheetRows actions={actsAfter} onClose={() => setMenu(false)} />
-    </>
   );
 
   return (
@@ -708,75 +498,17 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
             onScroll={onListScroll}
             onContentSizeChange={onContentSizeChange}
             scrollEventThrottle={16}
-            renderItem={({ item, index: at }) => {
-              if (item === ADD_CELL) return addCell(tile);
-              const index = at - lead;
-              if (grid) {
-                return canArrange
-                  ? (
-                    <DraggableTile
-                      place={item}
-                      index={index}
-                      count={drafted.length}
-                      size={tile}
-                      style={styleOf(index)}
-                      onOpen={openPlace}
-                      onStep={step}
-                      onLift={onLift}
-                      onRelease={onRelease}
-                    />
-                  )
-                  : <StillTile place={item} index={index} size={tile} onOpen={openPlace} />;
-              }
-              return canArrange
-                ? (
-                  <DraggableCard
-                    place={item}
-                    index={index}
-                    count={drafted.length}
-                    style={styleOf(index)}
-                    onOpen={openPlace}
-                    onStep={step}
-                    onLift={onLift}
-                    onRelease={onRelease}
-                    onPitch={onPitch}
-                  />
-                )
-                // By position, mine or not, so a smoke flow opens the first
-                // place whichever card shape the list is drawn with.
-                // Narrowed, the card names the chosen kind it answers to —
-                // the first of them in the card's order — as the pin and
-                // card do under a chip on Explore.
-                : (
-                  <StillCard
-                    place={item}
-                    index={index}
-                    onOpen={openPlace}
-                    chip={narrowed ? kinds.find((k) => chosen.includes(k) && categoriesOf(item).includes(k)) : null}
-                  />
-                );
-            }}
-            ListEmptyComponent={!loading && col
-              ? (owned
-                // One message, not two. The reference stacks "No places in this
-                // collection yet." above a card that says the same thing again.
-                ? <OwnEmpty onAdd={addPlace} />
-                : <Empty text={t(
-                  'No places in this collection yet.',
-                  'Bộ sưu tập này chưa có địa điểm nào.',
-                  'このコレクションにはまだスポットがありません。',
-                  '这个合集里还没有地点。', '這個合集裡還沒有地點。',
-                )} />)
-              : undefined}
+            renderItem={({ item, index: at }) => (item === ADD_CELL ? addCell(tile) : placeCell({
+              item, index: at - lead, grid, canArrange, count: drafted.length, tile, styleOf,
+              openPlace, step, onLift, onRelease, onPitch, chip: narrowed ? chipFor(item, kinds, chosen) : null,
+            }))}
+            ListEmptyComponent={!loading && col ? <ListEmpty owned={owned} onAdd={addPlace} /> : undefined}
             ListHeaderComponent={introCard || (adding && !grid) ? (
               <>
                 {introCard && (
                   <View
                     testID="collection-intro"
-                    onLayout={(e) => {
-                      const { y, height } = e.nativeEvent.layout;
-                      cardEnd.current = y + height;
-                    }}
+                    onLayout={onCardLayout}
                   >
                     {introCard}
                   </View>
@@ -791,40 +523,10 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
         </View>
       </LiftedCard.Provider>
 
-      <ActionSheet
-        visible={menu}
-        onClose={() => setMenu(false)}
-        header={<Text style={s.sheetTitle} numberOfLines={2} accessibilityRole="header">{title}</Text>}
-      >
-        {menuSheet}
-      </ActionSheet>
-      <DockSlot visible={dock} onPress={plan} accessibilityRole="button" testID="collection-dock">
-        <DockOffer
-          icon="paw"
-          title={t('Plan a trip', 'Lên kế hoạch', 'プランを立てる', '规划行程', '規劃行程')}
-          // Short enough for one line beside the widest pill. "Dùng danh
-          // sách này cho chuyến đi" was cut to "…cho ch…" beside "Lưu bản
-          // sao" on the owner's phone (17 Oct 2026): about 23 characters
-          // fit there, fewer on a 375pt screen. "Danh sách này" was the
-          // part the screen already says.
-          sub={t('Use it for a trip', 'Dùng cho chuyến đi', '旅の計画に使う', '用于规划行程', '用於規劃行程')}
-        />
-        {owned ? (
-          <AddPill
-            label={t('Place', 'Địa điểm', 'スポット', '地点', '地點')}
-            accessibilityLabel={t('Add place', 'Thêm địa điểm', 'スポットを追加', '添加地点', '新增地點')}
-            onPress={addPlace}
-            testID="collection-dock-add"
-          />
-        ) : canCopy ? (
-          <AddPill
-            icon="copy-outline"
-            label={t('Save a copy', 'Lưu bản sao', 'コピーを保存', '保存副本', '儲存副本')}
-            onPress={copy}
-            testID="collection-dock-copy"
-          />
-        ) : null}
-      </DockSlot>
+      <MenuSheet
+        title={title} menu={menu} setMenu={setMenu} actsBefore={actsBefore} viewRows={viewRows} actsAfter={actsAfter}
+      />
+      <ListDock dock={dock} plan={plan} owned={owned} canCopy={canCopy} addPlace={addPlace} copy={copy} />
       {reportSheet}
       {col && owned ? (
         <ShareSheet
@@ -840,14 +542,7 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
           history={listShares.data}
         />
       ) : null}
-      <ActionSheet
-        visible={whoSees}
-        onClose={() => setWhoSees(false)}
-        header={<ShareHead />}
-      >
-        <SheetRows actions={whoSees3} onClose={() => setWhoSees(false)} />
-        <SheetRows actions={sendRows(t)} onClose={() => setWhoSees(false)} />
-      </ActionSheet>
+      <WhoSeesSheet whoSees={whoSees} setWhoSees={setWhoSees} whoSees3={whoSees3} />
       {commentsSetting.node}
     </Screen>
   );
