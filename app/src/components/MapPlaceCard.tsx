@@ -1,7 +1,7 @@
 // The one place the map is talking about, in a strip along its bottom
 // edge, laid out after a reference the owner chose on 23 Nov 2026:
 //
-//     [photo + kind]  [open · until 22:00]  1.2 km  ✓        [bookmark]
+//     [photo + kind]  [open · until 22:00]  1.2 km  ✓
 //                     Name
 //                     Street, ward
 //                     ★ 4.6 (920)                         [Directions]
@@ -14,12 +14,13 @@
 // and a route to the place share the last row, as they do on the detail
 // screen, whose Directions this is (`mapsRouteUrl`, one stop, driving).
 //
-// The bookmark is here and check-in is not. Saving is one tap on the
-// collection picker every card already opens (`save` in `lib/save`), and
-// a reader browsing a map is deciding what to keep. A check-in is a claim
-// to have been there, made from wherever the reader is standing — and on
-// a map they are usually somewhere else; it also carries the flag, the
-// sign-in, the daily cap, the undo menu and the reward that
+// Neither a bookmark nor a check-in. The bookmark was here for an
+// afternoon and went that evening (owner, 23 Nov 2026): the map is for
+// finding where a place is and whether to go, and keeping it is a
+// decision made on the place's own page, a tap away. A check-in is a
+// claim to have been there, made from wherever the reader is standing —
+// and on a map they are usually somewhere else; it also carries the
+// flag, the sign-in, the daily cap, the undo menu and the reward that
 // `PlaceDetailScreen` holds, which a second copy here would drift from.
 // So the strip only says it has happened: a tick after the hours, with
 // the count spoken. It had a line of its own until the layout above had
@@ -40,8 +41,6 @@ import React from 'react';
 import { Alert, Linking, StyleSheet, Text, View } from 'react-native';
 import { Image } from 'expo-image';
 import { Glyph, ICON } from './ui/glyph';
-import { PHOTO_DISC, PHOTO_SLOP } from './ui/controls';
-import { useIsSaved, useSaveActions } from '../lib/save';
 import { useMyCheckins } from '../lib/checkins';
 import { visitsAt } from '../lib/checkin';
 import { useFlag } from '../lib/useFlag';
@@ -132,32 +131,6 @@ function Directions({ place, t }: { place: Place; t: T }) {
   );
 }
 
-/** The bookmark the list's card carries in its photograph's corner, on
- *  the page's ground here: the same act, the same picker, the same fill
- *  once kept. */
-function SaveDisc({ place, t }: { place: Place; t: T }) {
-  const { save } = useSaveActions();
-  const saved = useIsSaved(place.slug);
-  return (
-    <PressableScale
-      onPress={() => save(place)}
-      scaleTo={0.9}
-      haptic="selection"
-      accessibilityRole="button"
-      accessibilityState={{ selected: saved }}
-      accessibilityLabel={saved
-        ? t('Saved — change collections', 'Đã lưu — đổi bộ sưu tập', '保存済み — コレクションを変更', '已保存 — 更改合集', '已儲存 — 更改合集')
-        : t('Save to a collection', 'Lưu vào bộ sưu tập', 'コレクションに保存', '保存到合集', '儲存到合集')}
-      hitSlop={PHOTO_SLOP}
-      style={s.saveSlot}
-      contentStyle={s.save}
-      testID="map-card-save"
-    >
-      <Glyph name={saved ? 'bookmark' : 'bookmark-outline'} size={ICON.action} color={saved ? colors.accent : colors.text} />
-    </PressableScale>
-  );
-}
-
 export default function MapPlaceCard({ place, distanceKm, kind, now, onPress }: {
   place: Place;
   /** Null when there is no fix to measure from — the figure is then left
@@ -172,10 +145,10 @@ export default function MapPlaceCard({ place, distanceKm, kind, now, onPress }: 
   onPress: () => void;
 }) {
   const { t, lang } = useI18n();
-  // Read here rather than passed in, as the bookmark's state is: both are
-  // the reader's own, from providers above every screen, and the map's
-  // screen is at its size ceiling (`oversize.js`). Nothing to count while
-  // check-in is switched off (`place_checkin`).
+  // Read here rather than passed in: the reader's own, from a provider
+  // above every screen, and the map's screen is at its size ceiling
+  // (`oversize.js`). Nothing to count while check-in is switched off
+  // (`place_checkin`).
   const checkinOn = useFlag('place_checkin');
   const mine = useMyCheckins().data;
   const visits = checkinOn ? visitsAt(mine, place.slug).length : 0;
@@ -250,7 +223,6 @@ export default function MapPlaceCard({ place, distanceKm, kind, now, onPress }: 
           <Directions place={place} t={t} />
         </View>
       </View>
-      <SaveDisc place={place} t={t} />
     </PressableScale>
   );
 }
@@ -277,9 +249,8 @@ const s = StyleSheet.create({
     paddingHorizontal: 6, paddingVertical: 2, borderRadius: 6, overflow: 'hidden',
     color: '#FFFFFF', fontSize: 11, fontWeight: font.semibold,
   },
-  // Clear of the bookmark in the top-right corner (36 and a 4pt gap).
   body: { flex: 1, gap: 3, minWidth: 0 },
-  status: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingRight: 40, minHeight: 22 },
+  status: { flexDirection: 'row', alignItems: 'center', gap: 6, minHeight: 22 },
   pill: {
     flexShrink: 1, paddingHorizontal: 8, paddingVertical: 3, borderRadius: radius.pill, overflow: 'hidden',
     fontSize: 12, fontWeight: font.semibold,
@@ -296,11 +267,4 @@ const s = StyleSheet.create({
     height: CHIP_H, paddingHorizontal: 10, borderRadius: radius.pill, backgroundColor: colors.accentSoft,
   },
   routeText: { color: colors.accent, fontSize: 13, fontWeight: font.semibold },
-  saveSlot: { position: 'absolute', top: 8, right: 8 },
-  // The photograph disc's size and reach (`PHOTO_DISC`), on the page's
-  // well rather than a scrim, since there is no photograph under it.
-  save: {
-    width: PHOTO_DISC, height: PHOTO_DISC, borderRadius: PHOTO_DISC / 2,
-    alignItems: 'center', justifyContent: 'center', backgroundColor: colors.surfaceGlass,
-  },
 });

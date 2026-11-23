@@ -106,11 +106,13 @@ function useFit(
 /**
  * The pins the set just lost, fading for a tenth of a second before they
  * go (`pinFade`) — drawn apart from the clusters, which are cut from the
- * set that stays, and not to be tapped on the way out. The same picture
- * they wore, unchosen: a chosen place that leaves the set stops being
- * chosen with it.
+ * set that stays, and not to be tapped on the way out. The picture they
+ * wore before the change, unchosen: a chosen place that leaves the set
+ * stops being chosen with it. It was drawn from the chips after the
+ * change, and on the phone every leaving pin flashed its own colour for
+ * a frame (owner's recording, 23 Nov 2026).
  */
-function Leaving({ pins, categories, opacity }: { pins: readonly Pinned[]; categories: readonly string[]; opacity: (slug: string) => number }) {
+function Leaving({ pins, opacity }: { pins: readonly (Pinned & { pic: ReturnType<typeof pinImage> })[]; opacity: (slug: string) => number }) {
   return (
     <>
       {pins.map((p) => (
@@ -118,7 +120,7 @@ function Leaving({ pins, categories, opacity }: { pins: readonly Pinned[]; categ
           key={`gone-${p.slug}`}
           identifier={`gone-${p.slug}`}
           coordinate={{ latitude: p.lat, longitude: p.lng }}
-          image={pinImage(p, chosenKind(p, categories), false)}
+          image={p.pic}
           anchor={{ x: 0.5, y: 1 }}
           zIndex={0}
           tracksViewChanges={false}
@@ -206,7 +208,10 @@ export default function PlacesMap({ places, selectedSlug, onSelect, categories, 
     [key, span.latitudeDelta, span.longitudeDelta, selectedSlug],
   );
   const at = useMemo(() => new Map(pins.map((p) => [p.slug, p])), [pins]);
-  const fade = usePinFade(pins, still);
+  // Each pin with the picture it wears now, so one that leaves fades in
+  // the colour it had rather than its own: under a chip every pin is the
+  // chip's colour, and the next chip is not theirs.
+  const fade = usePinFade(useMemo(() => pins.map((p) => ({ ...p, pic: pinImage(p, chosenKind(p, categories), false) })), [pins, categories]), still);
 
   // A custom marker view frozen from its first frame comes out blank on
   // iOS; one that is never frozen redraws on every pan. So each new set of
@@ -382,7 +387,7 @@ export default function PlacesMap({ places, selectedSlug, onSelect, categories, 
           />
           );
         })}
-        <Leaving pins={fade.leaving} categories={categories} opacity={fade.opacity} />
+        <Leaving pins={fade.leaving} opacity={fade.opacity} />
         {cities.filter((c) => c.count != null).map((c) => (
           <Marker
             key={`city-${c.id}`}

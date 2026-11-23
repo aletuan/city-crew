@@ -9,11 +9,6 @@ import { mapsRouteUrl } from '../lib/maps';
 import MapPlaceCard from './MapPlaceCard';
 import { colors } from '../theme';
 
-const save = vi.hoisted(() => ({ save: vi.fn(), saved: false }));
-vi.mock('../lib/save', () => ({
-  useSaveActions: () => ({ save: save.save }),
-  useIsSaved: () => save.saved,
-}));
 const visits = vi.hoisted(() => ({ on: true, data: [] as { place_slug: string }[] }));
 vi.mock('../lib/useFlag', () => ({ useFlag: (name: string) => name === 'place_checkin' && visits.on }));
 vi.mock('../lib/checkins', () => ({ useMyCheckins: () => ({ data: visits.data }) }));
@@ -50,7 +45,7 @@ const NOON = new Date('2026-09-19T05:00:00Z');       // 12:00 Hanoi — open, ho
 const HALF_PAST_TEN = new Date('2026-09-19T15:30:00Z'); // 22:30 Hanoi — open, closes in 30 min
 
 describe('MapPlaceCard', () => {
-  beforeEach(() => { save.save.mockReset(); save.saved = false; visits.on = true; visits.data = []; });
+  beforeEach(() => { visits.on = true; visits.data = []; });
   it('shows the cover, the name, the rating and the distance', () => {
     render(<MapPlaceCard place={place()} distanceKm={0.8} kind={null} now={NOON} onPress={() => {}} />);
     expect(screen.getByText('Cộng Cà Phê')).toBeTruthy();
@@ -68,35 +63,14 @@ describe('MapPlaceCard', () => {
   // shuts in half an hour says so; one open until late says nothing; one
   // that is shut says that, and when it opens. Same rule `PlaceCard` keeps.
   // The pin under this strip is the branch; the name line is the brand.
-  // The chevron gave its place to the bookmark (owner, 23 Nov 2026): the
-  // whole strip opens the place, so the arrow said nothing a press did not.
-  it('ends with the bookmark, not a chevron, and saves through the collection picker', () => {
+  // No bookmark (owner, 23 Nov 2026, the evening after it went in): the
+  // strip's only buttons are itself and its route.
+  it('keeps nothing: no bookmark on the strip', () => {
     render(<MapPlaceCard place={place()} distanceKm={0.8} kind={null} now={NOON} onPress={() => {}} />);
-    expect(document.querySelector('[data-icon="chevron-forward"]')).toBeNull();
-    const mark = document.querySelector('[data-icon="bookmark-outline"]')!;
-    expect(mark.getAttribute('data-size')).toBe('18');
-    expect(mark.getAttribute('data-color')).toBe(colors.text);
-    fireEvent.click(screen.getByRole('button', { name: 'Save to a collection' }));
-    expect(save.save).toHaveBeenCalledExactlyOnceWith(expect.objectContaining({ slug: 'cong' }));
+    expect(screen.queryByRole('button', { name: /collection/i })).toBeNull();
+    expect(document.querySelector('[data-icon^="bookmark"]')).toBeNull();
   });
 
-  it('fills the bookmark in coral once the place is kept, and says so', () => {
-    save.saved = true;
-    render(<MapPlaceCard place={place()} distanceKm={0.8} kind={null} now={NOON} onPress={() => {}} />);
-    const mark = document.querySelector('[data-icon="bookmark"]')!;
-    expect(mark.getAttribute('data-color')).toBe(colors.accent);
-    expect(screen.getByRole('button', { name: 'Saved — change collections' })).toBeTruthy();
-  });
-
-  it('saving does not open the place', () => {
-    const onPress = vi.fn();
-    render(<MapPlaceCard place={place()} distanceKm={0.8} kind={null} now={NOON} onPress={onPress} />);
-    fireEvent.click(screen.getByTestId('map-card-save'));
-    expect(onPress).not.toHaveBeenCalled();
-  });
-
-  // The count of check-ins, never a control: the act stays on the detail
-  // screen, where the cap, the undo and the reward live.
   it('says how often the reader has checked in here, and nothing before the first', () => {
     visits.data = been(2, 'elsewhere');
     const { rerender } = render(<MapPlaceCard place={place()} distanceKm={0.8} kind={null} now={NOON} onPress={() => {}} />);

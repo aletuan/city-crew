@@ -31,7 +31,7 @@
 // a set of a few hundred, and the fade is short enough that the eye reads
 // steps as a fade. A setting that asks for less motion gets none.
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 
 export const FADE_OUT_MS = 120;
 export const FADE_IN_AT = 260;
@@ -50,31 +50,48 @@ type Change<P> = { leaving: P[]; gone: Set<string>; arriving: Set<string> };
 
 /**
  * The pins that have just left and are still fading, and each pin's
- * opacity, the leaving ones' included. `pins` is the set now; `still` turns the whole thing off.
- * The first set is never a change — the map opens with its pins.
+ * opacity, the leaving ones' included. `pins` is the set now; `still`
+ * turns the whole thing off. The first set is never a change — the map
+ * opens with its pins.
+ *
+ * The change is worked out in the render that brings the new set, not in
+ * an effect after it (owner's recording, 23 Nov 2026). From an effect,
+ * that one render drew the new set at full opacity and the old one not at
+ * all, and only the next put the fade in place: on the phone, a frame of
+ * every arriving pin at once and the leaving ones gone, then the leaving
+ * ones back and the arriving ones gone — a flash at the start of every
+ * change, which is what the fade was meant to replace. Setting state while
+ * rendering is React's own way to derive it from a prop that changed
+ * (it renders again at once, before anything reaches the screen).
  */
 export function usePinFade<P extends { slug: string }>(pins: readonly P[], still: boolean): {
   leaving: P[];
   opacity: (slug: string) => number;
 } {
   const key = pins.map((p) => p.slug).sort().join('|');
-  const prev = useRef<readonly P[] | null>(null);
+  const [seen, setSeen] = useState<{ key: string; pins: readonly P[] }>({ key, pins });
   const [change, setChange] = useState<Change<P> | null>(null);
   const [t, setT] = useState(0);
 
+  if (seen.key !== key) {
+    setSeen({ key, pins });
+    if (still) {
+      setChange(null);
+    } else {
+      const now = new Set(pins.map((p) => p.slug));
+      const was = new Set(seen.pins.map((p) => p.slug));
+      const leaving = seen.pins.filter((p) => !now.has(p.slug));
+      setChange({
+        leaving,
+        gone: new Set(leaving.map((p) => p.slug)),
+        arriving: new Set(pins.filter((p) => !was.has(p.slug)).map((p) => p.slug)),
+      });
+      setT(0);
+    }
+  }
+
   useEffect(() => {
-    const before = prev.current;
-    prev.current = pins;
-    if (!before || still) { setChange(null); return undefined; }
-    const now = new Set(pins.map((p) => p.slug));
-    const was = new Set(before.map((p) => p.slug));
-    const leaving = before.filter((p) => !now.has(p.slug));
-    setChange({
-      leaving,
-      gone: new Set(leaving.map((p) => p.slug)),
-      arriving: new Set(pins.filter((p) => !was.has(p.slug)).map((p) => p.slug)),
-    });
-    setT(0);
+    if (!change) return undefined;
     const tick = setInterval(() => setT((v) => {
       if (v + TICK_MS < DONE_AT) return v + TICK_MS;
       clearInterval(tick);
@@ -82,9 +99,7 @@ export function usePinFade<P extends { slug: string }>(pins: readonly P[], still
       return DONE_AT;
     }), TICK_MS);
     return () => clearInterval(tick);
-  // The set is the change; a new array with the same pins is not one.
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [key, still]);
+  }, [change]);
 
   if (!change) return { leaving: [], opacity: () => 1 };
   return {

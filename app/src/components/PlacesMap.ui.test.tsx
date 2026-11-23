@@ -212,6 +212,19 @@ describe('PlacesMap', () => {
     }
   });
 
+  // The colour it had, not its own: under the Heritage chip every pin is
+  // a heritage pin, and on the phone a leaving pin redrawn by the next chip
+  // flashed its own colour for a frame (owner's recording, 23 Nov 2026).
+  it('fades a leaving pin in the picture it wore, not the one the next chip would give it', () => {
+    const b = place('b', 21.1, 105.1, ['cafes', 'heritage']);
+    const { rerender } = render(<PlacesMap places={[place('a', 21, 105, ['heritage']), b]} selectedSlug={null} onSelect={() => {}} categories={['heritage']} origin={null} cities={[]} onPickCity={() => {}} fallback={HANOI} />);
+    markMapReady();
+    rerender(<PlacesMap places={[place('c', 21.2, 105.2, ['nature'])]} selectedSlug={null} onSelect={() => {}} categories={['nature']} origin={null} cities={[]} onPickCity={() => {}} fallback={HANOI} />);
+    const gone = markers().find((m) => m.getAttribute('data-slug') === 'gone-b')!;
+    expect(String(pinImage(b, 'heritage', false))).not.toBe(String(pinImage(b, null, false)));
+    expect(gone.getAttribute('data-icon')).toBe(String(pinImage(b, 'heritage', false)));
+  });
+
   // The fit, again, on request — gliding — and the controls only when
   // there are pins to fit.
   it('fits every pin again from its control, and has none with nothing to fit', () => {
