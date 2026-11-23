@@ -150,7 +150,7 @@ export function marks(seen: ListSeen, t: T): ActivityMark {
   if (seen.kind === 'friends') {
     return { icon: SEEN_GLYPH.friends, text: String(seen.n), label: `${seenName('friends', t)}, ${seen.n}` };
   }
-  const lent = t('Shared with you', 'Chia sẻ với bạn', 'あなたに共有', '与你共享', '與你共享');
+  const lent = t('Shared with you', 'Được chia sẻ với bạn', 'あなたと共有', '与你共享', '與你共享');
   return { icon: SEEN_GLYPH.friends, text: lent, label: lent };
 }
 
