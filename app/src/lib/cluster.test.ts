@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { CATEGORIES, CATEGORY_ORDER } from './categories';
-import { clusterPins, clusterSize, clusterSkin, metresApart, oneSpot, STACK_M, stackAt, type ClusterPoint } from './cluster';
+import { clusterPins, clusterSize, fitSpan, clusterSkin, metresApart, oneSpot, STACK_M, stackAt, type ClusterPoint } from './cluster';
 
 const p = (slug: string, lat: number, lng: number): ClusterPoint => ({ slug, lat, lng });
 
@@ -209,5 +209,38 @@ describe('stackAt', () => {
 
   it('is empty for a place that is not on the map', () => {
     expect(stackAt([RUSH, REO], 'nowhere')).toEqual([]);
+  });
+});
+
+describe('fitSpan', () => {
+  const pad = { top: 0, right: 0, bottom: 0, left: 0 };
+  // At the equator a degree is a degree each way, so the arithmetic is
+  // plain: the wider side of a square screen decides.
+  it('lands on the box, by the side that fills first', () => {
+    const square = { width: 100, height: 100 };
+    expect(fitSpan([{ lat: 0, lng: 0 }, { lat: 0.5, lng: 1 }], square, pad)!.longitudeDelta).toBeCloseTo(1);
+    expect(fitSpan([{ lat: 0, lng: 0 }, { lat: 1, lng: 0.5 }], square, pad)!.latitudeDelta).toBeCloseTo(1);
+  });
+
+  it('widens the view by the padding the fit keeps clear', () => {
+    const s = fitSpan([{ lat: 0, lng: 0 }, { lat: 0, lng: 1 }], { width: 200, height: 400 }, { top: 0, right: 50, bottom: 0, left: 50 })!;
+    expect(s.longitudeDelta).toBeCloseTo(2);
+    expect(s.latitudeDelta).toBeCloseTo(4);
+  });
+
+  // Hanoi, at 21°: a degree of latitude is wider on screen than one of
+  // longitude, by 1/cos.
+  it('reckons latitude by the cosine where the points are', () => {
+    const s = fitSpan([{ lat: 21, lng: 105 }, { lat: 21.1, lng: 105 }], { width: 100, height: 100 }, pad)!;
+    expect(s.latitudeDelta).toBeCloseTo(0.1);
+    expect(s.longitudeDelta).toBeCloseTo(0.1 / Math.cos((21.05 * Math.PI) / 180));
+  });
+
+  it('has nothing to say of no points, one spot, or no room', () => {
+    const view = { width: 100, height: 100 };
+    expect(fitSpan([], view, pad)).toBeNull();
+    expect(fitSpan([{ lat: 21, lng: 105 }, { lat: 21, lng: 105 }], view, pad)).toBeNull();
+    expect(fitSpan([{ lat: 0, lng: 0 }, { lat: 1, lng: 1 }], view, { ...pad, top: 60, bottom: 60 })).toBeNull();
+    expect(fitSpan([{ lat: 0, lng: 0 }, { lat: 1, lng: 1 }], view, { ...pad, left: 100 })).toBeNull();
   });
 });

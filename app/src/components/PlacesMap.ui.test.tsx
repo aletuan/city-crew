@@ -34,6 +34,8 @@ vi.mock('./mapsModule', async () => {
       'data-poi-icons': String(!(p.customMapStyle ?? []).some((r: any) => r.featureType === 'poi' && r.elementType === 'labels.icon' && r.stylers?.[0]?.visibility === 'off')),
     },
     R.createElement('button', { type: 'button', 'data-stub': 'ready', onClick: p.onMapReady }),
+    // The map laid out at a phone's size.
+    R.createElement('button', { type: 'button', 'data-stub': 'layout', onClick: () => p.onLayout?.({ nativeEvent: { layout: { width: 400, height: 800 } } }) }),
     // A tap on the map's own ground, and the same tap as a provider that
     // also reports a marker's press there.
     R.createElement('button', { type: 'button', 'data-stub': 'ground', onClick: () => p.onPress?.({ nativeEvent: {} }) }),
@@ -210,6 +212,28 @@ describe('PlacesMap', () => {
     } finally {
       vi.useRealTimers();
     }
+  });
+
+  // Gathered for where the camera is going: from a street, out to a set
+  // that spans the city, two places a few doors apart are one bubble at
+  // once — not two pins piled up until the glide ends (owner's recording,
+  // 23 Nov 2026).
+  it('gathers a new set at the zoom its fit will land on, before the map gets there', () => {
+    const { rerender } = render(<PlacesMap places={[place('a', 21, 105)]} selectedSlug={null} onSelect={() => {}} categories={[]} origin={null} cities={[]} onPickCity={() => {}} fallback={HANOI} />);
+    fireEvent.click(document.querySelector('[data-stub="layout"]')!);
+    markMapReady();
+    zoomIn();
+    const far = [place('a', 21, 105), place('b', 21.0003, 105.0003), place('z', 21.5, 105.5)];
+    rerender(<PlacesMap places={far} selectedSlug={null} onSelect={() => {}} categories={[]} origin={null} cities={[]} onPickCity={() => {}} fallback={HANOI} />);
+    expect(markers().some((m) => m.getAttribute('data-label')?.startsWith('2 places'))).toBe(true);
+  });
+
+  it('keeps the view it has when it cannot yet say where a fit will land', () => {
+    const { rerender } = render(<PlacesMap places={[place('a', 21, 105)]} selectedSlug={null} onSelect={() => {}} categories={[]} origin={null} cities={[]} onPickCity={() => {}} fallback={HANOI} />);
+    markMapReady();
+    zoomIn();
+    rerender(<PlacesMap places={[place('a', 21, 105), place('b', 21.0003, 105.0003), place('z', 21.5, 105.5)]} selectedSlug={null} onSelect={() => {}} categories={[]} origin={null} cities={[]} onPickCity={() => {}} fallback={HANOI} />);
+    expect(markers().some((m) => m.getAttribute('data-label')?.startsWith('2 places'))).toBe(false);
   });
 
   // The colour it had, not its own: under the Heritage chip every pin is

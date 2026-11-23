@@ -21,7 +21,7 @@
 
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
-import { clusterPins, clusterSize, clusterSkin, oneSpot, stackAt } from '../lib/cluster';
+import { clusterPins, clusterSize, clusterSkin, fitSpan, oneSpot, stackAt } from '../lib/cluster';
 import { mapStyle } from '../lib/mapStyle';
 import type { Place } from '../lib/data';
 import type { ExploreOrigin } from '../lib/exploreFilters';
@@ -101,6 +101,33 @@ function useFit(
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [key, ready, edgePadding.top, edgePadding.right, edgePadding.bottom, edgePadding.left]);
   return fitAll;
+}
+
+/**
+ * How wide a stretch of the world is on screen — which is the zoom, and
+ * so the size of the cells the pins are gathered into. Until the map
+ * says, the opening span is the honest guess; and when the set changes,
+ * the span the fit is about to land on (`fitSpan`), worked out in the
+ * render that brings the set, so the new pins are gathered for where the
+ * camera is going rather than where it is. The map's own report when it
+ * stops (`onRegionChangeComplete`) has the last word.
+ */
+function useSpan(
+  pins: readonly Pinned[],
+  key: string,
+  edgePadding: { top: number; right: number; bottom: number; left: number },
+) {
+  const [span, setSpan] = useState({ latitudeDelta: OPENING_SPAN, longitudeDelta: OPENING_SPAN });
+  const [view, setView] = useState<{ width: number; height: number } | null>(null);
+  const [aimed, setAimed] = useState(key);
+  if (aimed !== key) {
+    setAimed(key);
+    const next = view ? fitSpan(pins, view, edgePadding) : null;
+    if (next) setSpan(next);
+  }
+  const onLayout = (e: { nativeEvent: { layout: { width: number; height: number } } }) =>
+    setView({ width: e.nativeEvent.layout.width, height: e.nativeEvent.layout.height });
+  return { span, setSpan, onLayout };
 }
 
 /**
@@ -197,10 +224,7 @@ export default function PlacesMap({ places, selectedSlug, onSelect, categories, 
   const still = useReducedMotion();
   const fitAll = useFit(ref, pins, key, ready, edgePadding, still);
 
-  // How wide a stretch of the world is on screen — which is the zoom, and
-  // so the size of the cells the pins are gathered into. Until the map
-  // says, the opening span is the honest guess.
-  const [span, setSpan] = useState({ latitudeDelta: OPENING_SPAN, longitudeDelta: OPENING_SPAN });
+  const { span, setSpan, onLayout } = useSpan(pins, key, edgePadding);
   const clusters = useMemo(
     () => clusterPins(pins.map((p) => ({ slug: p.slug, lat: p.lat, lng: p.lng })), span, selectedSlug),
     // `pins` is rebuilt every render; its content is what matters.
@@ -288,6 +312,7 @@ export default function PlacesMap({ places, selectedSlug, onSelect, categories, 
         showsMyLocationButton={false}
         toolbarEnabled={false}
         onMapReady={() => setReady(true)}
+        onLayout={onLayout}
         // iOS's Apple map reports a marker's tap here too, as
         // `marker-press`; Google's does not, but the guard costs nothing.
         onPress={(e: { nativeEvent?: { action?: string } }) => { if (e?.nativeEvent?.action !== 'marker-press') onSelect(null); }}
