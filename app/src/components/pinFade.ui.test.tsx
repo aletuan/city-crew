@@ -3,7 +3,7 @@
 // The pins' half of a change of set: which leave and how fast, which
 // arrive and when. Driven on fake timers, since the fade is a count of
 // ticks and nothing else.
-import React from 'react';
+import React, { useEffect } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { Text } from 'react-native';
 import { act, render, screen } from '../uitest/render';
@@ -12,8 +12,10 @@ import { FADE_IN_AT, FADE_IN_MS, FADE_OUT_MS, TICK_MS, fadeAt, usePinFade } from
 type Pin = { slug: string };
 const pins = (...slugs: string[]): Pin[] => slugs.map((slug) => ({ slug }));
 // What the hook says, written out where the test can read it back.
-function Probe({ set, still = false, ask }: { set: Pin[]; still?: boolean; ask: string[] }) {
+function Probe({ set, still = false, ask, onCommit }: { set: Pin[]; still?: boolean; ask: string[]; onCommit?: (s: string) => void }) {
   const fade = usePinFade(set, still);
+  const said = JSON.stringify({ leaving: fade.leaving.map((p) => p.slug), opacity: Object.fromEntries(ask.map((s) => [s, fade.opacity(s)])) });
+  useEffect(() => { onCommit?.(said); });
   return (
     <Text testID="probe">
       {JSON.stringify({ leaving: fade.leaving.map((p) => p.slug), opacity: Object.fromEntries(ask.map((s) => [s, fade.opacity(s)])) })}
@@ -73,6 +75,19 @@ describe('usePinFade', () => {
 
     step(FADE_IN_MS);
     expect(seen()).toEqual({ leaving: [], opacity: { a: 1, b: 1, c: 1 } });
+  });
+
+  // Every render that reaches the screen, not only the last: worked out
+  // in an effect, the change left one committed render with the new set
+  // whole and the old one gone — a flash on the phone (owner's recording,
+  // 23 Nov 2026).
+  it('never puts a change on screen before its fade is in place', () => {
+    const commits: string[] = [];
+    const log = (c: string) => { commits.push(c); };
+    const { rerender } = render(<Probe set={pins('a')} ask={ask} onCommit={log} />);
+    commits.length = 0;
+    rerender(<Probe set={pins('b')} ask={ask} onCommit={log} />);
+    expect(commits.map((c) => JSON.parse(c))).toEqual([{ leaving: ['a'], opacity: { a: 1, b: 0, c: 1 } }]);
   });
 
   it('does not count a re-sort of the same pins as a change', () => {
