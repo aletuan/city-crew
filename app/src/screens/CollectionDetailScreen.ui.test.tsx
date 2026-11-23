@@ -1348,6 +1348,36 @@ describe('sharing with friends', () => {
   });
 
   describe('the sheet', () => {
+    // The backdrop, which is the sheet's only way out: no Cancel row (see
+    // `whoSeesRows`). Nothing written on the way.
+    it('closes from its backdrop and changes nothing', async () => {
+      show();
+      fireEvent.click(screen.getByTestId('collection-share'));
+      expect(screen.getByTestId('sheet-action-friends')).toBeTruthy();
+      fireEvent.click(screen.getAllByLabelText('Close').at(-1)!);
+      endModalFade();
+      await waitFor(() => expect(screen.queryByTestId('sheet-action-friends')).toBeNull());
+      expect(spies.setShares).not.toHaveBeenCalled();
+      expect(spies.setCollectionPublic).not.toHaveBeenCalled();
+    });
+
+    // The friends picker, opened and left: the ticks are not saved, and
+    // the list is as it was.
+    it('lets the friends picker go without sharing anything', async () => {
+      show();
+      openPicker();
+      tick('Lan Phương');
+      // The picker's own backdrop: the who-sees sheet it replaced is drawn
+      // after it and still fading, so the last Close on the page is that one.
+      const save = screen.getByTestId('share-save');
+      const backdrop = screen.getAllByLabelText('Close').find((el) => el.parentElement?.contains(save))!;
+      fireEvent.click(backdrop);
+      endModalFade();
+      await waitFor(() => expect(screen.queryByTestId('share-save')).toBeNull());
+      expect(spies.setShares).not.toHaveBeenCalled();
+      expect(screen.getByTestId('collection-visibility').getAttribute('aria-label')).toBe('Private');
+    });
+
     it('puts Friends between Public and Private, and says what it means while nobody has it', () => {
       show();
       fireEvent.click(screen.getByTestId('collection-share'));

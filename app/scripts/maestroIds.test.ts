@@ -39,7 +39,11 @@ const flowIds = (): Map<string, string> => {
 const sourceIds = () => {
   const exact = new Set<string>();
   const prefixes = new Set<string>();
-  const files = walk(join(app, 'src'), (f) => f.endsWith('.tsx') && !/\.test\.tsx$/.test(f));
+  // `.ts` as well as `.tsx` (23 Nov 2026): a hook that builds sheet rows
+  // sets their ids with no JSX in sight — `useListMenu`'s
+  // `collection-menu-edit` — and reading only `.tsx` failed three flows
+  // the day the ⋯'s rows left the screen for it.
+  const files = walk(join(app, 'src'), (f) => /\.tsx?$/.test(f) && !/\.test\.tsx?$/.test(f));
   for (const file of files) {
     for (const line of readFileSync(file, 'utf8').split('\n')) {
       // Any case: a prop that forwards an id under its own name

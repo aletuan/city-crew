@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { PencilGlyph } from '../components/PencilGlyph';
 import {
-  ActivityIndicator, Alert, FlatList,
+  ActivityIndicator, FlatList,
   type NativeScrollEvent,
   type NativeSyntheticEvent, Pressable, Text, useWindowDimensions, View,
 } from 'react-native';
@@ -24,7 +24,7 @@ import { useCollections, useCuratorAvatar, useLikes, usePlaces } from '../lib/ca
 import { askCommentsAgain } from '../lib/commentsChanged';
 import { likesWorthShowing } from '../lib/likes';
 import {
-  deleteCollection, membersOf, unseenMembers, useCopyCountsQuery, useCountView, usePrefetchOwnListActivity,
+  membersOf, unseenMembers, useCopyCountsQuery, useCountView, usePrefetchOwnListActivity,
   useProfileByHandle, useSharedWithMe,
 } from '../lib/data';
 import LikeHeart from '../components/LikeHeart';
@@ -33,7 +33,7 @@ import ShareSheet from '../components/ShareSheet';
 import { atHandle, normalizeHandle } from '../lib/handle';
 import { useCurrentCity } from '../lib/city';
 import { useReport } from '../components/reportFlow';
-import ActionSheet, { SheetRows, type SheetAction } from '../components/ActionSheet';
+import ActionSheet, { SheetRows } from '../components/ActionSheet';
 import { useMyLists, useSaveActions } from '../lib/save';
 import { readerKey, COLLECTION_VIEW_KEY } from '../lib/readerPrefs';
 import { oneOf, useStored } from '../lib/stored';
@@ -47,12 +47,13 @@ import { DraggableCard, DraggableTile, LiftCell, LiftedCard, StillCard, StillTil
 import { OwnEmpty } from './collectionDetail/OwnEmpty';
 import { ReaderSeen, readerWord, sendRows, ShareButton, ShareHead, whoHint } from './collectionDetail/Share';
 import { CommentsDoor } from './collectionDetail/CommentsDoor';
-import { useCommentsSetting } from './collectionDetail/CommentsSetting';
 import { CopyDoor } from './collectionDetail/CopyDoor';
 import { ACT_GLYPH, ACTIVITY_CHEVRON, BYLINE_SLOP, FACE, GRID_GAP, s } from './collectionDetail/styles';
 import { useKindFilter } from './collectionDetail/useKindFilter';
 import { useReorderDraft } from './collectionDetail/useReorderDraft';
 import { useListVisibility } from './collectionDetail/useListVisibility';
+import { useCopyRemove } from './collectionDetail/useCopyRemove';
+import { useListMenu } from './collectionDetail/useListMenu';
 
 
 /**
@@ -151,9 +152,6 @@ function useReloadFigures() {
   const { reload: reloadCopies } = useCopyCountsQuery();
   return () => { reloadLikes(); askCommentsAgain(); reloadCopies(); };
 }
-
-/** A menu's rows, less the ones that do not apply here. */
-const present = (rows: (SheetAction | null | false)[]) => rows.filter((r): r is SheetAction => !!r);
 
 export default function CollectionDetailScreen({ navigation, route }: { navigation: Nav; route: RootRoute<'CollectionDetail'> }) {
   const { t, lang } = useI18n();
@@ -438,62 +436,6 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
     readerKey(COLLECTION_VIEW_KEY, userId), 'grid', LIST_OR_GRID,
   );
   const grid = view === 'grid';
-  /*
-   * The two views, in either menu: how a list is looked at is the
-   * reader's, whoever made the list. A choice of two under its own name,
-   * the one in force ticked, as iOS's own Files does it (owner, 22 Oct
-   * 2026, from the reference). It was one row naming where it went —
-   * "List view" while in the grid — which said nothing about where you
-   * were.
-   *
-   * In the sheet since 13 Nov 2026 they are a card of their own under
-   * the name, between the acts above and below them: a tick among verbs
-   * would read as one more thing done, and `SheetAction.selected` is for
-   * a choice between states, which these two are and the rest are not.
-   *
-   * ── the grid notice, removed (owner, 12 Nov 2026) ──
-   * From 22 Oct a banner under the card said lists now open as a grid
-   * and pointed here, with a ring pulsing round ⋯, until the reader
-   * closed it. Three weeks on it was news to almost nobody it reached:
-   * 59 of 107 accounts had joined after the grid became the default and
-   * never knew the cards as one, and 55 of the 61 active in the last
-   * fortnight had never closed it, so it stood over the photographs on
-   * every list. The way back to the cards is still here, in this menu.
-   * `preferences.grid_notice_closed_at` stays in the table: dropping it
-   * is a live migration that would change nothing a reader sees.
-   */
-  const viewRows: SheetAction[] = [
-    {
-      key: 'grid',
-      icon: 'grid-outline',
-      title: t('Grid', 'Dạng lưới', 'グリッド', '网格', '網格'),
-      selected: grid,
-      onPress: () => pickView('grid'),
-      testID: 'collection-menu-grid',
-    },
-    {
-      key: 'list',
-      icon: 'list-outline',
-      title: t('List', 'Dạng danh sách', 'リスト', '列表', '列表'),
-      selected: !grid,
-      onPress: () => pickView('list'),
-      testID: 'collection-menu-list',
-    },
-  ];
-
-  // Search, opened for this list (owner, 23 Oct 2026). It used to be the
-  // Explore tab, where saving a place offered this list by name: a trip
-  // out of the list, a sheet per place, and a way back that was not the
-  // one the reader came by. Search in this tab's own stack puts a ⊕ for
-  // this list on every place it finds, and back is back to the list.
-  const addPlace = () => {
-    if (col) navigation.navigate('Search', { addTo: col.slug });
-  };
-
-  const edit = () => {
-    if (!col) return;
-    navigation.navigate('CollectionForm', { slug: col.slug, title, desc });
-  };
 
 
   // Putting the list in order: the order on screen, the write a beat
@@ -563,114 +505,12 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
   const openPlace = useCallback((slug: string) => navigation.navigate('PlaceDetail', { slug }), [navigation]);
   const step = useCallback((index: number, by: -1 | 1) => latest.current(index, index + by), []);
 
-  /**
-   * Take this list into your own collections.
-   *
-   * The answer to a question the app could not answer before: you find a
-   * list you like, and the only things you can do with it are like it and
-   * leave. Liking is a compliment. This is the one that lets you use it —
-   * your copy, your order, your additions, and the original untouched.
-   *
-   * ── through the form, not on the spot ──
-   *
-   * Nothing is created here. The row hands the source's facts to the
-   * collection form — the title (which the form offers back as "Copy of
-   * X", editable before anything exists), the description as the curator
-   * wrote it, the members in the curator's order — and the copy is
-   * born only when the reader saves there. Backing out of the form
-   * creates nothing, so a curious tap costs nothing to undo.
-   *
-   * ── the credit, kept out of the text ──
-   *
-   * The copy used to carry a "Copied from @curator" line appended to its
-   * description, back when that was the only record of where a copy came
-   * from. It no longer is: the form writes `copied_from` onto the new row
-   * (see `CollectionFormScreen`), and the curator hears about the copy in
-   * Activity through `copies_of_mine`. The line had become a stamp in
-   * somebody else's words — the copier's first edit was to delete it, it
-   * was written in whichever language the copier happened to read, and
-   * the form saved that one string into every language column. So the
-   * description now carries only what the curator wrote, and where the
-   * copy came from lives in the data, not on the screen (owner, 15 Oct
-   * 2026).
-   *
-   * ── the city, from the list rather than from the tab ──
-   *
-   * `col.city_id`, falling back to the city on screen. The fallback
-   * exists for the legacy select that omits the column. The public query
-   * is no longer city-scoped (a list appears in every city it has a place
-   * in — see `fetchCollections`), so the stamp can differ from the tab;
-   * the copy takes the original's stamp, not the tab's.
-   */
-  const copyCityId = col?.city_id || city?.id;
-  // Where the copy's doors open — the ⋯'s sheet, the dock's pill and,
-  // since 20 Nov 2026, the activity row with its figure
-  // (`collectionDetail/CopyDoor`; the card's corner held one until 13
-  // Nov): with a city to file it under, and never on a list lent to you
-  // (`sharedToMe`).
-  const canCopy = !!copyCityId && !sharedToMe;
-  const copyRef = useRef<() => void>(() => {});
-  const copy = () => {
-    if (!col) return;
-    // Signed out this is the sheet, not an error: wanting somebody's list
-    // is a good moment to be offered an account, and a disabled row would
-    // have explained nothing.
-    // Signed in, the copy is finished on the reader's return: the form
-    // opens and waits for them, so nothing is written unasked. Through
-    // the ref because the `copy` that runs must be a render that knows
-    // the reader is signed in — this one does not.
-    if (!uid) { askToSignIn('copy', () => copyRef.current()); return; }
-    const cityId = copyCityId;
-    if (!cityId) return;
-    const sourceDesc = t(col.desc_en, col.desc_vi, col.desc_ja)?.trim() || '';
-    navigation.navigate('CollectionForm', {
-      copyFrom: {
-        sourceId: col.id,
-        cityId,
-        title,
-        desc: sourceDesc,
-        // The order on screen, which is `sort_order` already resolved by
-        // `membersOf` — copying the list means copying the sequence the
-        // curator chose, not the order the rows happen to come back in.
-        placeSlugs: members.map((p) => p.slug),
-      },
-    });
-  };
-  copyRef.current = copy;
-
-  const remove = () => Alert.alert(
-    t('Delete this collection?', 'Xoá bộ sưu tập này?', 'このコレクションを削除しますか？', '删除这个合集？', '刪除這個合集？'),
-    t(`"${title}" will be gone for good.`, `"${title}" sẽ mất hẳn.`, `「${title}」は完全に削除されます。`, `“${title}”将被永久删除。`, `「${title}」將被永久刪除。`),
-    [
-      { text: t('Cancel', 'Huỷ', 'キャンセル', '取消', '取消'), style: 'cancel' },
-      {
-        text: t('Delete', 'Xoá', '削除', '删除', '刪除'),
-        style: 'destructive',
-        onPress: () => {
-          if (!col) return;
-          deleteCollection(col.slug)
-            // Leaving first: the screen is about a row that no longer
-            // exists, and the list behind it is where the outcome shows.
-            //
-            // The members left the saved set with the list, and the taste
-            // profile has to hear it — without these, their last recorded
-            // verb stays `save` forever and a thrown-away list keeps
-            // counting as liked (#315). After the delete, never before:
-            // a failed delete must not leave false events behind.
-            .then(() => {
-              for (const m of members) note(m.slug, 'unsave');
-              navigation.goBack();
-              // Both catalogs, as publish and reorder do: a public list
-              // also lives in the public query, and without this it stays
-              // on the Explore shelf and in search after it is gone.
-              mine.reload();
-              cols.reload();
-            })
-            .catch((e: Error) => Alert.alert(t('Could not delete', 'Không xoá được', '削除できませんでした', '无法删除', '無法刪除'), e.message));
-        },
-      },
-    ],
-  );
+  // Saving a copy of a list and deleting your own: `useCopyRemove`, the
+  // second step of F1 (23 Nov 2026). `copy` opens three doors — the ⋯,
+  // the dock, the activity row — and `canCopy` says whether they show.
+  const { canCopy, copy, remove } = useCopyRemove({
+    col, uid, tabCityId: city?.id, sharedToMe, members, title, mine, cols, note, askToSignIn, navigation, t,
+  });
 
   /* Who can see this list, and the place to change it (owner, 16 Oct
      2026). It sat under the title as a line of its own and was changed
@@ -967,22 +807,6 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
   // A face or a profile row means an account; an editorial handle has
   // neither (see `curatorHandle`), and so no page to open.
   const curatorIsPerson = !!curatorAvatar || !!lookup.data;
-  /* Report, a row in the ⋯. Never on a shared list: see `sharedToMe`. */
-  const reportRow: SheetAction | null = col && !sharedToMe
-    && canReport({ kind: 'collection', id: col.id ?? '', ownerId: col.owner_id })
-    ? {
-      key: 'report',
-      icon: 'flag-outline',
-      title: t('Report this list', 'Báo cáo bộ sưu tập này', 'このリストを報告', '举报这个清单', '舉報這個清單'),
-      desc: t(
-        'Tell the desk something here is wrong.',
-        'Báo cho desk biết có điều gì không ổn ở đây.',
-        'ここに問題があることをデスクに伝えます。',
-        '告诉编辑团队这里有问题。', '告訴編輯團隊這裡有問題。',
-      ),
-      onPress: () => report({ kind: 'collection', id: col.id ?? '', ownerId: col.owner_id, name: title }),
-    }
-    : null;
   /* ── your own face, too (owner, 16 Oct 2026) ──
      Your own list leads with your face and handle as well, as the
      owner’s view in the review drew it: the card reads the same from
@@ -1178,6 +1002,12 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
     goTo('Ideas', { screen: 'IdeasHome', params: { from: col.slug, at: Date.now() } });
   };
   const canPlan = !!col && members.length > 0;
+  // The ⋯'s sheet: its rows, the two views, and the presses only it and
+  // the card make (Add place, Edit). `useListMenu`, the second step of F1.
+  const { viewRows, addPlace, edit, actsBefore, actsAfter, commentsSetting } = useListMenu({
+    col, owned, sharedToMe, grid, pickView, title, desc, navigation, t,
+    canPlan, plan, canCopy, copy, remove, canReport, report,
+  });
   // Where the card ends in the list's content, measured, so the dock waits
   // until it has actually gone rather than guessing from a row count.
   const cardEnd = useRef(Number.POSITIVE_INFINITY);
@@ -1344,138 +1174,6 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
     </View>
   ) : null;
 
-  /* ── the ⋯'s sheet (owner, 13 Nov 2026) ──
-     The sheet the other ⋯s in the app open — `ActionSheet`, as
-     who-can-see-it beside it, Visited's ⋯ and the curator's face do — so
-     that every pop-up in the app rises from the bottom the same way and
-     is closed the same way: the backdrop, the grabber, or a row. That is
-     the owner's reason, and the whole of it.
-
-     Rejected, and removed that day: the popover it was. A `Modal` hung
-     under the header's ⋯ from a measure of the button, with a lighter
-     scrim and a shadow, on the argument that a menu anchored to its
-     control is visibly that control's menu. It was the one menu in the
-     app that did not rise from the bottom, so a reader met two shapes of
-     menu and two ways out of them. What the anchor said — this is the
-     list's menu — the sheet's header says in words, and the sheet needs
-     no measure of anything.
-
-     The header is the list's name, the way Visited's ⋯ heads its sheet
-     with the visit's: the thing the menu is about, above the rows
-     (`ActionSheet`). The rows are their names alone (owner, 13 Nov 2026):
-     this is a menu of acts, and "Edit collection" or "Delete collection"
-     says what it does. Rejected the same day, before it shipped: a
-     sentence under every row, as the sheets that are choices wear them
-     ("Only you can see it" under Private). Here they repeated the names —
-     "Its name, description and categories" under Edit — and made the
-     sheet twice as tall to read for nothing. Report keeps its sentence
-     in the curator's sheet, where it stands beside Block; here it is the
-     one red row among plain ones, and its name is enough.
-
-     The rows are the popover's, on its conditions, in three cards:
-     what you do with the list, the two views under their name
-     (`viewRows`), and the one row in red. A card with nothing in it is
-     not drawn (`SheetRows`), which is how a list lent to you, with
-     nothing to plan from, opens on the views.
-
-     ── the order (owner, 16 Nov 2026) ──
-     Every act on the list in the first card, the views under it, the red
-     row alone at the foot. Until then the sheet kept the popover's
-     order, which nobody had argued for: two acts, the views, then the
-     other two with the red row closing their card. The views cut what
-     you do with a list in half, and Delete stood one row under Share in
-     the same card. Deleting asks first (`remove`), so the row apart is
-     not what saves a list from a slipped thumb; it is that a card of
-     plain verbs ending in a red one reads as four of a kind, and the
-     red row is not one of them. What it costs is the views two rows
-     further down, and which view a reader looks at is kept for them
-     (`LIST_OR_GRID`), so that row is pressed once and rarely again. The
-     sheet is as tall as it was: the same rows in the same three cards.
-
-     Both sheets, yours and a visitor's, so the menu is one shape
-     whoever's list it is on.
-
-     ── yours ──
-     Add place, Plan a trip, Edit collection, Share; the views; Delete.
-     No publish row: who can see the list is changed where it is said,
-     under your handle at the card's head — see `visibility`.
-
-     ── somebody else's ──
-     The things you can do to a thing you do not own: plan from it,
-     take it, pass it on, say something is wrong with it. No Edit, no
-     Delete, no publish switch — not because they are kept from you but
-     because they are not yours to press, and a menu listing what the
-     database will refuse lies twice.
-
-     "Save a copy" and not "Follow", and the wording is the promise.
-     Following would leave the curator in charge of what you see — they
-     drop a place, you lose it — and the reason to want this list was to
-     make it yours: reorder it, cut the two you have been to, add the
-     four you know. It copies, and the row's name says so before the
-     tap rather than after it. Only with a city to file the copy under (`canCopy`):
-     without one the row could only close the sheet and do nothing.
-
-     Plan a trip, Save a copy, Share; the views; Report. Report last,
-     alone and in red, because it is the row that is about a person
-     rather than about the list — and never on your own, which is yours
-     to delete.
-
-     A friend's list shared with you keeps only the reading half: Plan a
-     trip and the two views. See `sharedToMe`. */
-  const planRow: SheetAction | null = canPlan ? {
-    key: 'plan',
-    icon: 'paw-outline',
-    title: t('Plan a trip', 'Lên kế hoạch', 'プランを立てる', '规划行程', '規劃行程'),
-    onPress: plan,
-    testID: 'collection-menu-plan',
-  } : null;
-  const commentsSetting = useCommentsSetting(col, owned);
-  const [actsBefore, actsAfter]: SheetAction[][] = owned
-    ? [
-      present([
-        {
-          key: 'add',
-          icon: 'add-circle-outline',
-          title: t('Add place', 'Thêm địa điểm', 'スポットを追加', '添加地点', '新增地點'),
-          onPress: addPlace,
-          testID: 'collection-menu-add',
-        },
-        planRow,
-        {
-          key: 'edit',
-          icon: 'create-outline',
-          title: t('Edit collection', 'Sửa bộ sưu tập', 'コレクションを編集', '编辑合集', '編輯合集'),
-          onPress: edit,
-          testID: 'collection-menu-edit',
-        },
-        commentsSetting.row,
-      ]),
-      [
-        {
-          key: 'delete',
-          icon: 'trash-outline',
-          title: t('Delete collection', 'Xoá bộ sưu tập', 'コレクションを削除', '删除合集', '刪除合集'),
-          destructive: true,
-          onPress: remove,
-          testID: 'collection-menu-delete',
-        },
-      ],
-    ]
-    : [
-      present([
-        planRow,
-        canCopy && {
-          key: 'copy',
-          icon: 'copy-outline',
-          title: t('Save a copy', 'Lưu bản sao', 'コピーを保存', '保存副本', '儲存副本'),
-          onPress: copy,
-          testID: 'collection-menu-copy',
-        },
-      ]),
-      present([
-        reportRow && { ...reportRow, desc: undefined, destructive: true, testID: 'collection-menu-report' },
-      ]),
-    ];
   const menuSheet = (
     <>
       <SheetRows actions={actsBefore} onClose={() => setMenu(false)} />
