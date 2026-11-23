@@ -77,6 +77,11 @@ export default function InviteSheet({
   // by the sending alone — "Send 1 and take back 1" is a button nobody
   // reads, and the ticks above already show the second half.
   const moved = invite.length + withdraw.length;
+  // Asked and not answered, and still ticked: what the sheet opens on
+  // after a send. With nothing moved, the note and the button speak for
+  // them rather than offering to "send" what has been sent.
+  const waiting = rows.filter((r) => r.invited && !r.locked && picked.has(r.id));
+  const nameOf = (id: string) => people[id]?.full_name || people[id]?.handle || '';
 
   // The company's own ceiling. On a couple's evening one tick fills the
   // seat, and the rest of the list greys out with the note below saying
@@ -89,6 +94,8 @@ export default function InviteSheet({
 
   const label = sending
     ? t('Sending…', 'Đang gửi…', '送信中…', '发送中…', '傳送中…')
+    : !moved && waiting.length
+      ? t('Sent — waiting for an answer', 'Đã gửi, đang chờ', '送信済み — 返事待ち', '已发送，等待回复', '已傳送，等待回覆')
     : invite.length
       ? t(
         `Send ${invite.length} invite${invite.length === 1 ? '' : 's'}`,
@@ -112,7 +119,21 @@ export default function InviteSheet({
       'この旅程は満員です — 一晩は最大20人までです。',
       '这个行程已满 — 一个晚上最多 20 人。', '這個行程已滿 — 一個晚上最多 20 人。',
     )
-    : seatsHeld
+    : !moved && waiting.length
+      ? waiting.length === 1
+        ? t(
+          `${nameOf(waiting[0].id)} is invited and hasn’t answered yet. Tap them to take it back.`,
+          `Đã mời ${nameOf(waiting[0].id)}, đang chờ trả lời. Chạm vào người đó để rút lời mời.`,
+          `${nameOf(waiting[0].id)}さんを招待済み、返事待ちです。取り消すにはタップしてください。`,
+          `已邀请${nameOf(waiting[0].id)}，等待回复。点一下可撤回邀请。`, `已邀請${nameOf(waiting[0].id)}，等待回覆。點一下可撤回邀請。`,
+        )
+        : t(
+          `${waiting.length} invited and not answered yet. Tap one to take it back.`,
+          `Đã mời ${waiting.length} người, đang chờ trả lời. Chạm vào một người để rút lời mời.`,
+          `${waiting.length}人を招待済み、返事待ちです。取り消すにはタップしてください。`,
+          `已邀请 ${waiting.length} 人，等待回复。点一下可撤回邀请。`, `已邀請 ${waiting.length} 人，等待回覆。點一下可撤回邀請。`,
+        )
+      : seatsHeld
       ? t(
         'A couple’s evening is complete — your guest has answered.',
         'Buổi tối hai người đã đủ — người đi cùng đã trả lời.',
@@ -152,10 +173,20 @@ export default function InviteSheet({
         // An answered row says which way: a locked row that holds no seat
         // is a refusal (`candidates`), and wearing "Answered" it looked
         // like a yes (owner, 20 Nov 2026).
-        const badge = !r.locked ? undefined : r.seated
-          ? t('Accepted', 'Đã đồng ý', '承諾済み', '已接受', '已接受')
-          : t('Can’t make it', 'Không đi được', '不参加', '无法参加', '無法參加');
-        return { id: r.id, on, off: r.locked || benched, badge };
+        // And an unanswered one says it is waiting, and a fresh tick that
+        // it is about to go (owner, 23 Nov 2026): all three wore the same
+        // coral tick, and an invitation nobody had answered read as a yes.
+        const pending = r.invited && !r.locked;
+        const badge = r.locked
+          ? r.seated
+            ? t('Accepted', 'Đã đồng ý', '承諾済み', '已接受', '已接受')
+            : t('Can’t make it', 'Không đi được', '不参加', '无法参加', '無法參加')
+          : !on ? undefined
+            : pending
+              ? t('Waiting', 'Đang chờ', '返事待ち', '等待中', '等待中')
+              : t('To invite', 'Sẽ mời', '招待する', '将邀请', '將邀請');
+        const mark = pending ? 'waiting' as const : r.locked && r.seated ? 'yes' as const : undefined;
+        return { id: r.id, on, off: r.locked || benched, badge, mark };
       })}
       people={people}
       // The Crew screen is where that happens — and no link to it from
@@ -170,7 +201,7 @@ export default function InviteSheet({
       )}
       note={{ icon: 'time-outline', text: note }}
       cta={{
-        icon: 'paper-plane-outline',
+        icon: !moved && waiting.length ? 'time-outline' : 'paper-plane-outline',
         label,
         testID: 'invite-send',
         disabled: sending || !moved,

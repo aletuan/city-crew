@@ -81,6 +81,18 @@ export type PickRow = {
   /** A word worn under the name — an answered invitation's answer.
    *  A tick that cannot be untapped should not look like one that can. */
   badge?: string;
+  /** What kind of tick a ticked face wears, when it is not the plain
+   *  "will be sent" one. Three things looked like one until 23 Nov 2026
+   *  (owner, on a couple's evening): a friend just picked, one asked and
+   *  not yet answered, and one who said yes all wore the same coral tick,
+   *  so an unanswered invitation read as a yes.
+   *
+   *  - `waiting`: asked, no answer. A dashed ring and a clock, no wash —
+   *    the seat is held but nobody is in it yet. Still a tick: tapping it
+   *    takes the invitation back.
+   *  - `yes`: answered yes. Green, the app's colour for good news
+   *    (`ok`), so it no longer shares the coral of a choice not yet sent. */
+  mark?: 'waiting' | 'yes';
 };
 
 export default function FriendPicker({
@@ -222,14 +234,18 @@ function Strip({ rows, people, rowTestID, onToggle }: {
             // its strength: it is the one that says yes.
             contentStyle={[s.cell, { width: cell }, r.off && !r.on && s.cellOff]}
           >
-            <View style={[s.halo, r.on && s.haloOn]}>
+            <View style={[s.halo, r.on && HALO_ON[r.mark ?? 'picked']]}>
               <Avatar url={p?.avatar_url} size={FACE} />
               {r.on ? (
                 // On the sheet's own ground, so the disc is parted from
                 // the photograph without a border to colour.
-                <View style={s.onRim} testID="picker-on">
-                  <View style={s.onDisc}>
-                    <Glyph name="checkmark" size={ICON.meta} color={colors.accentInk} />
+                <View style={s.onRim} testID={r.mark ? `picker-${r.mark}` : 'picker-on'}>
+                  <View style={[s.onDisc, DISC[r.mark ?? 'picked']]}>
+                    <Glyph
+                      name={r.mark === 'waiting' ? 'time-outline' : 'checkmark'}
+                      size={ICON.meta}
+                      color={INK[r.mark ?? 'picked']}
+                    />
                   </View>
                 </View>
               ) : null}
@@ -277,10 +293,12 @@ const s = StyleSheet.create({
     position: 'absolute', right: -1, bottom: -1, width: 26, height: 26, borderRadius: 13,
     backgroundColor: colors.bgElevated, alignItems: 'center', justifyContent: 'center',
   },
-  onDisc: {
-    width: 20, height: 20, borderRadius: 10, backgroundColor: colors.accentFill,
-    alignItems: 'center', justifyContent: 'center',
-  },
+  onDisc: { width: 20, height: 20, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
+  haloWaiting: { borderWidth: 1.5, borderStyle: 'dashed', borderColor: colors.textTertiary },
+  haloYes: { backgroundColor: colors.okSoft },
+  discPicked: { backgroundColor: colors.accentFill },
+  discWaiting: { backgroundColor: colors.surfaceGlassStrong },
+  discYes: { backgroundColor: colors.okSoft },
   // Two lines, centred: "Tran Thi Trang" is wider than its cell at 13 and
   // would be cut at one. The height of two is held, so a strip of short
   // and long names keeps one foot.
@@ -302,3 +320,9 @@ const s = StyleSheet.create({
   later: { paddingVertical: 14, marginTop: 2, alignSelf: 'center' },
   laterText: { color: colors.textSecondary, fontSize: 16, fontWeight: font.medium },
 });
+
+/** The three ticks of `PickRow.mark`, by name, so the face reads one
+ *  table rather than three ternaries. */
+const HALO_ON = { picked: s.haloOn, waiting: s.haloWaiting, yes: s.haloYes };
+const DISC = { picked: s.discPicked, waiting: s.discWaiting, yes: s.discYes };
+const INK = { picked: colors.accentInk, waiting: colors.textSecondary, yes: colors.okInk };
