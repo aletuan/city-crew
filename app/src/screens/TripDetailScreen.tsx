@@ -28,7 +28,7 @@
 // seen what it is.
 
 import React, { useMemo, useState } from 'react';
-import { Alert, Linking, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Linking, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Glyph, ICON } from '../components/ui/glyph';
 import { useFlag } from '../lib/useFlag';
 import {
@@ -39,10 +39,7 @@ import StopRow from '../components/StopRow';
 import { useProfile, useSession } from '../lib/auth';
 import { FOOD_CATEGORIES } from '../lib/categories';
 import { fromISO } from '../lib/day';
-import {
-  answerInvite, deleteTrip, sendInvites, withdrawInvites,
-  type TripStopRow,
-} from '../lib/data';
+import type { TripStopRow } from '../lib/data';
 import { useCrew } from '../lib/crew';
 import { useMyTrips } from '../lib/mytrips';
 import { useInvitations } from '../lib/invitations';
@@ -52,7 +49,6 @@ import InviteSheet from '../components/InviteSheet';
 import StopGallery from '../components/StopGallery';
 import TripCrew from '../components/TripCrew';
 import TripReminderNote from '../components/TripReminderNote';
-import { cancelTripReminder } from '../lib/reminders';
 import { clockOf, dateline, fmtMinutes, fmtVnd, openLabel } from '../lib/format';
 import {  } from '../lib/geo';
 import { useI18n } from '../lib/i18n';
@@ -62,6 +58,7 @@ import { legsOf } from '../lib/travel';
 import { spendVnd, tripCover } from '../lib/trips';
 import { colors, font, radius, space, type } from '../theme';
 import type { Nav, RootRoute } from '../nav';
+import { useTripActions } from './trips/useTripActions';
 
 export default function TripDetailScreen({ navigation, route }: {
   navigation: Nav;
@@ -99,14 +96,17 @@ export default function TripDetailScreen({ navigation, route }: {
   // Whether a friend has said yes is the one thing here another person
   // changes, so it is re-read on every focus and on a pull (`lib/usePull`).
   const refresh = useKeepCurrent([invites], [trips, invites]);
-  const [sheetOpen, setSheetOpen] = useState(false);
-  const [sending, setSending] = useState(false);
   const tripId = route.params.id;
   const me = session?.user?.id ?? null;
   const mineInvites = useMemo(() => invites.data.filter((i) => i.trip_id === tripId), [invites.data, tripId]);
 
   const trip = trips.data.find((x) => x.id === tripId) ?? null;
   const owned = !!trip && !!me && trip.owner_id === me;
+  // Inviting, deleting and leaving: `useTripActions` (23 Nov 2026). The
+  // screen draws the sheet and the red button; the hook does the writing.
+  const { sheetOpen, setSheetOpen, sending, onSend, confirmDelete, confirmLeave } = useTripActions({
+    trip, tripId, me, trips, invites, navigation, t,
+  });
 
   // The headcount an invitee is allowed — batched by the invitations
   // provider back at the Trips list, so this screen opens already holding
@@ -206,91 +206,6 @@ export default function TripDetailScreen({ navigation, route }: {
    */
   const cover = tripCover(stops);
 
-  /** Send what was ticked and take back what was unticked, in that order:
-   *  a press that both invites and withdraws should not leave the trip
-   *  briefly emptier than the reader asked for. */
-  const onSend = async (invite: string[], withdraw: string[]) => {
-    if (!me || sending) return;
-    setSending(true);
-    try {
-      await sendInvites(tripId, me, invite);
-      await withdrawInvites(tripId, withdraw);
-      setSheetOpen(false);
-      invites.reload();
-    } catch (e) {
-      Alert.alert(
-        t('Could not send', 'Không gửi được', '送信できません', '无法发送', '無法傳送'),
-        e instanceof Error ? e.message : String(e),
-      );
-    } finally {
-      setSending(false);
-    }
-  };
-
-  const confirmDelete = () => Alert.alert(
-    t('Delete this trip?', 'Xoá chuyến đi này?', 'この旅程を削除しますか？', '删除这个行程？', '刪除這個行程？'),
-    t(
-      `"${trip.title}" will be gone for good.`,
-      `"${trip.title}" sẽ mất hẳn.`,
-      `「${trip.title}」は完全に削除されます。`,
-      `“${trip.title}”将被永久删除。`, `「${trip.title}」將被永久刪除。`,
-    ),
-    [
-      { text: t('Cancel', 'Huỷ', 'キャンセル', '取消', '取消'), style: 'cancel' },
-      {
-        text: t('Delete', 'Xoá', '削除', '删除', '刪除'),
-        style: 'destructive',
-        // Back first, then reload: the list is the screen that has to
-        // notice, and leaving this one standing over a row that no longer
-        // exists would put it through its own "no longer here" state on
-        // the way out.
-        onPress: () => {
-          cancelTripReminder(trip.id);
-          deleteTrip(trip.id)
-            .then(() => { navigation.goBack(); trips.reload(); })
-            .catch((e: Error) => Alert.alert(
-              t('Could not delete', 'Không xoá được', '削除できませんでした', '无法删除', '無法刪除'), e.message,
-            ));
-        },
-      },
-    ],
-  );
-
-  /** The guest's version of the red button. Deleting is the owner's act —
-   *  a guest who pressed it reached a row RLS would not let them touch,
-   *  got a silent zero, and watched the trip "come back" on the next
-   *  refetch. What a guest actually does is leave: a late decline, which
-   *  ends their view of the plan for good and tells the planner the
-   *  truth — the crew row marks them "can't make it". */
-  const confirmLeave = () => Alert.alert(
-    t('Leave this trip?', 'Rời chuyến đi này?', 'この旅程から抜けますか？', '退出这个行程？', '離開這個行程？'),
-    t(
-      `"${trip.title}" will leave your list, and the planner will see you can't make it.`,
-      `"${trip.title}" sẽ rời khỏi danh sách của bạn; người mời sẽ thấy bạn không đi được.`,
-      `「${trip.title}」はリストから消え、招待した人には不参加と表示されます。`,
-      `“${trip.title}”将从你的列表中移除，发起人会看到你无法参加。`, `「${trip.title}」將從你的列表中移除，發起人會看到你無法參加。`,
-    ),
-    [
-      { text: t('Cancel', 'Huỷ', 'キャンセル', '取消', '取消'), style: 'cancel' },
-      {
-        text: t('Leave', 'Rời', '抜ける', '退出', '離開'),
-        style: 'destructive',
-        onPress: () => {
-          answerInvite(trip.id, 'declined')
-            .then(() => {
-              // Leaving takes the reminder with it, as a delete does for
-              // the planner. The sync would pull it on the next reload
-              // anyway; doing it here means it is gone before that.
-              cancelTripReminder(trip.id);
-              navigation.goBack(); trips.reload(); invites.reload();
-            })
-            .catch((e: Error) => Alert.alert(
-              t('Could not leave', 'Không rời được', '退出できませんでした', '无法退出', '無法離開'), e.message,
-            ));
-        },
-      },
-    ],
-  );
 
   // The subtitle is date and hours — no company, and no city. Who is
   // going is the crew row's own line below; which city is what every
