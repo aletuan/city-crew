@@ -86,10 +86,25 @@ function useFit(
   still: boolean,
 ) {
   const fittedKey = useRef<string | null>(null);
-  const fitAll = (animated: boolean) => ref.current?.fitToCoordinates(
-    pins.map((p) => ({ latitude: p.lat, longitude: p.lng })),
-    { edgePadding, animated },
-  );
+  const fitAll = (animated: boolean) => {
+    // A set on one spot — one place, often, under a chip with a filter on
+    // — has no box to fit: Google fits a box of no size by zooming in as
+    // far as it goes, and the owner's recording (24 Nov 2026) shows what
+    // that is — a blank street-level square with one pin in it, half a
+    // second of gliding to get there and as long to get out. So the
+    // camera goes to the spot at a neighbourhood's width instead.
+    if (oneSpot(pins)) {
+      ref.current?.animateCamera(
+        { center: { latitude: pins[0].lat, longitude: pins[0].lng }, zoom: ONE_SPOT_ZOOM },
+        { duration: animated ? 500 : 0 },
+      );
+      return;
+    }
+    ref.current?.fitToCoordinates(
+      pins.map((p) => ({ latitude: p.lat, longitude: p.lng })),
+      { edgePadding, animated },
+    );
+  };
   useEffect(() => {
     if (!ready || !pins.length) return;
     fitAll(!still && fittedKey.current != null && fittedKey.current !== key);
@@ -130,6 +145,12 @@ function useSpan(
   return { span, setSpan, onLayout };
 }
 
+/** Google's zoom for a set on one spot: fifteen shows a neighbourhood,
+ *  a couple of kilometres across a phone — the streets round the place
+ *  and enough of the city to say where it is. Sixteen was a few blocks,
+ *  fourteen a district in which the pin was one dot of many labels. */
+const ONE_SPOT_ZOOM = 15;
+
 /**
  * The pins the set just lost, fading for a tenth of a second before they
  * go (`pinFade`) — drawn apart from the clusters, which are cut from the
@@ -139,10 +160,10 @@ function useSpan(
  * change, and on the phone every leaving pin flashed its own colour for
  * a frame (owner's recording, 23 Nov 2026).
  */
-function Leaving({ pins, opacity }: { pins: readonly (Pinned & { pic: ReturnType<typeof pinImage> })[]; opacity: (slug: string) => number }) {
+function Leaving({ pins, opacity }: { pins: readonly (Pinned & { pic: ReturnType<typeof pinImage>; alone: boolean })[]; opacity: (slug: string) => number }) {
   return (
     <>
-      {pins.map((p) => (
+      {pins.filter((p) => p.alone).map((p) => (
         <Marker
           key={`gone-${p.slug}`}
           identifier={`gone-${p.slug}`}
@@ -235,7 +256,15 @@ export default function PlacesMap({ places, selectedSlug, onSelect, categories, 
   // Each pin with the picture it wears now, so one that leaves fades in
   // the colour it had rather than its own: under a chip every pin is the
   // chip's colour, and the next chip is not theirs.
-  const fade = usePinFade(useMemo(() => pins.map((p) => ({ ...p, pic: pinImage(p, chosenKind(p, categories), false) })), [pins, categories]), still);
+  // And whether it is drawn on its own or inside a bubble: a pin that
+  // leaves from inside a bubble has nothing of its own to fade, and the
+  // recording showed what drawing it anyway does — every bubble of the
+  // old set burst into its dozens of pins for the fade's tenth of a
+  // second. The bubble just goes, with the set it counted.
+  const fade = usePinFade(useMemo(() => {
+    const alone = new Set(clusters.filter((c) => c.slugs.length === 1).map((c) => c.slugs[0]));
+    return pins.map((p) => ({ ...p, pic: pinImage(p, chosenKind(p, categories), false), alone: alone.has(p.slug) }));
+  }, [pins, categories, clusters]), still);
 
   // A custom marker view frozen from its first frame comes out blank on
   // iOS; one that is never frozen redraws on every pan. So each new set of
