@@ -159,6 +159,12 @@ const tickFriends = async (...rows: number[]) => {
   fireEvent.click(screen.getByTestId('collection-form-seen'));
   fireEvent.click(screen.getByTestId('sheet-action-friends'));
   await waitFor(() => expect(screen.getByTestId('share-friend-0')).toBeTruthy(), { timeout: 3000 });
+  // The faces mount from the sheet's timer, and a face can be in the
+  // tree before its press handler is wired — `pick` below has the same
+  // race. A click in that gap is dropped, Save stays dimmed and the wait
+  // for "Friends" runs out: 4 runs in 24 on 23 Nov 2026, once the ticked
+  // face's disc took a style per kind of tick. Flush, then press.
+  await act(async () => {});
   for (const i of rows) fireEvent.click(screen.getByTestId(`share-friend-${i}`));
   fireEvent.click(screen.getByTestId('share-save'));
   await waitFor(() => expect(screen.getByTestId('collection-form-seen').textContent!.startsWith('Friends')).toBe(true), { timeout: 3000 });
