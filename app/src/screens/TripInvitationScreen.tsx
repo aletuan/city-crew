@@ -39,10 +39,18 @@ import { fmtDistance } from '../lib/geo';
 import { useI18n } from '../lib/i18n';
 import { localized } from '../lib/localized';
 import { useInvitations } from '../lib/invitations';
+import { useFlag } from '../lib/useFlag';
 import { spendVnd } from '../lib/trips';
 import { legsOf } from '../lib/travel';
 import { colors, font, radius, space, type } from '../theme';
 import type { Nav, RootRoute } from '../nav';
+
+/** The cost per person when prices are shown, and 0 — which prints
+ *  nothing — when they are not. Outside the screen so the switch costs
+ *  its function no branch (`oversize.js`). */
+function shownSpend(on: boolean, stops: readonly { places?: Parameters<typeof spendVnd>[0][number] }[]): number {
+  return on ? spendVnd(stops.map((st) => st.places)) : 0;
+}
 
 export default function TripInvitationScreen({ navigation, route }: {
   navigation: Nav;
@@ -54,6 +62,12 @@ export default function TripInvitationScreen({ navigation, route }: {
   const { invites, crewCounts } = useInvitations();
   const clearance = useTabBarClearance();
   const trips = useMyTrips();
+  // The cost per person is behind the same switch as every other price
+  // (#597, #755), and was the one left out (23 Nov 2026): this line
+  // predates the switch, so when the plan screens' totals went behind it
+  // the invitation kept "~50k ₫ / người" — the only price left in the
+  // app, shown to the one reader who cannot open the places to check it.
+  const showPrice = useFlag('place_price');
 
   const [busy, setBusy] = useState(false);
   // The guard, as opposed to the dimming: `busy` is only seen by the
@@ -130,9 +144,8 @@ export default function TripInvitationScreen({ navigation, route }: {
   const day = fromISO(trip.day);
   const from = people[invite?.inviter_id ?? ''] ?? null;
   const legs = legsOf(stops.map((st) => st.places ?? { lat: null, lng: null }));
-  const spend = spendVnd(stops.map((st) => st.places));
-  const first = stops[0];
-  const last = stops[stops.length - 1];
+  const spend = shownSpend(showPrice, stops);
+  const [first, last] = [stops[0], stops[stops.length - 1]];
   const window = first?.arrive_min != null && last?.arrive_min != null
     ? `${clockOf(first.arrive_min)}–${clockOf(last.arrive_min + (last.dwell_min ?? 0))}`
     : null;

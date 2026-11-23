@@ -14,6 +14,7 @@
 import React from 'react';
 import { Alert } from 'react-native';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { appFlags } from '../lib/flags';
 import { act, fireEvent, render, screen, waitFor } from '../uitest/render';
 import type { Nav, RootRoute } from '../nav';
 import type { Place } from '../lib/types';
@@ -121,6 +122,7 @@ const no = () => screen.getByRole('button', { name: /Can’t make it/ });
 const text = () => document.body.textContent ?? '';
 
 beforeEach(() => {
+  appFlags.reset();
   vi.clearAllMocks();
   alert.mockImplementation(() => {});
   answerInvite.mockImplementation(async () => {});
@@ -200,12 +202,20 @@ describe('what the invitee sees', () => {
     expect(text()).toMatch(/km · ≈ \d+ min/);
   });
 
+  it('prints no cost while the price switch is off, as it ships', () => {
+    show();
+    expect(text()).toContain('3 stops · 09:00–12:30');
+    expect(text()).not.toContain('₫');
+  });
+
   it('sums stops, hours and the cost per person under the plan', () => {
+    appFlags.set('place_price', true);
     show();
     expect(text()).toContain('3 stops · 09:00–12:30 · ~165k ₫ / person');
   });
 
   it('writes a million-dong plan in millions and a single stop in the singular', () => {
+    appFlags.set('place_price', true);
     state.trips = [trip({ trip_stops: [stop(place({ price_vnd: 1_250_000 }), { arrive_min: 600 })] })];
     show();
     expect(text()).toContain('1 stop · 10:00–10:00 · ~1.3M ₫ / person');
@@ -213,6 +223,7 @@ describe('what the invitee sees', () => {
   });
 
   it('keeps a stop whose place has gone, with a dash for its time and no cost line for a free plan', () => {
+    appFlags.set('place_price', true);
     state.trips = [trip({ trip_stops: [stop(null), stop(place({ price_vnd: 0 }), { arrive_min: 600 })] })];
     show();
     expect(screen.getByText('A place that has since gone')).toBeTruthy();
