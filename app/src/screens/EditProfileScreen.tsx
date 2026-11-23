@@ -325,7 +325,7 @@ export default function EditProfileScreen({ navigation, route }: { navigation: N
       <View style={{ alignItems: 'center', gap: 10, marginBottom: 22 }}>
         <AvatarPicker size={96} />
         <Text style={{ color: colors.textTertiary, fontSize: 13 }}>
-          {t('Change profile photo', 'Thay đổi ảnh đại diện', 'プロフィール写真を変更', '更换头像', '更換大頭貼')}
+          {t('Change profile photo', 'Đổi ảnh đại diện', 'プロフィール写真を変更', '更换头像', '更換大頭貼')}
         </Text>
       </View>
       {/* No lede. "Tell your crew a little about yourself" introduced four

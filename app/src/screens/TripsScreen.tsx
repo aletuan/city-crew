@@ -391,7 +391,7 @@ export default function TripsScreen({ navigation, route }: { navigation: Nav; ro
         </View>
         <View style={s.guestReturning}>
           <Text style={s.guestHint}>
-            {t('Already have an account?', 'Đã có tài khoản?', 'アカウントをお持ちですか？', '已有账号？', '已有帳號？')}
+            {t('Already have an account?', 'Đã có tài khoản?', 'すでにアカウントをお持ちですか？', '已有账号？', '已有帳號？')}
           </Text>
           <PressableScale
             accessibilityRole="button"

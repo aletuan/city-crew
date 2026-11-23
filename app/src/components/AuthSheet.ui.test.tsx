@@ -94,7 +94,7 @@ describe('what it says', () => {
     view.unmount();
     state.lang = 'ja';
     open('search');
-    expect(lines()).toEqual(['Google マップで新しいスポットを探す', 'サインイン / 登録', '今はしない']);
+    expect(lines()).toEqual(['Google マップで新しいスポットを探す', 'サインイン / 登録', 'あとで']);
   });
 });
 

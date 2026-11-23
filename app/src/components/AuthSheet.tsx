@@ -127,7 +127,7 @@ export default function AuthSheet({ visible, why = 'save', onClose, onSignIn }: 
           </LinearGradient>
         </PressableScale>
         <PressableScale testID="auth-sheet-cancel" onPress={onClose} accessibilityRole="button" contentStyle={s.secondary}>
-          <Text style={s.secondaryText}>{t('Not now', 'Để sau', '今はしない', '暂不', '暫不')}</Text>
+          <Text style={s.secondaryText}>{t('Not now', 'Để sau', 'あとで', '以后再说', '以後再說')}</Text>
         </PressableScale>
       </Animated.View>
     </Modal>

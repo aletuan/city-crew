@@ -90,7 +90,7 @@ export function FindField({ find, name }: { find: PageFind; name: string | null 
           ? t(`Search ${name}'s collections`, `Tìm trong bộ sưu tập của ${name}`, `${name}さんのコレクションを検索`, `搜索 ${name} 的合集`, `搜尋 ${name} 的合集`)
           : t('Search your collections', 'Tìm trong bộ sưu tập của bạn', '自分のコレクションを検索', '搜索你的合集', '搜尋你的合集')}
         testID={{ input: 'person-find-input', cancel: 'person-find-cancel' }}
-        cancel={{ shown: true, label: t('Cancel', 'Hủy', 'キャンセル', '取消', '取消'), onPress: find.close }}
+        cancel={{ shown: true, label: t('Cancel', 'Huỷ', 'キャンセル', '取消', '取消'), onPress: find.close }}
       />
     </View>
   );

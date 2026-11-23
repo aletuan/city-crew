@@ -237,7 +237,7 @@ export default function CrewScreen({ navigation }: { navigation: Nav }) {
       {
         key: 'unfriend',
         icon: 'person-remove-outline',
-        title: t('Unfriend', 'Hủy kết bạn', '友達をやめる', '删除好友', '刪除好友'),
+        title: t('Unfriend', 'Huỷ kết bạn', '友達をやめる', '删除好友', '刪除好友'),
         desc: t(
           'Take them out of your crew. They will not be told, and either of you can ask again later.',
           'Bỏ họ khỏi crew. Họ sẽ không được báo, và sau này ai cũng có thể mời lại.',
@@ -246,9 +246,9 @@ export default function CrewScreen({ navigation }: { navigation: Nav }) {
         ),
         destructive: true,
         onPress: () => askThen(
-          t(`Unfriend ${tag(p)}?`, `Hủy kết bạn với ${tag(p)}?`, `${tag(p)} と友達をやめますか？`, `删除好友 ${tag(p)}？`, `刪除好友 ${tag(p)}？`),
+          t(`Unfriend ${tag(p)}?`, `Huỷ kết bạn với ${tag(p)}?`, `${tag(p)} と友達をやめますか？`, `删除好友 ${tag(p)}？`, `刪除好友 ${tag(p)}？`),
           t('They will not be told.', 'Họ sẽ không được báo.', '相手に通知されません。', '对方不会收到通知。', '對方不會收到通知。'),
-          t('Unfriend', 'Hủy kết bạn', '友達をやめる', '删除好友', '刪除好友'),
+          t('Unfriend', 'Huỷ kết bạn', '友達をやめる', '删除好友', '刪除好友'),
           () => cutEdge(p.id, t('Could not unfriend', 'Không huỷ kết bạn được', '友達を解除できませんでした', '无法删除好友', '無法刪除好友')),
         ),
       },
@@ -257,7 +257,7 @@ export default function CrewScreen({ navigation }: { navigation: Nav }) {
         t('Block', 'Chặn', 'ブロック', '屏蔽', '遮蔽'),
         t(
           'Ends the friendship and keeps it ended: no requests either way, and their likes leave your Activity.',
-          'Hủy kết bạn và giữ nguyên như vậy: không ai mời được ai, và lượt thích của họ rời khỏi Hoạt động.',
+          'Huỷ kết bạn và giữ nguyên như vậy: không ai mời được ai, và lượt thích của họ rời khỏi Hoạt động.',
           '友達関係を解消し、以後どちらからも申請できません。相手のいいねもアクティビティから消えます。',
           '结束好友关系且不再恢复：双方都无法再发送请求，对方的点赞也会从你的动态中移除。', '結束好友關係且不再恢復：雙方都無法再傳送請求，對方的按讚也會從你的動態中移除。',
         ),

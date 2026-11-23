@@ -228,7 +228,7 @@ export const SEEN_GLYPH: Record<Visibility, keyof typeof Ionicons.glyphMap> = {
 /** The one word for each answer — the page's, and so the form's. */
 export function seenName(seen: Visibility, t: T): string {
   if (seen === 'public') return t('Public', 'Công khai', '公開', '公开', '公開');
-  if (seen === 'friends') return t('Friends', 'Bạn bè', '友だち', '好友', '好友');
+  if (seen === 'friends') return t('Friends', 'Bạn bè', '友達', '好友', '好友');
   return t('Private', 'Riêng tư', '非公開', '私密', '私密');
 }
 
@@ -249,7 +249,7 @@ export function seenName(seen: Visibility, t: T): string {
 export function seenGloss(seen: Visibility, t: T): string {
   if (seen === 'public') return t('Everyone can see it', 'Mọi người có thể xem', '誰でも見られます', '所有人可见', '所有人可見');
   if (seen === 'friends') {
-    return t('Only the friends you choose', 'Chỉ những bạn bè bạn chọn', '選んだ友だちだけが見られます', '仅你选择的好友可见', '僅你選擇的好友可見');
+    return t('Only the friends you choose', 'Chỉ những bạn bè bạn chọn', '選んだ友達だけが見られます', '仅你选择的好友可见', '僅你選擇的好友可見');
   }
   return t('Only you can see it', 'Chỉ mình bạn thấy', '自分だけが見られます', '仅你可见', '僅你可見');
 }

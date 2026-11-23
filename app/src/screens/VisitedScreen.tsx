@@ -242,7 +242,7 @@ export default function VisitedScreen({ navigation }: { navigation: Nav }) {
             testID={{ input: 'visits-input', cancel: 'visits-cancel' }}
             placeholder={t('Place or city', 'Tên địa điểm hoặc thành phố', '場所または都市', '地点或城市', '地點或城市')}
             // Inside the box, while the panel is up — see `SearchField`.
-            cancel={{ shown: open, label: t('Cancel', 'Hủy', 'キャンセル', '取消', '取消'), onPress: cancel }}
+            cancel={{ shown: open, label: t('Cancel', 'Huỷ', 'キャンセル', '取消', '取消'), onPress: cancel }}
           />
         </View>
         {open && (
@@ -256,9 +256,9 @@ export default function VisitedScreen({ navigation }: { navigation: Nav }) {
                     scaleTo={0.92}
                     hitSlop={{ top: 10, bottom: 10, left: 12, right: 12 }}
                     accessibilityRole="button"
-                    accessibilityLabel={t('Clear suggestions', 'Xóa gợi ý', '候補を消去', '清除推荐', '清除推薦')}
+                    accessibilityLabel={t('Clear suggestions', 'Xoá gợi ý', '候補を消去', '清除推荐', '清除推薦')}
                   >
-                    <Text style={s.clear}>{t('Clear', 'Xóa', '消去', '清除', '清除')}</Text>
+                    <Text style={s.clear}>{t('Clear', 'Xoá', '消去', '清除', '清除')}</Text>
                   </PressableScale>
                 </View>
                 {suggestions.map((term) => (

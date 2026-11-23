@@ -42,7 +42,7 @@ export const COMPANY: {
 }[] = [
   { key: 'solo', icon: 'person-outline', en: 'Just me', vi: 'Một mình', ja: 'ひとり', zh: '独自一人', hant: '獨自一人' },
   { key: 'couple', icon: 'heart-outline', en: 'Couple', vi: 'Hai người', ja: 'ふたり', zh: '情侣', hant: '情侶' },
-  { key: 'friends', icon: 'people-outline', en: 'Friends', vi: 'Bạn bè', ja: '友だち', zh: '朋友', hant: '朋友' },
+  { key: 'friends', icon: 'people-outline', en: 'Friends', vi: 'Bạn bè', ja: '友達', zh: '朋友', hant: '朋友' },
   { key: 'family', icon: 'home-outline', en: 'Family', vi: 'Gia đình', ja: '家族', zh: '家人', hant: '家人' },
 ];
 

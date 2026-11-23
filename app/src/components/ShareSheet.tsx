@@ -100,7 +100,7 @@ export default function ShareSheet({
   const button = rows.length === 0
     ? {
       icon: 'person-add-outline' as const,
-      label: t('Find friends', 'Tìm bạn bè', '友だちを探す', '查找好友', '查詢好友'),
+      label: t('Find friends', 'Tìm bạn bè', '友達を探す', '查找好友', '查詢好友'),
       disabled: false,
       // The Crew screen is in the Profile tab's stack, so the jump is
       // across tabs; `initial: false` keeps Profile's home beneath it
@@ -123,7 +123,7 @@ export default function ShareSheet({
           )
           : cta.kind === 'private'
             ? t('Keep private', 'Để riêng tư', '非公開のままにする', '保持私密', '保持私密')
-            : t('Choose friends', 'Chọn bạn bè', '友だちを選ぶ', '选择好友', '選擇好友'),
+            : t('Choose friends', 'Chọn bạn bè', '友達を選ぶ', '选择好友', '選擇好友'),
       disabled: sending || cta.kind === 'none' || (cta.kind === 'share' && !cta.live),
       onPress: () => onSave(add, remove),
     };
@@ -131,18 +131,18 @@ export default function ShareSheet({
   return (
     <FriendPicker
       open={open}
-      title={t('Share with friends', 'Chia sẻ với bạn bè', '友だちと共有', '与好友分享', '與好友分享')}
+      title={t('Share with friends', 'Chia sẻ với bạn bè', '友達と共有', '与好友分享', '與好友分享')}
       subtitle={isPublic
         ? t(
           'This list will become private: only the friends you choose can see and use it.',
           'Bộ sưu tập sẽ chuyển sang riêng tư: chỉ những người bạn mà bạn chọn mới xem và dùng được.',
-          'このリストは非公開になり、選んだ友だちだけが見て使えるようになります。',
+          'このリストは非公開になり、選んだ友達だけが見て使えるようになります。',
           '这个清单会变为私密，只有你选择的好友才能看到和使用。', '這個清單會變為私密，只有你選擇的好友才能看到和使用。',
         )
         : t(
           'Only the friends you choose can see and use this list.',
           'Chỉ những người bạn mà bạn chọn mới xem và dùng được bộ sưu tập này.',
-          '選んだ友だちだけがこのリストを見て使えます。',
+          '選んだ友達だけがこのリストを見て使えます。',
           '只有你选择的好友才能看到和使用这个清单。', '只有你選擇的好友才能看到和使用這個清單。',
         )}
       rows={rows.map((id) => ({ id, on: picked.has(id) }))}
@@ -153,7 +153,7 @@ export default function ShareSheet({
       none={t(
         'You have no friends here yet. Add one, then come back to share.',
         'Bạn chưa có bạn bè nào. Thêm bạn rồi quay lại chia sẻ nhé.',
-        'まだ友だちがいません。友だちを追加してから共有しましょう。',
+        'まだ友達がいません。友達を追加してから共有しましょう。',
         '你还没有好友。添加好友后再回来分享吧。', '你還沒有好友。新增好友後再回來分享吧。',
       )}
       cta={{ ...button, testID: 'share-save' }}

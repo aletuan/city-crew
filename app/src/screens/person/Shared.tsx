@@ -185,7 +185,7 @@ function FirstOfYours({ onCreate }: { onCreate: () => void }) {
           testID="person-first-list"
         >
           <Glyph name="add" size={ICON.text} color={colors.accent} />
-          <Text style={s.firstText}>{t('Create your first collection', 'Tạo bộ sưu tập đầu tiên', '最初のコレクションを作成', '创建第一个合集', '建立第一個合集')}</Text>
+          <Text style={s.firstText}>{t('Create your first collection', 'Tạo bộ sưu tập đầu tiên', '最初のコレクションを作る', '创建你的第一个合集', '建立你的第一個合集')}</Text>
       </PressableScale>
     </Card>
   );

@@ -127,8 +127,8 @@ function words(t: ReturnType<typeof useI18n>['t']) {
   const descriptions = [t('Search by place, dish or neighbourhood.', 'Tìm theo tên quán, món ăn hay khu phố.', '店名、料理、エリアで探せます。', '按店名、菜品或街区搜索。', '按店名、菜品或街區搜尋。'),
     t('Add a place to a collection to find it again easily.', 'Thêm địa điểm vào bộ sưu tập để dễ tìm lại.', '場所をコレクションに保存して、あとで簡単に見つけましょう。', '把地点加入合集，之后就能轻松找到。', '把地點加入合集，之後就能輕鬆找到。'),
     t('Lists from everyone are under Community. The places you save are under Yours.', 'Bộ sưu tập của mọi người ở mục Cộng đồng. Những nơi bạn lưu nằm ở mục Của bạn.', 'みんなのコレクションは「みんなの」に、保存した場所は「自分の」にあります。', '大家的合集在“社区”里，你保存的地点在“我的”里。', '大家的合集在「社群」裡，你儲存的地點在「我的」裡。'),
-    t('Introduce yourself, add friends, and see who liked or commented on your collections.', 'Giới thiệu bản thân, kết bạn, và xem ai đã thích hay bình luận bộ sưu tập của bạn.', '自己紹介をして友だちを追加し、コレクションへのいいねやコメントを確認できます。', '介绍一下自己，添加好友，看看谁赞了或评论了你的合集。', '介紹一下自己，新增好友，看看誰讚了或評論了你的合集。'),
-    t('Pick who is coming and what you are in the mood for, and City Crew suggests an outing to invite friends along.', 'Chọn đi cùng ai và bạn thích gì, City Crew sẽ gợi ý một buổi đi chơi để rủ bạn bè cùng đi.', '誰と行くか、どんな気分かを選ぶと、City Crew がお出かけを提案。友だちも誘えます。', '选好和谁去、想去哪类地方，City Crew 会推荐一次出行，约上好友一起去。', '選好和誰去、想去哪類地方，City Crew 會推薦一次出行，約上好友一起去。')];
+    t('Introduce yourself, add friends, and see who liked or commented on your collections.', 'Giới thiệu bản thân, kết bạn, và xem ai đã thích hay bình luận bộ sưu tập của bạn.', '自己紹介をして友達を追加し、コレクションへのいいねやコメントを確認できます。', '介绍一下自己，添加好友，看看谁赞了或评论了你的合集。', '介紹一下自己，新增好友，看看誰讚了或評論了你的合集。'),
+    t('Pick who is coming and what you are in the mood for, and City Crew suggests an outing to invite friends along.', 'Chọn đi cùng ai và bạn thích gì, City Crew sẽ gợi ý một buổi đi chơi để rủ bạn bè cùng đi.', '誰と行くか、どんな気分かを選ぶと、City Crew がお出かけを提案。友達も誘えます。', '选好和谁去、想去哪类地方，City Crew 会推荐一次出行，约上好友一起去。', '選好和誰去、想去哪類地方，City Crew 會推薦一次出行，約上好友一起去。')];
   return { titles, descriptions };
 }
 
