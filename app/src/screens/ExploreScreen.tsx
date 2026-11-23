@@ -21,7 +21,7 @@ import ExploreFilterSheet, { statusLabel } from '../components/ExploreFilterShee
 import { AmbientWarmth, Empty, PressableScale, Skeleton, UnderlineChoice, useOwnedStatusBar, useTabBarClearance } from '../components/ui';
 import { useDuckOnScroll, useTabBarDuck } from '../components/tabBarDuck';
 import { useDockOffer } from '../components/DockSlot';
-import { CATEGORIES, categoriesOf, categoryLabel, chosenKind, pinTint, presentCategories } from '../lib/categories';
+import { CATEGORIES, categoriesOf, categoryLabel, chosenKind, presentCategories } from '../lib/categories';
 import { useCity } from '../lib/city';
 import { cityTz, wallClock } from '../lib/clock';
 import { fetchPlaceIndex, heroPlace, Place, PlaceIndexRow } from '../lib/data';
@@ -1060,14 +1060,15 @@ export default function ExploreScreen({ navigation }: { navigation: Nav }) {
                 onPickCity={setCity}
                 // The map's box already starts under the bar (`marginTop`
                 // above), so the top inset is only breathing room; the
-                // bottom clears the strip and the tab bar beneath it: 124,
-                // the strip's 108 (an 88pt photograph and its 10pt
-                // padding, since 23 Nov 2026) and the 12 it stands off
-                // the bar, rounded up. It was 100 for the 84pt strip. The
+                // bottom clears the strip and the tab bar beneath it: 140,
+                // the strip's 124 (four lines beside the photograph, the
+                // last a 32pt Directions chip, and its 10pt padding, since
+                // 23 Nov 2026) and the 12 it stands off the bar, rounded
+                // up. It was 100 for the 84pt strip, 124 for the 108. The
                 // right is 64, not 40, since the zoom controls took that
                 // corner (`MapControls`, 42 wide at the page's gutter): a
                 // fitted pin should not land under them.
-                edgePadding={{ top: 24, right: 64, bottom: tabClearance + 124, left: 40 }}
+                edgePadding={{ top: 24, right: 64, bottom: tabClearance + 140, left: 40 }}
               />
               {selected ? (
                 <View style={[s.mapStrip, { bottom: tabClearance + 12 }]}>
@@ -1076,7 +1077,7 @@ export default function ExploreScreen({ navigation }: { navigation: Nav }) {
                     distanceKm={selectedKm}
                     // The same rule the map draws the pin with, so the
                     // mark on the card and the pin cannot drift apart.
-                    tint={pinTint(selected, chosenKind(selected, picked))}
+                    kind={chosenKind(selected, picked)}
                     now={new Date()}
                     onPress={() => navigation.navigate('PlaceDetail', { slug: selected.slug })}
                   />

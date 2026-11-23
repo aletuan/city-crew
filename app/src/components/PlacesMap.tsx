@@ -142,7 +142,10 @@ const DEFAULT_PADDING = { top: 80, right: 40, bottom: 160, left: 40 };
 export default function PlacesMap({ places, selectedSlug, onSelect, categories, origin, fallback, cities, onPickCity, edgePadding = DEFAULT_PADDING }: {
   places: readonly Place[];
   selectedSlug: string | null;
-  onSelect: (slug: string) => void;
+  /** A pin chosen, or — null — the map's empty ground tapped, which lets
+   *  the chosen one go and closes its strip, as on every map the reader
+   *  already uses (owner, 23 Nov 2026; the strip has no ✕). */
+  onSelect: (slug: string | null) => void;
   /**
    * The category chips the reader has chosen, or none for the whole
    * catalog.
@@ -280,6 +283,9 @@ export default function PlacesMap({ places, selectedSlug, onSelect, categories, 
         showsMyLocationButton={false}
         toolbarEnabled={false}
         onMapReady={() => setReady(true)}
+        // iOS's Apple map reports a marker's tap here too, as
+        // `marker-press`; Google's does not, but the guard costs nothing.
+        onPress={(e: { nativeEvent?: { action?: string } }) => { if (e?.nativeEvent?.action !== 'marker-press') onSelect(null); }}
         // The zoom is the grid: every pan and pinch re-cuts the cells, so
         // the mound comes apart as the reader goes in and gathers again
         // as they come out.

@@ -86,7 +86,7 @@ describe('PlaceCard', () => {
 
 describe('MapPlaceCard', () => {
   const card = (city_id: string) =>
-    render(<MapPlaceCard place={place(city_id)} distanceKm={null} tint={null} now={SCREENSHOT} onPress={() => {}} />);
+    render(<MapPlaceCard place={place(city_id)} distanceKm={null} kind={null} now={SCREENSHOT} onPress={() => {}} />);
 
   it('reads a Melbourne place on Melbourne’s clock', () => {
     card('melbourne');
