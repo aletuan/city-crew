@@ -1063,8 +1063,11 @@ export default function ExploreScreen({ navigation }: { navigation: Nav }) {
                 // bottom clears the strip and the tab bar beneath it: 124,
                 // the strip's 108 (an 88pt photograph and its 10pt
                 // padding, since 23 Nov 2026) and the 12 it stands off
-                // the bar, rounded up. It was 100 for the 84pt strip.
-                edgePadding={{ top: 24, right: 40, bottom: tabClearance + 124, left: 40 }}
+                // the bar, rounded up. It was 100 for the 84pt strip. The
+                // right is 64, not 40, since the zoom controls took that
+                // corner (`MapControls`, 42 wide at the page's gutter): a
+                // fitted pin should not land under them.
+                edgePadding={{ top: 24, right: 64, bottom: tabClearance + 124, left: 40 }}
               />
               {selected ? (
                 <View style={[s.mapStrip, { bottom: tabClearance + 12 }]}>
