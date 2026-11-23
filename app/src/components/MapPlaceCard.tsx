@@ -34,7 +34,7 @@ import { useFlag } from '../lib/useFlag';
 import { coverOf, fmtCount, type Place } from '../lib/data';
 import { useCityList } from '../lib/city';
 import { cityTz } from '../lib/clock';
-import { openFragment, openState, shutLabel } from '../lib/format';
+import { CLOSING_SOON_MIN, clockOf, openState, type OpenState } from '../lib/format';
 import { fmtDistance } from '../lib/geo';
 import { shortAddress } from '../lib/address';
 import { useI18n } from '../lib/i18n';
@@ -42,6 +42,50 @@ import { localized } from '../lib/localized';
 import { splitName } from '../lib/name';
 import { colors, font, radius, space } from '../theme';
 import { PressableScale } from './ui';
+
+/**
+ * The hours, on a line of their own and always (owner, 23 Nov 2026): the
+ * state as a word in its colour, then the hour that changes it — "Open ·
+ * until 22:00", "Closing soon · until 23:00", "Closed · opens 10:00".
+ *
+ * The list's cards keep the other rule — an open place says nothing
+ * until `CLOSING_SOON_MIN` before closing (`openFragment`) — and it is
+ * right there: a column of cards each saying "until 22:00" is a mark
+ * every row wears. A map shows one place at a time, and the question a
+ * reader standing somewhere is asking of it is "can I go now". Silence
+ * answered that only by inference. It also rode the end of the facts
+ * line, where a shut place's "Closed · opens 10:00" was cut to
+ * "Closed · o…" behind the rating and the distance, in the space the
+ * 88pt photograph leaves beside the text.
+ *
+ * The colours are the detail screen's hours row (`colors.open`,
+ * `colors.shutInk`) and the card's amber for closing soon (`colors.soon`),
+ * each on the word alone, so the hour reads in the facts' grey. Whole
+ * phrases per language for the hour, as `openFragment` keeps them:
+ * Japanese puts まで after it. Hours `openState` cannot read say nothing.
+ */
+type Hours = { word: string; tone: 'open' | 'soon' | 'shut'; rest: string | null };
+const TONE = { open: colors.open, soon: colors.soon, shut: colors.shutInk };
+type T = (en: string, vi: string, ja?: string, zh?: string, hant?: string) => string;
+function hoursLine(state: OpenState | null, t: T): Hours | null {
+  if (!state) return null;
+  if (!state.open) {
+    const at = state.opensAtMin != null ? clockOf(state.opensAtMin) : null;
+    return {
+      word: t('Closed', 'Đóng cửa', '閉店', '已打烊', '已打烊'),
+      tone: 'shut',
+      rest: at ? t(`opens ${at}`, `mở ${at}`, `${at}開店`, `${at} 开门`, `${at} 開門`) : null,
+    };
+  }
+  if (state.untilMin == null) {
+    return { word: t('Open', 'Đang mở', '営業中', '营业中', '營業中'), tone: 'open', rest: t('24 hours', '24 giờ', '24時間', '24小时', '24小時') };
+  }
+  const at = clockOf(state.untilMin);
+  const until = t(`until ${at}`, `đến ${at}`, `${at}まで`, `营业至 ${at}`, `營業至 ${at}`);
+  return (state.closesInMin as number) <= CLOSING_SOON_MIN
+    ? { word: t('Closing soon', 'Sắp đóng', 'まもなく閉店', '即将打烊', '即將打烊'), tone: 'soon', rest: until }
+    : { word: t('Open', 'Đang mở', '営業中', '营业中', '營業中'), tone: 'open', rest: until };
+}
 
 export default function MapPlaceCard({ place, distanceKm, tint, now, onPress }: {
   place: Place;
@@ -67,10 +111,6 @@ export default function MapPlaceCard({ place, distanceKm, tint, now, onPress }: 
   const mine = useMyCheckins().data;
   const visits = checkinOn ? visitsAt(mine, place.slug).length : 0;
   const cover = coverOf(place);
-  // Open: `openFragment` speaks only when closing is within the hour, and
-  // is silent otherwise. Shut: `shutLabel`. One of the two is null by
-  // construction, so at most one fact about hours reaches the line —
-  // the same split `PlaceCard` makes.
   const cities = useCityList().cities;
   const state = openState(place.opening_hours, now, cityTz(cities, place.city_id));
   // The street under the name, as the detail screen prints it — street
@@ -83,7 +123,7 @@ export default function MapPlaceCard({ place, distanceKm, tint, now, onPress }: 
   const home = cities.find((c) => c.id === place.city_id);
   const address = shortAddress(place.address, home ? [home.name_vi, home.name_en, home.short_vi, home.short_en].filter((n): n is string => !!n) : [])
     ?? (place.neighborhood_en ? localized(place, 'neighborhood', lang) : null);
-  const hours = state?.open ? openFragment(state, t) : shutLabel(state, t);
+  const hours = hoursLine(state, t);
   // The brand alone, as `PlaceCard` prints it. The suffix the catalog
   // hangs after the dash is the branch's ward, and this strip sits under
   // the pin that is standing in it, and the address line under the name
@@ -97,10 +137,7 @@ export default function MapPlaceCard({ place, distanceKm, tint, now, onPress }: 
   // its own, which beside a card saying "800 m" for the same place read
   // as two measurements.
   const distanceFact = distanceKm != null ? fmtDistance(distanceKm) : null;
-  const facts = [
-    distanceFact,
-    hours,
-  ].filter((f): f is string => !!f);
+  const facts = [distanceFact].filter((f): f is string => !!f);
   const visited = visits > 0
     ? (visits === 1
       ? t('Checked in once', 'Đã check-in 1 lần', '1回チェックイン済み', '打过卡 1 次', '打過卡 1 次')
@@ -114,7 +151,7 @@ export default function MapPlaceCard({ place, distanceKm, tint, now, onPress }: 
     address,
     ratingFact ? t(`rated ${ratingFact}`, `đánh giá ${ratingFact}`, `評価 ${ratingFact}`, `评分 ${ratingFact}`, `評分 ${ratingFact}`) : null,
     distanceFact,
-    hours,
+    hours ? `${hours.word}, ${hours.rest ?? ''}`.replace(/, $/, '') : null,
     visited,
   ].filter((f): f is string => !!f).join(', ');
 
@@ -138,6 +175,12 @@ export default function MapPlaceCard({ place, distanceKm, tint, now, onPress }: 
                 than as the score. */}
             {ratingFact ? <Text testID="place-star" style={{ color: colors.accent }}>★ </Text> : null}
             {[ratingFact, ...facts].filter(Boolean).join(' · ')}
+          </Text>
+        ) : null}
+        {hours ? (
+          <Text style={s.facts} numberOfLines={1} testID="place-hours">
+            <Text style={{ color: TONE[hours.tone] }} testID="place-hours-word">{hours.word}</Text>
+            {hours.rest ? ` · ${hours.rest}` : ''}
           </Text>
         ) : null}
         {visited ? (

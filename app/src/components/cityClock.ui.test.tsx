@@ -90,11 +90,11 @@ describe('MapPlaceCard', () => {
 
   it('reads a Melbourne place on Melbourne’s clock', () => {
     card('melbourne');
-    expect(screen.queryByText(/Closed/)).toBeNull();
+    expect(screen.getByTestId('place-hours').textContent).toBe('Open · until 22:00');
   });
 
   it('reads a Hanoi place on Hanoi’s clock', () => {
     card('hanoi');
-    expect(screen.getByText(/Closed · opens 15:00/)).toBeTruthy();
+    expect(screen.getByTestId('place-hours').textContent).toBe('Closed · opens 15:00');
   });
 });
