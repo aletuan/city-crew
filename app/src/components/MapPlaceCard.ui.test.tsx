@@ -15,6 +15,13 @@ const visits = vi.hoisted(() => ({ on: true, data: [] as { place_slug: string }[
 vi.mock('../lib/useFlag', () => ({ useFlag: (name: string) => name === 'place_checkin' && visits.on }));
 vi.mock('../lib/checkins', () => ({ useMyCheckins: () => ({ data: visits.data }) }));
 const been = (n: number, slug = 'cong') => Array.from({ length: n }, () => ({ place_slug: slug }));
+// The place's city, by names `lib/address` has never heard of, so the
+// cut under test is the one the card's own city list makes.
+vi.mock('../lib/city', () => ({
+  useCityList: () => ({ cities: [
+    { id: 'hanoi', tz: 'Asia/Ho_Chi_Minh', name_vi: 'Phố Núi', name_en: 'Hilltown', short_vi: null, short_en: null },
+  ] }),
+}));
 const hex = (c: string) => {
   const n = c.replace('#', '');
   return `rgb(${parseInt(n.slice(0, 2), 16)}, ${parseInt(n.slice(2, 4), 16)}, ${parseInt(n.slice(4, 6), 16)})`;
@@ -104,6 +111,28 @@ describe('MapPlaceCard', () => {
     visits.data = been(3);
     render(<MapPlaceCard place={place()} distanceKm={0.8} tint={null} now={NOON} onPress={() => {}} />);
     expect(screen.queryByTestId('place-visited')).toBeNull();
+  });
+
+  // The street a local would say, under the name: no city, postal code
+  // or country (owner, 23 Nov 2026).
+  it('prints and speaks the short address under the name', () => {
+    render(<MapPlaceCard place={place({ address: '5 Nguyễn Quang Bích, Hoàn Kiếm, Hà Nội 100000, Việt Nam' } as Partial<Place>)} distanceKm={0.8} tint={null} now={NOON} onPress={() => {}} />);
+    expect(screen.getByTestId('place-address').textContent).toBe('5 Nguyễn Quang Bích, Hoàn Kiếm');
+    expect(screen.getByRole('button', { name: /^Cộng Cà Phê, 5 Nguyễn Quang Bích, Hoàn Kiếm, rated/ })).toBeTruthy();
+  });
+
+  it('cuts the city by the names the catalog knows it by, and keeps a city it has not', () => {
+    const { rerender } = render(<MapPlaceCard place={place({ address: '1 Đường Ga, Phường 2, Phố Núi' } as Partial<Place>)} distanceKm={0.8} tint={null} now={NOON} onPress={() => {}} />);
+    expect(screen.getByTestId('place-address').textContent).toBe('1 Đường Ga, Phường 2');
+    rerender(<MapPlaceCard place={place({ city_id: 'nowhere', address: '1 Đường Ga, Phố Núi' } as Partial<Place>)} distanceKm={0.8} tint={null} now={NOON} onPress={() => {}} />);
+    expect(screen.getByTestId('place-address').textContent).toBe('1 Đường Ga, Phố Núi');
+  });
+
+  it('falls back to the ward, and to nothing', () => {
+    const { rerender } = render(<MapPlaceCard place={place({ address: null, neighborhood_en: 'Old Quarter', neighborhood_vi: 'Phố Cổ' } as Partial<Place>)} distanceKm={0.8} tint={null} now={NOON} onPress={() => {}} />);
+    expect(screen.getByTestId('place-address').textContent).toBe('Old Quarter');
+    rerender(<MapPlaceCard place={place({ address: null, neighborhood_en: null } as Partial<Place>)} distanceKm={0.8} tint={null} now={NOON} onPress={() => {}} />);
+    expect(screen.queryByTestId('place-address')).toBeNull();
   });
 
   // A long name wraps to a second line instead of losing its second half.
