@@ -1,14 +1,18 @@
 // The one place the map is talking about, in a strip along its bottom
-// edge: its photograph, its name, and the three facts a reader standing
-// somewhere wants — how good, how far, how long it stays open — with the
-// bookmark, and how often the reader has checked in there.
+// edge, laid out after a reference the owner chose on 23 Nov 2026:
 //
-// Grown on 23 Nov 2026 (owner), measured against a map card from another
-// app: the photograph 64 → 88, the name allowed a second line, and the
-// chevron given up to the bookmark. At 64 the photograph was the one
-// thing on the strip that tells two cafés apart and the smallest thing on
-// it; a long name ("Tranquil Books & Coffee") lost its second half. The
-// strip stands 24pt taller, which the map's bottom padding takes up.
+//     [photo + kind]  [open · until 22:00]  1.2 km  ✓        [bookmark]
+//                     Name
+//                     Street, ward
+//                     ★ 4.6 (920)                         [Directions]
+//
+// The kind rides the photograph's corner in its pin's colour, where the
+// dot before the name used to stand for it: the same echo of the pin,
+// now one that says which kind it is in words. The hours lead, in a pill
+// of their state's colour, because "can I go now" is the question a map
+// is asked; the distance beside them is the other half of it. The rating
+// and a route to the place share the last row, as they do on the detail
+// screen, whose Directions this is (`mapsRouteUrl`, one stop, driving).
 //
 // The bookmark is here and check-in is not. Saving is one tap on the
 // collection picker every card already opens (`save` in `lib/save`), and
@@ -17,13 +21,23 @@
 // a map they are usually somewhere else; it also carries the flag, the
 // sign-in, the daily cap, the undo menu and the reward that
 // `PlaceDetailScreen` holds, which a second copy here would drift from.
-// So the strip only says the count, and the detail screen keeps the act.
+// So the strip only says it has happened: a tick after the hours, with
+// the count spoken. It had a line of its own until the layout above had
+// four, and a fifth for a fact the reader already knows was one too many.
 //
-// It knows nothing of the map. It takes a place and a distance somebody
-// else worked out, so the same strip could sit under any picker.
+// No ✕, though the reference had one: a tap on the map's empty ground
+// closes the strip, as it does on every map the reader already uses
+// (`PlacesMap` › `onPress`). Two of the reference's colours were not
+// taken either: its gold star (gold is the photograph's, `onPhoto.star`;
+// on paper the star is coral, as the detail screen draws it) and its
+// violet button (coral is this app's one accent).
+//
+// It knows nothing of the map. It takes a place, the chip its pin answers
+// to and a distance somebody else worked out, so the same strip could sit
+// under any picker.
 
 import React from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { Alert, Linking, StyleSheet, Text, View } from 'react-native';
 import { Image } from 'expo-image';
 import { Glyph, ICON } from './ui/glyph';
 import { PHOTO_DISC, PHOTO_SLOP } from './ui/controls';
@@ -39,9 +53,11 @@ import { fmtDistance } from '../lib/geo';
 import { shortAddress } from '../lib/address';
 import { useI18n } from '../lib/i18n';
 import { localized } from '../lib/localized';
+import { mapsRouteUrl } from '../lib/maps';
+import { CATEGORIES, categoryLabel, pinCategory } from '../lib/categories';
 import { splitName } from '../lib/name';
 import { colors, font, radius, space } from '../theme';
-import { PressableScale } from './ui';
+import { CHIP_H, PressableScale } from './ui';
 
 /**
  * The hours, on a line of their own and always (owner, 23 Nov 2026): the
@@ -58,14 +74,22 @@ import { PressableScale } from './ui';
  * "Closed · o…" behind the rating and the distance, in the space the
  * 88pt photograph leaves beside the text.
  *
- * The colours are the detail screen's hours row (`colors.open`,
- * `colors.shutInk`) and the card's amber for closing soon (`colors.soon`),
- * each on the word alone, so the hour reads in the facts' grey. Whole
- * phrases per language for the hour, as `openFragment` keeps them:
- * Japanese puts まで after it. Hours `openState` cannot read say nothing.
+ * Since the reference layout (same day) the whole of it sits in a pill
+ * of its state's colour (`TONE`), where it was a coloured word on a grey
+ * line. Whole phrases per language for the hour, as `openFragment` keeps
+ * them: Japanese puts まで after it. Hours `openState` cannot read say
+ * nothing.
  */
 type Hours = { word: string; tone: 'open' | 'soon' | 'shut'; rest: string | null };
-const TONE = { open: colors.open, soon: colors.soon, shut: colors.shutInk };
+// A well and its ink for each state, the theme's own pairs, so the pill
+// passes on every look: the visited pill's green (`okSoft`/`okInk`), the
+// warning well (`warnSoft`/`warnInk`), and the delete well with its red
+// (`badSoft`/`bad`, 5.2:1 at its darkest).
+const TONE = {
+  open: { backgroundColor: colors.okSoft, color: colors.okInk },
+  soon: { backgroundColor: colors.warnSoft, color: colors.warnInk },
+  shut: { backgroundColor: colors.badSoft, color: colors.bad },
+};
 type T = (en: string, vi: string, ja?: string, zh?: string, hant?: string) => string;
 function hoursLine(state: OpenState | null, t: T): Hours | null {
   if (!state) return null;
@@ -87,22 +111,67 @@ function hoursLine(state: OpenState | null, t: T): Hours | null {
     : { word: t('Open', 'Đang mở', '営業中', '营业中', '營業中'), tone: 'open', rest: until };
 }
 
-export default function MapPlaceCard({ place, distanceKm, tint, now, onPress }: {
+/** The route to the place, opened in Maps; told when nothing opens it. */
+function Directions({ place, t }: { place: Place; t: T }) {
+  const url = mapsRouteUrl([place], 'driving')?.url;
+  if (!url) return null;
+  const label = t('Directions', 'Chỉ đường', '経路', '路线', '路線');
+  return (
+    <PressableScale
+      onPress={() => { Linking.openURL(url).catch(() => Alert.alert(t('Could not open Maps', 'Không mở được bản đồ', 'マップを開けませんでした', '无法打开地图', '無法開啟地圖'))); }}
+      haptic="selection"
+      accessibilityRole="button"
+      accessibilityLabel={label}
+      hitSlop={6}
+      contentStyle={s.route}
+      testID="map-card-route"
+    >
+      <Text style={s.routeText}>{label}</Text>
+      <Glyph name="navigate-outline" size={ICON.meta} color={colors.accent} />
+    </PressableScale>
+  );
+}
+
+/** The bookmark the list's card carries in its photograph's corner, on
+ *  the page's ground here: the same act, the same picker, the same fill
+ *  once kept. */
+function SaveDisc({ place, t }: { place: Place; t: T }) {
+  const { save } = useSaveActions();
+  const saved = useIsSaved(place.slug);
+  return (
+    <PressableScale
+      onPress={() => save(place)}
+      scaleTo={0.9}
+      haptic="selection"
+      accessibilityRole="button"
+      accessibilityState={{ selected: saved }}
+      accessibilityLabel={saved
+        ? t('Saved — change collections', 'Đã lưu — đổi bộ sưu tập', '保存済み — コレクションを変更', '已保存 — 更改合集', '已儲存 — 更改合集')
+        : t('Save to a collection', 'Lưu vào bộ sưu tập', 'コレクションに保存', '保存到合集', '儲存到合集')}
+      hitSlop={PHOTO_SLOP}
+      style={s.saveSlot}
+      contentStyle={s.save}
+      testID="map-card-save"
+    >
+      <Glyph name={saved ? 'bookmark' : 'bookmark-outline'} size={ICON.action} color={saved ? colors.accent : colors.text} />
+    </PressableScale>
+  );
+}
+
+export default function MapPlaceCard({ place, distanceKm, kind, now, onPress }: {
   place: Place;
   /** Null when there is no fix to measure from — the figure is then left
    *  out rather than written as zero. */
   distanceKm: number | null;
-  /** The colour this place's pin is wearing on the map, or null where it
-   *  is wearing the map's ink. The card repeats it so the eye can walk
-   *  from the card back to the pin it is talking about — the coral pin
-   *  says "this one", and the mark says which of them it was. */
-  tint: string | null;
+  /** The chip this place's pin answers to, or null for its own kind —
+   *  what `PlacesMap` paints the pin with (`pinCategory`), so the label on
+   *  the photograph and the pin on the map cannot disagree. A place no
+   *  category claims has no label, as its pin is grey. */
+  kind: string | null;
   now: Date;
   onPress: () => void;
 }) {
   const { t, lang } = useI18n();
-  const { save } = useSaveActions();
-  const saved = useIsSaved(place.slug);
   // Read here rather than passed in, as the bookmark's state is: both are
   // the reader's own, from providers above every screen, and the map's
   // screen is at its size ceiling (`oversize.js`). Nothing to count while
@@ -113,102 +182,75 @@ export default function MapPlaceCard({ place, distanceKm, tint, now, onPress }: 
   const cover = coverOf(place);
   const cities = useCityList().cities;
   const state = openState(place.opening_hours, now, cityTz(cities, place.city_id));
+  const key = pinCategory(place, kind);
   // The street under the name, as the detail screen prints it — street
   // and ward, without the city, postal code and country (`shortAddress`),
   // with the place's own city's names so one the module has never heard
-  // of is cut too (owner, 23 Nov 2026). The pin says where on the map;
-  // this says where to tell a driver, and lets two branches of one brand
-  // be told apart without opening either. A place with no address falls
-  // back to its ward, then to nothing.
+  // of is cut too. It lets two branches of one brand be told apart
+  // without opening either. No address falls back to the ward.
   const home = cities.find((c) => c.id === place.city_id);
   const address = shortAddress(place.address, home ? [home.name_vi, home.name_en, home.short_vi, home.short_en].filter((n): n is string => !!n) : [])
     ?? (place.neighborhood_en ? localized(place, 'neighborhood', lang) : null);
   const hours = hoursLine(state, t);
-  // The brand alone, as `PlaceCard` prints it. The suffix the catalog
-  // hangs after the dash is the branch's ward, and this strip sits under
-  // the pin that is standing in it, and the address line under the name
-  // says it with the street besides. Spoken the same way: a listener walking
-  // the pins hears one name per pin, not a name and a ward per pin.
+  // The brand alone, as `PlaceCard` prints it: the suffix after the dash
+  // is the branch's ward, which the address line says with the street.
   const name = splitName(localized(place, 'name', lang)).title;
   const ratingFact = place.rating ? `${place.rating.toFixed(1)}${place.rating_count ? ` (${fmtCount(place.rating_count)})` : ''}` : null;
-  // The same figure the list's cards print under "Nearest first", from
-  // the same formatter: metres to the nearest fifty while it is a walk,
-  // one decimal while it is a ride. This strip used to write "0.8 km" on
-  // its own, which beside a card saying "800 m" for the same place read
-  // as two measurements.
+  // The list's own formatter: metres to the nearest fifty while it is a
+  // walk, one decimal while it is a ride.
   const distanceFact = distanceKm != null ? fmtDistance(distanceKm) : null;
-  const facts = [distanceFact].filter((f): f is string => !!f);
   const visited = visits > 0
     ? (visits === 1
       ? t('Checked in once', 'Đã check-in 1 lần', '1回チェックイン済み', '打过卡 1 次', '打過卡 1 次')
       : t(`Checked in ${visits} times`, `Đã check-in ${visits} lần`, `${visits}回チェックイン済み`, `打过卡 ${visits} 次`, `打過卡 ${visits} 次`))
     : null;
-  // The visual line carries a "★" glyph that screen readers should not
-  // announce; speak the same facts as words so the listener hears name,
-  // rating, distance, and hours without that confusing symbol.
+  const hoursText = hours ? [hours.word, hours.rest].filter(Boolean).join(' · ') : null;
+  // The "★" is drawn, not read: a listener hears the facts as words, in
+  // the order the eye meets them.
   const spoken = [
+    key ? categoryLabel(key, t) : null,
+    hours ? [hours.word, hours.rest].filter(Boolean).join(', ') : null,
+    distanceFact,
     name,
     address,
     ratingFact ? t(`rated ${ratingFact}`, `đánh giá ${ratingFact}`, `評価 ${ratingFact}`, `评分 ${ratingFact}`, `評分 ${ratingFact}`) : null,
-    distanceFact,
-    hours ? `${hours.word}, ${hours.rest ?? ''}`.replace(/, $/, '') : null,
     visited,
   ].filter((f): f is string => !!f).join(', ');
 
   return (
     <PressableScale onPress={onPress} accessibilityRole="button" accessibilityLabel={spoken} style={s.gutter} contentStyle={s.card}>
-      {cover
-        ? <Image source={{ uri: cover.photo_uri }} style={s.thumb} contentFit="cover" />
-        : <View style={[s.thumb, { backgroundColor: colors.surfaceGlass }]} />}
-      <View style={s.body}>
-        <View style={s.line}>
-          {tint ? <View testID="place-tint" style={[s.dot, { backgroundColor: tint }]} /> : null}
-          <Text style={s.name} numberOfLines={2}>{name}</Text>
-        </View>
-        {address ? <Text style={s.address} numberOfLines={1} testID="place-address">{address}</Text> : null}
-        {ratingFact || facts.length ? (
-          <Text style={s.facts} numberOfLines={1}>
-            {/* The star the detail screen this strip opens draws its
-                rating with, coral on the page (`colors.accent`); the gold
-                one is the photograph's (`onPhoto.star`). It was grey with
-                the rest of the line, and read as one more fact rather
-                than as the score. */}
-            {ratingFact ? <Text testID="place-star" style={{ color: colors.accent }}>★ </Text> : null}
-            {[ratingFact, ...facts].filter(Boolean).join(' · ')}
+      <View style={s.thumb}>
+        {cover
+          ? <Image source={{ uri: cover.photo_uri }} style={StyleSheet.absoluteFill} contentFit="cover" />
+          : null}
+        {key ? (
+          <Text testID="place-kind" style={[s.kind, { backgroundColor: CATEGORIES[key].color }]} numberOfLines={1}>
+            {categoryLabel(key, t)}
           </Text>
-        ) : null}
-        {hours ? (
-          <Text style={s.facts} numberOfLines={1} testID="place-hours">
-            <Text style={{ color: TONE[hours.tone] }} testID="place-hours-word">{hours.word}</Text>
-            {hours.rest ? ` · ${hours.rest}` : ''}
-          </Text>
-        ) : null}
-        {visited ? (
-          <View style={s.visited} testID="place-visited">
-            <Glyph name="checkmark-circle-outline" size={ICON.meta} color={colors.textSecondary} />
-            <Text style={s.facts} numberOfLines={1}>{visited}</Text>
-          </View>
         ) : null}
       </View>
-      {/* The bookmark the list's card carries in its photograph's corner,
-          on the page's ground here: the same act, the same picker, the
-          same fill once kept. Top-aligned with the name rather than
-          centred, now that the strip can be two lines of name tall. */}
-      <PressableScale
-        onPress={() => save(place)}
-        scaleTo={0.9}
-        haptic="selection"
-        accessibilityRole="button"
-        accessibilityState={{ selected: saved }}
-        accessibilityLabel={saved
-          ? t('Saved — change collections', 'Đã lưu — đổi bộ sưu tập', '保存済み — コレクションを変更', '已保存 — 更改合集', '已儲存 — 更改合集')
-          : t('Save to a collection', 'Lưu vào bộ sưu tập', 'コレクションに保存', '保存到合集', '儲存到合集')}
-        hitSlop={PHOTO_SLOP}
-        contentStyle={s.save}
-        testID="map-card-save"
-      >
-        <Glyph name={saved ? 'bookmark' : 'bookmark-outline'} size={ICON.action} color={saved ? colors.accent : colors.text} />
-      </PressableScale>
+      <View style={s.body}>
+        <View style={s.status}>
+          {hoursText ? (
+            <Text testID="place-hours" style={[s.pill, TONE[hours!.tone]]} numberOfLines={1}>{hoursText}</Text>
+          ) : null}
+          {distanceFact ? <Text style={s.facts} numberOfLines={1}>{distanceFact}</Text> : null}
+          {visited ? <View testID="place-visited"><Glyph name="checkmark-circle-outline" size={ICON.meta} color={colors.textSecondary} /></View> : null}
+        </View>
+        <Text style={s.name} numberOfLines={1}>{name}</Text>
+        {address ? <Text style={s.facts} numberOfLines={1} testID="place-address">{address}</Text> : null}
+        <View style={s.foot}>
+          {ratingFact ? (
+            <Text style={s.rating} numberOfLines={1}>
+              <Text testID="place-star" style={{ color: colors.accent }}>★ </Text>
+              {place.rating!.toFixed(1)}
+              {place.rating_count ? <Text style={s.facts}>{` (${fmtCount(place.rating_count)})`}</Text> : null}
+            </Text>
+          ) : <View />}
+          <Directions place={place} t={t} />
+        </View>
+      </View>
+      <SaveDisc place={place} t={t} />
     </PressableScale>
   );
 }
@@ -224,28 +266,41 @@ const s = StyleSheet.create({
     backgroundColor: colors.bgElevated, borderRadius: radius.card,
     borderWidth: StyleSheet.hairlineWidth, borderColor: colors.borderGlassSoft,
   },
-  thumb: { width: 88, height: 88, borderRadius: radius.card - 4 },
-  // 2 down, so a one-line name sits on the photograph's top edge by its
-  // cap height rather than its line box.
-  body: { flex: 1, gap: 4, paddingTop: 2 },
-  // The dot keeps to the first line of a name that wraps.
-  line: { flexDirection: 'row', alignItems: 'flex-start', gap: 7 },
-  // The facts' size and ink: a line to read when wanted, not a second
-  // heading under the name.
-  address: { color: colors.textSecondary, fontSize: 13, fontWeight: font.regular },
-  visited: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  // 88 square, as since the morning: the reference's 80 lost the label
+  // half its photograph. Overflow clipped so the label's corner follows
+  // the photograph's.
+  thumb: { width: 88, height: 88, borderRadius: radius.card - 4, overflow: 'hidden', backgroundColor: colors.surfaceGlass },
+  // On the photograph, in the pin's own colour: every category colour
+  // carries a white glyph on the pin, so white words on it read as well.
+  kind: {
+    position: 'absolute', top: 6, left: 6, maxWidth: 76,
+    paddingHorizontal: 6, paddingVertical: 2, borderRadius: 6, overflow: 'hidden',
+    color: '#FFFFFF', fontSize: 11, fontWeight: font.semibold,
+  },
+  // Clear of the bookmark in the top-right corner (36 and a 4pt gap).
+  body: { flex: 1, gap: 3, minWidth: 0 },
+  status: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingRight: 40, minHeight: 22 },
+  pill: {
+    flexShrink: 1, paddingHorizontal: 8, paddingVertical: 3, borderRadius: radius.pill, overflow: 'hidden',
+    fontSize: 12, fontWeight: font.semibold,
+  },
+  name: { color: colors.text, fontSize: 16, lineHeight: 21, fontWeight: font.semibold },
+  facts: { color: colors.textSecondary, fontSize: 13, fontWeight: font.regular },
+  foot: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 2 },
+  rating: { color: colors.text, fontSize: 13, fontWeight: font.semibold, flexShrink: 1 },
+  // The accent's own wash and ink, as an on-chip wears them: the one
+  // action on the strip besides opening it. A chip's height (`CHIP_H`),
+  // the scale's smallest, reached to 44 by its slop.
+  route: {
+    flexDirection: 'row', alignItems: 'center', gap: 4,
+    height: CHIP_H, paddingHorizontal: 10, borderRadius: radius.pill, backgroundColor: colors.accentSoft,
+  },
+  routeText: { color: colors.accent, fontSize: 13, fontWeight: font.semibold },
+  saveSlot: { position: 'absolute', top: 8, right: 8 },
   // The photograph disc's size and reach (`PHOTO_DISC`), on the page's
   // well rather than a scrim, since there is no photograph under it.
   save: {
     width: PHOTO_DISC, height: PHOTO_DISC, borderRadius: PHOTO_DISC / 2,
     alignItems: 'center', justifyContent: 'center', backgroundColor: colors.surfaceGlass,
   },
-  // Small: it is a echo of the pin, not a second heading. No border, so
-  // it reads as the same ink the pin is drawn in.
-  dot: { width: 9, height: 9, borderRadius: 4.5, marginTop: 6 },
-  // `flexShrink: 1`, because the name now shares a row with the dot and
-  // Yoga defaults shrink to 0 unlike CSS: without it a long name sizes to
-  // its own content and runs under the chevron instead of truncating.
-  name: { color: colors.text, fontSize: 16, lineHeight: 21, fontWeight: font.semibold, flexShrink: 1 },
-  facts: { color: colors.textSecondary, fontSize: 13, fontWeight: font.regular },
 });

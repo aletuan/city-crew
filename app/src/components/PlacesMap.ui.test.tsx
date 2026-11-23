@@ -34,6 +34,10 @@ vi.mock('./mapsModule', async () => {
       'data-poi-icons': String(!(p.customMapStyle ?? []).some((r: any) => r.featureType === 'poi' && r.elementType === 'labels.icon' && r.stylers?.[0]?.visibility === 'off')),
     },
     R.createElement('button', { type: 'button', 'data-stub': 'ready', onClick: p.onMapReady }),
+    // A tap on the map's own ground, and the same tap as a provider that
+    // also reports a marker's press there.
+    R.createElement('button', { type: 'button', 'data-stub': 'ground', onClick: () => p.onPress?.({ nativeEvent: {} }) }),
+    R.createElement('button', { type: 'button', 'data-stub': 'ground-marker', onClick: () => p.onPress?.({ nativeEvent: { action: 'marker-press' } }) }),
     // The map telling the component how wide a stretch of the world is on
     // screen — which is what the clustering is cut from. A street's width.
     R.createElement('button', {
@@ -218,6 +222,16 @@ describe('PlacesMap', () => {
     expect(spies.fitToCoordinates).toHaveBeenCalledWith([{ latitude: 21, longitude: 105 }], expect.objectContaining({ animated: true }));
     rerender(<PlacesMap places={[]} selectedSlug={null} onSelect={() => {}} categories={[]} origin={null} cities={[]} onPickCity={() => {}} fallback={HANOI} />);
     expect(document.querySelector('[data-testid="map-fit"]')).toBeNull();
+  });
+
+  // The strip has no ✕: the map's empty ground lets the chosen place go.
+  it('lets the chosen place go on a tap on the empty map, and not on a pin\'s', () => {
+    const onSelect = vi.fn();
+    render(<PlacesMap places={[place('a', 21, 105)]} selectedSlug="a" onSelect={onSelect} categories={[]} origin={null} cities={[]} onPickCity={() => {}} fallback={HANOI} />);
+    fireEvent.click(document.querySelector('[data-stub="ground-marker"]')!);
+    expect(onSelect).not.toHaveBeenCalled();
+    fireEvent.click(document.querySelector('[data-stub="ground"]')!);
+    expect(onSelect).toHaveBeenCalledExactlyOnceWith(null);
   });
 
   it('refits for padding measured late without gliding', () => {
