@@ -1295,7 +1295,7 @@ describe('lists that are not for everybody', () => {
     it('says it in Vietnamese', async () => {
       state.lang = 'vi';
       await show();
-      expect(markIn(acts()[0])!.textContent).toBe('·Chia sẻ với bạn');
+      expect(markIn(acts()[0])!.textContent).toBe('·Được chia sẻ với bạn');
     });
 
     it('opens the lent list’s own page on a press', async () => {

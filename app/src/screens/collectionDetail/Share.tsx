@@ -145,7 +145,7 @@ export function ShareButton({ seen, friends, onPress }: {
 export function readerWord(kind: ReaderMark | null, t: T): string {
   if (!kind) return '';
   return kind === 'lent'
-    ? t('Shared with you', 'Chia sẻ với bạn', 'あなたに共有', '与你共享', '與你共享')
+    ? t('Shared with you', 'Được chia sẻ với bạn', 'あなたと共有', '与你共享', '與你共享')
     : seenName('public', t);
 }
 
