@@ -1060,8 +1060,11 @@ export default function ExploreScreen({ navigation }: { navigation: Nav }) {
                 onPickCity={setCity}
                 // The map's box already starts under the bar (`marginTop`
                 // above), so the top inset is only breathing room; the
-                // bottom clears the strip and the tab bar beneath it.
-                edgePadding={{ top: 24, right: 40, bottom: tabClearance + 100, left: 40 }}
+                // bottom clears the strip and the tab bar beneath it: 124,
+                // the strip's 108 (an 88pt photograph and its 10pt
+                // padding, since 23 Nov 2026) and the 12 it stands off
+                // the bar, rounded up. It was 100 for the 84pt strip.
+                edgePadding={{ top: 24, right: 40, bottom: tabClearance + 124, left: 40 }}
               />
               {selected ? (
                 <View style={[s.mapStrip, { bottom: tabClearance + 12 }]}>
