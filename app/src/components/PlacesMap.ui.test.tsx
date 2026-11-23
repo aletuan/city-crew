@@ -13,7 +13,7 @@ import { act, fireEvent, render } from '../uitest/render';
 import type { Place } from '../lib/data';
 import { pinImage } from './mapPins';
 
-const spies = vi.hoisted(() => ({ fitToCoordinates: vi.fn(), still: false }));
+const spies = vi.hoisted(() => ({ fitToCoordinates: vi.fn(), animateCamera: vi.fn(), still: false }));
 // Less motion, asked for by the reader's settings — read through `./ui`.
 vi.mock('./ui', async (orig) => ({ ...(await orig<typeof import('./ui')>()), useReducedMotion: () => spies.still }));
 
@@ -28,7 +28,7 @@ vi.mock('./mapsModule', async () => {
   // a click on a marker (which sits inside the map) must not bubble up
   // and be mistaken for `onMapReady`.
   const MapView = R.forwardRef((p: any, ref: any) => {
-    R.useImperativeHandle(ref, () => ({ fitToCoordinates: spies.fitToCoordinates, getCamera: async () => ({ zoom: 12 }), animateCamera: () => {} }));
+    R.useImperativeHandle(ref, () => ({ fitToCoordinates: spies.fitToCoordinates, getCamera: async () => ({ zoom: 12 }), animateCamera: spies.animateCamera }));
     return R.createElement('div', {
       'data-stub': 'MapView', 'data-user': String(!!p.showsUserLocation),
       'data-poi-icons': String(!(p.customMapStyle ?? []).some((r: any) => r.featureType === 'poi' && r.elementType === 'labels.icon' && r.stylers?.[0]?.visibility === 'off')),
@@ -70,6 +70,7 @@ import PlacesMap from './PlacesMap';
 // one test below flips it.
 beforeEach(() => {
   spies.fitToCoordinates.mockClear();
+  spies.animateCamera.mockClear();
   spies.still = false;
   verdict.canDrawMap = true;
 });
@@ -176,12 +177,27 @@ describe('PlacesMap', () => {
     );
 
     // A new set glides there; only the first fit lands at once.
-    rerender(<PlacesMap places={[place('a', 21, 105)]} selectedSlug={null} onSelect={() => {}} categories={[]} origin={null} cities={[]} onPickCity={() => {}} fallback={HANOI} />);
+    rerender(<PlacesMap places={[place('a', 21, 105), place('c', 21.2, 105.2)]} selectedSlug={null} onSelect={() => {}} categories={[]} origin={null} cities={[]} onPickCity={() => {}} fallback={HANOI} />);
     expect(spies.fitToCoordinates).toHaveBeenCalledTimes(2);
     expect(spies.fitToCoordinates).toHaveBeenLastCalledWith(
-      [{ latitude: 21, longitude: 105 }],
+      [{ latitude: 21, longitude: 105 }, { latitude: 21.2, longitude: 105.2 }],
       expect.objectContaining({ animated: true }),
     );
+  });
+
+  // A set on one spot has no box: Google's fit of one would zoom in as far
+  // as it goes — a blank street-level square in the owner's recording
+  // (24 Nov 2026). The camera goes to it at a neighbourhood's width.
+  it('goes to a set on one spot at a neighbourhood\'s width, not as far in as Google goes', () => {
+    const { rerender } = render(<PlacesMap places={[place('a', 21, 105), place('b', 21.1, 105.1)]} selectedSlug={null} onSelect={() => {}} categories={[]} origin={null} cities={[]} onPickCity={() => {}} fallback={HANOI} />);
+    markMapReady();
+    spies.fitToCoordinates.mockClear();
+    rerender(<PlacesMap places={[place('a', 21, 105)]} selectedSlug={null} onSelect={() => {}} categories={[]} origin={null} cities={[]} onPickCity={() => {}} fallback={HANOI} />);
+    expect(spies.fitToCoordinates).not.toHaveBeenCalled();
+    expect(spies.animateCamera).toHaveBeenLastCalledWith({ center: { latitude: 21, longitude: 105 }, zoom: 15 }, { duration: 500 });
+    spies.still = true;
+    rerender(<PlacesMap places={[place('b', 21.1, 105.1)]} selectedSlug={null} onSelect={() => {}} categories={[]} origin={null} cities={[]} onPickCity={() => {}} fallback={HANOI} />);
+    expect(spies.animateCamera).toHaveBeenLastCalledWith({ center: { latitude: 21.1, longitude: 105.1 }, zoom: 15 }, { duration: 0 });
   });
 
   it('lands a new set at once for a reader who asked for less motion', () => {
@@ -236,6 +252,18 @@ describe('PlacesMap', () => {
     expect(markers().some((m) => m.getAttribute('data-label')?.startsWith('2 places'))).toBe(false);
   });
 
+  // A pin that leaves from inside a bubble has nothing of its own to
+  // fade: drawing it anyway burst every bubble into its pins for the
+  // fade (owner's recording, 24 Nov 2026).
+  it('fades only the pins that were drawn alone, and lets a leaving bubble just go', () => {
+    const { rerender } = render(<PlacesMap places={[place('a', 21, 105), place('b', 21.0001, 105.0001), place('z', 21.5, 105.5)]} selectedSlug={null} onSelect={() => {}} categories={[]} origin={null} cities={[]} onPickCity={() => {}} fallback={HANOI} />);
+    markMapReady();
+    expect(markers().some((m) => m.getAttribute('data-label')?.startsWith('2 places'))).toBe(true);
+    rerender(<PlacesMap places={[place('c', 21.2, 105.2), place('d', 21.3, 105.3)]} selectedSlug={null} onSelect={() => {}} categories={[]} origin={null} cities={[]} onPickCity={() => {}} fallback={HANOI} />);
+    const gone = markers().map((m) => m.getAttribute('data-slug')).filter((x) => x?.startsWith('gone-'));
+    expect(gone).toEqual(['gone-z']);
+  });
+
   // The colour it had, not its own: under the Heritage chip every pin is
   // a heritage pin, and on the phone a leaving pin redrawn by the next chip
   // flashed its own colour for a frame (owner's recording, 23 Nov 2026).
@@ -252,11 +280,11 @@ describe('PlacesMap', () => {
   // The fit, again, on request — gliding — and the controls only when
   // there are pins to fit.
   it('fits every pin again from its control, and has none with nothing to fit', () => {
-    const { rerender } = render(<PlacesMap places={[place('a', 21, 105)]} selectedSlug={null} onSelect={() => {}} categories={[]} origin={null} cities={[]} onPickCity={() => {}} fallback={HANOI} />);
+    const { rerender } = render(<PlacesMap places={[place('a', 21, 105), place('b', 21.1, 105.1)]} selectedSlug={null} onSelect={() => {}} categories={[]} origin={null} cities={[]} onPickCity={() => {}} fallback={HANOI} />);
     markMapReady();
     spies.fitToCoordinates.mockClear();
     fireEvent.click(document.querySelector('[data-testid="map-fit"]')!);
-    expect(spies.fitToCoordinates).toHaveBeenCalledWith([{ latitude: 21, longitude: 105 }], expect.objectContaining({ animated: true }));
+    expect(spies.fitToCoordinates).toHaveBeenCalledWith([{ latitude: 21, longitude: 105 }, { latitude: 21.1, longitude: 105.1 }], expect.objectContaining({ animated: true }));
     rerender(<PlacesMap places={[]} selectedSlug={null} onSelect={() => {}} categories={[]} origin={null} cities={[]} onPickCity={() => {}} fallback={HANOI} />);
     expect(document.querySelector('[data-testid="map-fit"]')).toBeNull();
   });
@@ -272,9 +300,10 @@ describe('PlacesMap', () => {
   });
 
   it('refits for padding measured late without gliding', () => {
-    const { rerender } = render(<PlacesMap places={[place('a', 21, 105)]} selectedSlug={null} onSelect={() => {}} categories={[]} origin={null} cities={[]} onPickCity={() => {}} fallback={HANOI} />);
+    const two = [place('a', 21, 105), place('b', 21.1, 105.1)];
+    const { rerender } = render(<PlacesMap places={two} selectedSlug={null} onSelect={() => {}} categories={[]} origin={null} cities={[]} onPickCity={() => {}} fallback={HANOI} />);
     markMapReady();
-    rerender(<PlacesMap places={[place('a', 21, 105)]} selectedSlug={null} onSelect={() => {}} categories={[]} origin={null} cities={[]} onPickCity={() => {}} fallback={HANOI} edgePadding={{ top: 90, right: 64, bottom: 200, left: 40 }} />);
+    rerender(<PlacesMap places={two} selectedSlug={null} onSelect={() => {}} categories={[]} origin={null} cities={[]} onPickCity={() => {}} fallback={HANOI} edgePadding={{ top: 90, right: 64, bottom: 200, left: 40 }} />);
     expect(spies.fitToCoordinates).toHaveBeenCalledTimes(2);
     expect(spies.fitToCoordinates).toHaveBeenLastCalledWith(expect.anything(), expect.objectContaining({ animated: false }));
   });
