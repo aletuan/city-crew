@@ -33,6 +33,14 @@ describe('reminderFireDate', () => {
     expect(reminderFireDate('2026-08-23', now)).toBeNull();
   });
 
+  // The reminder used to read the date with its own pattern, which checked
+  // the shape and not the calendar: "2026-02-30" rolled into the 2nd of March
+  // and a note was set for the evening of the 1st.
+  it('a day the calendar does not have is no reminder at all', () => {
+    expect(reminderFireDate('2026-02-30', new Date(2026, 0, 1))).toBeNull();
+    expect(reminderFireDate('not a day', new Date(2026, 0, 1))).toBeNull();
+  });
+
   it('exactly eight is not strictly future', () => {
     const atEight = new Date(2026, 7, 24, REMINDER_HOUR, 0, 0, 0);
     expect(reminderFireDate('2026-08-25', atEight)).toBeNull();
