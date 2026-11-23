@@ -102,7 +102,7 @@ describe('MapPlaceCard', () => {
     visits.data = been(3);
     rerender(<MapPlaceCard place={place({ rating: 4.7 })} distanceKm={0.8} tint={null} now={NOON} onPress={() => {}} />);
     expect(screen.getByText('Checked in 3 times')).toBeTruthy();
-    expect(screen.getByRole('button', { name: /800 m, Checked in 3 times$/ })).toBeTruthy();
+    expect(screen.getByRole('button', { name: /800 m, Open, until 23:00, Checked in 3 times$/ })).toBeTruthy();
     expect(screen.queryByRole('button', { name: /check in$/i })).toBeNull();
   });
 
@@ -150,19 +150,45 @@ describe('MapPlaceCard', () => {
     expect(screen.getByRole('button', { name: /Every Half/ }).getAttribute('aria-label')).toMatch(/^Every Half Coffee Roasters, /);
   });
 
-  it('says "until 23:00" when the place closes within the hour', () => {
+  // On a line of its own and always, the state's word in its colour
+  // (owner, 23 Nov 2026) — unlike the list's cards, which keep quiet
+  // about an open place until it is about to close.
+  const hours = () => screen.getByTestId('place-hours').textContent;
+  const tone = () => getComputedStyle(screen.getByTestId('place-hours-word')).color;
+
+  it('says an open place is open, and until when, in green', () => {
+    render(<MapPlaceCard place={place()} distanceKm={0.8} tint={null} now={NOON} onPress={() => {}} />);
+    expect(hours()).toBe('Open · until 23:00');
+    expect(tone()).toBe(hex(colors.open as string));
+    expect(screen.getByRole('button', { name: /800 m, Open, until 23:00$/ })).toBeTruthy();
+  });
+
+  it('says a place about to close is closing soon, in amber', () => {
     render(<MapPlaceCard place={place()} distanceKm={null} tint={null} now={HALF_PAST_TEN} onPress={() => {}} />);
-    expect(screen.getByText(/until 23:00/)).toBeTruthy();
+    expect(hours()).toBe('Closing soon · until 23:00');
+    expect(tone()).toBe(hex(colors.soon as string));
   });
 
-  it('says nothing about hours while closing time is still far off', () => {
-    render(<MapPlaceCard place={place()} distanceKm={null} tint={null} now={NOON} onPress={() => {}} />);
-    expect(screen.queryByText(/until/)).toBeNull();
+  it('says a place open around the clock is open all day', () => {
+    render(<MapPlaceCard place={place({ opening_hours: week('Open 24 hours') })} distanceKm={null} tint={null} now={NOON} onPress={() => {}} />);
+    expect(hours()).toBe('Open · 24 hours');
   });
 
-  it('says a shut place is closed', () => {
-    render(<MapPlaceCard place={place({ opening_hours: week('Closed') })} distanceKm={null} tint={null} now={NOON} onPress={() => {}} />);
-    expect(screen.getByText(/Closed/)).toBeTruthy();
+  it('says a shut place is closed, and when it opens, in red', () => {
+    render(<MapPlaceCard place={place({ opening_hours: week('10:00 AM – 9:00 PM') })} distanceKm={null} tint={null} now={new Date('2026-09-19T01:00:00Z')} onPress={() => {}} />);
+    expect(hours()).toBe('Closed · opens 10:00');
+    expect(tone()).toBe(hex(colors.shutInk as string));
+  });
+
+  it('says closed alone when nothing opens within the day, and the word is all a listener hears', () => {
+    render(<MapPlaceCard place={place({ opening_hours: week('Closed') })} distanceKm={0.8} tint={null} now={NOON} onPress={() => {}} />);
+    expect(hours()).toBe('Closed');
+    expect(screen.getByRole('button', { name: /800 m, Closed$/ })).toBeTruthy();
+  });
+
+  it('says nothing about hours it cannot read', () => {
+    render(<MapPlaceCard place={place({ opening_hours: null })} distanceKm={null} tint={null} now={NOON} onPress={() => {}} />);
+    expect(screen.queryByTestId('place-hours')).toBeNull();
   });
 
   // No fix, no figure: a distance we do not know is left out, not
