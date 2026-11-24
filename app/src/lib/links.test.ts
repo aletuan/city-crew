@@ -7,7 +7,7 @@
 
 import { describe, expect, it } from 'vitest';
 import {
-  atHandle, hostOf, instagramUrl, threadsUrl, websiteHref, websiteRepeatsHandle,
+  hostOf, instagramUrl, threadsUrl, websiteHref, websiteRepeatsHandle,
 } from './links';
 
 describe('hostOf', () => {
@@ -69,8 +69,7 @@ describe('hostOf', () => {
 });
 
 describe('the handle links', () => {
-  it('puts the @ back for a reader and leaves it off for Instagram', () => {
-    expect(atHandle('cab.cafesg')).toBe('@cab.cafesg');
+  it('leaves the @ off for Instagram', () => {
     expect(instagramUrl('cab.cafesg')).toBe('https://www.instagram.com/cab.cafesg');
   });
 

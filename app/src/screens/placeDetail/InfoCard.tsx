@@ -17,9 +17,10 @@ import { pinImage } from '../../components/mapPins';
 import { Card, PressableScale } from '../../components/ui';
 import { Glyph, ICON } from '../../components/ui/glyph';
 import { clockOf, groupHours, openState } from '../../lib/format';
+import { atHandle } from '../../lib/handle';
 import { useI18n } from '../../lib/i18n';
 import {
-  atHandle, hostOf, instagramUrl, threadsUrl, websiteHref, websiteRepeatsHandle,
+  hostOf, instagramUrl, threadsUrl, websiteHref, websiteRepeatsHandle,
 } from '../../lib/links';
 import { mapsRouteUrl, mapsSearchUrl } from '../../lib/maps';
 import type { Place } from '../../lib/data';
