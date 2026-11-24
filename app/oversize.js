@@ -52,7 +52,7 @@ const OVERSIZE = {
   'src/screens/ExploreScreen.tsx': { lines: 567, complexity: 49 },
   'src/screens/IdeasScreen.tsx': { lines: 493, complexity: 51 },
   'src/screens/SearchScreen.tsx': { lines: 461, complexity: 40 },
-  'src/components/StartSheet.tsx': { lines: 412, complexity: 34 },
+  'src/components/StartSheet.tsx': { lines: 409, complexity: 34 },
   'src/screens/SignUpScreen.tsx': { lines: 365 },
   'src/screens/GalleryScreen.tsx': { lines: 287, complexity: 46 },
   'src/screens/PlanEditScreen.tsx': { lines: 317 },

@@ -61,13 +61,13 @@
 
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
-  ActivityIndicator, Alert, AppState, Keyboard, Linking, Modal, Platform, Pressable,
+  ActivityIndicator, Alert, AppState, Keyboard, Linking, Platform,
   ScrollView, StyleSheet, Text, TextInput, useWindowDimensions, View,
 } from 'react-native';
 import * as Location from 'expo-location';
 import { Glyph, ICON } from './ui/glyph';
 import MiniMap from './MiniMap';
-import { Chip, GradientCta, PressableScale, SelectTick } from './ui';
+import { Chip, GradientCta, PressableScale, SelectTick, Sheet } from './ui';
 import { type City, useCity, useMyPosition } from '../lib/city';
 import { cityAround } from '../lib/geo';
 import { findSpots, nameOf, SearchLimitError, SignedOutError, type Spot } from '../lib/findplace';
@@ -77,7 +77,7 @@ import { ctaMode } from '../lib/spots';
 import { useI18n } from '../lib/i18n';
 import { areaCentre, areasNear, nearestAreaKm } from '../lib/trip';
 import type { Place } from '../lib/types';
-import { colors, font, radius, space, type } from '../theme';
+import { colors, font, radius, type } from '../theme';
 
 export type Start = {
   district: string | null;
@@ -508,335 +508,326 @@ export default function StartSheet({ visible, places, value, onClose, onDone, on
   };
 
   return (
-    <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
-      <Pressable style={s.scrim} onPress={onClose} />
-      <View style={[s.sheet, { bottom: kb, maxHeight: (winH - kb) * 0.9 }]}>
-        <View style={s.grabber} />
-        <Text style={s.title}>{t('Choose a starting point', 'Chọn địa điểm bắt đầu', '出発地点を選ぶ', '选择出发地点', '選擇出發地點')}</Text>
-        <Text style={s.sub}>
-          {t(
-            // The owner's wording (4 Oct 2026): what to do on this sheet,
-            // in the order the sheet offers it — a spot near you, or the
-            // search box. The line it replaced promised that plans "lean
-            // toward what's nearby", which was already the softest claim
-            // the store listing allows (docs/store/listing.md: never write
-            // "walkable"); this one promises nothing about distance at
-            // all, and the plan still prints every leg's real figure.
-            'Pick a spot near you, or search for a starting point in the address box.',
-            'Chọn một chỗ gần bạn, hoặc tìm kiếm địa điểm xuất phát trong phần tìm địa chỉ.',
-            '近くの場所を選ぶか、住所検索で出発地点を探してください。',
-            '选择你附近的地点，或在地址栏中搜索出发地点。', '選擇你附近的地點，或在搜尋欄中搜尋出發地點。',
-          )}
-        </Text>
+    // The scrim stays light (0.32, the owner's, 25 Nov 2026): the plan
+    // behind is what a starting point is chosen for, and it stays legible.
+    <Sheet visible={visible} onClose={onClose} scrim={0.32} riseFrom={320} grabberGap={14}
+      style={[s.sheet, { bottom: kb, maxHeight: (winH - kb) * 0.9 }]}>
+      <Text style={s.title}>{t('Choose a starting point', 'Chọn địa điểm bắt đầu', '出発地点を選ぶ', '选择出发地点', '選擇出發地點')}</Text>
+      <Text style={s.sub}>
+        {t(
+          // The owner's wording (4 Oct 2026): what to do on this sheet,
+          // in the order the sheet offers it — a spot near you, or the
+          // search box. The line it replaced promised that plans "lean
+          // toward what's nearby", which was already the softest claim
+          // the store listing allows (docs/store/listing.md: never write
+          // "walkable"); this one promises nothing about distance at
+          // all, and the plan still prints every leg's real figure.
+          'Pick a spot near you, or search for a starting point in the address box.',
+          'Chọn một chỗ gần bạn, hoặc tìm kiếm địa điểm xuất phát trong phần tìm địa chỉ.',
+          '近くの場所を選ぶか、住所検索で出発地点を探してください。',
+          '选择你附近的地点，或在地址栏中搜索出发地点。', '選擇你附近的地點，或在搜尋欄中搜尋出發地點。',
+        )}
+      </Text>
 
-        <ScrollView
-          ref={scroller}
-          // Yoga defaults `flexShrink` to 0, unlike CSS. Without this the
-          // list keeps its full content height while the sheet's ceiling
-          // comes down around it — the overflow is clipped rather than
-          // scrolled, which would have made everything above pointless.
-          style={{ flexShrink: 1 }}
-          contentContainerStyle={{ paddingBottom: 8 }}
-          showsVerticalScrollIndicator={false}
-          keyboardShouldPersistTaps="handled"
-          // Drag the list down and the keyboard follows the finger, which
-          // is what every iOS list with a keyboard over it does.
-          keyboardDismissMode="interactive"
+      <ScrollView
+        ref={scroller}
+        // Yoga defaults `flexShrink` to 0, unlike CSS. Without this the
+        // list keeps its full content height while the sheet's ceiling
+        // comes down around it — the overflow is clipped rather than
+        // scrolled, which would have made everything above pointless.
+        style={{ flexShrink: 1 }}
+        contentContainerStyle={{ paddingBottom: 8 }}
+        showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
+        // Drag the list down and the keyboard follows the finger, which
+        // is what every iOS list with a keyboard over it does.
+        keyboardDismissMode="interactive"
+      >
+        {centre && (
+          <MiniMap
+            key={asked}
+            lat={centre.lat}
+            lng={centre.lng}
+            height={196}
+            caption={caption}
+            onLocate={locate}
+            onPick={(at) => {
+              if (!land(at, null)) return;
+              // The old point's name must not be read as this one's
+              // while the geocoder is still out; the effect refills it.
+              setWhere('');
+              setMissed(false);
+            }}
+          />
+        )}
+
+        {/* Where you are, as a row — the answer the map's locate button
+            gives, offered where there is no map to put a button on.
+
+            Two builds draw no map: Expo Go on an iPhone, and any build
+            made without the Google Maps key (`canDrawMap`). On both the
+            sheet still searched and still offered the areas, but "start
+            from where I am" had no control left at all, and nothing on
+            the sheet said that it was already the answer whenever no
+            area and no pin was chosen. A reader on such a build sent a
+            screenshot and asked for exactly this.
+
+            It stays when the map is there. A row with a tick is also the
+            one place the sheet *shows* which of its three answers is
+            current: the chips show an area, the map shows a pin, and
+            near-me was only ever a caption. */}
+        <PressableScale
+          onPress={locate}
+          scaleTo={0.985}
+          haptic="selection"
+          contentStyle={s.meRow}
+          accessibilityRole="button"
+          accessibilityLabel={t('Current location', 'Vị trí hiện tại', '現在地', '当前位置', '目前位置')}
+          aria-selected={onMe}
         >
-          {centre && (
-            <MiniMap
-              key={asked}
-              lat={centre.lat}
-              lng={centre.lng}
-              height={196}
-              caption={caption}
-              onLocate={locate}
-              onPick={(at) => {
-                if (!land(at, null)) return;
-                // The old point's name must not be read as this one's
-                // while the geocoder is still out; the effect refills it.
-                setWhere('');
-                setMissed(false);
-              }}
-            />
-          )}
-
-          {/* Where you are, as a row — the answer the map's locate button
-              gives, offered where there is no map to put a button on.
-
-              Two builds draw no map: Expo Go on an iPhone, and any build
-              made without the Google Maps key (`canDrawMap`). On both the
-              sheet still searched and still offered the areas, but "start
-              from where I am" had no control left at all, and nothing on
-              the sheet said that it was already the answer whenever no
-              area and no pin was chosen. A reader on such a build sent a
-              screenshot and asked for exactly this.
-
-              It stays when the map is there. A row with a tick is also the
-              one place the sheet *shows* which of its three answers is
-              current: the chips show an area, the map shows a pin, and
-              near-me was only ever a caption. */}
-          <PressableScale
-            onPress={locate}
-            scaleTo={0.985}
-            haptic="selection"
-            contentStyle={s.meRow}
-            accessibilityRole="button"
-            accessibilityLabel={t('Current location', 'Vị trí hiện tại', '現在地', '当前位置', '目前位置')}
-            aria-selected={onMe}
-          >
-            <View style={s.meIcon}>
-              <Glyph name="navigate" size={ICON.text} color={colors.accent} />
-            </View>
-            <View style={{ flex: 1, gap: 2 }}>
-              <Text style={s.hitName} numberOfLines={1}>
-                {t('Current location', 'Vị trí hiện tại', '現在地', '当前位置', '目前位置')}
-              </Text>
-              {meSub ? <Text style={s.hitSub} numberOfLines={1}>{meSub}</Text> : null}
-            </View>
-            <SelectTick on={onMe} />
-          </PressableScale>
-
-          {/* What the locate button used to do silently, said out loud.
-
-              It names what is missing and what it costs — not "permission
-              denied", which is the system's word for its own state and
-              tells the reader nothing about their plan. Then the one
-              action that can change it. `openSettings` lands on this
-              app's own page, so it is a tap and a switch rather than a
-              hunt through Privacy.
-
-              Only after they ask to be located. Nobody who has picked a
-              district or dropped a pin needs to be told about a
-              permission they are not using, and a notice that appears
-              unbidden is a nag. */}
-          {blocked && (
-            <View style={s.blocked}>
-              <Glyph name="location-outline" size={ICON.action} color={colors.textSecondary} />
-              <View style={{ flex: 1, gap: 6 }}>
-                <Text style={s.missed}>
-                  {t(
-                    "City Crew is not allowed to know where you are, so plans start from the city rather than from you. iOS only asks once — after that it is a switch in Settings.",
-                    'City Crew chưa được phép biết bạn ở đâu, nên kế hoạch sẽ bắt đầu từ thành phố thay vì từ chỗ bạn đứng. iOS chỉ hỏi một lần — sau đó phải bật lại trong Cài đặt.',
-                    'City Crew は現在地を取得できないため、プランはあなたの居場所ではなく街を起点にします。iOS が尋ねるのは一度きりで、あとは設定でのオンオフになります。',
-                    'City Crew 无法获取你的位置，因此计划会从城市而不是你的位置出发。iOS 只会询问一次 — 之后需要在设置中开启。', 'City Crew 無法取得你的位置，因此計畫會從城市而不是你的位置出發。iOS 只會詢問一次 — 之後需要在設定中開啟。',
-                  )}
-                </Text>
-                <PressableScale
-                  onPress={() => Linking.openSettings().catch(() => {})}
-                  accessibilityRole="button"
-                >
-                  <Text style={s.blockedCta}>
-                    {t('Open Settings', 'Mở Cài đặt', '設定を開く', '打开设置', '開啟設定')}
-                  </Text>
-                </PressableScale>
-              </View>
-            </View>
-          )}
-
-          <View style={s.field} onLayout={(e) => setFieldY(e.nativeEvent.layout.y)}>
-            <Glyph name="search-outline" size={ICON.action} color={colors.textTertiary} />
-            <TextInput
-              value={query}
-              onChangeText={(v) => { setQuery(v); setMissed(false); }}
-              onFocus={showField}
-              onSubmitEditing={find}
-              returnKeyType="search"
-              placeholder={t(
-                'Search an address or place',
-                'Tìm địa chỉ hoặc địa điểm',
-                '住所や場所を検索',
-                '搜索地址或地点', '搜尋地址或地點',
-              )}
-              placeholderTextColor={colors.textTertiary}
-              style={s.input}
-              autoCapitalize="none"
-              autoCorrect={false}
-            />
-            {finding ? <ActivityIndicator size="small" color={colors.accent} /> : null}
+          <View style={s.meIcon}>
+            <Glyph name="navigate" size={ICON.text} color={colors.accent} />
           </View>
-          {/* ── a pin that fell nowhere ──
-              A well, not a line. The first cut said this in `missed`'s
-              13pt grey, the register of "nothing found for that", and the
-              owner's reading was that nobody would notice it — which is
-              the one notice here that must be noticed, since the reader
-              has just done something the sheet refused. The theme's warn
-              pair (new with this, amber on every look) with the glyph
-              beside it; the fact in bold, the way out under it: search
-              again, or the area chips right below. "Not yet" rather than
-              "none": the catalog has not reached there, not the place. */}
-          {elsewhere && (
-            <View style={[s.well, s.warnWell]} testID="start-elsewhere">
-              <Glyph name="alert-circle-outline" size={ICON.action} color={colors.warnInk} />
-              <View style={{ flex: 1, gap: 2 }}>
-                <Text style={[s.wellTitle, { color: colors.warnInk }]}>
-                  {t(
-                    `No places near ${elsewhere.name} yet.`,
-                    `Chưa có địa điểm quanh ${elsewhere.name}.`,
-                    `${elsewhere.name} の周辺にはまだスポットがありません。`,
-                    `${elsewhere.name}附近还没有地点。`, `${elsewhere.name}附近還沒有地點。`,
-                  )}
-                </Text>
-                {/* Every way out, since nothing is chosen now (rule 3) and
-                    the button below is dimmed. When the refused pin is
-                    the reader's own position, "your current location"
-                    is the thing just refused, and the areas come first:
-                    they are the only answer that needs no typing. */}
-                <Text style={[s.wellBody, { color: colors.warnInk }]}>
-                  {elsewhere.me
-                    ? t(
-                      'Pick an area below, or search somewhere else.',
-                      'Chọn một khu vực bên dưới, hoặc tìm chỗ khác.',
-                      '下のエリアを選ぶか、別の場所を検索してください。',
-                      '选择下方的区域，或搜索其他地方。', '選擇下方的區域，或搜尋其他地方。',
-                    )
-                    : t(
-                      'Search somewhere else, pick an area below, or use your current location.',
-                      'Tìm chỗ khác, chọn một khu vực bên dưới, hoặc dùng vị trí hiện tại.',
-                      '別の場所を検索するか、下のエリアを選ぶか、現在地を使ってください。',
-                      '搜索其他地方、选择下方的区域，或使用你的当前位置。', '搜尋其他地方、選擇下方的區域，或使用你的目前位置。',
-                    )}
-                </Text>
-              </View>
-            </View>
-          )}
-          {/* The confirmation is the ok pair: a city the reader just chose
-              is state they made, which is what that green is for. What
-              the plan will do, not what the app just did (rule 4): the
-              switch is real now and undone by a cancel, and "switched to"
-              was a report of the one thing a cancel takes back. */}
-          {moved && (
-            <View style={[s.well, s.okWell]} testID="start-moved">
-              <Glyph name="checkmark-circle" size={ICON.action} color={colors.okInk} />
-              <Text style={[s.wellBody, { color: colors.okInk, flex: 1 }]}>
+          <View style={{ flex: 1, gap: 2 }}>
+            <Text style={s.hitName} numberOfLines={1}>
+              {t('Current location', 'Vị trí hiện tại', '現在地', '当前位置', '目前位置')}
+            </Text>
+            {meSub ? <Text style={s.hitSub} numberOfLines={1}>{meSub}</Text> : null}
+          </View>
+          <SelectTick on={onMe} />
+        </PressableScale>
+
+        {/* What the locate button used to do silently, said out loud.
+
+            It names what is missing and what it costs — not "permission
+            denied", which is the system's word for its own state and
+            tells the reader nothing about their plan. Then the one
+            action that can change it. `openSettings` lands on this
+            app's own page, so it is a tap and a switch rather than a
+            hunt through Privacy.
+
+            Only after they ask to be located. Nobody who has picked a
+            district or dropped a pin needs to be told about a
+            permission they are not using, and a notice that appears
+            unbidden is a nag. */}
+        {blocked && (
+          <View style={s.blocked}>
+            <Glyph name="location-outline" size={ICON.action} color={colors.textSecondary} />
+            <View style={{ flex: 1, gap: 6 }}>
+              <Text style={s.missed}>
                 {t(
-                  `The plan will be made in ${cityName(moved)}.`,
-                  `Kế hoạch sẽ lập ở ${cityName(moved)}.`,
-                  `プランは${cityName(moved)}で作ります。`,
-                  `计划将在${cityName(moved)}制定。`, `計畫將在${cityName(moved)}制定。`,
+                  "City Crew is not allowed to know where you are, so plans start from the city rather than from you. iOS only asks once — after that it is a switch in Settings.",
+                  'City Crew chưa được phép biết bạn ở đâu, nên kế hoạch sẽ bắt đầu từ thành phố thay vì từ chỗ bạn đứng. iOS chỉ hỏi một lần — sau đó phải bật lại trong Cài đặt.',
+                  'City Crew は現在地を取得できないため、プランはあなたの居場所ではなく街を起点にします。iOS が尋ねるのは一度きりで、あとは設定でのオンオフになります。',
+                  'City Crew 无法获取你的位置，因此计划会从城市而不是你的位置出发。iOS 只会询问一次 — 之后需要在设置中开启。', 'City Crew 無法取得你的位置，因此計畫會從城市而不是你的位置出發。iOS 只會詢問一次 — 之後需要在設定中開啟。',
                 )}
               </Text>
+              <PressableScale
+                onPress={() => Linking.openSettings().catch(() => {})}
+                accessibilityRole="button"
+              >
+                <Text style={s.blockedCta}>
+                  {t('Open Settings', 'Mở Cài đặt', '設定を開く', '打开设置', '開啟設定')}
+                </Text>
+              </PressableScale>
             </View>
-          )}
-          {missed && (
-            <Text style={s.missed}>
+          </View>
+        )}
+
+        <View style={s.field} onLayout={(e) => setFieldY(e.nativeEvent.layout.y)}>
+          <Glyph name="search-outline" size={ICON.action} color={colors.textTertiary} />
+          <TextInput
+            value={query}
+            onChangeText={(v) => { setQuery(v); setMissed(false); }}
+            onFocus={showField}
+            onSubmitEditing={find}
+            returnKeyType="search"
+            placeholder={t(
+              'Search an address or place',
+              'Tìm địa chỉ hoặc địa điểm',
+              '住所や場所を検索',
+              '搜索地址或地点', '搜尋地址或地點',
+            )}
+            placeholderTextColor={colors.textTertiary}
+            style={s.input}
+            autoCapitalize="none"
+            autoCorrect={false}
+          />
+          {finding ? <ActivityIndicator size="small" color={colors.accent} /> : null}
+        </View>
+        {/* ── a pin that fell nowhere ──
+            A well, not a line. The first cut said this in `missed`'s
+            13pt grey, the register of "nothing found for that", and the
+            owner's reading was that nobody would notice it — which is
+            the one notice here that must be noticed, since the reader
+            has just done something the sheet refused. The theme's warn
+            pair (new with this, amber on every look) with the glyph
+            beside it; the fact in bold, the way out under it: search
+            again, or the area chips right below. "Not yet" rather than
+            "none": the catalog has not reached there, not the place. */}
+        {elsewhere && (
+          <View style={[s.well, s.warnWell]} testID="start-elsewhere">
+            <Glyph name="alert-circle-outline" size={ICON.action} color={colors.warnInk} />
+            <View style={{ flex: 1, gap: 2 }}>
+              <Text style={[s.wellTitle, { color: colors.warnInk }]}>
+                {t(
+                  `No places near ${elsewhere.name} yet.`,
+                  `Chưa có địa điểm quanh ${elsewhere.name}.`,
+                  `${elsewhere.name} の周辺にはまだスポットがありません。`,
+                  `${elsewhere.name}附近还没有地点。`, `${elsewhere.name}附近還沒有地點。`,
+                )}
+              </Text>
+              {/* Every way out, since nothing is chosen now (rule 3) and
+                  the button below is dimmed. When the refused pin is
+                  the reader's own position, "your current location"
+                  is the thing just refused, and the areas come first:
+                  they are the only answer that needs no typing. */}
+              <Text style={[s.wellBody, { color: colors.warnInk }]}>
+                {elsewhere.me
+                  ? t(
+                    'Pick an area below, or search somewhere else.',
+                    'Chọn một khu vực bên dưới, hoặc tìm chỗ khác.',
+                    '下のエリアを選ぶか、別の場所を検索してください。',
+                    '选择下方的区域，或搜索其他地方。', '選擇下方的區域，或搜尋其他地方。',
+                  )
+                  : t(
+                    'Search somewhere else, pick an area below, or use your current location.',
+                    'Tìm chỗ khác, chọn một khu vực bên dưới, hoặc dùng vị trí hiện tại.',
+                    '別の場所を検索するか、下のエリアを選ぶか、現在地を使ってください。',
+                    '搜索其他地方、选择下方的区域，或使用你的当前位置。', '搜尋其他地方、選擇下方的區域，或使用你的目前位置。',
+                  )}
+              </Text>
+            </View>
+          </View>
+        )}
+        {/* The confirmation is the ok pair: a city the reader just chose
+            is state they made, which is what that green is for. What
+            the plan will do, not what the app just did (rule 4): the
+            switch is real now and undone by a cancel, and "switched to"
+            was a report of the one thing a cancel takes back. */}
+        {moved && (
+          <View style={[s.well, s.okWell]} testID="start-moved">
+            <Glyph name="checkmark-circle" size={ICON.action} color={colors.okInk} />
+            <Text style={[s.wellBody, { color: colors.okInk, flex: 1 }]}>
               {t(
-                'Nothing found for that. Try fewer words, or a street and district.',
-                'Không tìm thấy gì. Thử bớt chữ, hoặc tên đường kèm quận.',
-                '見つかりませんでした。語を減らすか、通りと区でお試しください。',
-                '没有找到结果。试试减少关键词，或输入街道和区名。', '沒有找到結果。試試減少關鍵字，或輸入街道和區名。',
+                `The plan will be made in ${cityName(moved)}.`,
+                `Kế hoạch sẽ lập ở ${cityName(moved)}.`,
+                `プランは${cityName(moved)}で作ります。`,
+                `计划将在${cityName(moved)}制定。`, `計畫將在${cityName(moved)}制定。`,
               )}
             </Text>
-          )}
+          </View>
+        )}
+        {missed && (
+          <Text style={s.missed}>
+            {t(
+              'Nothing found for that. Try fewer words, or a street and district.',
+              'Không tìm thấy gì. Thử bớt chữ, hoặc tên đường kèm quận.',
+              '見つかりませんでした。語を減らすか、通りと区でお試しください。',
+              '没有找到结果。试试减少关键词，或输入街道和区名。', '沒有找到結果。試試減少關鍵字，或輸入街道和區名。',
+            )}
+          </Text>
+        )}
 
-          {hits && hits.length > 0 && (
-            <View style={s.hits}>
-              {hits.map((h, i) => (
-                <PressableScale
-                  key={`${h.lat},${h.lng}`}
-                  onPress={() => take(h)}
-                  scaleTo={0.985}
-                  haptic="selection"
-                  accessibilityRole="button"
-                >
-                  <View style={[s.hit, i > 0 && s.hitTop]}>
-                    <Glyph name="location-outline" size={ICON.action} color={colors.accent} />
-                    <View style={{ flex: 1 }}>
-                      <Text style={s.hitName} numberOfLines={1}>{h.name}</Text>
-                      {/* Only when it says something the name did not —
-                          see `spotLabel`, which drops the parts that
-                          repeat. A blank line under every result is worse
-                          than a row that is simply one line tall. */}
-                      {h.label ? (
-                        <Text style={s.hitSub} numberOfLines={1}>{h.label}</Text>
-                      ) : null}
-                    </View>
+        {hits && hits.length > 0 && (
+          <View style={s.hits}>
+            {hits.map((h, i) => (
+              <PressableScale
+                key={`${h.lat},${h.lng}`}
+                onPress={() => take(h)}
+                scaleTo={0.985}
+                haptic="selection"
+                accessibilityRole="button"
+              >
+                <View style={[s.hit, i > 0 && s.hitTop]}>
+                  <Glyph name="location-outline" size={ICON.action} color={colors.accent} />
+                  <View style={{ flex: 1 }}>
+                    <Text style={s.hitName} numberOfLines={1}>{h.name}</Text>
+                    {/* Only when it says something the name did not —
+                        see `spotLabel`, which drops the parts that
+                        repeat. A blank line under every result is worse
+                        than a row that is simply one line tall. */}
+                    {h.label ? (
+                      <Text style={s.hitSub} numberOfLines={1}>{h.label}</Text>
+                    ) : null}
                   </View>
-                </PressableScale>
+                </View>
+              </PressableScale>
+            ))}
+            {/* No credit line. Google's terms ask for a "Powered by
+                Google" mark only where Places data is shown *without* a
+                Google map, and the map above this list is Google's and
+                carries its own logo. (In Expo Go on an iPhone there is no
+                map — see `canDrawMap` — which is a development build's
+                problem and not a shipped one.) */}
+          </View>
+        )}
+
+        {districts.length > 0 && (
+          <>
+            <Text style={s.label}>
+              {areasAreNear
+                ? t('Or pick a nearby area', 'Hoặc chọn khu vực gần đó', '近くのエリアから選ぶ', '或选择附近的区域', '或選擇附近的區域')
+                // Not "nearby", because it is not. Naming the city is
+                // the honest version of the same offer: these are the
+                // areas City Crew covers, and you are not in them.
+                : city
+                  ? t(`Or pick an area in ${city.name_en}`, `Hoặc chọn khu vực ở ${city.name_vi}`, `${city.name_en}のエリアから選ぶ`, `或选择${city.name_en}的区域`, `或選擇${city.name_en}的區域`)
+                  : t('Or pick an area', 'Hoặc chọn một khu vực', 'エリアから選ぶ', '或选择一个区域', '或選擇一個區域')}
+            </Text>
+            <View style={s.chips}>
+              {districts.map((d) => (
+                <Chip
+                  key={d}
+                  label={d}
+                  active={draft.district === d}
+                  onPress={() => {
+                    setMoved(null);
+                    setElsewhere(null);
+                    setDraft({ district: draft.district === d ? null : d, at: null, atName: null });
+                    // The heading above says *or*. Taking this answer
+                    // drops the other one rather than leaving half a
+                    // search in the field for the button to insist on.
+                    setQuery('');
+                    setSettled('');
+                    setHits(null);
+                    setMissed(false);
+                  }}
+                />
               ))}
-              {/* No credit line. Google's terms ask for a "Powered by
-                  Google" mark only where Places data is shown *without* a
-                  Google map, and the map above this list is Google's and
-                  carries its own logo. (In Expo Go on an iPhone there is no
-                  map — see `canDrawMap` — which is a development build's
-                  problem and not a shipped one.) */}
             </View>
-          )}
+          </>
+        )}
+      </ScrollView>
 
-          {districts.length > 0 && (
-            <>
-              <Text style={s.label}>
-                {areasAreNear
-                  ? t('Or pick a nearby area', 'Hoặc chọn khu vực gần đó', '近くのエリアから選ぶ', '或选择附近的区域', '或選擇附近的區域')
-                  // Not "nearby", because it is not. Naming the city is
-                  // the honest version of the same offer: these are the
-                  // areas City Crew covers, and you are not in them.
-                  : city
-                    ? t(`Or pick an area in ${city.name_en}`, `Hoặc chọn khu vực ở ${city.name_vi}`, `${city.name_en}のエリアから選ぶ`, `或选择${city.name_en}的区域`, `或選擇${city.name_en}的區域`)
-                    : t('Or pick an area', 'Hoặc chọn một khu vực', 'エリアから選ぶ', '或选择一个区域', '或選擇一個區域')}
-              </Text>
-              <View style={s.chips}>
-                {districts.map((d) => (
-                  <Chip
-                    key={d}
-                    label={d}
-                    active={draft.district === d}
-                    onPress={() => {
-                      setMoved(null);
-                      setElsewhere(null);
-                      setDraft({ district: draft.district === d ? null : d, at: null, atName: null });
-                      // The heading above says *or*. Taking this answer
-                      // drops the other one rather than leaving half a
-                      // search in the field for the button to insist on.
-                      setQuery('');
-                      setSettled('');
-                      setHits(null);
-                      setMissed(false);
-                    }}
-                  />
-                ))}
-              </View>
-            </>
-          )}
-        </ScrollView>
-
-        <View style={s.foot}>
-          {/* One button, two things it could mean — so it says which. Text
-              in the field that has never been searched is an intention
-              that has not happened yet, and committing over it used to
-              throw it away without a word: you typed "cau giay", pressed
-              the biggest warmest thing on the screen, and started the day
-              in Ba Đình. See `ctaMode`. */}
-          <GradientCta
-            icon={cta === 'search' ? 'search-outline' : 'checkmark'}
-            label={cta === 'search'
-              ? t('Search', 'Tìm', '検索', '搜索', '搜尋')
-              : t('Use this location', 'Dùng chỗ này', 'ここにする', '使用这个位置', '使用這個位置')}
-            onPress={cta === 'search' ? find : commit}
-            disabled={refused}
-            wide
-          />
-        </View>
+      <View style={s.foot}>
+        {/* One button, two things it could mean — so it says which. Text
+            in the field that has never been searched is an intention
+            that has not happened yet, and committing over it used to
+            throw it away without a word: you typed "cau giay", pressed
+            the biggest warmest thing on the screen, and started the day
+            in Ba Đình. See `ctaMode`. */}
+        <GradientCta
+          icon={cta === 'search' ? 'search-outline' : 'checkmark'}
+          label={cta === 'search'
+            ? t('Search', 'Tìm', '検索', '搜索', '搜尋')
+            : t('Use this location', 'Dùng chỗ này', 'ここにする', '使用这个位置', '使用這個位置')}
+          onPress={cta === 'search' ? find : commit}
+          disabled={refused}
+          wide
+        />
       </View>
-    </Modal>
+    </Sheet>
   );
 }
 
 const s = StyleSheet.create({
-  scrim: { ...StyleSheet.absoluteFill, backgroundColor: 'rgba(6,5,8,0.32)' },
   // `bottom` and `maxHeight` are set inline from the keyboard's height —
   // a sheet lifted without lowering its ceiling would simply grow off the
-  // top of the screen instead.
-  sheet: {
-    position: 'absolute', left: 0, right: 0,
-    backgroundColor: colors.bgElevated,
-    borderTopLeftRadius: 26, borderTopRightRadius: 26,
-    paddingHorizontal: space.page, paddingTop: 10, paddingBottom: 26,
-  },
-  grabber: {
-    width: 38, height: 4, borderRadius: 2, alignSelf: 'center',
-    backgroundColor: colors.borderGlass, marginBottom: 14,
-  },
+  // top of the screen instead. A flat 26 under the button, the inset or
+  // not: the sheet stands on the keyboard as often as on the screen's
+  // foot. The rest of the chrome is `Sheet`'s.
+  sheet: { paddingBottom: 26 },
   title: { color: colors.text, ...type.titleDetail },
   sub: { color: colors.textTertiary, fontSize: 14, lineHeight: 20, marginTop: 4, marginBottom: 16 },
 
