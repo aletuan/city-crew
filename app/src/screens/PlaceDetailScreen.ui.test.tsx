@@ -56,6 +56,8 @@ const spies = vi.hoisted(() => ({
   askToSignIn: vi.fn(),
   addCheckin: vi.fn(async (_at?: unknown): Promise<string> => 'k-new'),
   saveCheckin: vi.fn(async (_id: string, _said: unknown) => {}),
+  // The visits as the server has them, asked after a refusal.
+  fetchMine: vi.fn(async (_uid: string): Promise<unknown[]> => []),
   review: vi.fn(async (_total: number): Promise<boolean> => false),
   say: vi.fn((_said: { text: string; action: string }) => {}),
   removeCheckin: vi.fn(async () => {}),
@@ -102,6 +104,7 @@ vi.mock('../lib/data', async () => ({
   addPlacePhoto: async () => 'photo-id',
   addCheckin: spies.addCheckin,
   saveCheckin: spies.saveCheckin,
+  fetchMyCheckins: (uid: string) => spies.fetchMine(uid),
   removeCheckin: spies.removeCheckin,
 }));
 // Apple's review sheet: only when it is asked, and with what count.
@@ -296,6 +299,7 @@ beforeEach(() => {
   state.checkins = [];
   spies.addCheckin.mockReset().mockResolvedValue('k-new');
   spies.saveCheckin.mockReset().mockResolvedValue(undefined);
+  spies.fetchMine.mockReset().mockResolvedValue([]);
   spies.review.mockReset().mockResolvedValue(false);
   spies.say.mockReset();
   spies.removeCheckin.mockReset().mockResolvedValue(undefined);
@@ -924,24 +928,56 @@ describe('PlaceDetailScreen — title, rating, facts', () => {
     expect(screen.getAllByRole('button', { name: /Remove this visit/ })).toHaveLength(4);
   });
 
-  it('says so, in the reader\u2019s words, when the day\u2019s cap refuses the visit', async () => {
+  // A refusal reads the visits afresh to say which rule it was: from one
+  // phone only the day's fifty is reachable, and the other two mean a
+  // second phone's visit the list on screen does not have.
+  const refusedWith = async (fresh: unknown[] | Error) => {
     state.checkin = true;
     state.uid = 'u1';
     state.lang = 'vi';
     spies.addCheckin.mockRejectedValueOnce(new Error('daily_limit'));
+    if (fresh instanceof Error) spies.fetchMine.mockRejectedValueOnce(fresh);
+    else spies.fetchMine.mockResolvedValueOnce(fresh);
     show();
     fireEvent.click(screen.getByTestId('detail-checkin'));
-    await waitFor(() => expect(alert).toHaveBeenCalledWith('Không check-in được', expect.stringMatching(/3 lần/)));
-    expect(spies.reloadCheckins).not.toHaveBeenCalled();
+    await waitFor(() => expect(alert).toHaveBeenCalled());
+    return alert.mock.calls[alert.mock.calls.length - 1];
+  };
+  const here = (id: string, minutesAgo: number) => ({ ...visit(id, minutesAgo), place_slug: 'cong-caphe' });
+
+  it('says the day’s fifty, in the reader’s words, when nothing here explains the refusal', async () => {
+    const [title, said] = await refusedWith([{ ...visit('k1', 30), place_slug: 'elsewhere' }]);
+    expect(title).toBe('Không check-in được');
+    expect(said).toMatch(/50 lần trong một ngày qua/);
+    expect(spies.fetchMine).toHaveBeenCalledWith('u1');
+    // Asked again, so another phone's visits show.
+    expect(spies.reloadCheckins).toHaveBeenCalledTimes(1);
   });
 
-  it('shows any other refusal as it came', async () => {
+  it('says three here when another phone made them', async () => {
+    const [, said] = await refusedWith([here('k3', 60), here('k2', 60 * 5), here('k1', 60 * 9)]);
+    expect(said).toMatch(/ở đây 3 lần/);
+  });
+
+  it('says a moment ago when another phone checked in here inside ten minutes', async () => {
+    const [, said] = await refusedWith([here('k1', 2)]);
+    expect(said).toBe('Bạn vừa check-in ở đây. Thử lại sau ít phút nhé.');
+  });
+
+  it('falls back on the list it has when the fresh one cannot be read', async () => {
+    const [, said] = await refusedWith(new Error('offline'));
+    expect(said).toMatch(/50 lần/);
+  });
+
+  it('shows any other refusal as it came, without asking the visits again', async () => {
     state.checkin = true;
     state.uid = 'u1';
     spies.addCheckin.mockRejectedValueOnce(new Error('offline'));
     show();
     fireEvent.click(screen.getByTestId('detail-checkin'));
     await waitFor(() => expect(alert).toHaveBeenCalledWith('Could not check in', 'offline'));
+    expect(spies.fetchMine).not.toHaveBeenCalled();
+    expect(spies.reloadCheckins).not.toHaveBeenCalled();
   });
 
   // ── the price, which ships hidden ──

@@ -169,10 +169,37 @@ export function latestCheckin(rows: readonly Checkin[], slug: string): Checkin |
  * same rule for a reader in Hanoi and one in Melbourne. The insert
  * policy counts the same window (`20261009090000_checkins_per_place.sql`).
  *
- * There is no cap across places any more: thirty in a day was a guess at
- * "a script", and a day out that walks a whole lane of cafés is not one.
+ * Across places there was no cap from 9 Oct to 24 Nov 2026: thirty in a
+ * day was a guess at "a script", and a day out that walks a whole lane of
+ * cafés is not one. It came back at fifty (`PER_DAY`) when a visit could
+ * carry photographs.
  */
 export const PER_PLACE_PER_DAY = 3;
+
+/**
+ * How many visits an account may make in a day, across places
+ * (`20261124210000_checkins_per_day.sql`, where the measurement is: the
+ * busiest real day was 29, 95% of days 12 or fewer). A bound on a
+ * script, not on a reader.
+ */
+export const PER_DAY = 50;
+
+/**
+ * Why the server refused a visit, read off the reader's visits as they
+ * stand *after* the refusal — the caller asks for them afresh
+ * (`useCheckIn`). The server refuses all three rules the same way, and
+ * the sentence differs.
+ *
+ * From one phone only the day's fifty can be met: the pill is not offered
+ * inside ten minutes or after three here (`canRepeat`). The other two
+ * happen when a second phone checked in first, which is why the list
+ * must be fresh — the one on screen does not have that visit yet.
+ */
+export function whyRefused(rows: readonly Checkin[], slug: string, now: Date): 'soon' | 'place' | 'day' {
+  const latest = latestCheckin(rows, slug);
+  if (latest && now.getTime() - new Date(latest.at).getTime() < REPEAT_AFTER_MIN * 60_000) return 'soon';
+  return visitsInDay(rows, slug, now) >= PER_PLACE_PER_DAY ? 'place' : 'day';
+}
 
 /** This place's visits in the last twenty-four hours, strictly inside. */
 export function visitsInDay(rows: readonly Checkin[], slug: string, now: Date): number {

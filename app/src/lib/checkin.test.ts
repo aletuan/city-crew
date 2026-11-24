@@ -4,7 +4,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   audienceOf, cleanNote, nextAudience, NOTE_MAX,
-  canRepeat, type Checkin, filterVisits, latestCheckin, monthTitle, PER_PLACE_PER_DAY, REPEAT_AFTER_MIN,
+  canRepeat, type Checkin, filterVisits, PER_DAY, whyRefused, latestCheckin, monthTitle, PER_PLACE_PER_DAY, REPEAT_AFTER_MIN,
   textMatches, visitCategories, visitCities, visitSections, visitsInDay, visitSummary, visitsAt,
 } from './checkin';
 
@@ -224,5 +224,26 @@ describe('a visit\'s note and who sees it', () => {
     expect(cleanNote('a'.repeat(NOTE_MAX + 20))).toHaveLength(NOTE_MAX);
     // Cut at the bound, a space left hanging there goes too.
     expect(cleanNote(`${'a'.repeat(NOTE_MAX - 1)} b`)).toBe('a'.repeat(NOTE_MAX - 1));
+  });
+});
+
+describe('whyRefused', () => {
+  const now = new Date('2026-10-08T20:00:00Z');
+  it('says "a moment ago" when this place has a visit inside the ten minutes, whatever else is true', () => {
+    const rows = [row('a', 'cong', '2026-10-08T19:55:00Z'), row('b', 'cong', '2026-10-08T12:00:00Z'), row('c', 'cong', '2026-10-08T08:00:00Z')];
+    expect(whyRefused(rows, 'cong', now)).toBe('soon');
+    // Exactly ten minutes on is no longer "a moment ago".
+    expect(whyRefused([row('a', 'cong', '2026-10-08T19:50:00Z')], 'cong', now)).toBe('day');
+  });
+  it('says "three here" when this place has its three in the day', () => {
+    const rows = [row('a', 'cong', '2026-10-08T19:00:00Z'), row('b', 'cong', '2026-10-08T12:00:00Z'), row('c', 'cong', '2026-10-08T08:00:00Z')];
+    expect(whyRefused(rows, 'cong', now)).toBe('place');
+    expect(whyRefused(rows.slice(0, 2), 'cong', now)).toBe('day');
+  });
+  it('says "the day" otherwise — other places’ visits do not make it this place’s three', () => {
+    expect(PER_DAY).toBe(50);
+    const rows = [row('a', 'pizza', '2026-10-08T19:58:00Z'), row('b', 'pizza', '2026-10-08T12:00:00Z'), row('c', 'pizza', '2026-10-08T08:00:00Z')];
+    expect(whyRefused(rows, 'cong', now)).toBe('day');
+    expect(whyRefused([], 'cong', now)).toBe('day');
   });
 });
