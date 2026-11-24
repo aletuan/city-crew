@@ -93,6 +93,19 @@ describe('the heart', () => {
   const onHeart = vi.fn();
   beforeEach(() => onHeart.mockReset());
 
+  // The Author chip: after the name, before the age, said with them.
+  it('wears an Author chip between the name and the age only when it is the owner\'s', () => {
+    render(<CommentRow comment={placed()} when="2h ago" byOwner onPerson={onPerson} />);
+    const head = screen.getByTestId('comment-who').parentElement!;
+    expect([...head.children].map((c) => c.getAttribute('data-testid'))).toEqual(['comment-who', 'comment-author', 'comment-when']);
+    expect(screen.getByTestId('comment-author').textContent).toBe('Author');
+    expect(screen.getByTestId('comment-words').getAttribute('aria-label')).toContain(', Author, 2h ago,');
+    cleanup();
+    render(<CommentRow comment={placed()} when="2h ago" onPerson={onPerson} />);
+    expect(screen.queryByTestId('comment-author')).toBeNull();
+  });
+
+
   it('is not drawn on a page that gave no way to press it', () => {
     render(<CommentRow comment={placed({ likes: 4, liked: true })} when="2h ago" onPerson={onPerson} />);
     expect(screen.queryByTestId('comment-heart')).toBeNull();

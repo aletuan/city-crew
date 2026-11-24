@@ -49,10 +49,13 @@ const MORE_GLYPH = ICON.action;
  *  measured on a phone. */
 export const INDENT = [0, FACE + 10, FACE + 10 + FACE_REPLY + 10] as const;
 
-export default function CommentRow({ comment, when, onPerson, onPlace, onReply, replyOff, onMore, hearts, onHeart, lit, onLayout }: {
+export default function CommentRow({ comment, when, byOwner, onPerson, onPlace, onReply, replyOff, onMore, hearts, onHeart, lit, onLayout }: {
   comment: Placed;
   /** How long ago, already in words. */
   when: string;
+  /** Written by the list's owner: a chip after the name says so
+   *  (owner, 24 Nov 2026, after Threads' "Author"). */
+  byOwner?: boolean;
   onPerson: (handle: string) => void;
   /** Absent until a place tag has somewhere to open. */
   onPlace?: (slug: string) => void;
@@ -83,6 +86,7 @@ export default function CommentRow({ comment, when, onPerson, onPlace, onReply, 
   const who = handle || comment.full_name || t('Someone', 'Ai đó', '誰か', '某人', '某人');
   const size = comment.level === 0 ? FACE : FACE_REPLY;
   const { body, under } = comment;
+  const author = t('Author', 'Tác giả', '作者', '作者', '作者');
   const reply = t(`Reply to ${who}`, `Trả lời ${who}`, `${who}さんに返信`, `回复 ${who}`, `回覆 ${who}`);
   // The figure is said with the act, as a tab's dot is said with its name.
   const replyLabel = under > 0
@@ -105,9 +109,12 @@ export default function CommentRow({ comment, when, onPerson, onPlace, onReply, 
         </PressableScale>
       ) : <Avatar url={comment.avatar_url} size={size} />}
       <View style={s.words}>
-        <View accessible accessibilityLabel={[who, when, body].join(', ')} testID="comment-words">
+        <View accessible accessibilityLabel={[who, byOwner ? author : null, when, body].filter(Boolean).join(', ')} testID="comment-words">
         <View style={s.head}>
           <Text style={s.who} numberOfLines={1} testID="comment-who">{who}</Text>
+          {byOwner ? (
+            <View style={s.chip} testID="comment-author"><Text style={s.chipText}>{author}</Text></View>
+          ) : null}
           <Text style={s.when} testID="comment-when">{when}</Text>
         </View>
         <Text style={s.body} testID="comment-body">
@@ -206,6 +213,12 @@ const s = StyleSheet.create({
   // The name gives when it is long; the age never does.
   who: { color: colors.text, fontSize: 15, fontWeight: font.semibold, lineHeight: 20, flexShrink: 1 },
   when: { color: colors.textTertiary, fontSize: 13, lineHeight: 17 },
+  // After the name and before the age, as Threads sets it, in the app's
+  // own tint: the accent's soft fill and the accent's ink, the pair a
+  // selected chip wears, so it is read as a mark and not as a link.
+  // 12 on 18, the age's size less one; not measured on a phone.
+  chip: { backgroundColor: colors.accentSoft, borderRadius: 999, paddingHorizontal: 8, height: 18, justifyContent: 'center', alignSelf: 'center' },
+  chipText: { color: colors.accent, fontSize: 12, lineHeight: 16, fontWeight: font.semibold },
   body: { color: colors.text, fontSize: 15, lineHeight: 21 },
   // Who a deep answer is to: the accent, as a tag is, since it is one.
   to: { color: colors.accent },
