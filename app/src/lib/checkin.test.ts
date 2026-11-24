@@ -3,7 +3,7 @@
 
 import { describe, expect, it } from 'vitest';
 import {
-  PhotoError, photoRefusalOf, PHOTOS_PER_VISIT,
+  PhotoError, photoRefusalOf, PHOTOS_PER_VISIT, visitPhotosOf,
   audienceOf, cleanNote, nextAudience, NOTE_MAX,
   canRepeat, type Checkin, filterVisits, PER_DAY, whyRefused, latestCheckin, monthTitle, PER_PLACE_PER_DAY, REPEAT_AFTER_MIN,
   textMatches, visitCategories, visitCities, visitSections, visitsInDay, visitSummary, visitsAt,
@@ -277,5 +277,26 @@ describe('photoRefusalOf', () => {
     expect(e.message).toBe('day');
     expect(e.name).toBe('PhotoError');
     expect(PHOTOS_PER_VISIT).toBe(3);
+  });
+});
+
+describe('visitPhotosOf', () => {
+  const ph = (id: string, extra: Record<string, unknown> = {}) => ({ id, path: `u1/k1/${id}.jpg`, width: 1200, height: 900, ...extra });
+  it('reads nothing that is not a list as no photos', () => {
+    expect(visitPhotosOf(null)).toEqual([]);
+    expect(visitPhotosOf({ id: 'p1' })).toEqual([]);
+  });
+  it('keeps the size and path, in position order, and drops the hidden', () => {
+    expect(visitPhotosOf([ph('b', { position: 2 }), ph('h', { position: 1, hidden_at: '2026-11-25T00:00:00Z' }), ph('a', { position: 1, extra: 1 })]))
+      .toEqual([{ id: 'a', path: 'u1/k1/a.jpg', width: 1200, height: 900 }, { id: 'b', path: 'u1/k1/b.jpg', width: 1200, height: 900 }]);
+  });
+  it('keeps the order it was sent in when no position rides along', () => {
+    expect(visitPhotosOf([ph('b'), ph('a')]).map((p) => p.id)).toEqual(['b', 'a']);
+  });
+  it('leaves out an entry it could not draw', () => {
+    expect(visitPhotosOf([null, ph('a'), { ...ph('b'), path: 7 }, { ...ph('c'), width: '1200' }, { ...ph('d'), height: null }, { ...ph('e'), id: 3 }]).map((p) => p.id)).toEqual(['a']);
+  });
+  it('never draws more than a visit may carry', () => {
+    expect(visitPhotosOf([ph('a'), ph('b'), ph('c'), ph('d')])).toHaveLength(PHOTOS_PER_VISIT);
   });
 });

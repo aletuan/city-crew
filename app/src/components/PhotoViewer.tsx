@@ -50,8 +50,13 @@ export function settledPage(x: number, pageWidth: number, pages: number): number
  *  and short of the pixels running out on a 1,600-pixel Google photo. */
 const MAX_ZOOM = 3;
 
+/** What the viewer draws of a photograph: a gallery's, or a visit's own
+ *  (K4 of `docs/checkin-photos-plan.md`), whose link changes hourly and
+ *  so is cached by the key it is handed rather than by its URL. */
+export type ViewerPhoto = Pick<GalleryPhoto, 'id' | 'photo_uri' | 'score'> & { cacheKey?: string };
+
 export default function PhotoViewer({ photos, index, onIndex, onClose }: {
-  photos: GalleryPhoto[];
+  photos: ViewerPhoto[];
   /** The photograph shown, by its place in `photos`. */
   index: number;
   onIndex: (i: number) => void;
@@ -102,7 +107,7 @@ export default function PhotoViewer({ photos, index, onIndex, onClose }: {
               accessibilityLabel={`${t('Photo', 'Ảnh', '写真', '照片', '照片')} ${i + 1}/${photos.length}`}
               testID={`photo-viewer-page-${ph.id}`}
             >
-              <Image source={{ uri: ph.photo_uri }} style={StyleSheet.absoluteFill} contentFit="contain" transition={150} />
+              <Image source={{ uri: ph.photo_uri, cacheKey: ph.cacheKey }} style={StyleSheet.absoluteFill} contentFit="contain" transition={150} />
             </Pressable>
           </ScrollView>
         ))}

@@ -9,7 +9,7 @@ import React from 'react';
 import { Text } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { act, cleanup, fireEvent, render, screen, waitFor, within } from '../../uitest/render';
+import { act, cleanup, fireEvent, propsWhere, render, screen, waitFor, within } from '../../uitest/render';
 import type { PersonCheckin } from '../../lib/checkin';
 import type { FriendProfile } from '../../lib/data';
 
@@ -17,26 +17,30 @@ const data = vi.hoisted(() => ({
   fetchPersonCheckins: vi.fn(async (_id: string): Promise<unknown[]> => []),
   likeCheckin: vi.fn(async (_id: string, _on: boolean) => {}),
   saveCheckin: vi.fn(async (_id: string, _said: unknown) => {}),
+  signCheckinPhotos: vi.fn(async (paths: readonly string[]): Promise<Record<string, string>> =>
+    Object.fromEntries(paths.map((p) => [p, `https://signed/${p}`]))),
 }));
 vi.mock('../../lib/data', async (orig) => ({
   ...(await orig<Record<string, unknown>>()),
   fetchPersonCheckins: data.fetchPersonCheckins,
   likeCheckin: data.likeCheckin,
   saveCheckin: data.saveCheckin,
+  signCheckinPhotos: data.signCheckinPhotos,
 }));
 const mine = vi.hoisted(() => ({ loadedAt: 1 as number | null, reload: vi.fn() }));
 vi.mock('../../lib/checkins', () => ({ useMyCheckins: () => ({ data: [], loadedAt: mine.loadedAt, reload: mine.reload }) }));
 vi.mock('../../lib/city', () => ({
   useCityList: () => ({ cities: [{ id: 'hanoi', short_en: 'Hanoi', short_vi: 'Hà Nội', short_ja: null }] }),
 }));
-const flags = vi.hoisted(() => ({ place_checkin: true }));
-vi.mock('../../lib/useFlag', () => ({ useFlag: (k: string) => (k === 'place_checkin' ? flags.place_checkin : false) }));
+const flags = vi.hoisted(() => ({ place_checkin: true, checkin_photos: false }));
+vi.mock('../../lib/useFlag', () => ({ useFlag: (k: string) => (flags as Record<string, boolean>)[k] ?? false }));
 const i18n = vi.hoisted(() => ({ lang: 'en' }));
 vi.mock('../../lib/i18n', () => ({ useI18n: () => ({ lang: i18n.lang, t: (en: string, vi?: string) => (i18n.lang === 'vi' ? vi : en) ?? en }) }));
 vi.mock('react-native-safe-area-context', () => ({ useSafeAreaInsets: () => ({ top: 0, bottom: 0, left: 0, right: 0 }) }));
 
 import { cacheKey } from '../../lib/data/cache';
 import { HOLD_MS, useVisitCards } from './CheckinAct';
+import { forgetSignedPhotos } from '../../components/useSignedPhotos';
 
 const LAN: FriendProfile = { id: 'lan', handle: 'lan', full_name: 'Lan Pham', avatar_url: '' } as FriendProfile;
 const ME: FriendProfile = { id: 'me', handle: 'andy', full_name: '', avatar_url: '' } as FriendProfile;
@@ -70,6 +74,8 @@ beforeEach(() => {
   data.likeCheckin.mockImplementation(async () => {});
   data.saveCheckin.mockImplementation(async () => {});
   flags.place_checkin = true;
+  flags.checkin_photos = false;
+  forgetSignedPhotos();
   mine.loadedAt = 1;
   i18n.lang = 'en';
 });
@@ -366,5 +372,92 @@ describe('your own visits', () => {
     fireEvent.click(screen.getByTestId('checkin-sheet-close'));
     await act(async () => { await Promise.resolve(); });
     expect(mine.reload).not.toHaveBeenCalled();
+  });
+});
+
+describe('a visit’s own photos', () => {
+  const ph = (id: string) => ({ id, path: `lan/k1/${id}.jpg`, width: 1200, height: 900 });
+  const WITH = visit('k1', { photos: [ph('p1'), ph('p2'), ph('p3')] });
+  const settle = () => act(async () => { for (let i = 0; i < 6; i += 1) await Promise.resolve(); });
+
+  it('draws the place’s cover, and asks for no link, with the switch off', async () => {
+    await show('me', LAN, [WITH]);
+    expect(data.signCheckinPhotos).not.toHaveBeenCalled();
+    expect(screen.queryByTestId('activity-photo')).toBeNull();
+    expect(document.querySelector('img[src="https://x/k1.jpg"]')).not.toBeNull();
+  });
+
+  it('asks once for the whole column, and wears the first photo with the count', async () => {
+    flags.checkin_photos = true;
+    await show('me', LAN, [WITH, visit('k2', { photos: [ph('q1')] }), visit('k3')]);
+    await settle();
+    expect(data.signCheckinPhotos).toHaveBeenCalledTimes(1);
+    expect(data.signCheckinPhotos).toHaveBeenCalledWith(['lan/k1/p1.jpg', 'lan/k1/p2.jpg', 'lan/k1/p3.jpg', 'lan/k1/q1.jpg']);
+    const [first, second, third] = cards();
+    expect(within(first).getByTestId('activity-photo').getAttribute('aria-label')).toBe('3 photos');
+    expect(within(first).getByTestId('activity-photo-count').textContent).toBe('3');
+    expect(first.querySelector('img[src="https://signed/lan/k1/p1.jpg"]')).not.toBeNull();
+    // In the cover's place, not as well as it.
+    expect(first.querySelector('img[src="https://x/k1.jpg"]')).toBeNull();
+    // One photo: no count, said as one.
+    expect(within(second).getByTestId('activity-photo').getAttribute('aria-label')).toBe('Photo');
+    expect(within(second).queryByTestId('activity-photo-count')).toBeNull();
+    // None: the place, as before.
+    expect(within(third).queryByTestId('activity-photo')).toBeNull();
+    expect(third.querySelector('img[src="https://x/k3.jpg"]')).not.toBeNull();
+  });
+
+  it('counts only the photos the bucket signed, and draws the place until one is', async () => {
+    flags.checkin_photos = true;
+    data.signCheckinPhotos.mockResolvedValueOnce({ 'lan/k1/p2.jpg': 'https://signed/p2' });
+    await show('me', LAN, [WITH, visit('k2', { photos: [ph('q1')] })]);
+    await settle();
+    const [first, second] = cards();
+    expect(first.querySelector('img[src="https://signed/p2"]')).not.toBeNull();
+    expect(within(first).queryByTestId('activity-photo-count')).toBeNull();
+    expect(within(second).queryByTestId('activity-photo')).toBeNull();
+  });
+
+  it('opens them full screen from the picture, pages through them, and closes; the words still open the place', async () => {
+    flags.checkin_photos = true;
+    await show('me', LAN, [WITH]);
+    await settle();
+    expect(screen.queryByTestId('photo-viewer')).toBeNull();
+    fireEvent.click(screen.getByTestId('activity-photo'));
+    expect(onPlace).not.toHaveBeenCalled();
+    expect(screen.getByTestId('photo-viewer-count').textContent).toBe('1/3');
+    expect(screen.getByTestId('photo-viewer-page-p3')).toBeTruthy();
+    expect(document.querySelectorAll('img[src="https://signed/lan/k1/p2.jpg"]')).toHaveLength(1);
+    // Cached by the photo, not by a link that changes every hour.
+    const sourceOf = (uri: string) => propsWhere((p) => (p.source as { uri?: string } | undefined)?.uri === uri).source;
+    expect(sourceOf('https://signed/lan/k1/p1.jpg')).toEqual({ uri: 'https://signed/lan/k1/p1.jpg', cacheKey: 'p1' });
+    expect(sourceOf('https://signed/lan/k1/p2.jpg')).toEqual({ uri: 'https://signed/lan/k1/p2.jpg', cacheKey: 'p2' });
+    // A swipe that settles on the third page (the pager's own reading of
+    // a swipe is `PhotoViewer.ui.test.tsx`'s).
+    act(() => { (propsWhere((p) => 'onIndex' in p).onIndex as (i: number) => void)(2); });
+    expect(screen.getByTestId('photo-viewer-count').textContent).toBe('3/3');
+    fireEvent.click(screen.getByTestId('photo-viewer-close'));
+    expect(screen.queryByTestId('photo-viewer')).toBeNull();
+    fireEvent.click(screen.getByTestId('activity-open'));
+    expect(onPlace).toHaveBeenCalledWith('slug-k1');
+  });
+
+  it('closes on the back gesture', async () => {
+    flags.checkin_photos = true;
+    await show('me', LAN, [WITH]);
+    await settle();
+    fireEvent.click(screen.getByTestId('activity-photo'));
+    act(() => { (propsWhere((p) => p.visible === true && 'onRequestClose' in p).onRequestClose as () => void)(); });
+    expect(screen.queryByTestId('photo-viewer')).toBeNull();
+  });
+
+  it('does not ask again for links it already holds', async () => {
+    flags.checkin_photos = true;
+    const { unmount } = await show('me', LAN, [WITH]);
+    await settle();
+    unmount();
+    await show('me', LAN, [WITH]);
+    await settle();
+    expect(data.signCheckinPhotos).toHaveBeenCalledTimes(1);
   });
 });

@@ -33,6 +33,16 @@
 // is a visit made private a moment ago, and the next read drops the
 // card.
 //
+// ── a visit's own photos (K4 of `docs/checkin-photos-plan.md`) ──
+//
+// Behind `checkin_photos`. The first wears the card's picture in place of
+// the place's cover; a press on it opens all of them full screen
+// (`PhotoViewer`), and the words stay the press into the place. Links
+// for the whole column are asked for at once (`useSignedPhotos`); until
+// they come, and for a visit with none, the card is the place's as it
+// was. The viewer is a `Modal` of its own: the page has none to draw it
+// in, as the photo sheet does.
+//
 // ── while the page is searched ──
 //
 // No visits. The search is of a person's *collections* and the places in
@@ -40,9 +50,12 @@
 // its place's name would be a second kind of answer in a list that
 // explains itself as one.
 
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { Modal } from 'react-native';
 import ActivityCard from '../../components/ActivityCard';
 import CheckinSheet from '../../components/CheckinSheet';
+import PhotoViewer from '../../components/PhotoViewer';
+import { useSignedPhotos } from '../../components/useSignedPhotos';
 import VisitNote from '../../components/VisitNote';
 import { fireHaptic } from '../../components/ui';
 import { dayLabel } from '../../lib/ago';
@@ -146,6 +159,16 @@ export function useVisitCards({ me, person, onPlace }: {
     likeCheckin(v.id, !was).catch(() => setPressed((p) => ({ ...p, [v.id]: was })));
   };
 
+  const photosOn = useFlag('checkin_photos');
+  const all = useMemo(() => read.data.flatMap((v) => v.photos ?? []), [read.data]);
+  const linkOf = useSignedPhotos(all, photosOn);
+  /** The photos of `v` that have a link to draw, in order. */
+  const shown = (v: PersonCheckin) => (v.photos ?? []).flatMap((ph) => {
+    const uri = linkOf(ph);
+    return uri ? [{ ph, uri }] : [];
+  });
+  const [viewing, setViewing] = useState<{ v: PersonCheckin; at: number } | null>(null);
+
   const [noteFor, setNoteFor] = useState<PersonCheckin | null>(null);
   const nameOf = (v: PersonCheckin) => localized(v.place, 'name', lang);
 
@@ -153,6 +176,7 @@ export function useVisitCards({ me, person, onPlace }: {
     const liked = pressed[v.id] ?? v.liked;
     const shared = !own || v.audience === 'friends';
     const kind = v.place.categories[0];
+    const pics = shown(v);
     return (
       <ActivityCard
         key={v.id}
@@ -167,6 +191,10 @@ export function useVisitCards({ me, person, onPlace }: {
           : { icon: SEEN_GLYPH.private, label: t('Only me', 'Chỉ mình tôi', '自分のみ', '仅自己', '僅自己') }}
         title={nameOf(v)}
         uri={v.place.cover ?? undefined}
+        photo={pics.length > 0 ? {
+          uri: pics[0].uri, cacheKey: pics[0].ph.id, n: pics.length,
+          onPress: () => setViewing({ v, at: 0 }),
+        } : undefined}
         meta={[kind ? categoryLabel(kind, t) : null, cityShortById(cities, v.city_id, t)].filter(Boolean).join(' · ')}
         desc={own ? null : v.note}
         under={own ? <VisitNote note={v.note} onEdit={() => setNoteFor(v)} /> : undefined}
@@ -180,20 +208,37 @@ export function useVisitCards({ me, person, onPlace }: {
     );
   };
 
+  const viewed = viewing ? shown(viewing.v) : [];
+  const viewer = (
+    <Modal visible={viewed.length > 0} transparent animationType="fade" onRequestClose={() => setViewing(null)} statusBarTranslucent>
+      {viewing ? (
+        <PhotoViewer
+          photos={viewed.map(({ ph, uri }) => ({ id: ph.id, photo_uri: uri, cacheKey: ph.id }))}
+          index={Math.min(viewing.at, viewed.length - 1)}
+          onIndex={(at) => setViewing({ ...viewing, at })}
+          onClose={() => setViewing(null)}
+        />
+      ) : null}
+    </Modal>
+  );
+
   const sheet = (
-    <CheckinSheet
-      visit={noteFor ? {
-        id: noteFor.id, name: nameOf(noteFor), cover: noteFor.place.cover,
-        // The day at local noon: the sheet writes a date from this, and a
-        // bare `YYYY-MM-DD` is read as UTC midnight — the day before, west
-        // of Greenwich.
-        at: `${noteFor.day}T12:00:00`,
-        note: noteFor.note, audience: noteFor.audience ?? 'private', fresh: false,
-      } : null}
-      withAudience={AUDIENCE_ON}
-      // Saved: your visits are asked again, and this page after them.
-      onClose={(saved) => { setNoteFor(null); if (saved) mine.reload(); }}
-    />
+    <>
+      <CheckinSheet
+        visit={noteFor ? {
+          id: noteFor.id, name: nameOf(noteFor), cover: noteFor.place.cover,
+          // The day at local noon: the sheet writes a date from this, and a
+          // bare `YYYY-MM-DD` is read as UTC midnight — the day before, west
+          // of Greenwich.
+          at: `${noteFor.day}T12:00:00`,
+          note: noteFor.note, audience: noteFor.audience ?? 'private', fresh: false,
+        } : null}
+        withAudience={AUDIENCE_ON}
+        // Saved: your visits are asked again, and this page after them.
+        onClose={(saved) => { setNoteFor(null); if (saved) mine.reload(); }}
+      />
+      {viewer}
+    </>
   );
 
   return {

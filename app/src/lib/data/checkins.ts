@@ -3,7 +3,7 @@
 
 import { supabase } from '../supabase';
 import type { I18nDoc } from '../localized';
-import type { Audience, Checkin, PersonCheckin } from '../checkin';
+import { visitPhotosOf, type Audience, type Checkin, type PersonCheckin } from '../checkin';
 import { DAILY_LIMIT, refusedByPolicy } from '../quota';
 import { fetchPlaceId } from './guide';
 
@@ -11,6 +11,8 @@ type PhotoRow = { photo_uri: string; is_cover: boolean; is_hidden: boolean; sort
 type CheckinRow = {
   id: string; city_id: string | null; at: string;
   note?: string | null; audience?: Audience | null;
+  /** The visit's own photos (K4 of `docs/checkin-photos-plan.md`). */
+  checkin_photos?: unknown;
   places: {
     slug: string; name_en: string; name_vi: string; i18n?: I18nDoc | null;
     categories?: string[] | null;
@@ -40,7 +42,7 @@ function coverUri(photos: PhotoRow[] | undefined): string | null {
 export async function fetchMyCheckins(ownerId: string): Promise<Checkin[]> {
   const { data, error } = await supabase
     .from('checkins')
-    .select('id, city_id, at, note, audience, places(slug, name_en, name_vi, i18n, categories, place_photos(photo_uri, is_cover, is_hidden, sort_order))')
+    .select('id, city_id, at, note, audience, checkin_photos(id, path, width, height, position, hidden_at), places(slug, name_en, name_vi, i18n, categories, place_photos(photo_uri, is_cover, is_hidden, sort_order))')
     .eq('user_id', ownerId)
     .order('at', { ascending: false });
   if (error) throw new Error(error.message);
@@ -49,6 +51,7 @@ export async function fetchMyCheckins(ownerId: string): Promise<Checkin[]> {
   return ((data ?? []) as unknown as CheckinRow[]).map((r) => ({
     id: r.id, place_slug: r.places?.slug ?? '', city_id: r.city_id, at: r.at,
     note: r.note ?? null, audience: r.audience ?? null,
+    photos: visitPhotosOf(r.checkin_photos),
     place: r.places
       ? {
         name_en: r.places.name_en, name_vi: r.places.name_vi, i18n: r.places.i18n ?? null,
@@ -133,6 +136,7 @@ export async function fetchPersonCheckins(personId: string): Promise<PersonCheck
     audience: r.audience === 'friends' || r.audience === 'private' ? r.audience : null,
     likes: typeof r.likes === 'number' ? r.likes : 0,
     liked: r.liked === true,
+    photos: visitPhotosOf(r.photos),
   }));
 }
 

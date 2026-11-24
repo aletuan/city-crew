@@ -70,6 +70,9 @@ export type Checkin = {
      *  second row of chips. Empty when the row has none. */
     categories: string[];
   } | null;
+  /** The visit's own photos, in order, none hidden (`visitPhotosOf`).
+   *  Absent on a row the cache kept before they rode along. */
+  photos?: CheckinPhoto[];
 };
 
 /** Who a visit is shown to. Two answers, not the collections' three: a
@@ -328,6 +331,9 @@ export type PersonCheckin = {
   audience: Audience | null;
   likes: number;
   liked: boolean;
+  /** The visit's photos the reader may see, in order: none hidden, at
+   *  most three. Absent on a row the cache kept from before they rode. */
+  photos?: CheckinPhoto[];
 };
 
 // ── photos on a visit (K3 of docs/checkin-photos-plan.md) ──
@@ -357,6 +363,27 @@ export type CheckinPhoto = {
  *  · `other` — anything else, the network first among them: the one kind
  *    worth trying again as it is.
  */
+/**
+ * A visit's photos out of whatever the server sent: `person_checkins`'
+ * `jsonb`, or `checkins`' embed of `checkin_photos`. Read as untrusted —
+ * the generated types call a `jsonb` anything — so an entry without a
+ * path or a size is left out rather than drawn as a broken tile. The
+ * hidden are left out too: on a card a photo the desk took down is not
+ * there (only the sheet, for its owner, draws the gap). In `position`
+ * order where the rows carry one; `person_checkins` sends them ordered.
+ */
+export function visitPhotosOf(raw: unknown): CheckinPhoto[] {
+  if (!Array.isArray(raw)) return [];
+  type Row = { id?: unknown; path?: unknown; width?: unknown; height?: unknown; position?: unknown; hidden_at?: unknown };
+  return (raw as Row[])
+    .filter((r) => r && typeof r.id === 'string' && typeof r.path === 'string'
+      && typeof r.width === 'number' && typeof r.height === 'number' && r.hidden_at == null)
+    .map((r, i) => ({ r, at: typeof r.position === 'number' ? r.position : i }))
+    .sort((a, b) => a.at - b.at)
+    .slice(0, PHOTOS_PER_VISIT)
+    .map(({ r }) => ({ id: r.id as string, path: r.path as string, width: r.width as number, height: r.height as number }));
+}
+
 export type PhotoRefusal = 'full' | 'day' | 'account' | 'image' | 'signed_out' | 'other';
 
 const IMAGE_CODES = new Set(['not_jpeg', 'malformed', 'truncated', 'no_image', 'too_large', 'too_big']);

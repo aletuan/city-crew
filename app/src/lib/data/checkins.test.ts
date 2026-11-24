@@ -21,6 +21,13 @@ describe('fetchMyCheckins', () => {
     fake().replies({ data: [
       {
         id: 'k2', city_id: 'hanoi', at: '2026-10-08T03:00:00+07:00', note: 'Crisp sourdough.', audience: 'friends',
+        // In position order, whatever order the embed came in; the
+        // hidden one left out.
+        checkin_photos: [
+          { id: 'p2', path: 'u1/k2/p2.jpg', width: 900, height: 1200, position: 2, hidden_at: null },
+          { id: 'p3', path: 'u1/k2/p3.jpg', width: 900, height: 1200, position: 3, hidden_at: '2026-11-25T00:00:00Z' },
+          { id: 'p1', path: 'u1/k2/p1.jpg', width: 1200, height: 900, position: 1, hidden_at: null },
+        ],
         places: {
           slug: 'cong', name_en: 'Cong', name_vi: 'Cộng', i18n: null, categories: ['cafes', 'eats'],
           // The cover wins over sort order; a hidden one never shows.
@@ -40,16 +47,16 @@ describe('fetchMyCheckins', () => {
     const rows = await fetchMyCheckins('u1');
     const [call] = fake().log;
     expect(call.table).toBe('checkins');
-    expect(call.payload).toBe('id, city_id, at, note, audience, places(slug, name_en, name_vi, i18n, categories, place_photos(photo_uri, is_cover, is_hidden, sort_order))');
+    expect(call.payload).toBe('id, city_id, at, note, audience, checkin_photos(id, path, width, height, position, hidden_at), places(slug, name_en, name_vi, i18n, categories, place_photos(photo_uri, is_cover, is_hidden, sort_order))');
     expect(call.filters).toEqual([['user_id', 'u1']]);
     expect(call.order).toEqual(['at', { ascending: false }]);
     expect(rows).toEqual([
-      { id: 'k2', place_slug: 'cong', city_id: 'hanoi', at: '2026-10-08T03:00:00+07:00', note: 'Crisp sourdough.', audience: 'friends', place: { name_en: 'Cong', name_vi: 'Cộng', i18n: null, cover: 'https://x/cover.jpg', categories: ['cafes', 'eats'] } },
+      { id: 'k2', place_slug: 'cong', city_id: 'hanoi', at: '2026-10-08T03:00:00+07:00', note: 'Crisp sourdough.', audience: 'friends', photos: [{ id: 'p1', path: 'u1/k2/p1.jpg', width: 1200, height: 900 }, { id: 'p2', path: 'u1/k2/p2.jpg', width: 900, height: 1200 }], place: { name_en: 'Cong', name_vi: 'Cộng', i18n: null, cover: 'https://x/cover.jpg', categories: ['cafes', 'eats'] } },
       // A row whose place is gone has no slug to show; it still counts.
       // No note and no answer on it: nulls, never holes.
-      { id: 'k1', place_slug: '', city_id: null, at: '2026-10-01T03:00:00Z', note: null, audience: null, place: null },
+      { id: 'k1', place_slug: '', city_id: null, at: '2026-10-01T03:00:00Z', note: null, audience: null, photos: [], place: null },
       // No categories on the row: an empty list, never a hole.
-      { id: 'k0', place_slug: 'bare', city_id: 'hanoi', at: '2026-09-01T03:00:00Z', note: null, audience: null, place: { name_en: 'Bare', name_vi: 'Bare', i18n: { ja: { name: 'ベア' } }, cover: null, categories: [] } },
+      { id: 'k0', place_slug: 'bare', city_id: 'hanoi', at: '2026-09-01T03:00:00Z', note: null, audience: null, photos: [], place: { name_en: 'Bare', name_vi: 'Bare', i18n: { ja: { name: 'ベア' } }, cover: null, categories: [] } },
     ]);
   });
   it('throws the database’s words when the read fails', async () => {
@@ -171,11 +178,13 @@ describe('fetchPersonCheckins', () => {
     fake().replies({ data: [{
       id: 'k1', place_slug: 'cong', name_en: 'Cong', name_vi: 'Cộng', i18n: { ja: { name: 'コン' } }, categories: ['cafes'],
       cover: 'https://x/cover.jpg', city_id: 'hanoi', day: '2026-11-24', note: 'Crisp sourdough.', audience: 'friends', likes: 2, liked: true,
+      photos: [{ id: 'p1', path: 'u2/k1/p1.jpg', width: 1200, height: 900 }],
     }] });
     expect(await fetchPersonCheckins('u1')).toEqual([{
       id: 'k1', place_slug: 'cong',
       place: { name_en: 'Cong', name_vi: 'Cộng', cover: 'https://x/cover.jpg', i18n: { ja: { name: 'コン' } }, categories: ['cafes'] },
       city_id: 'hanoi', day: '2026-11-24', note: 'Crisp sourdough.', audience: 'friends', likes: 2, liked: true,
+      photos: [{ id: 'p1', path: 'u2/k1/p1.jpg', width: 1200, height: 900 }],
     }]);
     expect(fake().log).toEqual([{ op: 'rpc', fn: 'person_checkins', payload: { p_person: 'u1' }, filters: [] }]);
   });
@@ -187,7 +196,7 @@ describe('fetchPersonCheckins', () => {
     }] });
     expect(await fetchPersonCheckins('u1')).toEqual([{
       id: 'k1', place_slug: 'cong', place: { name_en: '', name_vi: '', cover: null, i18n: null, categories: [] },
-      city_id: null, day: '2026-11-24', note: null, audience: null, likes: 0, liked: false,
+      city_id: null, day: '2026-11-24', note: null, audience: null, likes: 0, liked: false, photos: [],
     }]);
   });
 

@@ -61,12 +61,13 @@ import { RECENTS_SHOWN, rememberSearch, VISIT_RECENTS_KEY } from '../lib/recents
 import { NO_RECENTS, RECENTS, useStored } from '../lib/stored';
 import { colors, display, font, space } from '../theme';
 import type { Nav } from '../nav';
-import { VisitNoteSheet, VisitRow } from './visited/VisitRow';
+import { useVisitThumbs, VisitNoteSheet, VisitRow } from './visited/VisitRow';
 
 export default function VisitedScreen({ navigation }: { navigation: Nav }) {
   const { t, lang } = useI18n();
   const visits = useMyCheckins();
   const removeVisit = useRemoveCheckin(visits.reload);
+  const thumbOf = useVisitThumbs(visits.data);
   const { cities } = useCityList();
   const [menuFor, setMenuFor] = useState<Checkin | null>(null);
   const [noteFor, setNoteFor] = useState<Checkin | null>(null);
@@ -318,9 +319,7 @@ export default function VisitedScreen({ navigation }: { navigation: Nav }) {
                     <VisitRow
                       key={v.id}
                       v={v}
-                      name={nameOf(v)}
-                      meta={metaOf(v)}
-                      divided={i > 0}
+                      name={nameOf(v)} meta={metaOf(v)} divided={i > 0} own={thumbOf(v)}
                       onOpen={v.place_slug ? () => { noteSearch(); navigation.navigate('PlaceDetail', { slug: v.place_slug }); } : undefined}
                       onMenu={() => setMenuFor(v)}
                       onNote={() => setNoteFor(v)}

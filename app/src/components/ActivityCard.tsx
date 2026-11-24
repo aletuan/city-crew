@@ -45,6 +45,19 @@
 // kept from being public as a figure in the heart's place: the outline
 // in the quiet grey, the number, and nothing to press, as its own page
 // draws them. With none kept it ends in the card's own padding.
+//
+// ── a visit's own photos (K4 of `docs/checkin-photos-plan.md`) ──
+//
+// A visit with photos wears its first in the cover's place (`photo`),
+// and the picture is then its own press, into the photos, full screen;
+// the words under it stay the press into the place. Two presses on one
+// card, one above the other, rather than one nested in the other: a
+// press inside a press is the inner one's on a phone and a warning on
+// the web, and the line between them is the picture's own edge.
+//
+// More than one: their number in the corner, on the scrim the photo
+// controls wear (`photoDisc`), with the stack glyph — the count is what
+// says the press opens more than this picture.
 
 import React from 'react';
 import type Ionicons from '@expo/vector-icons/Ionicons';
@@ -53,12 +66,12 @@ import { Image } from 'expo-image';
 import LikeHeart from './LikeHeart';
 import { CopyGlyph } from './CopyGlyph';
 import { Glyph, ICON } from './ui/glyph';
-import { PressableScale } from './ui/controls';
+import { photoDisc, PressableScale } from './ui/controls';
 import { Avatar, Card } from './ui/surfaces';
 import { useI18n } from '../lib/i18n';
 import type { Preview } from '../lib/comments';
 import { likesWorthShowing } from '../lib/likes';
-import { colors, font, space, type } from '../theme';
+import { colors, font, onPhoto, space, type } from '../theme';
 
 /** The face beside the reason: a line of the reason and a line of the
  *  time is 20 + 17, and the face is their height. */
@@ -108,8 +121,13 @@ function CopyFoot({ copy }: { copy: CardCopy }) {
   );
 }
 
+/** A visit's own photo in the cover's place: its link, the key the
+ *  picture is cached under (the photo's id — the link changes hourly),
+ *  how many the visit has, and the press that opens them. */
+export type CardPhoto = { uri: string; cacheKey: string; n: number; onPress: () => void };
+
 export default function ActivityCard({
-  face, who, did, when, mark, title, uri, meta, desc, under, liked, likes, onOpen, onHeart, comments, onComments, commentsOff, copy, testID,
+  face, who, did, when, mark, title, uri, photo, meta, desc, under, liked, likes, onOpen, onHeart, comments, onComments, commentsOff, copy, testID,
 }: {
   /** Whose face, as `Avatar` takes it. */
   face?: string | null;
@@ -123,6 +141,8 @@ export default function ActivityCard({
   mark?: ActivityMark | null;
   title: string;
   uri?: string;
+  /** Drawn instead of `uri`, as its own press — see the header. */
+  photo?: CardPhoto;
   meta: string;
   desc?: string | null;
   /** Drawn under the words, in the description's place, by a card whose
@@ -180,6 +200,7 @@ export default function ActivityCard({
           </View>
         </View>
       </View>
+      {photo ? <PhotoPress photo={photo} /> : null}
       <PressableScale
         onPress={onOpen}
         haptic="selection"
@@ -188,7 +209,7 @@ export default function ActivityCard({
         accessibilityLabel={[title, meta].join(', ')}
         testID="activity-open"
       >
-        {uri
+        {photo ? null : uri
           // `memory-disk`, where `expo-image` defaults to `disk`: a feed
           // prefetches the covers it is about to draw into memory, and a
           // card must read from where they were put (`Avatar` has the
@@ -254,7 +275,39 @@ export default function ActivityCard({
   );
 }
 
+function PhotoPress({ photo }: { photo: CardPhoto }) {
+  const { t } = useI18n();
+  return (
+    <PressableScale
+      onPress={photo.onPress}
+      haptic="selection"
+      scaleTo={0.985}
+      accessibilityRole="button"
+      accessibilityLabel={photo.n > 1
+        ? t(`${photo.n} photos`, `${photo.n} ảnh`, `写真${photo.n}枚`, `${photo.n} 张照片`, `${photo.n} 張照片`)
+        : t('Photo', 'Ảnh', '写真', '照片', '照片')}
+      testID="activity-photo"
+    >
+      <Image source={{ uri: photo.uri, cacheKey: photo.cacheKey }} style={s.photo} contentFit="cover" transition={160} cachePolicy="memory-disk" />
+      {photo.n > 1 ? (
+        <View style={s.many} testID="activity-photo-count">
+          <Glyph name="images-outline" size={ICON.meta} color={onPhoto.text} />
+          <Text style={s.manyText}>{photo.n}</Text>
+        </View>
+      ) : null}
+    </PressableScale>
+  );
+}
+
 const s = StyleSheet.create({
+  // The photo controls' scrim and hairline (`photoDisc`), as a pill: 10
+  // from the picture's corner, the bookmark's inset on a place card.
+  many: {
+    position: 'absolute', right: 10, bottom: 10, flexDirection: 'row', alignItems: 'center', gap: 4,
+    paddingHorizontal: 8, height: 24, borderRadius: 12,
+    backgroundColor: photoDisc.backgroundColor, borderWidth: photoDisc.borderWidth, borderColor: photoDisc.borderColor,
+  },
+  manyText: { color: onPhoto.text, fontSize: 13, fontWeight: font.semibold, fontVariant: ['tabular-nums'] },
   off: { opacity: 0.35 },
   head: { flexDirection: 'row', alignItems: 'center', gap: 10, padding: space.cardPadding, paddingBottom: 12 },
   headWords: { flex: 1 },
