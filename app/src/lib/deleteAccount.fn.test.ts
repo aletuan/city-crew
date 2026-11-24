@@ -93,7 +93,7 @@ describe('delete-account', () => {
   });
 
   it('deletes the account the token proves, whatever the body names', async () => {
-    h.fake.replies(signedIn('u1'), { data: {} }, { data: {}, error: null });
+    h.fake.replies(signedIn('u1'), { data: {} }, { data: [], error: null }, { data: {}, error: null });
     const res = await call({ token: 'jwt-u1', body: { user_id: 'someone-else' } });
     expect(res.status).toBe(200);
     expect(await res.json()).toEqual({ ok: true });
@@ -101,34 +101,67 @@ describe('delete-account', () => {
   });
 
   it('holds the service role, which is what deleting an auth user takes', async () => {
-    h.fake.replies(signedIn('u1'), { data: {} }, { data: {}, error: null });
+    h.fake.replies(signedIn('u1'), { data: {} }, { data: [], error: null }, { data: {}, error: null });
     await call({ token: 'jwt-u1' });
     expect(h.created).toEqual([['https://project.test', 'service-role-key']]);
   });
 
   it('removes the avatar first, while something still owns it', async () => {
-    h.fake.replies(signedIn('u1'), { data: {} }, { data: {}, error: null });
+    h.fake.replies(signedIn('u1'), { data: {} }, { data: [], error: null }, { data: {}, error: null });
     await call({ token: 'jwt-u1' });
-    expect(fns()).toEqual(['getUser', 'remove', 'admin.deleteUser']);
+    expect(fns()).toEqual(['getUser', 'remove', undefined, 'admin.deleteUser']);
     expect(h.fake.log[1]).toMatchObject({ table: 'avatars', op: 'storage', payload: ['u1/avatar.jpg', 'u1/wall.jpg'] });
   });
 
+  // The photos on their check-ins: named by their rows before the cascade
+  // takes the rows, removed before the account goes, best-effort.
+  it('removes the photos on their check-ins, named by their rows, before the account goes', async () => {
+    h.fake.replies(
+      signedIn('u1'), { data: {} },
+      { data: [{ path: 'u1/v1/p1.jpg' }, { path: 'u1/v2/p2.jpg' }], error: null },
+      { data: {}, error: null },
+      { data: {}, error: null },
+    );
+    const res = await call({ token: 'jwt-u1' });
+    expect(res.status).toBe(200);
+    expect(fns()).toEqual(['getUser', 'remove', undefined, 'remove', 'admin.deleteUser']);
+    expect(h.fake.log[2]).toMatchObject({ table: 'checkin_photos', op: 'select', payload: 'path', filters: [['user_id', 'u1']] });
+    expect(h.fake.log[3]).toMatchObject({ table: 'checkin-photos', op: 'storage', payload: ['u1/v1/p1.jpg', 'u1/v2/p2.jpg'] });
+  });
+
+  it('asks Storage nothing when there are no such photos', async () => {
+    h.fake.replies(signedIn('u1'), { data: {} }, { data: null, error: null }, { data: {}, error: null });
+    await call({ token: 'jwt-u1' });
+    expect(h.fake.log.filter((a) => a.table === 'checkin-photos')).toEqual([]);
+    expect(fns()).toContain('admin.deleteUser');
+  });
+
+  it('still deletes the account when finding or removing those photos fails', async () => {
+    h.fake.replies(signedIn('u1'), { data: {} }, { throws: new Error('db down') }, { data: {}, error: null });
+    expect((await call({ token: 'jwt-u1' })).status).toBe(200);
+    expect(fns()).toContain('admin.deleteUser');
+    h.fake.reset();
+    h.fake.replies(signedIn('u1'), { data: {} }, { data: [{ path: 'u1/v1/p1.jpg' }], error: null }, { throws: new Error('storage down') }, { data: {}, error: null });
+    expect((await call({ token: 'jwt-u1' })).status).toBe(200);
+    expect(fns()).toContain('admin.deleteUser');
+  });
+
   it('still deletes the account when removing the avatar throws', async () => {
-    h.fake.replies(signedIn('u1'), { throws: new Error('storage down') }, { data: {}, error: null });
+    h.fake.replies(signedIn('u1'), { throws: new Error('storage down') }, { data: [], error: null }, { data: {}, error: null });
     const res = await call({ token: 'jwt-u1' });
     expect(res.status).toBe(200);
     expect(fns()).toContain('admin.deleteUser');
   });
 
   it('still deletes the account when there was no avatar to remove', async () => {
-    h.fake.replies(signedIn('u1'), { data: null, error: { message: 'Object not found' } }, { data: {}, error: null });
+    h.fake.replies(signedIn('u1'), { data: null, error: { message: 'Object not found' } }, { data: [], error: null }, { data: {}, error: null });
     const res = await call({ token: 'jwt-u1' });
     expect(res.status).toBe(200);
     expect(fns()).toContain('admin.deleteUser');
   });
 
   it('reports a deletion the auth server refused, rather than claiming it happened', async () => {
-    h.fake.replies(signedIn('u1'), { data: {} }, { data: null, error: { message: 'Database error deleting user' } });
+    h.fake.replies(signedIn('u1'), { data: {} }, { data: [], error: null }, { data: null, error: { message: 'Database error deleting user' } });
     const res = await call({ token: 'jwt-u1' });
     expect(res.status).toBe(500);
     expect(await res.json()).toEqual({ error: 'Database error deleting user' });

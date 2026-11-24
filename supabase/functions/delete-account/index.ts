@@ -13,7 +13,8 @@
 //
 // The avatar lives in storage rather than a table, so the cascade cannot
 // reach it; it is removed here, best-effort — an orphaned jpeg must not
-// be what stands between a person and their right to leave.
+// be what stands between a person and their right to leave. The photos on
+// their check-ins too, since 25 Nov 2026.
 //
 // No confirmation happens here. The server cannot know whether a tap was
 // meant; the app asks twice before calling, and by the time this runs,
@@ -45,6 +46,17 @@ Deno.serve(async (req) => {
   // folder; one call takes both, and a name with no file behind it is not
   // an error to Storage.
   await admin.storage.from("avatars").remove([`${uid}/avatar.jpg`, `${uid}/wall.jpg`]).catch(() => {});
+
+  // The photos on their check-ins (docs/checkin-photos-plan.md), named by
+  // their rows while the rows still exist — the cascade takes the rows,
+  // and nothing could name the files after it. Best-effort for the same
+  // reason as the face: a file left behind is an orphan the daily
+  // `prune-checkin-photos` takes, not a reason to keep anybody.
+  try {
+    const { data: photos } = await admin.from("checkin_photos").select("path").eq("user_id", uid);
+    const paths = ((photos ?? []) as { path: string }[]).map((p) => p.path);
+    if (paths.length > 0) await admin.storage.from("checkin-photos").remove(paths);
+  } catch (_) { /* see above */ }
 
   const { error } = await admin.auth.admin.deleteUser(uid);
   if (error) return json({ error: error.message }, 500);

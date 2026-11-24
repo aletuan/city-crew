@@ -173,9 +173,17 @@ Mỗi bước một PR, theo thứ tự. Cờ `checkin_photos` tắt suốt cả
   ảnh, `checkin_photo_slot` chỉ service role gọi được. Ảnh bị xoá trả lại
   chỗ trong hạn mức ngày: vòng xoá rồi thêm chỉ tốn lượt ghi, không tốn
   dung lượng, vì tổng không vượt 300.
-- **K2. Edge Function `checkin-photo`** (tải lên, xoá) và
+- **K2. Edge Function `checkin-photo` — xong (25/11/2026).** (tải lên, xoá) và
   **`prune-checkin-photos`**, kèm `*.fn.test.ts` (sàn coverage của Edge
   Function là 100 dòng / 94 nhánh). Xoá tài khoản xoá cả thư mục.
+  Đã làm: `checkin-photo` (ảnh gửi dạng base64 trong JSON; tải lên và
+  xoá), `_shared/jpeg.ts` (kiểm JPEG, bỏ APP1–APP15 trừ APP14 của Adobe
+  vì nó chỉ nói cách đổi màu, bỏ COM, cắt mọi thứ sau EOI — đo trên ảnh
+  thật: điểm ảnh giữ nguyên từng điểm, hết EXIF/GPS, 2–7 ms một ảnh),
+  `prune-checkin-photos` với hàm `checkin_photo_orphans` /
+  `checkin_photos_usage` (`20261125000000_checkin_photo_orphans.sql`) và
+  `cron.sql` chạy mỗi ngày (áp tay, như các cron khác), `delete-account`
+  xoá ảnh check-in theo dòng trước khi xoá tài khoản.
 - **K3. Thêm ảnh trong `CheckinSheet`:** tối đa ba ô, thêm, bỏ, tiến độ
   tải, lỗi từng ảnh. Sau cờ.
 - **K4. Hiển thị:** thẻ trên trang cá nhân, danh sách check-in, trình
