@@ -59,8 +59,13 @@ export function dragCallbacks(drag: Animated.Value, close: () => void): PanRespo
  * spread on whatever part of it can be pulled. A sheet that scrolls puts
  * them on its handle and title only, so the list keeps its own gesture;
  * one that does not, on the whole sheet.
+ *
+ * `on` false makes no responder at all, for `Sheet`, which calls this for
+ * every sheet and spreads the handlers only on those that can be pulled:
+ * a responder nobody holds is still a `PanResponder.create`, and a screen
+ * test that watches for the one its list makes would take this one.
  */
-export function useSheetDrag(visible: boolean, onClose: () => void) {
+export function useSheetDrag(visible: boolean, onClose: () => void, on = true) {
   const drag = useRef(new Animated.Value(0)).current;
   const close = useRef(onClose);
   close.current = onClose;
@@ -68,8 +73,8 @@ export function useSheetDrag(visible: boolean, onClose: () => void) {
   // put back before it opens again.
   useEffect(() => { if (visible) drag.setValue(0); }, [visible, drag]);
   const handlers = useMemo(
-    () => PanResponder.create(dragCallbacks(drag, () => close.current())).panHandlers,
-    [drag],
+    () => (on ? PanResponder.create(dragCallbacks(drag, () => close.current())).panHandlers : {}),
+    [drag, on],
   );
   return { drag, handlers };
 }

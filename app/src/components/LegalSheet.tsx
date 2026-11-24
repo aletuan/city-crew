@@ -12,25 +12,22 @@
 // the sheet closes, with no state to lift and nothing to restore. A
 // `navigation.navigate` would have had to earn that back.
 //
-// The sheet grammar is the app's — `Modal transparent` with a fading
-// scrim and a sheet that springs up on the native driver, the same spring
-// the city, language and theme switchers use. What is new here is only
-// the height (these are long documents) and `accessibilityViewIsModal`,
-// which none of the older sheets set: without it VoiceOver walks straight
-// past the sheet into the form behind it.
+// The sheet is the app's `Sheet`. What is its own is the height (these
+// are long documents), a spring from 60 under rather than 320, and a foot
+// that carries the phone's inset itself. `accessibilityViewIsModal`
+// started here, when none of the older sheets set it — without it
+// VoiceOver walks straight past the sheet into the form behind it — and
+// is now `Sheet`'s, for every one.
 
 import React, { useEffect, useRef, useState } from 'react';
-import {
-  Animated, Linking, Modal, Pressable, ScrollView, StyleSheet, Text,
-  useWindowDimensions, View,
-} from 'react-native';
+import { Linking, Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import { Glyph, ICON } from './ui/glyph';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { DOCS, type Block, type Doc, type LegalId } from '../lib/legal';
 import { isDocLink, parseInline } from '../lib/legalmark';
 import { useI18n } from '../lib/i18n';
-import { colors, font, radius, space, type } from '../theme';
-import { fireHaptic, PressableScale } from './ui';
+import { colors, font, space, type } from '../theme';
+import { fireHaptic, PressableScale, Sheet } from './ui';
 
 const byId = (id: LegalId): Doc => DOCS.find((d) => d.id === id) ?? DOCS[0];
 const byFile = (file: string): LegalId | null => DOCS.find((d) => d.file === file)?.id ?? null;
@@ -111,12 +108,6 @@ export default function LegalSheet({ id, onClose }: {
   const [shown, setShown] = useState<LegalId>(id ?? 'terms');
   useEffect(() => { if (id) setShown(id); }, [id]);
 
-  const rise = useRef(new Animated.Value(1)).current;
-  useEffect(() => {
-    if (!id) { rise.setValue(1); return; }
-    Animated.spring(rise, { toValue: 0, useNativeDriver: true, speed: 14, bounciness: 3 }).start();
-  }, [id, rise]);
-
   const doc = byId(shown);
   // Japanese falls back to English, exactly as the published pages do for
   // a reader who follows the same link in a browser.
@@ -131,71 +122,54 @@ export default function LegalSheet({ id, onClose }: {
   };
 
   return (
-    <Modal visible={id != null} transparent animationType="fade" onRequestClose={onClose} statusBarTranslucent>
-      <Pressable style={st.scrim} onPress={onClose} accessibilityLabel={close} />
-      <Animated.View
-        accessibilityViewIsModal
-        style={[st.sheet, {
-          height: winH * 0.9,
-          transform: [{ translateY: rise.interpolate({ inputRange: [0, 1], outputRange: [0, 60] }) }],
-        }]}
-      >
-        <View style={st.grabber} />
-        <View style={st.head}>
-          <View style={{ flex: 1 }}>
-            <Text style={st.title} accessibilityRole="header">{doc.title[half]}</Text>
-            <Text style={st.date}>{doc.effective[half]}</Text>
-          </View>
-          {/* 44×44 because it is a control, which is where that rule
-              actually applies — see the note in SignUpScreen about why
-              the links in the sentence below the button cannot be. */}
-          <PressableScale
-            onPress={onClose}
-            haptic="selection"
-            contentStyle={st.x}
-            accessibilityRole="button"
-            accessibilityLabel={close}
-          >
-            <Glyph name="close" size={ICON.nav} color={colors.textSecondary} />
-          </PressableScale>
+    <Sheet visible={id != null} onClose={onClose} riseFrom={60} grabberGap={10}
+      style={[st.sheet, { height: winH * 0.9 }]}>
+      <View style={st.head}>
+        <View style={{ flex: 1 }}>
+          <Text style={st.title} accessibilityRole="header">{doc.title[half]}</Text>
+          <Text style={st.date}>{doc.effective[half]}</Text>
         </View>
-
-        <ScrollView
-          ref={scroller}
-          style={st.scroll}
-          contentContainerStyle={{ paddingVertical: 18, paddingBottom: 26 }}
-          showsVerticalScrollIndicator={false}
+        {/* 44×44 because it is a control, which is where that rule
+            actually applies — see the note in SignUpScreen about why
+            the links in the sentence below the button cannot be. */}
+        <PressableScale
+          onPress={onClose}
+          haptic="selection"
+          contentStyle={st.x}
+          accessibilityRole="button"
+          accessibilityLabel={close}
         >
-          {doc.blocks.map((b, i) => <BlockView key={i} block={b} lang={half} onDoc={swap} />)}
-        </ScrollView>
+          <Glyph name="close" size={ICON.nav} color={colors.textSecondary} />
+        </PressableScale>
+      </View>
 
-        {/* Quiet, not the gradient PrimaryButton: that one is the Sign up
-            button, and the loudest thing on a screen should not be its
-            way out. It earns its place all the same — at 90% tall the
-            scrim is a 10% strip nobody's thumb reaches, and after a long
-            document the thumb is down here. */}
-        <View style={[st.foot, { paddingBottom: 14 + insets.bottom }]}>
-          <Pressable onPress={() => { fireHaptic('selection'); onClose(); }} accessibilityRole="button">
-            <Text style={st.footText}>{close}</Text>
-          </Pressable>
-        </View>
-      </Animated.View>
-    </Modal>
+      <ScrollView
+        ref={scroller}
+        style={st.scroll}
+        contentContainerStyle={{ paddingVertical: 18, paddingBottom: 26 }}
+        showsVerticalScrollIndicator={false}
+      >
+        {doc.blocks.map((b, i) => <BlockView key={i} block={b} lang={half} onDoc={swap} />)}
+      </ScrollView>
+
+      {/* Quiet, not the gradient PrimaryButton: that one is the Sign up
+          button, and the loudest thing on a screen should not be its
+          way out. It earns its place all the same — at 90% tall the
+          scrim is a 10% strip nobody's thumb reaches, and after a long
+          document the thumb is down here. */}
+      <View style={[st.foot, { paddingBottom: 14 + insets.bottom }]}>
+        <Pressable onPress={() => { fireHaptic('selection'); onClose(); }} accessibilityRole="button">
+          <Text style={st.footText}>{close}</Text>
+        </Pressable>
+      </View>
+    </Sheet>
   );
 }
 
 const st = StyleSheet.create({
-  scrim: { ...StyleSheet.absoluteFill, backgroundColor: 'rgba(6,5,8,0.62)' },
-  sheet: {
-    position: 'absolute', left: 0, right: 0, bottom: 0,
-    backgroundColor: colors.bgElevated,
-    borderTopLeftRadius: radius.card + 6, borderTopRightRadius: radius.card + 6,
-    paddingTop: 8,
-  },
-  grabber: {
-    alignSelf: 'center', width: 36, height: 4, borderRadius: 2,
-    backgroundColor: colors.borderGlass, marginBottom: 10,
-  },
+  // The documents' head and body take the page margin themselves, and
+  // the foot carries the inset: the panel adds neither.
+  sheet: { paddingHorizontal: 0, paddingTop: 8, paddingBottom: 0 },
   head: {
     flexDirection: 'row', alignItems: 'flex-start', gap: 10,
     paddingHorizontal: space.page, paddingBottom: 12,
