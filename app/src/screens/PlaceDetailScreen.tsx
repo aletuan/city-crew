@@ -24,7 +24,6 @@
 // pretty. On paper neither number applies to the glyphs: they are ink.
 
 import { useTourAnchor } from '../components/SignupTour';
-import { useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   ScrollView,
@@ -33,38 +32,30 @@ import {
   View,
 } from 'react-native';
 import { Image } from 'expo-image';
-import { useFlag } from '../lib/useFlag';
-import { useSession } from '../lib/auth';
 import { LinearGradient } from 'expo-linear-gradient';
-import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { Glyph, ICON } from '../components/ui/glyph';
-import { coverOf, fmtCount, isFree, photosOf, usePlaceBySlug, usePlacePhotos, withPhotos } from '../lib/data';
-import { useMyCheckins } from '../lib/checkins';
-import { canRepeat, latestCheckin, visitsAt } from '../lib/checkin';
-import ActionSheet, { type SheetAction } from '../components/ActionSheet';
-import { usePlaces } from '../lib/catalog';
+import { photosOf } from '../lib/data';
 import { shortAddress } from '../lib/address';
 import { splitName, subtitleBeside } from '../lib/name';
 import { useCity } from '../lib/city';
 import { kindsInOrder } from '../lib/categories';
 import PhotoCarousel from '../components/PhotoCarousel';
 import { cityTz } from '../lib/clock';
-import { clockOf, dateline } from '../lib/format';
 import { useI18n } from '../lib/i18n';
-import { useRemoveCheckin } from '../lib/useRemoveCheckin';
 import { localized } from '../lib/localized';
-import { useIsSaved, useSaveActions } from '../lib/save';
-import { useNoteEvent } from '../lib/tasteProfile';
+import { useSaveActions } from '../lib/save';
 import { colors, space } from '../theme';
-import { AmbientWarmth, BackButton, CountBadge, Empty, GradientCta, PressableScale, useTabBarClearance } from '../components/ui';
-import PricePill from '../components/PricePill';
+import { AmbientWarmth, Empty, useTabBarClearance } from '../components/ui';
 import { KindPills } from '../components/KindPill';
 import LocalGuidePanel from '../components/LocalGuidePanel';
 import type { Nav, RootRoute } from '../nav';
 import { BlurbCard } from './placeDetail/BlurbCard';
 import { InfoCard } from './placeDetail/InfoCard';
-import { useCheckIn } from './placeDetail/useCheckIn';
-import { HISTORY_ROWS, MARK_INSET, BAR_NAME_MIN_SCALE, s } from './placeDetail/styles';
+import { usePhotoPage, usePlaceLookup } from './placeDetail/usePlacePage';
+import { PlaceBar } from './placeDetail/PlaceBar';
+import { ScoreRow } from './placeDetail/ScoreRow';
+import { MARK_INSET, s } from './placeDetail/styles';
 
 /**
  * The photograph card's height for its width, from the owner's mock-up:
@@ -80,87 +71,10 @@ export default function PlaceDetailScreen({ navigation, route }: { navigation: N
   const { city, cities } = useCity();
   const { save, askToSignIn } = useSaveActions();
   const { width } = useWindowDimensions();
-  const { loading: catalogLoading, data: places } = usePlaces();
-  const inCatalog = useMemo(
-    () => places.find((p) => p.slug === route.params.slug),
-    [places, route.params.slug],
-  );
-  // A place reached through a collection can be in another city, and the
-  // catalog is one city's worth. Asked for only when the catalog missed,
-  // and only once the catalog has actually settled — asking while it is
-  // still loading would fire a request for every place you open.
-  const elsewhere = usePlaceBySlug(!catalogLoading && !inCatalog ? route.params.slug : null);
-  // The catalog carries one photograph a place, and the carousel wants
-  // them all — asked for on opening, while the cover is already on
-  // screen. A place from elsewhere came with its own set and asks nothing.
-  // The catalog's row is the stamp: when it reloads after the gallery,
-  // the set is asked for again (`usePlacePhotos`, `withPhotos`).
-  const allPhotos = usePlacePhotos(inCatalog ? [inCatalog.slug] : null, inCatalog);
-  const place = useMemo(
-    () => (inCatalog ? withPhotos(inCatalog, allPhotos.data[inCatalog.slug]) : elsewhere.data ?? undefined),
-    [inCatalog, allPhotos.data, elsewhere.data],
-  );
+  const { place, loading } = usePlaceLookup(route.params.slug);
   const saveAnchor = useTourAnchor('save', () => { if (place) save(place); }, () => navigation.isFocused());
-  const loading = catalogLoading || elsewhere.loading;
-  const [photoIndex, setPhotoIndex] = useState(0);
-  // Back to the first page when the cover changes under the reader. The
-  // gallery is opened from this screen, and the way a keeper picks a new
-  // cover is by swiping here first: they find the picture on page 5, set
-  // it, and come back. The catalog reloads and puts it first — while the
-  // carousel stays on page 5, now showing somebody else, with "5 / 6"
-  // still under it. The screen looked as if the change had not taken.
-  // Reset during render rather than in an effect, so the stale page is
-  // never painted; the carousel below is keyed on the same value so the
-  // native scroll offset starts over too.
-  //
-  // And when the number of photographs changes (23 Oct 2026): the owner
-  // swiped to a late page, deleted photographs in the gallery, and came
-  // back to a page that no longer existed — the carousel now keeps its
-  // own reading in range, but the strip should start over all the same,
-  // as it does for a new cover.
-  const coverUri = place ? coverOf(place)?.photo_uri ?? null : null;
-  const pageKey = `${coverUri ?? 'no-cover'}|${place ? photosOf(place).length : 0}`;
-  const [pagedFor, setPagedFor] = useState(pageKey);
-  if (pagedFor !== pageKey) {
-    setPagedFor(pageKey);
-    setPhotoIndex(0);
-  }
-  const showPrice = useFlag('place_price');
-  // The door before the room: see `place_checkin` in `lib/flags`. For
-  // everyone, guests included. It was the signed-in's only, on the
-  // argument that a guest has nobody to check in as and the bookmark
-  // already played the door-to-sign-in part here. The owner's review
-  // (15 Oct 2026): a control that appears only after signing in is one
-  // a guest never learns exists, and the bookmark and the like are both
-  // drawn for guests and open the sign-in sheet on a tap. So this does
-  // the same — see `checkIn`.
-  const { session } = useSession();
-  const uid = session?.user?.id ?? null;
-  const showCheckin = useFlag('place_checkin');
-  // The reader's visits — the one copy the whole app shares, so the
-  // reload after a tap here is what the profile's count draws too.
-  const visits = useMyCheckins();
-  const removeVisit = useRemoveCheckin(visits.reload);
-  const [checkinMenu, setCheckinMenu] = useState(false);
-  const tap = useCheckIn({ uid, visits, askToSignIn });
-  const saved = useIsSaved(route.params.slug);
+  const { photoIndex, setPhotoIndex, pageKey, coverUri } = usePhotoPage(place);
   const tabClearance = useTabBarClearance();
-  const insets = useSafeAreaInsets();
-
-  // Opening a place is the one signal the app has to observe for itself:
-  // everything else the reader tells us out loud. Noted once per visit and
-  // only for a place that actually resolved — a screen that spent its whole
-  // life on the spinner is not somebody looking at a café.
-  //
-  // Above the two early returns, because a hook cannot live below one. It
-  // does nothing until `place` arrives, which is what the guard inside says.
-  const note = useNoteEvent();
-  useEffect(() => {
-    if (place) note(place.slug, 'open');
-  // One event per place, not per re-render: `place` is a new object whenever the catalog reloads
-  // and the slug is what identifies the visit.
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [place?.slug, note]);
 
   if (loading && !place) {
     return <SafeAreaView style={s.screen}><ActivityIndicator color={colors.accent} style={{ marginTop: 64 }} /></SafeAreaView>;
@@ -170,10 +84,8 @@ export default function PlaceDetailScreen({ navigation, route }: { navigation: N
   }
 
   const photos = photosOf(place);
-  const reviews = fmtCount(place.rating_count);
   // The pin's category first, so the page leads where the card led.
   const kindOrder = kindsInOrder(place);
-  const priceShown = showPrice && (place.price_display || place.price_vnd != null);
   // The page's width less its two margins, at the mock-up's ratio.
   const heroW = width - space.page * 2;
   const heroH = Math.round(heroW * HERO_RATIO);
@@ -235,89 +147,20 @@ export default function PlaceDetailScreen({ navigation, route }: { navigation: N
   // margin so its ink, not its empty box, stands on it: back by
   // `BACK_HANG`, the bookmark by `SAVE_HANG`. The name between them is
   // centred on the screen, which the two hangs keep within a point.
-  const header = (
-    <View style={[s.bar, { paddingTop: insets.top + 6 }]}>
-      <BackButton onPress={() => navigation.goBack()} bare testID="detail-back" />
-      <Text
-        style={s.barName}
-        numberOfLines={1}
-        adjustsFontSizeToFit
-        minimumFontScale={BAR_NAME_MIN_SCALE}
-        accessibilityRole="header"
-        testID="detail-name"
-      >
-        {name.title}
-      </Text>
-      {/* The same control as the bookmark on the card that got you
-          here — same glyph, same sheet, same rows underneath. It was a
-          heart wired to component state: it filled in, it meant
-          nothing, and it forgot on the way back. */}
-      <PressableScale
-        anchorRef={saveAnchor}
-        onPress={() => save(place)} scaleTo={0.9} haptic="selection"
-        style={s.saveHang} contentStyle={s.barControl}
-        accessibilityRole="button"
-        accessibilityState={{ selected: saved }}
-        // Two ids for the two states, so a smoke flow can wait on the
-        // save having landed without reading a trilingual label.
-        testID={saved ? 'detail-saved' : 'detail-save'}
-        accessibilityLabel={saved
-          ? t('Saved — change collections', 'Đã lưu — đổi bộ sưu tập', '保存済み — コレクションを変更', '已保存 — 更改合集', '已儲存 — 更改合集')
-          : t('Save to a collection', 'Lưu vào bộ sưu tập', 'コレクションに保存', '保存到合集', '儲存到合集')}
-      >
-        <Glyph name={saved ? 'bookmark' : 'bookmark-outline'} size={ICON.nav} color={saved ? colors.accent : colors.text} />
-      </PressableScale>
-    </View>
-  );
 
-  // ── check-in ──
-  const latestVisit = latestCheckin(visits.data, place.slug);
-  const visitsHere = visitsAt(visits.data, place.slug);
-  // The tap, its refusals and the sheet that follows: `useCheckIn`.
-  const checkIn = () => tap.checkIn({
-    slug: place.slug, name: fullName, cover: coverUri, cityId: place.city_id ?? city?.id ?? null,
-  });
-  // Any one visit, not only the newest: the sheet lists them all, each
-  // with its own undo, because the one that was a slip is not always
-  // the last. The sheet stays open after one goes — the reader may be
-  // tidying two — and closes itself only when the last goes, since a
-  // sheet about a visit that no longer exists has nothing to show. No
-  // "are you sure": the sheet is already the second step after the
-  // pill, as the ⋯-then-sheet on the check-ins list was. The check-ins
-  // list itself no longer offers the undo for a place that opens, so
-  // this is the one place a visit is taken back (#831).
-  const undoCheckin = async (id: string) => {
-    if (visitsHere.length <= 1) setCheckinMenu(false);
-    await removeVisit(id);
-  };
-  // "Again" is the sheet's one commit, so it is drawn as every sheet's
-  // commit is — the wide gradient CTA under the history — and not as a
-  // menu row among rows (the reference mock made it a filled card of
-  // its own; the CTA is this app's filled card). Offered only while the
-  // rules allow another — ten minutes since the last, fewer than three
-  // today — because inside those a second tap is a slip, and the undo
-  // for a slip is on its row above. Hidden rather than dimmed: the
-  // sheet is most often opened in the minutes after a check-in, and a
-  // big dimmed button there would read as a button that is broken.
-  const canAgain = canRepeat(visits.data, place.slug, new Date());
-  // Below it, what else a visit might lead to. The review is a door
-  // drawn before its room, as the Check-in pill itself was (#812): the
-  // owner wants the reader to learn that a visit will be rateable here,
-  // and a row that says "coming soon" and refuses the tap teaches that
-  // without pretending.
-  const checkinActions: SheetAction[] = [{
-    key: 'review', icon: 'create-outline' as const, disabled: true,
-    title: t('Write a review', 'Viết đánh giá', 'レビューを書く', '写评价', '寫評價'),
-    desc: t('Coming soon — share what it was like.', 'Sắp có — chia sẻ trải nghiệm của bạn.', '近日公開 — 感想を共有できます。', '即将推出 — 分享你的体验。', '即將推出 — 分享你的體驗。'),
-    onPress: () => {},
-  }];
 
   return (
     // The bar takes the top inset itself, so it can sit on the paper
     // right under the clock; the bottom is cleared by `tabClearance`.
     <View style={s.screen}>
       <AmbientWarmth style={{ top: heroH, height: 620 }} />
-      {header}
+      <PlaceBar
+        slug={route.params.slug}
+        title={name.title}
+        onBack={() => navigation.goBack()}
+        onSave={() => save(place)}
+        saveAnchor={saveAnchor}
+      />
       <ScrollView
         testID={`detail-place-${place.slug}`}
         contentContainerStyle={{ paddingBottom: tabClearance }}
@@ -425,180 +268,10 @@ export default function PlaceDetailScreen({ navigation, route }: { navigation: N
               {subtitle}
             </Text>
           ) : null}
-          {/* ── the score, and the one thing to do about it ──
-              The rating at the left, check-in at the right: one line that
-              used to be two bands, the score and then a row of category
-              pills with the pill at its end. The categories went onto the
-              cover then, and came back under this line on 15 Oct 2026 as a
-              row of their own (see "what the place is"); check-in stays
-              here, beside the score it answers. */}
-          {(place.rating || showCheckin || priceShown) ? (
-          <View style={s.metaRow} testID="detail-meta">
-          <View style={s.metaFacts}>
-            {place.rating ? (
-              // Spoken as one phrase. Left to itself a screen reader reads
-              // the star glyph, then the number, then a lone middle dot,
-              // then the count — four stops for one fact.
-              <View
-                style={s.ratingRow}
-                testID="detail-rating"
-                accessibilityRole="text"
-                accessibilityLabel={reviews
-                  ? `${place.rating} — ${reviews} ${t('reviews', 'đánh giá', '件のレビュー', '条评价', '條評價')}`
-                  : String(place.rating)}
-              >
-                <Glyph name="star" size={ICON.action} color={colors.accent} />
-                <Text style={s.ratingValue}>{place.rating}</Text>
-                {reviews ? (
-                  <>
-                    <Text style={s.ratingDot}>·</Text>
-                    <Text style={s.ratingCount}>{reviews} {t('reviews', 'đánh giá', '件のレビュー', '条评价', '條評價')}</Text>
-                  </>
-                ) : null}
-              </View>
-            ) : null}
-            {/* FREE is already a pill of its own, accented because it is
-                the one price that is a state; a paid price is quiet text
-                and takes a tag glyph.
-
-                On the rating's line now, as text, since the row of pills
-                it sat in moved onto the cover. It went behind its switch
-                because it pushed a three-category row onto a second line
-                (that row wanted 427pt of a 386pt card); it would wrap
-                this line the same way on a long count, which is the
-                reason to look again before the switch goes back on.
-
-                This screen is the only place in the app that has ever
-                drawn a price, so the switch hides it everywhere, on 557
-                published places of 648. That is why it is a row in
-                `app_flags` rather than a deletion — see `lib/flags` for
-                the one line that brings it back on every phone at once. */}
-            {priceShown ? (
-              isFree(place) ? (
-                <PricePill place={place} />
-              ) : (
-                <View style={s.priceLine}>
-                  <Glyph name="pricetag-outline" size={ICON.text} color={colors.textSecondary} />
-                  <PricePill place={place} />
-                </View>
-              )
-            ) : null}
-          </View>
-            {/* ── check-in ──
-                A placeholder, drawn to be judged where it will live. It
-                opened as the Directions pill — glass, hairline, accent
-                type — and on the phone that read as a fourth fact: same
-                fill, same hairline, same "coloured glyph and a word" as
-                the chips to its left, with only the colour of the word to
-                say otherwise. So it is a *bordered* button now, the way
-                the filter row on Explore says "press me" with a bare
-                outline where that row said "read me" with a glass fill;
-                the outline is the accent at hairline
-                strength. Not the tinted fill the mockup wore: the
-                accent as a surface is for state (`theme.ts`), and a pill
-                at rest is not one. *Having* checked in is the state, and
-                the state wears a fill of its own — green, see "worn" below.
-
-                ── the glyph: a ringed tick, hollow then filled ──
-
-                The rest glyph was a filled pin, "one solid mark in a row
-                of outlines", and the worn glyph a bare tick. The owner
-                found the pin indistinguishable from the pin on the
-                address row just below it and from the map tab at the
-                foot of the screen — three pins on one screen, one of
-                which is a verb. A pin says *where*; this control says
-                *I was here*, which is what a tick in a ring says, on a
-                form, on a passport stamp, on the owner's own reference
-                (13 Oct 2026). Hollow at rest, filled once worn: the same
-                glyph in its two states, the way the bookmark on the
-                cover is `bookmark-outline` and then `bookmark`, so the
-                eye reads one control changing rather than one control
-                replaced. Pin-then-tick was two glyphs for one button.
-
-                It sat at the right of the category pills until those
-                moved onto the cover; it hangs at the right of the score
-                now, the owner's reference having put it beside the name.
-                Not beside the name: at `titleDetail` a name like "Off
-                street fine coffee" already wraps, and a 110pt pill beside
-                it would take a third of every name's line. The score's
-                line is short on every place, so the pill costs it nothing.
-
-                44 drawn (`FACT_HEIGHT`), the height it had as one of the
-                chips and the target this app gives every control.
-
-                Behind `place_checkin`, off as shipped, so the day it
-                misleads it comes down on every phone without a build. */}
-            {showCheckin && (
-              <PressableScale
-                // Rest: the tap is the visit. Worn: the tap is the menu —
-                // again, or undo — so a slip never writes a second row.
-                onPress={latestVisit ? () => setCheckinMenu(true) : () => { void checkIn(); }}
-                disabled={tap.checking}
-                haptic="selection"
-                accessibilityRole="button"
-                accessibilityState={{ selected: !!latestVisit, busy: tap.checking }}
-                accessibilityLabel={latestVisit
-                  ? t('Visited — options', 'Đã qua — tuỳ chọn', '訪問済み — オプション', '已打卡 — 选项', '已打卡 — 選項')
-                  : t('Check in', 'Check-in', 'チェックイン', '打卡', '打卡')}
-                style={s.checkinSlot}
-                // ── worn ──
-                // Filled once a visit is written, bare outline until then.
-                // It was `accentSoft` first, and on the phone a 10% tint
-                // inside a 28% hairline read as the same pill with the light
-                // on it; then solid `accentFill`, which read as one more
-                // coral ask. Green now (`okSoft` / `okInk`): a different hue
-                // as well as a fill, so rest and worn are two things.
-                //
-                // The word changes for the same reason. "Check-in" and
-                // "Checked in" (VI "Check-in" / "Đã check-in") share the
-                // word that carries the meaning, so a glance read both as
-                // the verb. "Visited" / "Đã qua" shares nothing with it,
-                // and stays true months later, where "Checked in" read as
-                // "you are here now". "Đã qua", not "Đã ghé" — the first
-                // draft, borrowed from the Visited screen's "Bỏ lần ghé
-                // này"; the owner read "Đã qua" as the better word.
-                //
-                // The rest label is a verb because a button is one: "Check
-                // in", not the noun. Vietnamese has no such split and keeps
-                // "Check-in".
-                contentStyle={[s.checkin, latestVisit && s.checkinOn]}
-                testID={latestVisit ? 'detail-checked-in' : 'detail-checkin'}
-              >
-                <Glyph name={latestVisit ? 'checkmark-circle' : 'checkmark-circle-outline'} size={ICON.text} color={latestVisit ? colors.okInk : colors.accent} />
-                {/* ── one width in both states ──
-                    The pill was as wide as its word, and the two words
-                    are not the same length: "Check-in" and "Đã qua" are
-                    8 and 6 characters, so on the phone the pill shrank
-                    by about 18pt on the tap and grew back on the undo.
-                    The owner read that as the control breathing.
-
-                    So the label is a column holding both words: the one
-                    being shown, and the other at zero height, invisible
-                    and hidden from VoiceOver. A column is as wide as its
-                    widest child, so the pill is the width of the longer
-                    word whichever is showing, and the shown word sits
-                    centred in that width under the glyph. Measured, not
-                    fixed: a `minWidth` would be a number for one
-                    language and one type size, and the ghost word is
-                    right in all three languages and at every Dynamic
-                    Type step, because it is the other word itself. */}
-                <View style={s.checkinWords}>
-                  <Text style={[s.goText, latestVisit && s.checkinOnText]}>
-                    {latestVisit ? t('Visited', 'Đã qua', '訪問済み', '已打卡', '已打卡') : t('Check in', 'Check-in', 'チェックイン', '打卡', '打卡')}
-                  </Text>
-                  <Text
-                    style={[s.goText, s.checkinGhost]}
-                    aria-hidden
-                    importantForAccessibility="no-hide-descendants"
-                    testID="detail-checkin-ghost"
-                  >
-                    {latestVisit ? t('Check in', 'Check-in', 'チェックイン', '打卡', '打卡') : t('Visited', 'Đã qua', '訪問済み', '已打卡', '已打卡')}
-                  </Text>
-                </View>
-              </PressableScale>
-            )}
-          </View>
-          ) : null}
+          <ScoreRow
+            place={place} name={fullName} cover={coverUri}
+            cityId={place.city_id ?? city?.id ?? null} askToSignIn={askToSignIn}
+          />
 
           {/* ── what the place is ──
               Every category, as the pill the feed's card wears — the card
@@ -654,67 +327,6 @@ export default function PlaceDetailScreen({ navigation, route }: { navigation: N
 
         </View>
       </ScrollView>
-      {/* The worn pill's sheet: the history of visits here, newest
-          first, each in the reader's own date format with its own undo
-          on the right, and "again" below when the rules allow it. The
-          list scrolls past HISTORY_ROWS rows rather than growing the
-          sheet off the top of the screen — three a day for a regular
-          adds up — and the count in the header says when it does. */}
-      {showCheckin && latestVisit && (
-        <ActionSheet
-          visible={checkinMenu}
-          onClose={() => setCheckinMenu(false)}
-          actions={checkinActions}
-          header={(
-            <View style={s.checkinHead}>
-              {/* The count is the Profile's pill at the row's end, not a
-                  line of words under the title: one shape for "how many"
-                  across the app, and 20pt of sheet given back. Inset by
-                  the history card's padding so it stands on the trash
-                  column's axis below. */}
-              <View style={s.checkinHeadRow} testID="checkin-head">
-                <Text style={s.checkinHeadTitle}>{t('Checked in here', 'Bạn đã check-in ở đây', 'ここにチェックイン済み', '你在这里打过卡', '你在這裡打過卡')}</Text>
-                <CountBadge n={visitsHere.length} style={s.checkinCount} />
-              </View>
-              <ScrollView style={s.history} bounces={false} showsVerticalScrollIndicator={visitsHere.length > HISTORY_ROWS}>
-                {visitsHere.map((v, i) => {
-                  const d = new Date(v.at);
-                  return (
-                    <View key={v.id} style={[s.historyRow, i > 0 && s.historyDivider]} testID="checkin-visit">
-                      <Glyph name="time-outline" size={ICON.action} color={colors.textTertiary} />
-                      <Text style={s.historyText} numberOfLines={1}>
-                        {dateline(lang, d)} · {clockOf(d.getHours() * 60 + d.getMinutes())}
-                      </Text>
-                      <PressableScale
-                        onPress={() => { void undoCheckin(v.id); }}
-                        // One id for every row's trash: a flow tidying up
-                        // taps the first until the sheet closes itself.
-                        testID="checkin-visit-remove"
-                        scaleTo={0.85}
-                        hitSlop={{ top: 8, bottom: 8, left: 10, right: 10 }}
-                        accessibilityRole="button"
-                        accessibilityLabel={t('Remove this visit', 'Bỏ lần ghé này', 'この訪問を削除', '删除这次打卡', '刪除這次打卡')}
-                      >
-                        <Glyph name="trash-outline" size={ICON.action} color={colors.bad} />
-                      </PressableScale>
-                    </View>
-                  );
-                })}
-              </ScrollView>
-              {canAgain && (
-                <GradientCta
-                  wide
-                  icon="location"
-                  label={t('Check in again', 'Check-in lần nữa', 'もう一度チェックイン', '再次打卡', '再次打卡')}
-                  onPress={() => { setCheckinMenu(false); void checkIn(); }}
-                  testID="detail-checkin-again"
-                />
-              )}
-            </View>
-          )}
-        />
-      )}
-      {tap.sheet}
     </View>
   );
 }
