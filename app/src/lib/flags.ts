@@ -109,6 +109,21 @@ export const FLAG_DEFAULTS = {
    * taken off every phone at the next launch, with no build to publish.
    */
   comments: false,
+  /**
+   * Photos on a check-in, up to three (`docs/checkin-photos-plan.md`).
+   * **Off** as shipped, and off until the release that carries the whole
+   * of it — the upload (K3), the cards that show them (K4), the report
+   * and the policy's sentence (K5) — has been through App Review, for the
+   * reason `comments` is: a photograph a person uploads for others to see
+   * is what Guideline 1.2 is about, and every merge reaches every phone
+   * within the hour. To try it on one's own phone before then, the row
+   * on, a launch, the row off:
+   *
+   *     insert into app_flags (key, enabled, note) values
+   *       ('checkin_photos', true, 'Photos on check-ins.')
+   *     on conflict (key) do update set enabled = true;
+   */
+  checkin_photos: false,
 } as const;
 
 export type FlagKey = keyof typeof FLAG_DEFAULTS;

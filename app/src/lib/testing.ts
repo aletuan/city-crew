@@ -271,6 +271,13 @@ export function fakeSupabase() {
             log.push({ table: bucket, fn: 'remove', op: 'storage', payload: paths, filters: [] });
             return settle();
           },
+          // Signed links for a private bucket: a request, unlike a public
+          // URL, so it answers off the queue; what a test pins is the
+          // paths and how long the links live.
+          createSignedUrls(paths: string[], expiresIn: number) {
+            log.push({ table: bucket, fn: 'createSignedUrls', op: 'storage', payload: { paths, expiresIn }, filters: [] });
+            return settle();
+          },
           getPublicUrl(path: string) {
             return { data: { publicUrl: `https://storage.test/${bucket}/${path}` } };
           },

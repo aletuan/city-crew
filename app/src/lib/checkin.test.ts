@@ -3,6 +3,7 @@
 
 import { describe, expect, it } from 'vitest';
 import {
+  PhotoError, photoRefusalOf, PHOTOS_PER_VISIT,
   audienceOf, cleanNote, nextAudience, NOTE_MAX,
   canRepeat, type Checkin, filterVisits, PER_DAY, whyRefused, latestCheckin, monthTitle, PER_PLACE_PER_DAY, REPEAT_AFTER_MIN,
   textMatches, visitCategories, visitCities, visitSections, visitsInDay, visitSummary, visitsAt,
@@ -245,5 +246,36 @@ describe('whyRefused', () => {
     const rows = [row('a', 'pizza', '2026-10-08T19:58:00Z'), row('b', 'pizza', '2026-10-08T12:00:00Z'), row('c', 'pizza', '2026-10-08T08:00:00Z')];
     expect(whyRefused(rows, 'cong', now)).toBe('day');
     expect(whyRefused([], 'cong', now)).toBe('day');
+  });
+});
+
+describe('photoRefusalOf', () => {
+  // The function's own codes first, whatever the status carrying them:
+  // a cap is a cap at 403, 409 or 429.
+  it('names the three caps by their codes', () => {
+    expect(photoRefusalOf(409, 'photo:full')).toBe('full');
+    expect(photoRefusalOf(429, 'photo:day')).toBe('day');
+    expect(photoRefusalOf(403, 'photo:account')).toBe('account');
+  });
+  it('calls every way a file is not a picture the same thing', () => {
+    for (const code of ['not_jpeg', 'malformed', 'truncated', 'no_image', 'too_large', 'too_big']) {
+      expect(photoRefusalOf(415, code)).toBe('image');
+    }
+  });
+  it('reads a 401 with no code as signed out', () => {
+    expect(photoRefusalOf(401, undefined)).toBe('signed_out');
+  });
+  it('leaves anything else to be tried again', () => {
+    expect(photoRefusalOf(500, 'boom')).toBe('other');
+    expect(photoRefusalOf(undefined, undefined)).toBe('other');
+    // A code wins over the status: a cap refused while signed in is the cap.
+    expect(photoRefusalOf(401, 'photo:day')).toBe('day');
+  });
+  it('carries its reason on the error', () => {
+    const e = new PhotoError('day');
+    expect(e.why).toBe('day');
+    expect(e.message).toBe('day');
+    expect(e.name).toBe('PhotoError');
+    expect(PHOTOS_PER_VISIT).toBe(3);
   });
 });
