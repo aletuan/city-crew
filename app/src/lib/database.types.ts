@@ -120,6 +120,48 @@ export type Database = {
         }
         Relationships: []
       }
+      checkin_photos: {
+        Row: {
+          bytes: number
+          checkin_id: string
+          created_at: string
+          height: number
+          hidden_at: string | null
+          hidden_by: string | null
+          id: string
+          path: string
+          position: number
+          user_id: string
+          width: number
+        }
+        Insert: {
+          bytes: number
+          checkin_id: string
+          created_at?: string
+          height: number
+          hidden_at?: string | null
+          hidden_by?: string | null
+          id?: string
+          path: string
+          position: number
+          user_id: string
+          width: number
+        }
+        Update: {
+          bytes?: number
+          checkin_id?: string
+          created_at?: string
+          height?: number
+          hidden_at?: string | null
+          hidden_by?: string | null
+          id?: string
+          path?: string
+          position?: number
+          user_id?: string
+          width?: number
+        }
+        Relationships: []
+      }
       checkins: {
         Row: {
           at: string
@@ -1774,6 +1816,7 @@ export type Database = {
           name_en: string
           name_vi: string
           note: string
+          photos: Json
           place_slug: string
         }[]
       }
