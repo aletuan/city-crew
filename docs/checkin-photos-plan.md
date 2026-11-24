@@ -164,9 +164,15 @@ dòng trong database không xoá file thật**, nên không dựa vào cascade.
 Mỗi bước một PR, theo thứ tự. Cờ `checkin_photos` tắt suốt cả quá trình.
 
 - **K0. Tài liệu này.**
-- **K1. Database và storage.** Bảng `checkin_photos`, bucket riêng tư,
+- **K1. Database và storage — xong (24/11/2026).** Bảng `checkin_photos`, bucket riêng tư,
   policy đọc, hàm kiểm hạn mức, `person_checkins` trả thêm ảnh, test
   trong `supabase/tests`. Migration: có; áp lên live trước khi merge.
+  Đã làm: `20261124230000_checkin_photos.sql`. Đường dẫn do chính dòng
+  dữ liệu quy định (kiểm bằng ràng buộc), một trigger buộc ảnh thuộc chủ
+  check-in, chủ ảnh đọc được dòng của mình nhưng không đọc được ai đã ẩn
+  ảnh, `checkin_photo_slot` chỉ service role gọi được. Ảnh bị xoá trả lại
+  chỗ trong hạn mức ngày: vòng xoá rồi thêm chỉ tốn lượt ghi, không tốn
+  dung lượng, vì tổng không vượt 300.
 - **K2. Edge Function `checkin-photo`** (tải lên, xoá) và
   **`prune-checkin-photos`**, kèm `*.fn.test.ts` (sàn coverage của Edge
   Function là 100 dòng / 94 nhánh). Xoá tài khoản xoá cả thư mục.

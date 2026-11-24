@@ -807,6 +807,16 @@ for f in "$ROOT"/supabase/migrations/*_city_clock.sql "$ROOT"/supabase/migration
 done
 run "$DB" -f "$HERE/checkin_friends_test.sql"
 
+# Photos on a check-in (K1 of docs/checkin-photos-plan.md): the table, the
+# private bucket and its read policy, the caps. After the friends' read,
+# whose `checkin_seen` and `person_checkins` it builds on, and the storage
+# stub the "rls, exercised" block made.
+echo "→ check-in photos"
+for f in "$ROOT"/supabase/migrations/*_checkin_photos.sql; do
+  run "$DB" -f "$f" >/dev/null
+done
+run "$DB" -f "$HERE/checkin_photos_test.sql"
+
 # A list may be made public from the start (20 Nov 2026). After the daily
 # caps, whose insert policy it rewrites with one clause taken out.
 echo "→ lists born public"
