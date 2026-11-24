@@ -384,16 +384,16 @@ describe('history and contributions', () => {
       .toEqual({ place_slug: null, event: 'open', city_id: null, at: '' });
   });
 
-  it('lists check-ins as place, city and instant — nothing else is kept about one', () => {
+  it('lists check-ins as place, city, instant, the note and who sees it', () => {
     const checkins = [
-      { id: 'k1', place_slug: 'p', city_id: 'hanoi', at: '2026-10-08T10:00:00+07:00' },
+      { id: 'k1', place_slug: 'p', city_id: 'hanoi', at: '2026-10-08T10:00:00+07:00', note: 'Crisp sourdough.', audience: 'friends' as const },
       { id: 'k0', place_slug: '', city_id: null, at: 'nonsense' },
     ];
     expect(buildExport(bare({ checkins }), NOW, 'en').checkins).toEqual([
-      { place_slug: 'p', city_id: 'hanoi', at: '2026-10-08T03:00:00.000Z' },
+      { place_slug: 'p', city_id: 'hanoi', at: '2026-10-08T03:00:00.000Z', note: 'Crisp sourdough.', seen_by: 'friends' },
       // The row's own id is the database's business, and a gone place
-      // leaves no slug to name.
-      { place_slug: null, city_id: null, at: '' },
+      // leaves no slug to name. A visit never asked is private.
+      { place_slug: null, city_id: null, at: '', note: null, seen_by: 'private' },
     ]);
   });
 

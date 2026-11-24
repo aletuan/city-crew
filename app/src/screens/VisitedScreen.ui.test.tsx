@@ -15,9 +15,10 @@ import { VISIT_RECENTS_KEY } from '../lib/recents';
 const data = vi.hoisted(() => ({
   visits: { data: [] as Checkin[], loading: false, loaded: true, error: null as string | null, loadedAt: 1, fromCache: false, reload: vi.fn() },
   removeCheckin: vi.fn(async (_id: string) => {}),
+  saveCheckin: vi.fn(async (_id: string, _said: unknown) => {}),
   asked: vi.fn(() => {}),
 }));
-vi.mock('../lib/data', () => ({ removeCheckin: data.removeCheckin }));
+vi.mock('../lib/data', () => ({ removeCheckin: data.removeCheckin, saveCheckin: data.saveCheckin }));
 vi.mock('../lib/checkins', () => ({ useMyCheckins: () => { data.asked(); return data.visits; } }));
 vi.mock('../lib/city', () => {
   const m = {
@@ -415,6 +416,77 @@ describe('VisitedScreen', () => {
       fireEvent.keyDown(input(), { key: 'Enter' });
       expect(AsyncStorage.setItem).toHaveBeenLastCalledWith(VISIT_RECENTS_KEY, JSON.stringify(['piz', 'bun', 'older']));
     });
+  });
+
+  // ── the note on a visit (24 Nov 2026) ──
+
+  it('reads a visit’s note under its date, and asks for one on a visit that has none', () => {
+    data.visits.data = [
+      visit('k2', 'cong', '2026-10-08T03:00:00Z', { note: 'Crisp sourdough.' }),
+      visit('k1', 'giang', '2026-10-01T03:00:00Z'),
+    ];
+    show();
+    const [noted, bare] = screen.getAllByTestId('visit-row');
+    expect(within(noted).getByTestId('visit-note').textContent).toBe('Crisp sourdough.');
+    expect(within(noted).queryByTestId('visit-note-add')).toBeNull();
+    expect(within(bare).getByTestId('visit-note-add').textContent).toBe('Write a few lines about this visit');
+  });
+
+  it('opens the sheet over that visit from its line, not the place, with the visit’s own words and day', async () => {
+    data.visits.data = [
+      // Midday UTC: the same day on the suite's New York clock.
+      visit('k2', 'cong', '2026-10-08T12:00:00Z', { note: 'Crisp sourdough.' }),
+      visit('k1', 'giang', '2026-10-01T03:00:00Z'),
+    ];
+    const { raw } = show();
+    expect(screen.queryByTestId('checkin-sheet')).toBeNull();
+    fireEvent.click(screen.getByTestId('visit-note'));
+    const sheet = await screen.findByTestId('checkin-sheet');
+    expect(raw.navigate).not.toHaveBeenCalled();
+    expect(within(sheet).getByTestId('checkin-sheet-name').textContent).toBe('cong en');
+    expect(within(sheet).getByTestId('checkin-sheet-when').textContent).toBe('8 Oct');
+    expect((within(sheet).getByTestId('checkin-sheet-note') as HTMLTextAreaElement).value).toBe('Crisp sourdough.');
+    // An old visit is edited, not just made; and nobody is asked who
+    // sees it before friends can.
+    expect(within(sheet).queryByTestId('checkin-sheet-done')).toBeNull();
+    expect(within(sheet).queryByTestId('checkin-sheet-seen')).toBeNull();
+  });
+
+  it('saves the words to the visit whose line was pressed, and asks the list again', async () => {
+    data.visits.data = [
+      visit('k2', 'cong', '2026-10-08T03:00:00Z', { note: 'Crisp sourdough.' }),
+      visit('k1', 'giang', '2026-10-01T03:00:00Z'),
+    ];
+    show();
+    fireEvent.click(screen.getByTestId('visit-note-add'));
+    await screen.findByTestId('checkin-sheet');
+    fireEvent.change(screen.getByTestId('checkin-sheet-note'), { target: { value: 'Egg coffee, upstairs.' } });
+    fireEvent.click(screen.getByTestId('checkin-sheet-save'));
+    await waitFor(() => expect(data.saveCheckin).toHaveBeenCalledWith('k1', { note: 'Egg coffee, upstairs.' }));
+    await waitFor(() => expect(data.visits.reload).toHaveBeenCalledTimes(1));
+    document.querySelectorAll('[class*="r-animationKeyframes"]').forEach((el) => fireEvent.animationEnd(el));
+    await waitFor(() => expect(screen.queryByTestId('checkin-sheet')).toBeNull());
+  });
+
+  it('puts the sheet away on a tap outside it, having written nothing and asked nothing again', async () => {
+    data.visits.data = [visit('k1', 'giang', '2026-10-01T03:00:00Z')];
+    show();
+    fireEvent.click(screen.getByTestId('visit-note-add'));
+    await screen.findByTestId('checkin-sheet');
+    fireEvent.change(screen.getByTestId('checkin-sheet-note'), { target: { value: 'Never mind.' } });
+    fireEvent.click(screen.getByTestId('checkin-sheet-close'));
+    document.querySelectorAll('[class*="r-animationKeyframes"]').forEach((el) => fireEvent.animationEnd(el));
+    await waitFor(() => expect(screen.queryByTestId('checkin-sheet')).toBeNull());
+    expect(data.saveCheckin).not.toHaveBeenCalled();
+    expect(data.visits.reload).not.toHaveBeenCalled();
+  });
+
+  it('names a place that was removed on its sheet too', async () => {
+    data.visits.data = [visit('k1', '', '2026-10-01T03:00:00Z', { place_slug: null as unknown as string, place: null })];
+    show();
+    fireEvent.click(screen.getByTestId('visit-note-add'));
+    const sheet = await screen.findByTestId('checkin-sheet');
+    expect(within(sheet).getByTestId('checkin-sheet-name').textContent).toBe('A place that was removed');
   });
 
   it('goes back from its header', () => {

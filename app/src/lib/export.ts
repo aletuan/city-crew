@@ -47,7 +47,7 @@
 import { localized, type LocalizedRow } from './localized';
 import type { Collection, Place } from './types';
 import type { Trip } from './data/trips';
-import type { Checkin } from './checkin';
+import { audienceOf, type Checkin } from './checkin';
 import type { Preferences } from './data/preferences';
 import type { FriendshipRow } from './friends';
 import type {
@@ -146,7 +146,7 @@ export type ExportBundle = {
   };
   history: { place_slug: string | null; event: string; city_id: string | null; at: string }[];
   /** Where and when, and nothing else — that is all a check-in is yet. */
-  checkins: { place_slug: string | null; city_id: string | null; at: string }[];
+  checkins: { place_slug: string | null; city_id: string | null; at: string; note: string | null; seen_by: 'private' | 'friends' }[];
   places_added: { slug: string; name: string; submitted_at: string | null }[];
   /**
    * Every comment you wrote. Rule 6 draws the line here as it does for a
@@ -373,6 +373,10 @@ export function buildExport(input: ExportInput, now: Date, lang: ExportLang): Ex
       place_slug: c.place_slug || null,
       city_id: c.city_id,
       at: isoUtc(c.at) ?? '',
+      // The reader's own words, and the answer as it is read: an
+      // unanswered visit is private (`audienceOf`).
+      note: c.note ?? null,
+      seen_by: audienceOf(c),
     })),
 
     places_added: input.submitted.map((p) => ({

@@ -8,6 +8,25 @@
 // cuts, and each is user content with its own moderation and its own
 // screen, which is exactly why they are not folded into the row now.
 //
+// ── the second cut: a note, and who sees it (owner, 24 Nov 2026) ──
+//
+// A line of words (`NOTE_MAX`) and an answer, Private or Friends. The
+// visit is still written by the one tap, as it always was: the sheet
+// that asks for the words comes up *after*, over a visit that already
+// exists, so nothing typed or not typed can lose it. Two other ways were
+// weighed for the owner the same day. A sheet before the visit (the
+// reference he brought) gets more notes and shows who will see it before
+// anything is written, and costs a second tap on every visit, the
+// regular's fourth this week included, and a visit lost to a sheet
+// swiped away. The tap alone with "add a note" behind a further press
+// keeps the tap and gets few notes. This is the tap, with the field
+// already under the thumb.
+//
+// The answer is written when the sheet goes, not with the visit, so a
+// friend is never shown a visit its owner has not had the chance to keep
+// (`20261124120000_checkin_notes.sql`). Photographs are still a later
+// cut: storage and moderation of their own.
+//
 // ── why not `place_events` ──
 //
 // There is already a per-account log of places, and it is the wrong
@@ -31,6 +50,13 @@ export type Checkin = {
   city_id: string | null;
   /** ISO instant, as Postgres hands back `timestamptz`. */
   at: string;
+  /** The reader's words about the visit, or none. Absent on a row the
+   *  cache kept before the column rode along. */
+  note?: string | null;
+  /** Who sees it. Null — every visit before 24 Nov 2026, and one whose
+   *  sheet never closed — is the question unanswered, and reads as
+   *  private (`audienceOf`). */
+  audience?: Audience | null;
   /** The place's names and its cover, embedded with the row so the
    *  Visited screen can name and picture a place from a city the catalog
    *  is not holding. Null when the place is gone; absent on a row the
@@ -45,6 +71,63 @@ export type Checkin = {
     categories: string[];
   } | null;
 };
+
+/** Who a visit is shown to. Two answers, not the collections' three: a
+ *  visit says where a person was and when, and strangers see less than
+ *  friends (`docs/collection-feed-plan.md`, principle 5). */
+export type Audience = 'private' | 'friends';
+
+/**
+ * Whether the sheet asks who sees the visit. **Off**, and the note ships
+ * alone, until the change that gives a friend somewhere to see a visit:
+ * the read for friends (date, not the hour; blocks kept), its sentence
+ * in the privacy policy, and the card on a person's page — step 2. A
+ * control that said "Friends" a release before any friend could see
+ * anything would be a promise the app did not keep, and an answer
+ * collected under it would be one given about a screen nobody had seen.
+ * So until then no answer is written at all, and every visit reads as
+ * private (`audienceOf`).
+ *
+ * A constant and not an `app_flags` row: turning it on without that code
+ * is exactly the mistake above, and a row can be turned on without it.
+ */
+export const AUDIENCE_ON: boolean = false;
+
+/** A note's length: a remark's, not a review's — the migration's bound. */
+export const NOTE_MAX = 280;
+
+/** Who sees this visit, the unanswered question read as private. */
+export const audienceOf = (v: Pick<Checkin, 'audience'>): Audience => v.audience ?? 'private';
+
+/**
+ * The answer a new visit's sheet opens on: the last one the reader gave,
+ * and Friends before they have given any.
+ *
+ * Friends first because a visit kept to oneself is what the app had for
+ * six weeks and the count on the page was the whole of it; the point of
+ * this cut is the friend who sees it. Remembered because the reader who
+ * chose Private once did not choose it for one visit: asked again each
+ * time, the default would undo them every time they did not look.
+ *
+ * Read off the visits themselves — the newest with an answer — rather
+ * than kept as a setting: there is nothing to sync, and an old visit
+ * (answer null) says nothing either way.
+ */
+export function nextAudience(rows: readonly Checkin[]): Audience {
+  let best: Checkin | null = null;
+  for (const r of rows) {
+    if (!r.audience) continue;
+    if (!best || r.at > best.at) best = r;
+  }
+  return best?.audience ?? 'friends';
+}
+
+/** A note as it is stored: trimmed, cut to the bound, and null when
+ *  there is nothing left — the column's "no note". */
+export function cleanNote(text: string): string | null {
+  const said = text.trim().slice(0, NOTE_MAX).trim();
+  return said || null;
+}
 
 /**
  * How long after a visit the pill offers another one, in minutes.

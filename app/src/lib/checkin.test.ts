@@ -3,6 +3,7 @@
 
 import { describe, expect, it } from 'vitest';
 import {
+  audienceOf, cleanNote, nextAudience, NOTE_MAX,
   canRepeat, type Checkin, filterVisits, latestCheckin, monthTitle, PER_PLACE_PER_DAY, REPEAT_AFTER_MIN,
   textMatches, visitCategories, visitCities, visitSections, visitsInDay, visitSummary, visitsAt,
 } from './checkin';
@@ -189,5 +190,39 @@ describe('textMatches', () => {
     expect(textMatches(['x'], '')).toBe(true);
     expect(textMatches(['x'], '   ')).toBe(true);
     expect(textMatches([], 'x')).toBe(false);
+  });
+});
+
+describe('a visit\'s note and who sees it', () => {
+  const v = (id: string, at: string, audience?: 'private' | 'friends' | null) => ({ id, place_slug: 'p', city_id: null, at, audience });
+
+  it('reads an unanswered visit as private', () => {
+    expect(audienceOf({})).toBe('private');
+    expect(audienceOf({ audience: null })).toBe('private');
+    expect(audienceOf({ audience: 'friends' })).toBe('friends');
+  });
+
+  it('opens the next visit on Friends until the reader has answered once', () => {
+    expect(nextAudience([])).toBe('friends');
+    expect(nextAudience([v('a', '2026-10-01T00:00:00Z'), v('b', '2026-10-02T00:00:00Z', null)])).toBe('friends');
+  });
+
+  it('then on the last answer given, whatever order the rows come in', () => {
+    const rows = [
+      v('old', '2026-11-20T00:00:00Z', 'friends'),
+      v('newest-unanswered', '2026-11-24T00:00:00Z', null),
+      v('last-answer', '2026-11-23T00:00:00Z', 'private'),
+    ];
+    expect(nextAudience(rows)).toBe('private');
+    expect(nextAudience([...rows].reverse())).toBe('private');
+  });
+
+  it('stores a note trimmed and bounded, and nothing as null', () => {
+    expect(cleanNote('  Crisp sourdough.  ')).toBe('Crisp sourdough.');
+    expect(cleanNote('   ')).toBeNull();
+    expect(cleanNote('')).toBeNull();
+    expect(cleanNote('a'.repeat(NOTE_MAX + 20))).toHaveLength(NOTE_MAX);
+    // Cut at the bound, a space left hanging there goes too.
+    expect(cleanNote(`${'a'.repeat(NOTE_MAX - 1)} b`)).toBe('a'.repeat(NOTE_MAX - 1));
   });
 });

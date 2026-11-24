@@ -27,7 +27,6 @@ import { useTourAnchor } from '../components/SignupTour';
 import { useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
-  Alert,
   ScrollView,
   Text,
   useWindowDimensions,
@@ -39,11 +38,9 @@ import { useSession } from '../lib/auth';
 import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Glyph, ICON } from '../components/ui/glyph';
-import { addCheckin, coverOf, fmtCount, isFree, photosOf, usePlaceBySlug, usePlacePhotos, withPhotos } from '../lib/data';
+import { coverOf, fmtCount, isFree, photosOf, usePlaceBySlug, usePlacePhotos, withPhotos } from '../lib/data';
 import { useMyCheckins } from '../lib/checkins';
-import { reviewAfterCheckin } from '../lib/askReview';
 import { canRepeat, latestCheckin, visitsAt } from '../lib/checkin';
-import { DAILY_CAPS, isDailyLimit } from '../lib/quota';
 import ActionSheet, { type SheetAction } from '../components/ActionSheet';
 import { usePlaces } from '../lib/catalog';
 import { shortAddress } from '../lib/address';
@@ -59,13 +56,14 @@ import { localized } from '../lib/localized';
 import { useIsSaved, useSaveActions } from '../lib/save';
 import { useNoteEvent } from '../lib/tasteProfile';
 import { colors, space } from '../theme';
-import { AmbientWarmth, BackButton, CountBadge, Empty, GradientCta, PressableScale, successHaptic, useTabBarClearance } from '../components/ui';
+import { AmbientWarmth, BackButton, CountBadge, Empty, GradientCta, PressableScale, useTabBarClearance } from '../components/ui';
 import PricePill from '../components/PricePill';
 import { KindPills } from '../components/KindPill';
 import LocalGuidePanel from '../components/LocalGuidePanel';
 import type { Nav, RootRoute } from '../nav';
 import { BlurbCard } from './placeDetail/BlurbCard';
 import { InfoCard } from './placeDetail/InfoCard';
+import { useCheckIn } from './placeDetail/useCheckIn';
 import { HISTORY_ROWS, MARK_INSET, BAR_NAME_MIN_SCALE, s } from './placeDetail/styles';
 
 /**
@@ -144,7 +142,7 @@ export default function PlaceDetailScreen({ navigation, route }: { navigation: N
   const visits = useMyCheckins();
   const removeVisit = useRemoveCheckin(visits.reload);
   const [checkinMenu, setCheckinMenu] = useState(false);
-  const [checking, setChecking] = useState(false);
+  const tap = useCheckIn({ uid, visits, askToSignIn });
   const saved = useIsSaved(route.params.slug);
   const tabClearance = useTabBarClearance();
   const insets = useSafeAreaInsets();
@@ -275,40 +273,10 @@ export default function PlaceDetailScreen({ navigation, route }: { navigation: N
   // ── check-in ──
   const latestVisit = latestCheckin(visits.data, place.slug);
   const visitsHere = visitsAt(visits.data, place.slug);
-  const checkIn = async () => {
-    // A guest's tap is the door, with its reason named, as the like's is.
-    // Nothing resumes on the far side: signed in, the pill is the same
-    // pill, and a visit written by a sign-in rather than by a tap would
-    // be one the reader did not quite make.
-    if (!uid) { askToSignIn('checkin'); return; }
-    if (checking) return;
-    setChecking(true);
-    try {
-      await addCheckin({ ownerId: uid, placeSlug: place.slug, cityId: place.city_id ?? city?.id ?? null });
-      successHaptic();
-      // The list is the one before this visit; the count includes it.
-      reviewAfterCheckin(visits.data.length + 1);
-      visits.reload();
-    } catch (e) {
-      // The cap gets its own words, as the collection form's does. Not
-      // noted in the taste profile either way: `place_events` is the
-      // private signal and this is the reader's own record — see
-      // `lib/checkin` for why the two are kept apart.
-      Alert.alert(
-        t('Could not check in', 'Không check-in được', 'チェックインできませんでした', '无法打卡', '無法打卡'),
-        isDailyLimit(e)
-          ? t(
-            `You have checked in here ${DAILY_CAPS.checkinsPerPlace} times today. Come back tomorrow.`,
-            `Hôm nay bạn đã check-in ở đây ${DAILY_CAPS.checkinsPerPlace} lần rồi. Mai quay lại nhé.`,
-            `今日はここに${DAILY_CAPS.checkinsPerPlace}回チェックイン済みです。また明日どうぞ。`,
-            `你今天已在这里打卡 ${DAILY_CAPS.checkinsPerPlace} 次，明天再来吧。`, `你今天已在這裡打卡 ${DAILY_CAPS.checkinsPerPlace} 次，明天再來吧。`,
-          )
-          : (e as Error).message,
-      );
-    } finally {
-      setChecking(false);
-    }
-  };
+  // The tap, its refusals and the sheet that follows: `useCheckIn`.
+  const checkIn = () => tap.checkIn({
+    slug: place.slug, name: fullName, cover: coverUri, cityId: place.city_id ?? city?.id ?? null,
+  });
   // Any one visit, not only the newest: the sheet lists them all, each
   // with its own undo, because the one that was a slip is not always
   // the last. The sheet stays open after one goes — the reader may be
@@ -565,10 +533,10 @@ export default function PlaceDetailScreen({ navigation, route }: { navigation: N
                 // Rest: the tap is the visit. Worn: the tap is the menu —
                 // again, or undo — so a slip never writes a second row.
                 onPress={latestVisit ? () => setCheckinMenu(true) : () => { void checkIn(); }}
-                disabled={checking}
+                disabled={tap.checking}
                 haptic="selection"
                 accessibilityRole="button"
-                accessibilityState={{ selected: !!latestVisit, busy: checking }}
+                accessibilityState={{ selected: !!latestVisit, busy: tap.checking }}
                 accessibilityLabel={latestVisit
                   ? t('Visited — options', 'Đã qua — tuỳ chọn', '訪問済み — オプション', '已打卡 — 选项', '已打卡 — 選項')
                   : t('Check in', 'Check-in', 'チェックイン', '打卡', '打卡')}
@@ -746,6 +714,7 @@ export default function PlaceDetailScreen({ navigation, route }: { navigation: N
           )}
         />
       )}
+      {tap.sheet}
     </View>
   );
 }

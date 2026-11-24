@@ -24,16 +24,17 @@
 
 import React, { useMemo, useState } from 'react';
 import { Alert, StyleSheet, Text, View } from 'react-native';
+import Segmented from '../../components/Segmented';
 import ShareSheet from '../../components/ShareSheet';
 import { Lede } from '../../components/authUi';
-import { CHIP_SLOP, PressableScale, SECONDARY_CONTROL_H } from '../../components/ui';
+import { CHIP_SLOP, PressableScale } from '../../components/ui';
 import { Glyph, ICON } from '../../components/ui/glyph';
 import { createCollection, fetchCollectionId, isNotShareable, useMyListShares, writeFriends } from '../../lib/data';
 import { useCrew } from '../../lib/crew';
 import { useI18n } from '../../lib/i18n';
 import { SEEN_GLYPH, seenGloss, seenName, sharesByList, visibilityOf, type Visibility } from '../../lib/shares';
 import { splitFriendships } from '../../lib/friends';
-import { colors, font, radius, type } from '../../theme';
+import { colors, type } from '../../theme';
 import type { Collection } from '../../lib/types';
 import { goTo, type Nav } from '../../nav';
 
@@ -110,11 +111,9 @@ export function useAudience(col: Pick<Collection, 'id' | 'is_public'> | null, ui
  * way back to the picker — a press on the segment already chosen would
  * be, too, but nothing says so, and a line that names the friends does.
  *
- * The control is the chips' material (`ui/controls` › `chip`, `chipOn`):
- * a well of `surfaceGlass` holding the three, the chosen one lifted onto
- * the elevated ground with the accent's words, as a chosen chip carries
- * them. 44 tall, the secondary control's height (`SECONDARY_CONTROL_H`),
- * because each third is a target of its own.
+ * The control is `components/Segmented`, lifted out of here the day it
+ * was made when a check-in's sheet asked for the same: the chips'
+ * material, 44 tall.
  *
  * A copy, which has no say, keeps the answer as a line of words.
  */
@@ -164,30 +163,14 @@ export function SeenLine({ aud }: {
   return (
     <View style={s.accessStack}>
       {name}
-      <View style={s.well} testID="collection-form-seen" accessibilityRole="radiogroup" accessibilityLabel={t('Who can see this collection?', 'Ai có thể xem bộ sưu tập này?', 'このコレクションを見られる人', '谁可以查看此合集？', '誰可以檢視此合集？')}>
-        {(['public', 'friends', 'private'] as const).map((v) => {
-          const on = shown === v;
-          return (
-            <PressableScale
-              key={v}
-              style={s.segAt}
-              contentStyle={[s.seg, on && s.segOn]}
-              scaleTo={0.97}
-              haptic="selection"
-              onPress={() => choose(v)}
-              accessibilityRole="radio"
-              // `aria-checked` rather than `accessibilityState`, which
-              // react-native-web drops, as the chips do (`ui/controls`).
-              aria-checked={on}
-              accessibilityLabel={on ? `${seenName(v, t)}, ${gloss}` : seenName(v, t)}
-              testID={`collection-form-seen-${v}`}
-            >
-              <Glyph name={SEEN_GLYPH[v]} size={ICON.text} color={on ? colors.accent : colors.textSecondary} />
-              <Text style={[s.segText, on && s.segTextOn]} numberOfLines={1}>{seenName(v, t)}</Text>
-            </PressableScale>
-          );
-        })}
-      </View>
+      <Segmented
+        items={(['public', 'friends', 'private'] as const).map((v) => ({ key: v, label: seenName(v, t), icon: SEEN_GLYPH[v], testID: `collection-form-seen-${v}` }))}
+        chosen={shown}
+        onPick={choose}
+        label={t('Who can see this collection?', 'Ai có thể xem bộ sưu tập này?', 'このコレクションを見られる人', '谁可以查看此合集？', '誰可以檢視此合集？')}
+        said={gloss}
+        testID="collection-form-seen"
+      />
       {shown === 'friends' && n > 0 ? (
         <PressableScale
           style={s.glossAt}
@@ -370,18 +353,6 @@ const s = StyleSheet.create({
   // The control's row: the name over the three, the meaning under them,
   // with the air the fields' rows keep (`access`).
   accessStack: { gap: 12, paddingTop: 20, paddingBottom: 22 },
-  well: {
-    flexDirection: 'row', height: SECONDARY_CONTROL_H, padding: 3, borderRadius: radius.pill,
-    borderWidth: StyleSheet.hairlineWidth, borderColor: colors.borderGlassSoft, backgroundColor: colors.surfaceGlass,
-  },
-  segAt: { flex: 1 },
-  seg: {
-    flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,
-    borderRadius: radius.pill, borderWidth: 1, borderColor: 'transparent',
-  },
-  segOn: { backgroundColor: colors.bgElevated, borderColor: colors.borderGlass },
-  segText: { color: colors.textSecondary, fontSize: 14, fontWeight: font.medium },
-  segTextOn: { color: colors.accent, fontWeight: font.semibold },
   glossAt: { alignSelf: 'flex-start' },
   glossRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   gloss: { color: colors.textTertiary, ...type.meta },

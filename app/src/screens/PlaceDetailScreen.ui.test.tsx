@@ -54,7 +54,9 @@ const state = vi.hoisted(() => ({
 const spies = vi.hoisted(() => ({
   save: vi.fn(),
   askToSignIn: vi.fn(),
-  addCheckin: vi.fn(async () => {}),
+  addCheckin: vi.fn(async (_at?: unknown): Promise<string> => 'k-new'),
+  saveCheckin: vi.fn(async (_id: string, _said: unknown) => {}),
+  review: vi.fn((_total: number) => {}),
   removeCheckin: vi.fn(async () => {}),
   reloadCheckins: vi.fn(),
   note: vi.fn(),
@@ -98,8 +100,11 @@ vi.mock('../lib/data', async () => ({
   fetchMyPhotoCounts: async () => ({ mineHere: 0, mineToday: 0 }),
   addPlacePhoto: async () => 'photo-id',
   addCheckin: spies.addCheckin,
+  saveCheckin: spies.saveCheckin,
   removeCheckin: spies.removeCheckin,
 }));
+// Apple's review sheet: only when it is asked, and with what count.
+vi.mock('../lib/askReview', () => ({ reviewAfterCheckin: spies.review }));
 // The reader's check-ins, as the provider hands them to every screen.
 vi.mock('../lib/checkins', () => ({
   useMyCheckins: () => ({ data: state.checkins, loading: false, loaded: true, error: null, loadedAt: 1, fromCache: false, reload: spies.reloadCheckins }),
@@ -286,7 +291,9 @@ beforeEach(() => {
   state.price = false;
   state.checkin = false;
   state.checkins = [];
-  spies.addCheckin.mockReset().mockResolvedValue(undefined);
+  spies.addCheckin.mockReset().mockResolvedValue('k-new');
+  spies.saveCheckin.mockReset().mockResolvedValue(undefined);
+  spies.review.mockReset();
   spies.removeCheckin.mockReset().mockResolvedValue(undefined);
   spies.reloadCheckins.mockReset();
   state.city = null;
@@ -604,6 +611,63 @@ describe('PlaceDetailScreen — title, rating, facts', () => {
     await waitFor(() => expect(spies.reloadCheckins).toHaveBeenCalledTimes(1));
     expect(spies.note).toHaveBeenCalledTimes(noted);
     expect(alert).not.toHaveBeenCalled();
+  });
+
+  // ── the sheet that follows the tap (24 Nov 2026) ──
+
+  it('raises the sheet over the visit just written, named for the place, and asks for no review while it is up', async () => {
+    state.checkin = true;
+    state.uid = 'u1';
+    show();
+    expect(screen.queryByTestId('checkin-sheet')).toBeNull();
+    fireEvent.click(screen.getByTestId('detail-checkin'));
+    const sheet = await screen.findByTestId('checkin-sheet');
+    expect(within(sheet).getByTestId('checkin-sheet-name').textContent).toBe('Cộng Cà Phê - Old Quarter');
+    expect(within(sheet).getByTestId('checkin-sheet-done')).toBeTruthy();
+    // Who sees it is not asked until friends can see a visit at all.
+    expect(within(sheet).queryByTestId('checkin-sheet-seen')).toBeNull();
+    expect(spies.review).not.toHaveBeenCalled();
+  });
+
+  it('writes the note to the visit the tap made, asks the list again, and only then asks for the review, with the count the visit made', async () => {
+    state.checkin = true;
+    state.uid = 'u1';
+    // A visit somewhere else: this one is the reader's second.
+    state.checkins = [{ ...visit('k0', 60 * 48), place_slug: 'elsewhere' }];
+    show();
+    fireEvent.click(screen.getByTestId('detail-checkin'));
+    await screen.findByTestId('checkin-sheet');
+    expect(spies.reloadCheckins).toHaveBeenCalledTimes(1);
+    fireEvent.change(screen.getByTestId('checkin-sheet-note'), { target: { value: 'Crisp sourdough.' } });
+    fireEvent.click(screen.getByTestId('checkin-sheet-save'));
+    await waitFor(() => expect(spies.saveCheckin).toHaveBeenCalledWith('k-new', { note: 'Crisp sourdough.' }));
+    await waitFor(() => expect(spies.review).toHaveBeenCalledWith(2));
+    expect(spies.reloadCheckins).toHaveBeenCalledTimes(2);
+    document.querySelectorAll('[class*="r-animationKeyframes"]').forEach((el) => fireEvent.animationEnd(el));
+    await waitFor(() => expect(screen.queryByTestId('checkin-sheet')).toBeNull());
+  });
+
+  it('asks for the review all the same when the sheet goes with nothing written, and does not ask the list twice', async () => {
+    state.checkin = true;
+    state.uid = 'u1';
+    show();
+    fireEvent.click(screen.getByTestId('detail-checkin'));
+    await screen.findByTestId('checkin-sheet');
+    fireEvent.click(screen.getByTestId('checkin-sheet-save'));
+    await waitFor(() => expect(spies.review).toHaveBeenCalledWith(1));
+    expect(spies.saveCheckin).not.toHaveBeenCalled();
+    expect(spies.reloadCheckins).toHaveBeenCalledTimes(1);
+  });
+
+  it('raises no sheet over a visit that was refused', async () => {
+    state.checkin = true;
+    state.uid = 'u1';
+    spies.addCheckin.mockRejectedValueOnce(new Error('offline'));
+    show();
+    fireEvent.click(screen.getByTestId('detail-checkin'));
+    await waitFor(() => expect(alert).toHaveBeenCalledWith('Could not check in', 'offline'));
+    expect(screen.queryByTestId('checkin-sheet')).toBeNull();
+    expect(spies.review).not.toHaveBeenCalled();
   });
 
   it('wears the visit once it is written: solid, ticked, and named as a state', () => {
