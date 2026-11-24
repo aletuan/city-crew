@@ -43,6 +43,20 @@ describe('Sheet', () => {
     }
   });
 
+  // The Explore filter pulls from the panel while it fits and from its
+  // head once it scrolls; its head must be the same node either way.
+  it('keeps the head where it was when the pull moves, under the name it is given', () => {
+    const at = (pull: 'sheet' | 'head') => (
+      <Sheet visible onClose={() => {}} pull={pull} grabTestID="top" head={<Text>Title</Text>}><Text>List</Text></Sheet>
+    );
+    const { rerender } = render(at('sheet'));
+    const title = screen.getByText('Title');
+    expect(screen.getByTestId('top').contains(title)).toBe(true);
+    rerender(at('head'));
+    expect(screen.getByText('Title')).toBe(title);
+    expect(screen.getByTestId('top').contains(title)).toBe(true);
+  });
+
   it('names the tap above it as the caller says, and closes on it', () => {
     const onClose = vi.fn();
     render(

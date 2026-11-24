@@ -27,16 +27,15 @@
 // Dynamic Type the painting goes, as the Ideas header's does: 150pt of
 // decoration is the room the title and the buttons need there.
 
-import React, { useEffect, useRef } from 'react';
-import { Animated, Modal, Pressable, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
+import React from 'react';
+import { StyleSheet, Text, useWindowDimensions } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Image } from 'expo-image';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useI18n } from '../lib/i18n';
 import type { SignInWhy } from '../lib/save';
 import { useScheme } from '../lib/theme';
-import { colors, display, font, gradAI, labelScaleCap, space } from '../theme';
-import { CONTROL_H, PressableScale, useNarrowWindow } from './ui';
+import { colors, display, font, gradAI, labelScaleCap } from '../theme';
+import { CONTROL_H, PressableScale, Sheet, useNarrowWindow } from './ui';
 import artDark from '../../assets/signin-art-dark.webp';
 import artLight from '../../assets/signin-art-light.webp';
 
@@ -78,76 +77,46 @@ export default function AuthSheet({ visible, why = 'save', onClose, onSignIn }: 
   const { fontScale } = useWindowDimensions();
   const narrow = useNarrowWindow();
   const painted = !narrow && fontScale < labelScaleCap;
-  const insets = useSafeAreaInsets();
-  // Modal's own fade carries the backdrop; the panel gets a spring of its
-  // own so it rises like a sheet instead of appearing all at once.
-  const rise = useRef(new Animated.Value(1)).current;
-
-  useEffect(() => {
-    if (!visible) { rise.setValue(1); return; }
-    Animated.spring(rise, { toValue: 0, useNativeDriver: true, speed: 14, bounciness: 3 }).start();
-  }, [visible, rise]);
-
   return (
-    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose} statusBarTranslucent>
-      {/* Tapping the dimmed area dismisses — the same escape as "Not now". */}
-      <Pressable style={s.backdrop} onPress={onClose} accessibilityLabel={t('Close', 'Đóng', '閉じる', '关闭', '關閉')} />
-      <Animated.View
-        style={[
-          s.sheet,
-          { paddingBottom: insets.bottom + 22, transform: [{ translateY: rise.interpolate({ inputRange: [0, 1], outputRange: [0, 320] }) }] },
-        ]}
+    // Tapping the dimmed area dismisses — the same escape as "Not now".
+    <Sheet visible={visible} onClose={onClose} riseFrom={320} foot={22} grabberGap={14} style={s.sheet}>
+      {painted ? (
+        <Image
+          source={scheme === 'light' ? artLight : artDark}
+          style={s.art}
+          contentFit="contain"
+          accessible={false}
+          aria-hidden
+          testID="signin-art"
+        />
+      ) : null}
+      <Text style={s.title}>{TITLES[why](t)}</Text>
+      {/* The width has to go on the Pressable itself (`style`), not
+          on the animated child: the sheet centres its children, so an
+          un-stretched Pressable shrink-wraps the label and "100%" inside
+          it then resolves against that shrunken box. */}
+      <PressableScale
+        onPress={onSignIn}
+        testID="auth-sheet-sign-in"
+        accessibilityRole="button"
+        style={{ alignSelf: 'stretch' }}
       >
-        <View style={s.grabber} />
-        {painted ? (
-          <Image
-            source={scheme === 'light' ? artLight : artDark}
-            style={s.art}
-            contentFit="contain"
-            accessible={false}
-            aria-hidden
-            testID="signin-art"
-          />
-        ) : null}
-        <Text style={s.title}>{TITLES[why](t)}</Text>
-        {/* The width has to go on the Pressable itself (`style`), not
-            on the animated child: the sheet centres its children, so an
-            un-stretched Pressable shrink-wraps the label and "100%" inside
-            it then resolves against that shrunken box. */}
-        <PressableScale
-          onPress={onSignIn}
-          testID="auth-sheet-sign-in"
-          accessibilityRole="button"
-          style={{ alignSelf: 'stretch' }}
-        >
-          <LinearGradient {...gradAI} style={s.primary}>
-            {/* Both words: a reader without an account reads "Sign in" as
-                a door for somebody else. */}
-            <Text style={s.primaryText}>{t('Sign in / Sign up', 'Đăng nhập / Đăng ký', 'サインイン / 登録', '登录 / 注册', '登入 / 註冊')}</Text>
-          </LinearGradient>
-        </PressableScale>
-        <PressableScale testID="auth-sheet-cancel" onPress={onClose} accessibilityRole="button" contentStyle={s.secondary}>
-          <Text style={s.secondaryText}>{t('Not now', 'Để sau', 'あとで', '以后再说', '以後再說')}</Text>
-        </PressableScale>
-      </Animated.View>
-    </Modal>
+        <LinearGradient {...gradAI} style={s.primary}>
+          {/* Both words: a reader without an account reads "Sign in" as
+              a door for somebody else. */}
+          <Text style={s.primaryText}>{t('Sign in / Sign up', 'Đăng nhập / Đăng ký', 'サインイン / 登録', '登录 / 注册', '登入 / 註冊')}</Text>
+        </LinearGradient>
+      </PressableScale>
+      <PressableScale testID="auth-sheet-cancel" onPress={onClose} accessibilityRole="button" contentStyle={s.secondary}>
+        <Text style={s.secondaryText}>{t('Not now', 'Để sau', 'あとで', '以后再说', '以後再說')}</Text>
+      </PressableScale>
+    </Sheet>
   );
 }
 
 const s = StyleSheet.create({
-  backdrop: { ...StyleSheet.absoluteFill, backgroundColor: 'rgba(6,5,8,0.62)' },
-  sheet: {
-    position: 'absolute', left: 0, right: 0, bottom: 0,
-    alignItems: 'center', gap: 12,
-    paddingHorizontal: space.page, paddingTop: 10,
-    backgroundColor: colors.bgElevated,
-    borderTopLeftRadius: 28, borderTopRightRadius: 28,
-    borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.borderGlassSoft,
-  },
-  grabber: {
-    width: 38, height: 4, borderRadius: 2,
-    backgroundColor: colors.textTertiary, marginBottom: 14,
-  },
+  // The panel centres its children: the art, the title, two buttons.
+  sheet: { alignItems: 'center', gap: 12 },
   art: { width: Math.round(ART_HEIGHT * ART_ASPECT), height: ART_HEIGHT },
   // The margin below is the one the explanation line used to hold: the
   // title now sits straight over the button and needs the same air.
