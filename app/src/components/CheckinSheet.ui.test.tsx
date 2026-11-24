@@ -74,7 +74,7 @@ describe('CheckinSheet', () => {
     type('  Crisp sourdough.  ');
     await press('checkin-sheet-save');
     expect(data.saveCheckin).toHaveBeenCalledWith('k9', { note: 'Crisp sourdough.' });
-    expect(onClose).toHaveBeenCalledWith(true);
+    expect(onClose).toHaveBeenCalledWith(true, false);
   });
 
   it('writes nothing for a fresh visit left without words', async () => {
@@ -90,7 +90,7 @@ describe('CheckinSheet', () => {
     type('Quiet upstairs.');
     await press('checkin-sheet-close');
     expect(data.saveCheckin).toHaveBeenCalledWith('k9', { note: 'Quiet upstairs.' });
-    expect(onClose).toHaveBeenCalledWith(true);
+    expect(onClose).toHaveBeenCalledWith(true, false);
   });
 
   it('treats the back gesture as the tap outside: kept on a fresh visit, dropped on an old one', async () => {
@@ -150,7 +150,7 @@ describe('CheckinSheet', () => {
     expect(field().value).toBe('Crisp sourdough.');
     await press('checkin-sheet-save');
     expect(data.saveCheckin).toHaveBeenCalledTimes(2);
-    expect(onClose).toHaveBeenCalledWith(true);
+    expect(onClose).toHaveBeenCalledWith(true, false);
   });
 
   it('does not send twice while one save is on its way', async () => {
@@ -203,7 +203,28 @@ describe('CheckinSheet', () => {
     show(FRESH, true);
     await press('checkin-sheet-close');
     expect(data.saveCheckin).toHaveBeenCalledWith('k9', { note: null, audience: 'friends' });
-    expect(onClose).toHaveBeenCalledWith(true);
+    expect(onClose).toHaveBeenCalledWith(true, true);
+  });
+
+  it('says whether what it wrote leaves the visit shared: Friends yes, Only me no, and words alone no', async () => {
+    show(FRESH, true);
+    fireEvent.click(screen.getByTestId('checkin-sheet-seen-private'));
+    await press('checkin-sheet-save');
+    expect(onClose).toHaveBeenLastCalledWith(true, false);
+    cleanup();
+
+    show({ ...OLD, note: 'Before.' }, true);
+    fireEvent.click(screen.getByTestId('checkin-sheet-seen-friends'));
+    await press('checkin-sheet-save');
+    expect(onClose).toHaveBeenLastCalledWith(true, true);
+    cleanup();
+
+    // The words changed on a visit already shared: nothing about who
+    // sees it was written, so nothing is claimed.
+    show({ ...OLD, note: 'Before.', audience: 'friends' }, true);
+    type('After.');
+    await press('checkin-sheet-save');
+    expect(onClose).toHaveBeenLastCalledWith(true, false);
   });
 
   it('writes a changed answer on an old visit, and no answer when only the words changed', async () => {

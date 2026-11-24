@@ -10,6 +10,10 @@
 // anything is asked of them; the sheet rises over a visit that already
 // exists. `lib/checkin` has what that order was weighed against.
 //
+// When the sheet goes, a visit shared with friends is said to be on the
+// reader's page, with a way there (`lib/notice`) — the page is not gone
+// to for them, and why not is written there.
+//
 // The App Store's "enjoying the app?" waits for the sheet to go. It was
 // asked a second and a half after the tap (`askReview`'s settle), which
 // is now the moment the reader is looking at a field; Apple's sheet over
@@ -23,6 +27,7 @@ import { reviewAfterCheckin } from '../../lib/askReview';
 import { AUDIENCE_ON, nextAudience, type Checkin } from '../../lib/checkin';
 import { addCheckin, type Fetch } from '../../lib/data';
 import { useI18n } from '../../lib/i18n';
+import { useNotice } from '../../lib/notice';
 import { DAILY_CAPS, isDailyLimit } from '../../lib/quota';
 
 /** The place as the tap needs it; the screen has all four to hand. */
@@ -34,6 +39,7 @@ export function useCheckIn({ uid, visits, askToSignIn }: {
   askToSignIn: (why: 'checkin') => void;
 }): { checkIn: (at: CheckInAt) => Promise<void>; checking: boolean; sheet: React.ReactElement } {
   const { t } = useI18n();
+  const { say } = useNotice();
   const [checking, setChecking] = useState(false);
   const [raised, setRaised] = useState<SheetVisit | null>(null);
   // The reader's count with this visit in it, kept from the tap for the
@@ -84,10 +90,21 @@ export function useCheckIn({ uid, visits, askToSignIn }: {
     <CheckinSheet
       visit={raised}
       withAudience={AUDIENCE_ON}
-      onClose={(saved) => {
+      onClose={(saved, shared) => {
         setRaised(null);
-        reviewAfterCheckin(total.current);
         if (saved) visits.reload();
+        // Apple's sheet or the line, never both: the ask says at once
+        // whether its sheet is coming (`askReview`).
+        void reviewAfterCheckin(total.current).then((asks) => {
+          // Only for a visit friends see. One kept private has no card
+          // worth going to look at, and a line about it would be
+          // telling the reader something they just chose not to share.
+          if (asks || !shared) return;
+          say({
+            text: t('Added to your page', 'Đã thêm vào trang của bạn', 'あなたのページに追加しました', '已添加到你的主页', '已新增到你的主頁'),
+            action: t('View', 'Xem', '見る', '查看', '檢視'),
+          });
+        });
       }}
     />
   );

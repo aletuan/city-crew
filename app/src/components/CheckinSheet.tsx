@@ -99,8 +99,9 @@ const RISE = 360;
 
 export default function CheckinSheet({ visit, onClose, withAudience = false }: {
   visit: SheetVisit | null;
-  /** `saved`: something was written, and the visits want asking again. */
-  onClose: (saved: boolean) => void;
+  /** `saved`: something was written, and the visits want asking again.
+   *  `shared`: what was written made (or kept) the visit one friends see. */
+  onClose: (saved: boolean, shared?: boolean) => void;
   withAudience?: boolean;
 }) {
   // Android's back is a way out like the dim, and what the dim does is
@@ -116,7 +117,7 @@ export default function CheckinSheet({ visit, onClose, withAudience = false }: {
 }
 
 function Body({ visit, onClose, withAudience, backRef }: {
-  visit: SheetVisit; onClose: (saved: boolean) => void; withAudience: boolean;
+  visit: SheetVisit; onClose: (saved: boolean, shared?: boolean) => void; withAudience: boolean;
   backRef: React.MutableRefObject<() => void>;
 }) {
   const { t, lang } = useI18n();
@@ -147,7 +148,7 @@ function Body({ visit, onClose, withAudience, backRef }: {
     setBusy(true);
     try {
       await saveCheckin(visit.id, answered ? { note, audience } : { note });
-      onClose(true);
+      onClose(true, answered && audience === 'friends');
     } catch (e) {
       setBusy(false);
       Alert.alert(
