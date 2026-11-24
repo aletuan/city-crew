@@ -97,6 +97,38 @@ describe('Shared, with visits', () => {
     expect(column()).toEqual(['k1']);
   });
 
+  it('draws nothing of the column while the visits are awaited — no list, no empty page — and all of it once they are in', () => {
+    const lists = [list('b', 20)];
+    const page = render(
+      <Shared
+        me="me" person={LAN} lists={lists} visits={[]} visitCard={visitCard} holding
+        seenOf={() => ({ kind: 'public' })} coverFor={() => undefined} onOpen={() => {}} onCreate={() => {}}
+      />,
+    );
+    expect(screen.getByTestId('person-activity-wait')).toBeTruthy();
+    expect(screen.queryByTestId('person-activity')).toBeNull();
+    expect(screen.queryByTestId('person-no-lists')).toBeNull();
+    page.rerender(
+      <Shared
+        me="me" person={LAN} lists={lists} visits={[visit('k1', 22)]} visitCard={visitCard} holding={false}
+        seenOf={() => ({ kind: 'public' })} coverFor={() => undefined} onOpen={() => {}} onCreate={() => {}}
+      />,
+    );
+    expect(screen.queryByTestId('person-activity-wait')).toBeNull();
+    expect(column()).toEqual(['k1', 'List b']);
+  });
+
+  it('does not say the page is empty while it waits to find out', () => {
+    render(
+      <Shared
+        me="me" person={LAN} lists={[]} visits={[]} visitCard={visitCard} holding
+        seenOf={() => ({ kind: 'public' })} coverFor={() => undefined} onOpen={() => {}} onCreate={() => {}}
+      />,
+    );
+    expect(screen.queryByTestId('person-no-lists')).toBeNull();
+    expect(screen.getByTestId('person-activity-wait')).toBeTruthy();
+  });
+
   it('is the empty page with neither', () => {
     show([], []);
     expect(screen.getByTestId('person-no-lists')).toBeTruthy();

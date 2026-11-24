@@ -40,7 +40,7 @@
 // its place's name would be a second kind of answer in a list that
 // explains itself as one.
 
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import ActivityCard from '../../components/ActivityCard';
 import CheckinSheet from '../../components/CheckinSheet';
 import VisitNote from '../../components/VisitNote';
@@ -51,7 +51,8 @@ import { AUDIENCE_ON, type PersonCheckin } from '../../lib/checkin';
 import { useMyCheckins } from '../../lib/checkins';
 import { useCityList } from '../../lib/city';
 import { cityShortById } from '../../lib/cityName';
-import { fetchPersonCheckins, likeCheckin, useFetch, type Fetch, type FriendProfile } from '../../lib/data';
+import { fetchPersonCheckins, likeCheckin, usePersistedFetch, type Fetch, type FriendProfile } from '../../lib/data';
+import { CACHE_CATALOG, cacheKey } from '../../lib/data/cache';
 import { atHandle } from '../../lib/handle';
 import { useI18n } from '../../lib/i18n';
 import { localized } from '../../lib/localized';
@@ -59,6 +60,16 @@ import { SEEN_GLYPH } from '../../lib/shares';
 import { useFlag } from '../../lib/useFlag';
 
 const NONE: PersonCheckin[] = [];
+
+/**
+ * How long the column waits for the visits before drawing without them.
+ *
+ * 1200ms: chosen, not measured on a phone. A cached page answers in the
+ * time it takes to read storage, well inside it; the function itself
+ * answered in about 300ms from this desk. Past a second a blank column
+ * reads as a page that is broken rather than one that is loading.
+ */
+export const HOLD_MS = 1200;
 
 /**
  * The visits on `person`'s page for the reader `me`, their cards, and
@@ -75,6 +86,9 @@ export function useVisitCards({ me, person, onPlace }: {
 }): {
   /** The visits to draw — none while the page is searched. */
   visits: (searching: boolean) => PersonCheckin[];
+  /** The column should wait for the visits — never while searching,
+   *  which draws none. */
+  holding: (searching: boolean) => boolean;
   card: (v: PersonCheckin) => React.ReactElement;
   sheet: React.ReactElement;
   /** The read itself, for the page's pull to refresh. */
@@ -96,7 +110,31 @@ export function useVisitCards({ me, person, onPlace }: {
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [on, me, personId, stamp],
   );
-  const read = useFetch(fetcher, NONE);
+  // Kept between launches, per reader and per page, as your own visits
+  // are (`lib/checkins`): a page opened before draws its visits from the
+  // last answer while this one is on its way.
+  const asks = on && !!me && !!personId;
+  const read = usePersistedFetch(
+    CACHE_CATALOG && asks ? cacheKey('personvisits', personId as string, me) : null, fetcher, NONE,
+  );
+
+  // The column waits for the visits, briefly (owner, 24 Nov 2026, the
+  // evening of the day the cards shipped). The lists are in memory and
+  // draw on the first frame; the visits are a read, and landed a moment
+  // later among them — the newest visit pushing every list down, a page
+  // that looked loaded twice. So nothing of the column is drawn until
+  // the visits have answered, from the cache or the network, or failed.
+  //
+  // `HOLD_MS` at most: past that the lists are drawn without them, and
+  // the visits join when they come. A reader on a train must not be shown
+  // a spinner over lists the phone already has.
+  const [waited, setWaited] = useState<string | null>(null);
+  useEffect(() => {
+    if (!asks) return undefined;
+    const t0 = setTimeout(() => setWaited(personId), HOLD_MS);
+    return () => clearTimeout(t0);
+  }, [asks, personId]);
+  const holding = asks && !read.loaded && waited !== personId;
 
   // The reader's presses since the read, by visit: true set, false
   // taken back. Laid over what the server said.
@@ -158,5 +196,9 @@ export function useVisitCards({ me, person, onPlace }: {
     />
   );
 
-  return { visits: (searching) => (searching ? NONE : read.data), card, sheet, read };
+  return {
+    visits: (searching) => (searching ? NONE : read.data),
+    holding: (searching) => !searching && holding,
+    card, sheet, read,
+  };
 }
