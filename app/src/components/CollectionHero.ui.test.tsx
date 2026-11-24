@@ -193,7 +193,12 @@ describe('CollectionHero on your own list', () => {
 
   it('carries the camera, and the cover itself opens the sheet', () => {
     render(<CollectionHero list={mine()} members={[HEIM, SAM]} owned />);
-    expect(screen.getByTestId('collection-hero-camera')).toBeTruthy();
+    // The person page's disc, figure for figure.
+    const camera = screen.getByTestId('collection-hero-camera');
+    expect(camera.querySelector('[data-icon="camera-outline"]')!.getAttribute('data-size')).toBe('18');
+    const disc = getComputedStyle(camera);
+    expect([disc.width, disc.height]).toEqual(['36px', '36px']);
+    expect(disc.borderTopColor).toBe('rgba(255, 255, 255, 0.45)');
     expect(sheetOpen()).toBe(false);
     open();
     expect(sheetOpen()).toBe(true);

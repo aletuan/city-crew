@@ -1163,7 +1163,12 @@ describe('lists that are not for everybody', () => {
       await show('me');
       const camera = screen.getByTestId('person-cover-edit');
       expect(screen.getByTestId('person-cover').contains(camera)).toBe(true);
-      expect(camera.querySelector('[data-icon="camera-outline"]')).toBeTruthy();
+      // The photograph disc, with the action glyph and a white hairline,
+      // so it is not lost on a dark cover (owner, 24 Nov 2026).
+      expect(camera.querySelector('[data-icon="camera-outline"]')!.getAttribute('data-size')).toBe('18');
+      const disc = getComputedStyle(camera);
+      expect([disc.width, disc.height]).toEqual(['36px', '36px']);
+      expect(disc.borderTopColor).toBe('rgba(255, 255, 255, 0.45)');
       const tools = screen.getByTestId('person-own-tools');
       expect(tools.contains(camera)).toBe(false);
       expect(tools.firstElementChild!.contains(screen.getByTestId('person-search'))).toBe(true);
