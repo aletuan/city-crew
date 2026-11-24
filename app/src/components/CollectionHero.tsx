@@ -38,6 +38,7 @@ import { CollectionCoverSheet } from './CollectionCoverSheet';
 import { useCoverTrial } from './useCoverTrial';
 import { Glyph, ICON } from './ui/glyph';
 import { useReducedMotion } from './ui/motion';
+import { PHOTO_DISC } from './ui/controls';
 
 /** Wide, as the tile's own photograph is on a place's card (`StopHero`). */
 export const HERO_ASPECT = 2;
@@ -132,7 +133,7 @@ export default function CollectionHero({ list, members, from, owned, onChanged }
           picture is a control. The whole cover is the press. */}
       {owned ? (
         <View style={s.camera} pointerEvents="none" testID="collection-hero-camera">
-          <Glyph name="camera-outline" size={ICON.meta} color="#fff" />
+          <Glyph name="camera-outline" size={ICON.action} color="#fff" />
         </View>
       ) : null}
       {trying ? (
@@ -164,12 +165,16 @@ const s = StyleSheet.create({
   image: { ...StyleSheet.absoluteFill },
   hidden: { opacity: 0 },
   grow: { position: 'absolute', borderRadius: radius.image, overflow: 'hidden' },
+  // The person page's camera disc, figure for figure (`PersonScreen` ›
+  // `coverEdit`, where the reasoning is): 36 with the action glyph and a
+  // hairline ring, so it does not go under on a dark photograph.
   camera: {
-    position: 'absolute', right: 10, bottom: 10, width: 30, height: 30, borderRadius: 15,
+    position: 'absolute', right: 10, bottom: 10, width: PHOTO_DISC, height: PHOTO_DISC, borderRadius: PHOTO_DISC / 2,
     alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(0,0,0,0.55)',
+    borderWidth: StyleSheet.hairlineWidth * 2, borderColor: 'rgba(255,255,255,0.45)',
   },
   trying: {
-    position: 'absolute', bottom: 13, left: 10, paddingHorizontal: 10, paddingVertical: 4,
+    position: 'absolute', bottom: 17, left: 10, paddingHorizontal: 10, paddingVertical: 4,
     borderRadius: 999, backgroundColor: 'rgba(0,0,0,0.55)',
   },
   tryingText: { color: '#fff', fontSize: 12, fontWeight: font.medium },

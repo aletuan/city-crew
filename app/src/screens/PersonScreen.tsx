@@ -128,6 +128,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import {
   Avatar, EmptyState, GradientCta, PressableScale, Screen, SECONDARY_CONTROL_H, useTabBarClearance,
 } from '../components/ui';
+import { PHOTO_DISC } from '../components/ui/controls';
 import { Glyph, ICON } from '../components/ui/glyph';
 import { useFriendButtons } from '../components/FriendButton';
 import { usePullControl } from '../lib/usePull';
@@ -635,7 +636,7 @@ function Head({ me, person, own, cover, coverH, onCover, trying, ring, friend, o
             and the trial label leave free. The whole cover is the press. */}
         {onCover ? (
           <View style={s.coverEdit} testID="person-cover-edit">
-            <Glyph name="camera-outline" size={ICON.meta} color="#fff" />
+            <Glyph name="camera-outline" size={ICON.action} color="#fff" />
           </View>
         ) : null}
         {/* Said on the picture itself, so a look is never taken for a
@@ -815,16 +816,23 @@ const s = StyleSheet.create({
   spinner: { marginTop: 20 },
   // The accent's tint: a cover with no photograph to wear.
   tint: { backgroundColor: colors.accentSoft },
-  // A disc of the photograph's own dark, 30pt: it reads on a light sky
-  // and a night street alike; the target is the whole cover.
+  // A disc of the photograph's own dark: it reads on a light sky. The
+  // target is the whole cover. It was 30pt with a 13pt glyph, the size of
+  // a caption's icon, and on a dark photograph it went under altogether —
+  // the owner's cover, a street under trees, showed a speck of white and
+  // no disc (24 Nov 2026). Now the photograph disc every other control on
+  // a picture is (`PHOTO_DISC`, with the action glyph), and a hairline of
+  // white that draws its edge where the dark fill cannot: on a night
+  // street the ring is the disc, on a pale sky the fill is.
   coverEdit: {
-    position: 'absolute', right: 10, bottom: 10, width: 30, height: 30, borderRadius: 15,
+    position: 'absolute', right: 10, bottom: 10, width: PHOTO_DISC, height: PHOTO_DISC, borderRadius: PHOTO_DISC / 2,
     alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(0,0,0,0.55)',
+    borderWidth: StyleSheet.hairlineWidth * 2, borderColor: 'rgba(255,255,255,0.45)',
   },
   // The cover's corner, opposite the face: what the sheet is trying on.
   // Beside the camera at the foot: the cover's top is the bar's now.
   trying: {
-    position: 'absolute', bottom: 13, right: 50, paddingHorizontal: 10, paddingVertical: 4,
+    position: 'absolute', bottom: 17, right: 54, paddingHorizontal: 10, paddingVertical: 4,
     borderRadius: 999, backgroundColor: 'rgba(0,0,0,0.55)',
   },
   tryingText: { color: '#fff', fontSize: 12, fontWeight: font.medium },
