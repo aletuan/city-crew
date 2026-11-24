@@ -4339,11 +4339,14 @@ describe('pulling the list down', () => {
     spies.mineReload.mockClear();
     spies.placesReload.mockClear();
     spies.sharedReload.mockClear();
+    spies.sharesReload.mockClear();
     act(() => { list().onRefresh(); });
     expect(spies.colsReload).toHaveBeenCalledTimes(1);
     expect(spies.mineReload).toHaveBeenCalledTimes(1);
     expect(spies.sharedReload).toHaveBeenCalledTimes(1);
     expect(spies.placesReload).toHaveBeenCalledTimes(1);
+    // The list of who it is shared with, which another hook holds.
+    expect(spies.sharesReload).toHaveBeenCalledTimes(1);
     // Nothing is loading, so the spinner disarms as soon as it is armed.
     expect(list().refreshing).toBe(false);
   });
@@ -4514,5 +4517,31 @@ describe('the copy button', () => {
     expect(copyBtn()!.getAttribute('aria-label')).toBe('Who saved a copy, 2');
     fireEvent.click(copyBtn()!);
     expect(raw.navigate).toHaveBeenCalledWith('CollectionActivity', { slug: 'old-quarter' });
+  });
+});
+
+// A cover chosen on the card is a write to the list's row: your shelf
+// reads it again, and the public shelf too when the list is on it, where
+// the old cover would otherwise stand until the next pull.
+describe('a new cover', () => {
+  const changed = () => (propsWhere((q) => 'onChanged' in q && 'list' in q) as { onChanged: () => void }).onChanged;
+
+  it('asks for your lists again, and the public ones only for a public list', () => {
+    state.mine = [collection()];
+    show();
+    spies.mineReload.mockClear();
+    spies.colsReload.mockClear();
+    act(() => { changed()(); });
+    expect(spies.mineReload).toHaveBeenCalledTimes(1);
+    expect(spies.colsReload).not.toHaveBeenCalled();
+    cleanup();
+
+    state.mine = [collection({ is_public: true })];
+    show();
+    spies.mineReload.mockClear();
+    spies.colsReload.mockClear();
+    act(() => { changed()(); });
+    expect(spies.mineReload).toHaveBeenCalledTimes(1);
+    expect(spies.colsReload).toHaveBeenCalledTimes(1);
   });
 });
