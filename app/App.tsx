@@ -29,6 +29,7 @@ import { GuideGrantSync } from './src/lib/useGuideGrant';
 import { SessionNavSync } from './src/lib/sessionNavSync';
 import { ThemeAccountSync } from './src/lib/themeAccountSync';
 import { RewardsProvider } from './src/lib/rewards';
+import { NoticeProvider } from './src/lib/notice';
 import { FreshNewsProvider } from './src/lib/freshNews';
 import { SaveProvider } from './src/lib/save';
 import SaveSheets from './src/components/SaveSheets';
@@ -36,6 +37,7 @@ import { colors } from './src/theme';
 import { fireHaptic } from './src/components/ui';
 import FloatingTabBar from './src/components/FloatingTabBar';
 import RewardBanner from './src/components/RewardBanner';
+import NoticeBar from './src/components/NoticeBar';
 import { AppBoundary, ScreenBoundary } from './src/components/ScreenBoundary';
 import WelcomeSheet from './src/components/WelcomeSheet';
 import ReminderAskSheet from './src/components/ReminderAskSheet';
@@ -437,6 +439,7 @@ function Root() {
                           banner below all read this one copy. Inside the
                           lists, check-ins, friends and trips it counts —
                           see `lib/rewards`. */}
+                      <NoticeProvider>
                       <RewardsProvider>
                       {/* What is new for the reader in comments, once:
                           the last tab's dot, the bell on their own page
@@ -462,7 +465,12 @@ function Root() {
                           up; a press goes to Profile, where its sheet is
                           — see `components/RewardBanner`. */}
                       <RewardBanner onOpen={() => goTo('Profile', { screen: 'ProfileHome' })} />
+                      {/* A line from the foot of the screen with one thing
+                          to press — "Added to your page · View" after a
+                          check-in. See `lib/notice`. */}
+                      <NoticeBar onOpen={() => goTo('Profile', { screen: 'ProfileHome' })} />
                       </RewardsProvider>
+                      </NoticeProvider>
                     </SaveProvider>
                     </CheckinsProvider>
                     </MyTripsProvider>

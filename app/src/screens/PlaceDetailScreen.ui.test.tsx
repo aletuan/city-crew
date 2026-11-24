@@ -56,7 +56,8 @@ const spies = vi.hoisted(() => ({
   askToSignIn: vi.fn(),
   addCheckin: vi.fn(async (_at?: unknown): Promise<string> => 'k-new'),
   saveCheckin: vi.fn(async (_id: string, _said: unknown) => {}),
-  review: vi.fn((_total: number) => {}),
+  review: vi.fn(async (_total: number): Promise<boolean> => false),
+  say: vi.fn((_said: { text: string; action: string }) => {}),
   removeCheckin: vi.fn(async () => {}),
   reloadCheckins: vi.fn(),
   note: vi.fn(),
@@ -105,6 +106,8 @@ vi.mock('../lib/data', async () => ({
 }));
 // Apple's review sheet: only when it is asked, and with what count.
 vi.mock('../lib/askReview', () => ({ reviewAfterCheckin: spies.review }));
+// The line from the foot of the screen: what is said, if anything.
+vi.mock('../lib/notice', () => ({ useNotice: () => ({ note: null, say: spies.say, dismiss: () => {} }) }));
 // The reader's check-ins, as the provider hands them to every screen.
 vi.mock('../lib/checkins', () => ({
   useMyCheckins: () => ({ data: state.checkins, loading: false, loaded: true, error: null, loadedAt: 1, fromCache: false, reload: spies.reloadCheckins }),
@@ -293,7 +296,8 @@ beforeEach(() => {
   state.checkins = [];
   spies.addCheckin.mockReset().mockResolvedValue('k-new');
   spies.saveCheckin.mockReset().mockResolvedValue(undefined);
-  spies.review.mockReset();
+  spies.review.mockReset().mockResolvedValue(false);
+  spies.say.mockReset();
   spies.removeCheckin.mockReset().mockResolvedValue(undefined);
   spies.reloadCheckins.mockReset();
   state.city = null;
@@ -671,6 +675,42 @@ describe('PlaceDetailScreen — title, rating, facts', () => {
     fireEvent.click(screen.getByTestId('checkin-sheet-save'));
     await waitFor(() => expect(spies.review).toHaveBeenCalledWith(1));
     expect(spies.reloadCheckins).toHaveBeenCalledTimes(2);
+  });
+
+  // ── the line that says where the visit went (24 Nov 2026) ──
+
+  const checkInAndClose = async () => {
+    state.checkin = true;
+    state.uid = 'u1';
+    show();
+    fireEvent.click(screen.getByTestId('detail-checkin'));
+    await screen.findByTestId('checkin-sheet');
+  };
+
+  it('says a visit shared with friends is on the reader’s page, once the sheet has gone', async () => {
+    await checkInAndClose();
+    expect(spies.say).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByTestId('checkin-sheet-save'));
+    await waitFor(() => expect(spies.say).toHaveBeenCalledWith({ text: 'Added to your page', action: 'View' }));
+    expect(spies.say).toHaveBeenCalledTimes(1);
+  });
+
+  it('says nothing for a visit kept to oneself', async () => {
+    await checkInAndClose();
+    fireEvent.click(screen.getByTestId('checkin-sheet-seen-private'));
+    fireEvent.click(screen.getByTestId('checkin-sheet-save'));
+    await waitFor(() => expect(spies.review).toHaveBeenCalled());
+    await act(async () => { await Promise.resolve(); });
+    expect(spies.say).not.toHaveBeenCalled();
+  });
+
+  it('says nothing when Apple’s review sheet is on its way: one thing at a time', async () => {
+    spies.review.mockResolvedValue(true);
+    await checkInAndClose();
+    fireEvent.click(screen.getByTestId('checkin-sheet-save'));
+    await waitFor(() => expect(spies.review).toHaveBeenCalled());
+    await act(async () => { await Promise.resolve(); });
+    expect(spies.say).not.toHaveBeenCalled();
   });
 
   it('raises no sheet over a visit that was refused', async () => {
