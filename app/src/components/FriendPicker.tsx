@@ -57,15 +57,14 @@
 // twelve names is a keyboard over the list it filters. When a crew
 // outgrows that, measure again.
 
-import React, { useEffect, useRef } from 'react';
+import React from 'react';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { Animated, Modal, Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import type { FriendProfile } from '../lib/data';
 import { useI18n } from '../lib/i18n';
 import { colors, display, font, space } from '../theme';
 import { Glyph, ICON } from './ui/glyph';
-import { Avatar, GradientCta, PressableScale } from './ui';
+import { Avatar, GradientCta, PressableScale, Sheet } from './ui';
 
 type Icon = keyof typeof Ionicons.glyphMap;
 
@@ -129,64 +128,44 @@ export default function FriendPicker({
   onClose: () => void;
 }) {
   const { t } = useI18n();
-  const insets = useSafeAreaInsets();
-  const rise = useRef(new Animated.Value(1)).current;
-
-  useEffect(() => {
-    if (!open) { rise.setValue(1); return; }
-    Animated.spring(rise, { toValue: 0, useNativeDriver: true, speed: 14, bounciness: 3 }).start();
-  }, [open, rise]);
-
   return (
-    <Modal visible={open} transparent animationType="fade" onRequestClose={onClose} statusBarTranslucent>
-      <Pressable style={s.backdrop} onPress={onClose} accessibilityLabel={t('Close', 'Đóng', '閉じる', '关闭', '關閉')} />
-      <Animated.View
-        style={[
-          s.sheet,
-          {
-            paddingBottom: insets.bottom + 16,
-            transform: [{ translateY: rise.interpolate({ inputRange: [0, 1], outputRange: [0, 360] }) }],
-          },
-        ]}
-      >
-        <View style={s.grabber} />
-        <Text style={s.title}>{title}</Text>
-        {/* The subtitle says what picking does — who will see the list,
-            who joins the plan — so with nobody to pick it says it about
-            nothing, and the sheet is the empty line and the way to find
-            friends (owner, 20 Nov 2026, on the share sheet: "không cần
-            thiết"). The empty line sits its own 18 under the title. */}
-        {rows.length > 0 ? <Text style={s.subtitle}>{subtitle}</Text> : null}
+    <Sheet visible={open} onClose={onClose} grabberGap={14}>
+      <Text style={s.title}>{title}</Text>
+      {/* The subtitle says what picking does — who will see the list,
+          who joins the plan — so with nobody to pick it says it about
+          nothing, and the sheet is the empty line and the way to find
+          friends (owner, 20 Nov 2026, on the share sheet: "không cần
+          thiết"). The empty line sits its own 18 under the title. */}
+      {rows.length > 0 ? <Text style={s.subtitle}>{subtitle}</Text> : null}
 
-        {rows.length === 0 ? (
-          // Not an error, and not a dead end phrased as one: the reader
-          // has simply not added anybody yet.
-          <Text style={s.none}>{none}</Text>
-        ) : (
-          <Strip rows={rows} people={people} rowTestID={rowTestID} onToggle={onToggle} />
-        )}
+      {rows.length === 0 ? (
+        // Not an error, and not a dead end phrased as one: the reader
+        // has simply not added anybody yet.
+        <Text style={s.none}>{none}</Text>
+      ) : (
+        <Strip rows={rows} people={people} rowTestID={rowTestID} onToggle={onToggle} />
+      )}
 
-        {note ? (
-          <View style={s.note}>
-            <Glyph name={note.icon} size={ICON.text} color={colors.textTertiary} />
-            <Text style={s.noteText}>{note.text}</Text>
-          </View>
-        ) : <View style={s.gap} testID="picker-gap" />}
+      {note ? (
+        <View style={s.note}>
+          <Glyph name={note.icon} size={ICON.text} color={colors.textTertiary} />
+          <Text style={s.noteText}>{note.text}</Text>
+        </View>
+      ) : <View style={s.gap} testID="picker-gap" />}
 
-        <GradientCta
-          icon={cta.icon}
-          wide
-          label={cta.label}
-          testID={cta.testID}
-          disabled={cta.disabled}
-          onPress={() => { if (!cta.disabled) cta.onPress(); }}
-        />
+      <GradientCta
+        icon={cta.icon}
+        wide
+        label={cta.label}
+        testID={cta.testID}
+        disabled={cta.disabled}
+        onPress={() => { if (!cta.disabled) cta.onPress(); }}
+      />
 
-        <PressableScale onPress={onClose} accessibilityRole="button" contentStyle={s.later}>
-          <Text style={s.laterText}>{leave ?? t('Not now', 'Để sau', 'あとで', '以后再说', '以後再說')}</Text>
-        </PressableScale>
-      </Animated.View>
-    </Modal>
+      <PressableScale onPress={onClose} accessibilityRole="button" contentStyle={s.later}>
+        <Text style={s.laterText}>{leave ?? t('Not now', 'Để sau', 'あとで', '以后再说', '以後再說')}</Text>
+      </PressableScale>
+    </Sheet>
   );
 }
 
@@ -268,18 +247,6 @@ function Strip({ rows, people, rowTestID, onToggle }: {
 }
 
 const s = StyleSheet.create({
-  backdrop: { ...StyleSheet.absoluteFill, backgroundColor: 'rgba(6,5,8,0.62)' },
-  sheet: {
-    position: 'absolute', left: 0, right: 0, bottom: 0,
-    paddingHorizontal: space.page, paddingTop: 10,
-    backgroundColor: colors.bgElevated,
-    borderTopLeftRadius: 28, borderTopRightRadius: 28,
-    borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.borderGlassSoft,
-  },
-  grabber: {
-    width: 38, height: 4, borderRadius: 2, alignSelf: 'center',
-    backgroundColor: colors.textTertiary, marginBottom: 14,
-  },
   title: { color: colors.text, fontSize: 22, fontFamily: display.bold },
   subtitle: { color: colors.textTertiary, fontSize: 14, marginTop: 3, marginBottom: 10 },
   none: { color: colors.textTertiary, fontSize: 15, lineHeight: 21, paddingVertical: 18 },

@@ -1,17 +1,16 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { Glyph, ICON } from './ui/glyph';
-import React, { useEffect, useRef, useState } from 'react';
-import { Animated, LayoutAnimation, Modal, Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { LayoutAnimation, ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { ExploreFilters, ExploreSort, ExploreStatus, HoursWindow } from '../lib/exploreFilters';
 import { clockOf } from '../lib/format';
 import { answerFor, AXIS, axisOf, clockAt, headsFor } from '../lib/hoursSlider';
 import { useI18n } from '../lib/i18n';
 import { colors, display, font, radius, space } from '../theme';
-import { Card, fireHaptic, GradientCta, PressableScale, SECONDARY_CONTROL_H, useReducedMotion } from './ui';
+import { Card, fireHaptic, GradientCta, PressableScale, SECONDARY_CONTROL_H, Sheet, useReducedMotion } from './ui';
 import { HoursSlider } from './HoursSlider';
 import { SLIDE } from './SearchField';
-import { useSheetDrag } from './sheetDrag';
 
 /** What the sheet looks like with nothing chosen — the state Reset
  *  returns to, and the one it compares against to know it has anything
@@ -172,8 +171,6 @@ export default function ExploreFilterSheet({
 }) {
   const { t } = useI18n();
   const insets = useSafeAreaInsets();
-  const rise = useRef(new Animated.Value(1)).current;
-  const { drag, handlers } = useSheetDrag(visible, onClose);
   const [draft, setDraft] = useState(applied);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -186,11 +183,10 @@ export default function ExploreFilterSheet({
   const slide = () => { if (!still) LayoutAnimation.configureNext(SLIDE); };
 
   useEffect(() => {
-    if (!visible) { rise.setValue(1); return; }
+    if (!visible) return;
     setDraft(applied);
     setError(null);
-    Animated.spring(rise, { toValue: 0, useNativeDriver: true, speed: 14, bounciness: 3 }).start();
-  }, [visible, applied, rise]);
+  }, [visible, applied]);
 
   const choose = <K extends keyof ExploreFilters>(key: K, value: ExploreFilters[K]) => {
     fireHaptic('selection');
@@ -238,19 +234,17 @@ export default function ExploreFilterSheet({
   const [box, setBox] = useState({ view: 0, content: 0 });
   const scrolls = box.content > box.view + 1;
   return (
-    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose} statusBarTranslucent>
-      <Pressable style={s.backdrop} onPress={onClose} accessibilityLabel={t('Close', 'Đóng', '閉じる', '关闭', '關閉')} />
-      <Animated.View
-        {...(scrolls ? {} : handlers)}
-        testID="filter-sheet"
-        style={[s.sheet, {
-          maxHeight: screenH - insets.top - SHEET_CLEARANCE,
-          paddingBottom: 14 + insets.bottom,
-          transform: [{ translateY: rise.interpolate({ inputRange: [0, 1], outputRange: [0, 420] }) }, { translateY: drag }],
-        }]}
-      >
-        <View {...(scrolls ? handlers : {})} testID="filter-sheet-top">
-        <View style={s.handle} />
+    <Sheet
+      visible={visible}
+      onClose={onClose}
+      testID="filter-sheet"
+      grabTestID="filter-sheet-top"
+      pull={scrolls ? 'head' : 'sheet'}
+      riseFrom={420}
+      foot={14}
+      grabberGap={10}
+      style={[s.sheet, { maxHeight: screenH - insets.top - SHEET_CLEARANCE }]}
+      head={(
         <View style={s.head}>
           <Text style={s.title}>{t('Sort & filter', 'Sắp xếp & lọc', '並べ替え・絞り込み', '排序和筛选', '排序和篩選')}</Text>
           <PressableScale
@@ -263,272 +257,272 @@ export default function ExploreFilterSheet({
             <Glyph name="close" size={ICON.action} color={colors.text} />
           </PressableScale>
         </View>
-        </View>
+      )}
+    >
 
-        <ScrollView
-          style={s.questions}
-          scrollEnabled={scrolls}
-          bounces={false}
-          showsVerticalScrollIndicator={scrolls}
-          testID="filter-questions"
-          onLayout={(e) => { const view = e.nativeEvent.layout.height; setBox((b) => (b.view === view ? b : { ...b, view })); }}
-          onContentSizeChange={(_, content) => setBox((b) => (b.content === content ? b : { ...b, content }))}
-        >
+      <ScrollView
+        style={s.questions}
+        scrollEnabled={scrolls}
+        bounces={false}
+        showsVerticalScrollIndicator={scrolls}
+        testID="filter-questions"
+        onLayout={(e) => { const view = e.nativeEvent.layout.height; setBox((b) => (b.view === view ? b : { ...b, view })); }}
+        onContentSizeChange={(_, content) => setBox((b) => (b.content === content ? b : { ...b, content }))}
+      >
 
-        {/* A track of three segments, with a mark each — the shape the
-            opening-hours question below already takes, so the two
-            questions read as two of one thing.
+      {/* A track of three segments, with a mark each — the shape the
+          opening-hours question below already takes, so the two
+          questions read as two of one thing.
 
-            They were three rows of a card, and the rows were the better
-            answer while the sheet had three questions: the width for
-            the order's full name, a radio saying out loud that the
-            three are one choice. The fourth question (13 Oct 2026) is
-            what took the room back — three 52pt rows above it put the
-            Apply button under the home indicator on a 390pt phone, and
-            a sheet that scrolls to reach its own button is a sheet that
-            has lost. A segment gives up the radio and the long name and
-            keeps the mark, the tint and the hairline; the track is what
-            says these three are one answer, as it does for the hours. */}
-        <Text style={[s.legend, s.legendFirst]}>{t('Sort by', 'Sắp xếp theo', '並べ替え', '排序方式', '排序方式')}</Text>
-        <View style={s.track} accessibilityRole="radiogroup">
-          {SORTS.map((value) => {
-            const active = draft.sort === value;
-            return (
-              <PressableScale
-                key={value}
-                onPress={() => choose('sort', value)}
-                testID={`filter-sort-${value}`}
-                accessibilityRole="radio"
-                accessibilityState={{ selected: active }}
-                aria-checked={active}
-                // Said in words, not assembled from children: without
-                // this the segment's label is the icon's glyph, a comma
-                // and then the words.
-                accessibilityLabel={sortLabel(value, t)}
-                style={s.segmentCell}
-                hitSlop={TRACK_SLOP}
-                contentStyle={[s.segment, s.segmentWithMark, active && s.segmentOn]}
-              >
-                <Glyph
-                  name={sortIcon(value)}
-                  size={ICON.text}
-                  color={active ? colors.accent : colors.textSecondary}
-                />
-                <Text style={[s.segmentText, active && s.segmentTextOn]} numberOfLines={1}>
-                  {sortLabel(value, t)}
-                </Text>
-              </PressableScale>
-            );
-          })}
-        </View>
-
-        {/* One track holding three segments, rather than three pills
-            standing apart. The grouping is the point: a pill row leaves
-            each option looking like its own switch, and these three are
-            one answer to one question. The selected segment wears the
-            accent the rest of the app wears when something is chosen —
-            not the white raised tile of a native iOS segmented control,
-            which has no counterpart on the dark theme. */}
-        <View style={s.legendRow}>
-          <Text style={[s.legend, s.legendInRow]}>{t('Opening hours', 'Giờ mở cửa', '営業時間', '营业时间', '營業時間')}</Text>
-          <Text style={s.legendNote} numberOfLines={1} testID="filter-hours-note">{hoursNote(draft, nowMin, t)}</Text>
-        </View>
-        <View style={s.track} accessibilityRole="radiogroup">
-          {STATUSES.map((value) => {
-            const active = draft.status === value;
-            return (
-              <PressableScale
-                key={value}
-                onPress={() => choose('status', value)}
-                testID={`filter-status-${value}`}
-                accessibilityRole="radio"
-                accessibilityState={{ selected: active }}
-                // react-native-web drops `accessibilityState` from the DOM
-                // entirely; `aria-checked` is what a test can actually read.
-                aria-checked={active}
-                style={s.segmentCell}
-                hitSlop={TRACK_SLOP}
-                contentStyle={[s.segment, active && s.segmentOn]}
-              >
-                <Text style={[s.segmentText, active && s.segmentTextOn]} numberOfLines={1}>
-                  {statusLabel(value, t)}
-                </Text>
-              </PressableScale>
-            );
-          })}
-        </View>
-        {/* The segments' other drawing: see `lib/hoursSlider` for the
-            rule between them, both ways. */}
-        <HoursSlider heads={headsFor(draft, nowAt)} now={nowAt} onMove={moveHeads} />
-
-        {/* Its own card, for the same reason the sorts got one: a single
-            row with no frame beside two framed blocks reads as the one
-            thing nobody finished. And its own heading, for the same
-            reason again — two headed blocks and one bare card is the
-            same asymmetry one level up. Three questions, three headings.
-
-            "Bookmarked only" rather than naming the section twice: the
-            heading says what the block is about, so the row is free to
-            say what the switch does. */}
-        <Text style={s.legend}>{t('Saved places', 'Địa điểm đã lưu', '保存した場所', '已保存的地点', '已儲存的地點')}</Text>
-        <Card>
-        <PressableScale
-          onPress={() => {
-            if (!signedIn) { onNeedSignIn(); return; }
-            choose('savedOnly', !draft.savedOnly);
-          }}
-          testID="filter-saved"
-          // Same reason as the sort rows for naming it at all: the tree
-          // otherwise reads the bookmark glyph, the words, "Sign in" and
-          // the chevron glyph as one comma-spliced label.
-          {...switchOrDoor(
-            signedIn,
-            draft.savedOnly,
-            t('Bookmarked only', 'Chỉ nơi đã lưu', 'ブックマークのみ', '仅看已保存', '僅看已儲存'),
-            t('Bookmarked only, sign in', 'Chỉ nơi đã lưu, đăng nhập', 'ブックマークのみ、サインイン', '仅看已保存，需登录', '僅看已儲存，需登入'),
-            t('Sign in to filter by saved places', 'Đăng nhập để lọc theo nơi đã lưu', 'サインインして保存済みで絞り込む', '登录后可按已保存的地点筛选', '登入後可按已儲存的地點篩選'),
-          )}
-          contentStyle={[s.row, draft.savedOnly && s.rowOn]}
-        >
-          <Glyph
-            name={draft.savedOnly ? 'bookmark' : 'bookmark-outline'}
-            size={ICON.action}
-            color={draft.savedOnly ? colors.accent : colors.textSecondary}
-          />
-          <Text style={[s.rowText, draft.savedOnly && s.rowTextOn]}>
-            {t('Bookmarked only', 'Chỉ nơi đã lưu', 'ブックマークのみ', '仅看已保存', '僅看已儲存')}
-          </Text>
-          {/* Signed out this said "Sign in required" in grey, which is a
-              refusal written as a label. It is a door, so it looks like
-              one — the same accent-and-chevron the app uses wherever a
-              row leads somewhere. */}
-          {signedIn ? (
-            <View style={[s.check, draft.savedOnly && s.checkOn]}>
-              {draft.savedOnly ? <Glyph name="checkmark" size={ICON.text} color={colors.accentInk} /> : null}
-            </View>
-          ) : (
-            <View style={s.signIn}>
-              <Text style={s.signInText}>{t('Sign in', 'Đăng nhập', 'サインイン', '登录', '登入')}</Text>
-              <Glyph name="chevron-forward" size={ICON.text} color={colors.accent} />
-            </View>
-          )}
-        </PressableScale>
-        </Card>
-
-        {/* The fourth question, the saved one's twin: same card, same
-            row, same door for a guest. Its glyph is the Check-in pill's
-            own ring — hollow until the switch is on, as the pill is
-            hollow until a visit is written — so the filter and the
-            thing it filters on wear one mark. Behind `place_checkin`
-            with the pill itself: a filter on a thing nobody on this
-            build can do is a question with one answer. */}
-        {visitedAvailable ? (
-          <>
-            <Text style={s.legend}>{t('Visited places', 'Địa điểm đã check-in', '訪問済み', '已打卡的地点', '已打卡的地點')}</Text>
-            <Card>
+          They were three rows of a card, and the rows were the better
+          answer while the sheet had three questions: the width for
+          the order's full name, a radio saying out loud that the
+          three are one choice. The fourth question (13 Oct 2026) is
+          what took the room back — three 52pt rows above it put the
+          Apply button under the home indicator on a 390pt phone, and
+          a sheet that scrolls to reach its own button is a sheet that
+          has lost. A segment gives up the radio and the long name and
+          keeps the mark, the tint and the hairline; the track is what
+          says these three are one answer, as it does for the hours. */}
+      <Text style={[s.legend, s.legendFirst]}>{t('Sort by', 'Sắp xếp theo', '並べ替え', '排序方式', '排序方式')}</Text>
+      <View style={s.track} accessibilityRole="radiogroup">
+        {SORTS.map((value) => {
+          const active = draft.sort === value;
+          return (
             <PressableScale
-              onPress={() => {
-                if (!signedIn) { onNeedSignIn(); return; }
-                choose('visitedOnly', !draft.visitedOnly);
-              }}
-              testID="filter-visited"
-              {...switchOrDoor(
-                signedIn,
-                draft.visitedOnly,
-                t('Visited only', 'Chỉ nơi đã check-in', '訪問済みのみ', '仅看已打卡', '僅看已打卡'),
-                t('Visited only, sign in', 'Chỉ nơi đã check-in, đăng nhập', '訪問済みのみ、サインイン', '仅看已打卡，需登录', '僅看已打卡，需登入'),
-                t('Sign in to filter by places you checked in at', 'Đăng nhập để lọc theo nơi đã check-in', 'サインインして訪問済みで絞り込む', '登录后可按打过卡的地点筛选', '登入後可按打過卡的地點篩選'),
-              )}
-              contentStyle={[s.row, draft.visitedOnly && s.rowOn]}
+              key={value}
+              onPress={() => choose('sort', value)}
+              testID={`filter-sort-${value}`}
+              accessibilityRole="radio"
+              accessibilityState={{ selected: active }}
+              aria-checked={active}
+              // Said in words, not assembled from children: without
+              // this the segment's label is the icon's glyph, a comma
+              // and then the words.
+              accessibilityLabel={sortLabel(value, t)}
+              style={s.segmentCell}
+              hitSlop={TRACK_SLOP}
+              contentStyle={[s.segment, s.segmentWithMark, active && s.segmentOn]}
             >
               <Glyph
-                name={draft.visitedOnly ? 'checkmark-circle' : 'checkmark-circle-outline'}
-                size={ICON.action}
-                color={draft.visitedOnly ? colors.accent : colors.textSecondary}
+                name={sortIcon(value)}
+                size={ICON.text}
+                color={active ? colors.accent : colors.textSecondary}
               />
-              <Text style={[s.rowText, draft.visitedOnly && s.rowTextOn]}>
-                {t('Visited only', 'Chỉ nơi đã check-in', '訪問済みのみ', '仅看已打卡', '僅看已打卡')}
+              <Text style={[s.segmentText, active && s.segmentTextOn]} numberOfLines={1}>
+                {sortLabel(value, t)}
               </Text>
-              {signedIn ? (
-                <View style={[s.check, draft.visitedOnly && s.checkOn]}>
-                  {draft.visitedOnly ? <Glyph name="checkmark" size={ICON.text} color={colors.accentInk} /> : null}
-                </View>
-              ) : (
-                <View style={s.signIn}>
-                  <Text style={s.signInText}>{t('Sign in', 'Đăng nhập', 'サインイン', '登录', '登入')}</Text>
-                  <Glyph name="chevron-forward" size={ICON.text} color={colors.accent} />
-                </View>
-              )}
             </PressableScale>
-            </Card>
-          </>
-        ) : null}
+          );
+        })}
+      </View>
 
-        </ScrollView>
-
-        {error ? <Text style={s.error} accessibilityRole="alert">{error}</Text> : null}
-        {/* One track, always drawn, holding the button and — when there is
-            something to undo — Reset beside it. The owner's ask (17 Oct
-            2026): Reset inside one seamless block, arriving the way the
-            search box's Cancel does, with the button giving up the room
-            and taking it back.
-
-            The track stays when Reset is gone. Drawn only around the
-            pair, its 4pt of padding would come and go with Reset: three
-            things moving at once — the glass, the button's width, and
-            the button pushed in from both edges — and the sheet growing
-            8pt taller under the finger that just chose a filter. Kept,
-            the one thing that moves is the button's width. It is the
-            shape the sort and hours tracks above already take, so the
-            sheet ends in a fourth of a thing it has three of.
-
-            The hairline that sat above it went in the same change: the
-            track is its own edge, and the line was a second one. */}
-        <View style={s.actions}>
-          {/* Only when there is something to undo. A Reset standing
-              beside an untouched sheet is a control that cannot do
-              anything, and the reader has to work that out by pressing
-              it. It is drawn as words on the track rather than as a
-              second button for the same reason: one action here is the
-              action. The mark is `refresh`, the circle that means "back
-              to how it was"; `arrow-undo` reads as taking back the last
-              tap, and Reset takes back all of them. */}
-          {dirty ? (
+      {/* One track holding three segments, rather than three pills
+          standing apart. The grouping is the point: a pill row leaves
+          each option looking like its own switch, and these three are
+          one answer to one question. The selected segment wears the
+          accent the rest of the app wears when something is chosen —
+          not the white raised tile of a native iOS segmented control,
+          which has no counterpart on the dark theme. */}
+      <View style={s.legendRow}>
+        <Text style={[s.legend, s.legendInRow]}>{t('Opening hours', 'Giờ mở cửa', '営業時間', '营业时间', '營業時間')}</Text>
+        <Text style={s.legendNote} numberOfLines={1} testID="filter-hours-note">{hoursNote(draft, nowMin, t)}</Text>
+      </View>
+      <View style={s.track} accessibilityRole="radiogroup">
+        {STATUSES.map((value) => {
+          const active = draft.status === value;
+          return (
             <PressableScale
-              onPress={() => { slide(); setDraft(NOTHING_APPLIED); setError(null); }}
-              testID="filter-reset"
-              accessibilityRole="button"
-              contentStyle={s.reset}
+              key={value}
+              onPress={() => choose('status', value)}
+              testID={`filter-status-${value}`}
+              accessibilityRole="radio"
+              accessibilityState={{ selected: active }}
+              // react-native-web drops `accessibilityState` from the DOM
+              // entirely; `aria-checked` is what a test can actually read.
+              aria-checked={active}
+              style={s.segmentCell}
+              hitSlop={TRACK_SLOP}
+              contentStyle={[s.segment, active && s.segmentOn]}
             >
-              <Glyph name="refresh" size={ICON.action} color={colors.textSecondary} />
-              <Text style={s.resetText}>{t('Reset', 'Đặt lại', 'リセット', '重置', '重設')}</Text>
+              <Text style={[s.segmentText, active && s.segmentTextOn]} numberOfLines={1}>
+                {statusLabel(value, t)}
+              </Text>
             </PressableScale>
-          ) : null}
-          {/* The app's own primary button, not a coral pill drawn again
-              here. This one had been hand-rolled — flat fill, 14pt type,
-              48 high — beside a `GradientCta` that every other screen
-              commits with, so the one button that finishes this sheet was
-              the one button in the app that did not look like the rest.
-              `wide` is documented for exactly this: the action that
-              commits a sheet. The stretch comes from the row, since Reset
-              sits beside it.
+          );
+        })}
+      </View>
+      {/* The segments' other drawing: see `lib/hoursSlider` for the
+          rule between them, both ways. */}
+      <HoursSlider heads={headsFor(draft, nowAt)} now={nowAt} onMove={moveHeads} />
 
-              The label no longer swaps to "Locating…" while the fix is
-              being fetched — the primitive spins its glyph instead, and
-              holding the words still is the reason it does. */}
-          <View style={s.applyWrap}>
-            <GradientCta
-              icon="checkmark"
-              wide
-              busy={busy}
-              onPress={() => { void apply(); }}
-              testID="filter-apply"
-              label={`${t('Show', 'Hiện', '表示', '显示', '顯示')} ${count} ${t(count === 1 ? 'place' : 'places', 'địa điểm', '件', '个地点', '個地點')}`}
-            />
+      {/* Its own card, for the same reason the sorts got one: a single
+          row with no frame beside two framed blocks reads as the one
+          thing nobody finished. And its own heading, for the same
+          reason again — two headed blocks and one bare card is the
+          same asymmetry one level up. Three questions, three headings.
+
+          "Bookmarked only" rather than naming the section twice: the
+          heading says what the block is about, so the row is free to
+          say what the switch does. */}
+      <Text style={s.legend}>{t('Saved places', 'Địa điểm đã lưu', '保存した場所', '已保存的地点', '已儲存的地點')}</Text>
+      <Card>
+      <PressableScale
+        onPress={() => {
+          if (!signedIn) { onNeedSignIn(); return; }
+          choose('savedOnly', !draft.savedOnly);
+        }}
+        testID="filter-saved"
+        // Same reason as the sort rows for naming it at all: the tree
+        // otherwise reads the bookmark glyph, the words, "Sign in" and
+        // the chevron glyph as one comma-spliced label.
+        {...switchOrDoor(
+          signedIn,
+          draft.savedOnly,
+          t('Bookmarked only', 'Chỉ nơi đã lưu', 'ブックマークのみ', '仅看已保存', '僅看已儲存'),
+          t('Bookmarked only, sign in', 'Chỉ nơi đã lưu, đăng nhập', 'ブックマークのみ、サインイン', '仅看已保存，需登录', '僅看已儲存，需登入'),
+          t('Sign in to filter by saved places', 'Đăng nhập để lọc theo nơi đã lưu', 'サインインして保存済みで絞り込む', '登录后可按已保存的地点筛选', '登入後可按已儲存的地點篩選'),
+        )}
+        contentStyle={[s.row, draft.savedOnly && s.rowOn]}
+      >
+        <Glyph
+          name={draft.savedOnly ? 'bookmark' : 'bookmark-outline'}
+          size={ICON.action}
+          color={draft.savedOnly ? colors.accent : colors.textSecondary}
+        />
+        <Text style={[s.rowText, draft.savedOnly && s.rowTextOn]}>
+          {t('Bookmarked only', 'Chỉ nơi đã lưu', 'ブックマークのみ', '仅看已保存', '僅看已儲存')}
+        </Text>
+        {/* Signed out this said "Sign in required" in grey, which is a
+            refusal written as a label. It is a door, so it looks like
+            one — the same accent-and-chevron the app uses wherever a
+            row leads somewhere. */}
+        {signedIn ? (
+          <View style={[s.check, draft.savedOnly && s.checkOn]}>
+            {draft.savedOnly ? <Glyph name="checkmark" size={ICON.text} color={colors.accentInk} /> : null}
           </View>
+        ) : (
+          <View style={s.signIn}>
+            <Text style={s.signInText}>{t('Sign in', 'Đăng nhập', 'サインイン', '登录', '登入')}</Text>
+            <Glyph name="chevron-forward" size={ICON.text} color={colors.accent} />
+          </View>
+        )}
+      </PressableScale>
+      </Card>
+
+      {/* The fourth question, the saved one's twin: same card, same
+          row, same door for a guest. Its glyph is the Check-in pill's
+          own ring — hollow until the switch is on, as the pill is
+          hollow until a visit is written — so the filter and the
+          thing it filters on wear one mark. Behind `place_checkin`
+          with the pill itself: a filter on a thing nobody on this
+          build can do is a question with one answer. */}
+      {visitedAvailable ? (
+        <>
+          <Text style={s.legend}>{t('Visited places', 'Địa điểm đã check-in', '訪問済み', '已打卡的地点', '已打卡的地點')}</Text>
+          <Card>
+          <PressableScale
+            onPress={() => {
+              if (!signedIn) { onNeedSignIn(); return; }
+              choose('visitedOnly', !draft.visitedOnly);
+            }}
+            testID="filter-visited"
+            {...switchOrDoor(
+              signedIn,
+              draft.visitedOnly,
+              t('Visited only', 'Chỉ nơi đã check-in', '訪問済みのみ', '仅看已打卡', '僅看已打卡'),
+              t('Visited only, sign in', 'Chỉ nơi đã check-in, đăng nhập', '訪問済みのみ、サインイン', '仅看已打卡，需登录', '僅看已打卡，需登入'),
+              t('Sign in to filter by places you checked in at', 'Đăng nhập để lọc theo nơi đã check-in', 'サインインして訪問済みで絞り込む', '登录后可按打过卡的地点筛选', '登入後可按打過卡的地點篩選'),
+            )}
+            contentStyle={[s.row, draft.visitedOnly && s.rowOn]}
+          >
+            <Glyph
+              name={draft.visitedOnly ? 'checkmark-circle' : 'checkmark-circle-outline'}
+              size={ICON.action}
+              color={draft.visitedOnly ? colors.accent : colors.textSecondary}
+            />
+            <Text style={[s.rowText, draft.visitedOnly && s.rowTextOn]}>
+              {t('Visited only', 'Chỉ nơi đã check-in', '訪問済みのみ', '仅看已打卡', '僅看已打卡')}
+            </Text>
+            {signedIn ? (
+              <View style={[s.check, draft.visitedOnly && s.checkOn]}>
+                {draft.visitedOnly ? <Glyph name="checkmark" size={ICON.text} color={colors.accentInk} /> : null}
+              </View>
+            ) : (
+              <View style={s.signIn}>
+                <Text style={s.signInText}>{t('Sign in', 'Đăng nhập', 'サインイン', '登录', '登入')}</Text>
+                <Glyph name="chevron-forward" size={ICON.text} color={colors.accent} />
+              </View>
+            )}
+          </PressableScale>
+          </Card>
+        </>
+      ) : null}
+
+      </ScrollView>
+
+      {error ? <Text style={s.error} accessibilityRole="alert">{error}</Text> : null}
+      {/* One track, always drawn, holding the button and — when there is
+          something to undo — Reset beside it. The owner's ask (17 Oct
+          2026): Reset inside one seamless block, arriving the way the
+          search box's Cancel does, with the button giving up the room
+          and taking it back.
+
+          The track stays when Reset is gone. Drawn only around the
+          pair, its 4pt of padding would come and go with Reset: three
+          things moving at once — the glass, the button's width, and
+          the button pushed in from both edges — and the sheet growing
+          8pt taller under the finger that just chose a filter. Kept,
+          the one thing that moves is the button's width. It is the
+          shape the sort and hours tracks above already take, so the
+          sheet ends in a fourth of a thing it has three of.
+
+          The hairline that sat above it went in the same change: the
+          track is its own edge, and the line was a second one. */}
+      <View style={s.actions}>
+        {/* Only when there is something to undo. A Reset standing
+            beside an untouched sheet is a control that cannot do
+            anything, and the reader has to work that out by pressing
+            it. It is drawn as words on the track rather than as a
+            second button for the same reason: one action here is the
+            action. The mark is `refresh`, the circle that means "back
+            to how it was"; `arrow-undo` reads as taking back the last
+            tap, and Reset takes back all of them. */}
+        {dirty ? (
+          <PressableScale
+            onPress={() => { slide(); setDraft(NOTHING_APPLIED); setError(null); }}
+            testID="filter-reset"
+            accessibilityRole="button"
+            contentStyle={s.reset}
+          >
+            <Glyph name="refresh" size={ICON.action} color={colors.textSecondary} />
+            <Text style={s.resetText}>{t('Reset', 'Đặt lại', 'リセット', '重置', '重設')}</Text>
+          </PressableScale>
+        ) : null}
+        {/* The app's own primary button, not a coral pill drawn again
+            here. This one had been hand-rolled — flat fill, 14pt type,
+            48 high — beside a `GradientCta` that every other screen
+            commits with, so the one button that finishes this sheet was
+            the one button in the app that did not look like the rest.
+            `wide` is documented for exactly this: the action that
+            commits a sheet. The stretch comes from the row, since Reset
+            sits beside it.
+
+            The label no longer swaps to "Locating…" while the fix is
+            being fetched — the primitive spins its glyph instead, and
+            holding the words still is the reason it does. */}
+        <View style={s.applyWrap}>
+          <GradientCta
+            icon="checkmark"
+            wide
+            busy={busy}
+            onPress={() => { void apply(); }}
+            testID="filter-apply"
+            label={`${t('Show', 'Hiện', '表示', '显示', '顯示')} ${count} ${t(count === 1 ? 'place' : 'places', 'địa điểm', '件', '个地点', '個地點')}`}
+          />
         </View>
-      </Animated.View>
-    </Modal>
+      </View>
+    </Sheet>
   );
 }
 
@@ -542,19 +536,12 @@ const TRACK_INSET = 4;
 const TRACK_SLOP = { top: TRACK_INSET, bottom: TRACK_INSET };
 
 const s = StyleSheet.create({
-  backdrop: { ...StyleSheet.absoluteFill, backgroundColor: 'rgba(6,5,8,0.62)' },
-  sheet: {
-    position: 'absolute', left: 0, right: 0, bottom: 0,
-    paddingHorizontal: space.page, paddingTop: 8,
-    backgroundColor: colors.bgElevated,
-    borderTopLeftRadius: radius.card + 6, borderTopRightRadius: radius.card + 6,
-    borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.borderGlassSoft,
-  },
+  // 8 above the grabber; the rest of the chrome is `Sheet`'s.
+  sheet: { paddingTop: 8 },
   // Shrinks, and only shrinks: a scroll view grows to fill by default,
   // and this one should be as tall as its questions until the screen
   // says otherwise.
   questions: { flexGrow: 0, flexShrink: 1 },
-  handle: { alignSelf: 'center', width: 38, height: 4, borderRadius: 2, backgroundColor: colors.textTertiary, marginBottom: 10 },
   head: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
     // The title's own gap to the first heading, which is the same 24 the
