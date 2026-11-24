@@ -37,7 +37,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { AccessibilityInfo, Animated, PanResponder, StyleSheet, Text, View } from 'react-native';
 import { useNotice } from '../lib/notice';
-import { colors, font, radius } from '../theme';
+import { colors, font, radius, space } from '../theme';
 import { PressableScale, SECONDARY_CONTROL_H, useReducedMotion, useTabBarClearance } from './ui';
 import { Glyph, ICON } from './ui/glyph';
 
@@ -57,9 +57,11 @@ export default function NoticeBar({ onOpen }: {
   onOpen: () => void;
 }) {
   const { note, dismiss } = useNotice();
-  // 8 over the bar: near enough to read as belonging to the foot, clear
-  // of the bar's own shadow.
-  const bottom = useTabBarClearance(8);
+  // 14 over the bar. It was 8, and on the phone the line read as stuck
+  // to the bar (owner's recording, 24 Nov 2026); 14 is the gap between
+  // two cards in a column (`space.cardGap`), so it reads as a thing of
+  // its own lying above the bar.
+  const bottom = useTabBarClearance(space.cardGap);
   const still = useReducedMotion();
   const slide = useRef(new Animated.Value(0)).current;
   const [spoken, setSpoken] = useState(false);

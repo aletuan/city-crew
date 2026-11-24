@@ -57,7 +57,7 @@ describe('NoticeBar', () => {
     expect(screen.getByTestId('notice-text').textContent).toBe('Added to your page');
     expect(screen.getByTestId('notice-action').textContent).toBe('View');
     expect(screen.getByTestId('notice-action').getAttribute('aria-label')).toBe('View');
-    expect(viewStyleOf(screen.getByTestId('notice').parentElement as Element).bottom).toBe(88);
+    expect(viewStyleOf(screen.getByTestId('notice').parentElement as Element).bottom).toBe(80 + 14);
     expect(AccessibilityInfo.announceForAccessibility).toHaveBeenCalledWith('Added to your page. View');
   });
 

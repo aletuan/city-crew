@@ -677,6 +677,14 @@ describe('PlaceDetailScreen — title, rating, facts', () => {
     expect(spies.reloadCheckins).toHaveBeenCalledTimes(2);
   });
 
+  // The sheet is this scroll view's descendant in React's tree, and a
+  // scroll view left at its default takes a tap made over the keyboard
+  // and drops it: Done needed two presses on a phone.
+  it('lets a press made while the keyboard is up reach the button it was made on', () => {
+    show();
+    expect(propsWhere((p) => p.testID === 'detail-place-cong-caphe' && 'contentContainerStyle' in p).keyboardShouldPersistTaps).toBe('handled');
+  });
+
   // ── the line that says where the visit went (24 Nov 2026) ──
 
   const checkInAndClose = async () => {
