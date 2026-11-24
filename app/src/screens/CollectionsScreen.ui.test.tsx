@@ -1924,6 +1924,35 @@ describe('the Community Mosaic, one block a city', () => {
     expect(screen.getByTestId('collections-jump-hanoi').getAttribute('aria-selected')).toBe('true');
   });
 
+  // A jump made under the pinned tabs lands its heading just below them,
+  // by their measured height; one made before anything is pinned has
+  // nothing to clear. The height is the pinned copy's own, read from its
+  // layout, so a taller row (a larger type size) still clears.
+  it('lands a jump under the pinned tabs by their measured height', () => {
+    seed();
+    show({ tab: 'community' });
+    const ref = vi.mocked(useScrollToTop).mock.calls.at(-1)?.[0] as unknown as { current: { scrollToLocation: (p: unknown) => void } };
+    const go = vi.spyOn(ref.current, 'scrollToLocation').mockImplementation(() => {});
+    fireEvent.click(screen.getByRole('button', { name: 'Saigon, 4 collections' }));
+    fireEvent.click(screen.getByTestId('collections-jump-hanoi'));
+    expect(go).toHaveBeenLastCalledWith(expect.objectContaining({ viewOffset: 0 }));
+
+    type Layout = { __reactLayoutHandler: (e: unknown) => void };
+    act(() => {
+      (screen.getByTestId('collections-tabs') as unknown as Layout).__reactLayoutHandler({ nativeEvent: { layout: { x: 0, y: 120, width: 390, height: 44 } } });
+    });
+    const props = listProps() as unknown as { onScroll: (e: unknown) => void };
+    act(() => props.onScroll({ nativeEvent: {
+      contentOffset: { x: 0, y: 900 }, contentSize: { width: 390, height: 3000 }, layoutMeasurement: { width: 390, height: 844 },
+    } }));
+    act(() => {
+      (screen.getByTestId('collections-pinned-tabs') as unknown as Layout).__reactLayoutHandler({ nativeEvent: { layout: { x: 0, y: 0, width: 390, height: 58 } } });
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Saigon, 4 collections' }));
+    fireEvent.click(screen.getByTestId('collections-jump-hanoi'));
+    expect(go).toHaveBeenLastCalledWith(expect.objectContaining({ viewOffset: 58 }));
+  });
+
   // One heading, drawn in two places (owner, 15 Nov 2026): the name was 22
   // in the list and 18 pinned, the count beside the name in one and at the
   // far edge in the other, and scrolling showed both a moment apart.
