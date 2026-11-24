@@ -1418,6 +1418,19 @@ describe('the map', () => {
     expect(navigation.navigate).toHaveBeenCalledWith('PlaceDetail', { slug: 'a' });
   });
 
+  // A chip that takes the chosen place off the map lets it go with its
+  // strip: back at "All", it does not come back (owner, 24 Nov 2026).
+  it('lets the chosen place go when a chip takes it off the map, so "All" does not bring it back', async () => {
+    state.places.data = [place('a', { lat: 21, lng: 105, categories: ['cafes'] }), place('b', { lat: 21.1, lng: 105.1, categories: ['heritage'] })];
+    render(<ExploreScreen navigation={nav()} />);
+    await waitFor(() => expect(screen.getByTestId('places-map')).toBeTruthy());
+    await act(async () => { fireEvent.click(document.querySelector('[data-slug="b"]')!); });
+    expect(screen.getByRole('button', { name: /Place b/ })).toBeTruthy();
+    await act(async () => { fireEvent.click(screen.getByText('Cafés')); });
+    await act(async () => { fireEvent.click(screen.getByText('Cafés')); });
+    await waitFor(() => expect(screen.queryByRole('button', { name: /Place b/ })).toBeNull());
+  });
+
   // Explore reads one city at a time, and the map is where that stops
   // being invisible: the others stand at their own centres, and a tap on
   // one is what makes it the city being read. The wiring is the thing
