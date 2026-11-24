@@ -141,12 +141,22 @@ export function SeenLine({ aud }: {
     );
   }
   const n = aud.picks.length;
+  // The answer the control shows: Friends from the press that opens the
+  // picker (owner, 24 Nov 2026), not only once friends are ticked. The
+  // control had stayed on the old answer under the open picker, so the
+  // press looked as if it had not landed. Leaving the picker with nobody
+  // chosen lets it fall back to where the answer stands — shown only,
+  // never kept: Save and the discard guard read `aud.seen`.
+  const shown: Visibility = picking ? 'friends' : aud.seen;
   // What the chosen answer means: the sheet's own words for Public, the
   // page's for Private, and for Friends whom.
-  const gloss = aud.seen === 'public'
+  const gloss = shown === 'public'
     ? t('Shown in Explore and in search', 'Hiện trên Khám phá và trong tìm kiếm', '「探索する」と検索に表示されます', '会显示在探索和搜索中', '會顯示在探索和搜尋中')
-    : aud.seen === 'private'
+    : shown === 'private'
       ? seenGloss('private', t)
+      // Nobody ticked yet: the picker is open over a first choice.
+      : n === 0
+        ? seenGloss('friends', t)
       : n === 1
         ? t('1 friend chosen', 'Đã chọn 1 bạn', '1人を選択中', '已选择 1 位好友', '已選擇 1 位好友')
         : t(`${n} friends chosen`, `Đã chọn ${n} bạn`, `${n}人を選択中`, `已选择 ${n} 位好友`, `已選擇 ${n} 位好友`);
@@ -156,7 +166,7 @@ export function SeenLine({ aud }: {
       {name}
       <View style={s.well} testID="collection-form-seen" accessibilityRole="radiogroup" accessibilityLabel={t('Who can see this collection?', 'Ai có thể xem bộ sưu tập này?', 'このコレクションを見られる人', '谁可以查看此合集？', '誰可以檢視此合集？')}>
         {(['public', 'friends', 'private'] as const).map((v) => {
-          const on = aud.seen === v;
+          const on = shown === v;
           return (
             <PressableScale
               key={v}
@@ -178,7 +188,7 @@ export function SeenLine({ aud }: {
           );
         })}
       </View>
-      {aud.seen === 'friends' ? (
+      {shown === 'friends' && n > 0 ? (
         <PressableScale
           style={s.glossAt}
           contentStyle={s.glossRow}
