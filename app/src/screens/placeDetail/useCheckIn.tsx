@@ -24,8 +24,8 @@ import { Alert } from 'react-native';
 import CheckinSheet, { type SheetVisit } from '../../components/CheckinSheet';
 import { successHaptic } from '../../components/ui';
 import { reviewAfterCheckin } from '../../lib/askReview';
-import { AUDIENCE_ON, nextAudience, type Checkin } from '../../lib/checkin';
-import { addCheckin, type Fetch } from '../../lib/data';
+import { AUDIENCE_ON, nextAudience, whyRefused, type Checkin } from '../../lib/checkin';
+import { addCheckin, fetchMyCheckins, type Fetch } from '../../lib/data';
 import { useI18n } from '../../lib/i18n';
 import { useNotice } from '../../lib/notice';
 import { DAILY_CAPS, isDailyLimit } from '../../lib/quota';
@@ -46,6 +46,27 @@ export function useCheckIn({ uid, visits, askToSignIn }: {
   // review ask at the sheet's close: by then the list may or may not
   // have been asked again, and the ask's rule counts visits.
   const total = useRef(0);
+
+  const refusal = (why: 'soon' | 'place' | 'day') => (why === 'soon'
+    ? t(
+      'You checked in here a moment ago. Try again in a few minutes.',
+      'Bạn vừa check-in ở đây. Thử lại sau ít phút nhé.',
+      'ついさっきここでチェックインしました。数分後にもう一度どうぞ。',
+      '你刚在这里打过卡，几分钟后再试吧。', '你剛在這裡打過卡，幾分鐘後再試吧。',
+    )
+    : why === 'place'
+      ? t(
+        `You have checked in here ${DAILY_CAPS.checkinsPerPlace} times today. Come back tomorrow.`,
+        `Hôm nay bạn đã check-in ở đây ${DAILY_CAPS.checkinsPerPlace} lần rồi. Mai quay lại nhé.`,
+        `今日はここに${DAILY_CAPS.checkinsPerPlace}回チェックイン済みです。また明日どうぞ。`,
+        `你今天已在这里打卡 ${DAILY_CAPS.checkinsPerPlace} 次，明天再来吧。`, `你今天已在這裡打卡 ${DAILY_CAPS.checkinsPerPlace} 次，明天再來吧。`,
+      )
+      : t(
+        `You have checked in ${DAILY_CAPS.checkinsPerDay} times in the last day. Come back tomorrow.`,
+        `Bạn đã check-in ${DAILY_CAPS.checkinsPerDay} lần trong một ngày qua. Mai quay lại nhé.`,
+        `この1日で${DAILY_CAPS.checkinsPerDay}回チェックインしました。また明日どうぞ。`,
+        `你在过去一天里已打卡 ${DAILY_CAPS.checkinsPerDay} 次，明天再来吧。`, `你在過去一天裡已打卡 ${DAILY_CAPS.checkinsPerDay} 次，明天再來吧。`,
+      ));
 
   const checkIn = async (at: CheckInAt) => {
     // A guest's tap is the door, with its reason named, as the like's is.
@@ -70,17 +91,13 @@ export function useCheckIn({ uid, visits, askToSignIn }: {
       // noted in the taste profile either way: `place_events` is the
       // private signal and this is the reader's own record — see
       // `lib/checkin` for why the two are kept apart.
-      Alert.alert(
-        t('Could not check in', 'Không check-in được', 'チェックインできませんでした', '无法打卡', '無法打卡'),
-        isDailyLimit(e)
-          ? t(
-            `You have checked in here ${DAILY_CAPS.checkinsPerPlace} times today. Come back tomorrow.`,
-            `Hôm nay bạn đã check-in ở đây ${DAILY_CAPS.checkinsPerPlace} lần rồi. Mai quay lại nhé.`,
-            `今日はここに${DAILY_CAPS.checkinsPerPlace}回チェックイン済みです。また明日どうぞ。`,
-            `你今天已在这里打卡 ${DAILY_CAPS.checkinsPerPlace} 次，明天再来吧。`, `你今天已在這裡打卡 ${DAILY_CAPS.checkinsPerPlace} 次，明天再來吧。`,
-          )
-          : (e as Error).message,
-      );
+      const why = isDailyLimit(e)
+        ? whyRefused(await fetchMyCheckins(uid).catch(() => visits.data), at.slug, new Date())
+        : null;
+      // Asked again whatever the answer: a refusal from a rule this phone
+      // could not see means another phone's visit is not in the list yet.
+      if (why) visits.reload();
+      Alert.alert(t('Could not check in', 'Không check-in được', 'チェックインできませんでした', '无法打卡', '無法打卡'), why ? refusal(why) : (e as Error).message);
     } finally {
       setChecking(false);
     }

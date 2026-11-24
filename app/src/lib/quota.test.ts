@@ -32,7 +32,7 @@ describe('isDailyLimit', () => {
 describe('DAILY_CAPS', () => {
   // A copy of the migration's numbers. If this fails, one side moved.
   it('says what the policies enforce', () => {
-    expect(DAILY_CAPS).toEqual({ collections: 20, placesIntoLists: 300, checkinsPerPlace: 3 });
+    expect(DAILY_CAPS).toEqual({ collections: 20, placesIntoLists: 300, checkinsPerPlace: 3, checkinsPerDay: 50 });
   });
 });
 

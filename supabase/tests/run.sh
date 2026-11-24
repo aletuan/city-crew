@@ -529,6 +529,16 @@ for f in "$ROOT"/supabase/migrations/*_checkin_notes.sql; do
   run "$DB" -f "$f" >/dev/null
 done
 run "$DB" -f "$HERE/checkin_notes_test.sql"
+# Fifty a day across places, by an instant the client cannot write (24 Nov
+# 2026). First the table as the live project has it: Supabase's default
+# privileges give `anon` and `authenticated` INSERT on every column, and
+# without this line the migration's revoke would take back a grant that
+# was never made here.
+run "$DB" -c "grant insert on table public.checkins to anon, authenticated;"
+for f in "$ROOT"/supabase/migrations/*_checkins_per_day.sql; do
+  run "$DB" -f "$f" >/dev/null
+done
+run "$DB" -f "$HERE/checkins_per_day_test.sql"
 
 # The owner's chips on a collection (15 Oct 2026): two columns and their
 # checks. Needs only `collections`, which every block above has had.

@@ -107,8 +107,9 @@ dòng trong database không xoá file thật**, nên không dựa vào cascade.
 - **Hạn mức ảnh là chặn thật, không phải số check-in.** Check-in chỉ bị
   giới hạn 3 lần mỗi quán mỗi ngày, không có giới hạn tổng
   (`20261009090000_checkins_per_place.sql` đã bỏ mức 30 mỗi ngày của bản
-  đầu), mà catalog có hàng nghìn quán. Một kịch bản tạo được rất nhiều
-  check-in, nên chỉ riêng "3 ảnh mỗi check-in" không chặn được gì.
+  đầu), mà catalog có hàng nghìn quán. Từ 24/11/2026 có lại mức 50 mỗi
+  ngày, nên ảnh tối đa là 150 mỗi ngày nếu chỉ dựa vào đó: vẫn cần hạn
+  mức ảnh riêng.
 - Thêm một mức trần trên toàn tài khoản, **300 ảnh**, để một tài khoản
   sống lâu cũng không tích được vô hạn. Chạm trần thì app nói rõ và mời
   xoá bớt ảnh cũ.
@@ -176,7 +177,6 @@ Mỗi bước một PR, theo thứ tự. Cờ `checkin_photos` tắt suốt cả
    trước K3.
 3. **15 ảnh mỗi ngày và 300 ảnh mỗi tài khoản** là số chọn. Xem lại sau
    hai tuần có dữ liệu.
-4. **Check-in không có giới hạn tổng mỗi ngày.** Không thuộc kế hoạch
-   này, nhưng đã thấy khi rà: một kịch bản có thể tạo hàng nghìn dòng
-   mỗi ngày. Rẻ hơn ảnh nhiều, nhưng nên có một mức trần (ví dụ 50 mỗi
-   ngày) trước khi bật cờ.
+4. ~~**Check-in không có giới hạn tổng mỗi ngày.**~~ Đã đặt 50 mỗi
+   ngày mỗi tài khoản (`20261124210000_checkins_per_day.sql`), và giờ
+   của một lần ghé không còn do client ghi.

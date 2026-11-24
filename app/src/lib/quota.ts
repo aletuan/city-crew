@@ -37,10 +37,12 @@ export const TOO_SOON = 'too_soon';
 export const DAILY_CAPS = {
   collections: 20,
   placesIntoLists: 300,
-  /** Three visits at one place in a day; none across places. See
-   *  `PER_PLACE_PER_DAY` in `lib/checkin` and
-   *  `20261009090000_checkins_per_place.sql`. */
+  /** Three visits at one place in a day. See `PER_PLACE_PER_DAY` in
+   *  `lib/checkin` and `20261009090000_checkins_per_place.sql`. */
   checkinsPerPlace: 3,
+  /** Fifty in a day across places. See `PER_DAY` in `lib/checkin` and
+   *  `20261124210000_checkins_per_day.sql`. */
+  checkinsPerDay: 50,
 } as const;
 
 export type Refusal = { code?: string | null; message?: string | null } | null | undefined;
