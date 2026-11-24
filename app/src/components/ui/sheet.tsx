@@ -20,16 +20,18 @@
 //
 // ── what a caller may still choose ──
 //
-// - `scrim`: dark (0.62, the default) or clear. Clear is for a sheet whose
-//   page is the preview — the cover sheets put the tapped photograph on
-//   the cover above them, so the page must not dim. Still a press: a tap
-//   above the sheet closes it.
+// - `scrim`: dark (0.62, the default), clear, or as dark as a number
+//   says. Clear is for a sheet whose page is the preview — the cover
+//   sheets put the tapped photograph on the cover above them, so the page
+//   must not dim. Still a press: a tap above the sheet closes it. The
+//   start sheet keeps 0.32 (owner, 25 Nov 2026), lighter than the menus.
 // - `rise`: the spring up from 360pt under, which the menus have had
 //   since `PersonSheet`: the Modal only fades, so the scrim brightens in
 //   place the way a room dims, and the panel alone rises on the native
 //   driver. Modal's own animationType="slide" moved the whole window,
-//   scrim included, and read as a wall climbing the screen. The cover sheets came in with the fade alone and
-//   keep it until someone decides otherwise.
+//   scrim included, and read as a wall climbing the screen. The cover
+//   sheets came in with the fade alone and keep it until someone decides
+//   otherwise.
 // - `maxHeight`, `foot` (what is left under the last line, over the
 //   inset), `grabberGap` and `style` for the panel: the measured
 //   differences between the sheets that exist, kept rather than
@@ -62,7 +64,9 @@
 // the six above, and the rest of the menus — `AuthSheet`, `AvatarPicker`,
 // `FriendPicker`, `SaveSheet`, `ExploreFilterSheet`.
 //
-// Not here, on purpose: `CheckinSheet` and `CommentQuick` ride the
+// Not here, on purpose: `PhotoSheet` holds more than a sheet — a blur
+// under its scrim, and the full-screen viewer in the same Modal, which
+// Back closes first. And `CheckinSheet` and `CommentQuick` ride the
 // keyboard. Their panel stands in a dock that the keyboard lifts, with
 // its ground carried on under the keys, and the check-in's spring also
 // grows its tick; that is a second kind of sheet, and three more props
@@ -94,7 +98,8 @@ export function Sheet({
   title?: string;
   closeTestID?: string;
   testID?: string;
-  scrim?: boolean;
+  /** Dark, clear, or this opacity of the scrim's ink. */
+  scrim?: boolean | number;
   rise?: boolean;
   maxHeight?: ViewStyle['maxHeight'];
   foot?: number;
@@ -125,11 +130,12 @@ export function Sheet({
     ...(rise ? [{ translateY: up.interpolate({ inputRange: [0, 1], outputRange: [0, riseFrom] }) }] : []),
     ...(pull ? [{ translateY: drag }] : []),
   ];
+  const ink = scrim === true ? SHEET_SCRIM : scrim === false ? undefined : `rgba(6,5,8,${scrim})`;
   const grabber = <View style={[s.grabber, { marginBottom: grabberGap }]} />;
 
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose} onDismiss={onDismiss} statusBarTranslucent>
-      <Pressable style={[s.backdrop, scrim && s.dim]} onPress={onClose}
+      <Pressable style={[s.backdrop, ink != null && { backgroundColor: ink }]} onPress={onClose}
         accessibilityLabel={backdropLabel ?? close} testID={backdropTestID} />
       <Animated.View
         {...(pull === 'sheet' ? handlers : null)}
@@ -161,7 +167,6 @@ export function Sheet({
 
 const s = StyleSheet.create({
   backdrop: { ...StyleSheet.absoluteFill },
-  dim: { backgroundColor: SHEET_SCRIM },
   panel: {
     position: 'absolute', left: 0, right: 0, bottom: 0,
     paddingHorizontal: space.page, paddingTop: 10,
