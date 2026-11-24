@@ -10,6 +10,7 @@ import js from '@eslint/js';
 import globals from 'globals';
 import react from 'eslint-plugin-react';
 import hooks from 'eslint-plugin-react-hooks';
+import { CEILING, OVERSIZE } from './oversize.js';
 
 export default [
   // `.vite/` is the dep pre-bundle. It usually sits inside `node_modules` and
@@ -62,6 +63,23 @@ export default [
       }],
     },
   },
+
+  // ── how large a function may be ──
+  //
+  // The app's ceiling, and for the files already over it the size they
+  // stood at: the numbers are `oversize.js`. Not the tests. One block per
+  // file because flat config replaces a rule rather than merging it, so
+  // each names both measures.
+  ...(() => {
+    const size = ({ lines = CEILING.lines, complexity = CEILING.complexity } = {}) => ({
+      'max-lines-per-function': ['error', { max: lines, skipComments: true, skipBlankLines: true }],
+      complexity: ['error', complexity],
+    });
+    return [
+      { files: ['src/**/*.{js,jsx}'], rules: size() },
+      ...Object.entries(OVERSIZE).map(([file, at]) => ({ files: [file], rules: size(at) })),
+    ];
+  })(),
 
   // The module tests run under `node --test`, not in a browser; the UI
   // tests run under vitest in jsdom, which is both at once.
