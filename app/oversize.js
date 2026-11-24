@@ -50,7 +50,7 @@ const OVERSIZE = {
   'src/screens/CollectionDetailScreen.tsx': { lines: 200, complexity: 48 },
   'src/screens/CollectionsScreen.tsx': { lines: 716, complexity: 56 },
   'src/screens/CrewScreen.tsx': { lines: 576, complexity: 32 },
-  'src/screens/PlaceDetailScreen.tsx': { lines: 334, complexity: 51 },
+  'src/screens/PlaceDetailScreen.tsx': { lines: 232, complexity: 39 },
   'src/screens/ExploreScreen.tsx': { lines: 567, complexity: 49 },
   'src/screens/IdeasScreen.tsx': { lines: 493, complexity: 51 },
   'src/screens/SearchScreen.tsx': { lines: 461, complexity: 40 },
