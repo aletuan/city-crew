@@ -127,7 +127,11 @@ dòng trong database không xoá file thật**, nên không dựa vào cascade.
 
 ### Dọn dẹp
 
-- Gỡ một lần ghé: app gọi xoá ảnh trước, rồi mới xoá check-in.
+- Gỡ một lần ghé: dòng ảnh xoá theo check-in (cascade), nên từ lúc đó
+  bucket không ký link cho ảnh nào của nó nữa; tệp còn lại được
+  `prune-checkin-photos` dọn trong ngày. Bản kế hoạch đầu cho app gọi xoá
+  từng ảnh trước — bỏ ở K4: ba lần gọi function trước một lần xoá, mà
+  thứ nó tránh được chỉ là một tệp không ai mở được nằm thêm vài giờ.
 - Xoá tài khoản (`delete-account`): xoá cả thư mục `<uid>/`.
 - **`prune-checkin-photos`**, chạy định kỳ: xoá tệp không còn dòng
   (check-in bị xoá bằng đường khác, lần ghi lỗi giữa chừng), và báo
@@ -195,8 +199,19 @@ Mỗi bước một PR, theo thứ tự. Cờ `checkin_photos` tắt suốt cả
   khỏi sheet chờ ảnh đang lên, nút bận trong lúc chờ, và báo đã đổi nếu
   có ảnh lên hay đi — trang bên dưới tải lại. `prune-checkin-photos`
   chạy mỗi ngày từ bước này.
-- **K4. Hiển thị:** thẻ trên trang cá nhân, danh sách check-in, trình
-  xem ảnh, link ký và cache. Sau cờ.
+- **K4. Hiển thị — xong (25/11/2026).** Thẻ trên trang cá nhân, danh
+  sách check-in, trình xem ảnh, link ký và cache. Sau cờ.
+  Đã làm: `ActivityCard` nhận `photo` — ảnh thứ nhất thay ảnh bìa và là
+  một lần chạm riêng (mở `PhotoViewer` trong một `Modal`), phần chữ bên
+  dưới vẫn mở địa điểm; từ hai ảnh có số đếm ở góc. Hàng trong danh sách
+  check-in dùng ảnh thứ nhất làm ô ảnh, chạm vẫn vào địa điểm.
+  `useSignedPhotos` xin link một lần cho cả màn hình, giữ link trong bộ
+  nhớ app tới 55 phút (5 phút trước khi hết hạn), ảnh cache theo
+  `photo_id`. `fetchMyCheckins` nhúng `checkin_photos`, `person_checkins`
+  đã trả `photos` từ K1; cả hai qua `visitPhotosOf` (bỏ ảnh bị ẩn, theo
+  `position`, tối đa 3). Màn hình mở quá một giờ giữ link cũ: chỉ ảnh
+  chưa có trong cache mới hỏng, tới lần kéo làm mới tiếp theo — đã cân
+  nhắc và bỏ hẹn giờ ký lại cho mỗi màn hình.
 - **K5. Kiểm duyệt và pháp lý:** báo cáo, ẩn ở Data Desk, khoá tài
   khoản, `legal.ts`, xuất dữ liệu.
 - **K6. Bật cờ** sau bản đã qua duyệt của Apple.

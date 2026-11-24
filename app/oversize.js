@@ -60,7 +60,7 @@ const OVERSIZE = {
   'src/components/ExploreFilterSheet.tsx': { lines: 275 },
   'src/screens/EditProfileScreen.tsx': { lines: 258, complexity: 27 },
   'src/screens/SketchingScreen.tsx': { lines: 255, complexity: 38 },
-  'src/screens/VisitedScreen.tsx': { lines: 214, complexity: 27 },
+  'src/screens/VisitedScreen.tsx': { lines: 213, complexity: 27 },
   'src/screens/TripsScreen.tsx': { lines: 194, complexity: 31 },
   'src/lib/auth.tsx': { lines: 204 },
   'src/screens/CollectionActivityScreen.tsx': { lines: 162 },

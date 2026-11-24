@@ -10,8 +10,15 @@
 // sentence, the date's line is already three facts, and the row's end is
 // the chevron's. It makes a row with words taller than one without, and
 // the picture stays on the row's middle either way.
+//
+// A visit with photos of its own (K4 of `docs/checkin-photos-plan.md`,
+// behind `checkin_photos`) leads with the first of them instead of the
+// place's cover: on a list of where you went, your picture of the place
+// is the one that says which visit this was. It is the row's picture and
+// nothing more — the press is still into the place; the photos are a
+// press away on your page, and in the visit's sheet.
 
-import React from 'react';
+import React, { useMemo } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { Image } from 'expo-image';
 import CheckinSheet from '../../components/CheckinSheet';
@@ -20,6 +27,8 @@ import { PressableScale } from '../../components/ui';
 import { Glyph, ICON } from '../../components/ui/glyph';
 import { AUDIENCE_ON, audienceOf, type Checkin } from '../../lib/checkin';
 import { useI18n } from '../../lib/i18n';
+import { useFlag } from '../../lib/useFlag';
+import { useSignedPhotos } from '../../components/useSignedPhotos';
 import { colors, font, space, type } from '../../theme';
 
 const LINE = 21;
@@ -34,8 +43,11 @@ const LINE = 21;
  *  of text stand about 41pt; the row is 80 with the padding. */
 const THUMB = 56;
 
-export function VisitRow({ v, name, meta, divided, onOpen, onMenu, onNote }: {
+export function VisitRow({ v, name, meta, divided, onOpen, onMenu, onNote, own }: {
   v: Checkin;
+  /** The visit's first photo, signed (`useSignedPhotos`), cached by the
+   *  photo's id; absent for a visit without one. */
+  own?: { uri: string; cacheKey: string };
   name: string;
   meta: string;
   /** Not the first of its month: a hairline over it. */
@@ -57,7 +69,9 @@ export function VisitRow({ v, name, meta, divided, onOpen, onMenu, onNote }: {
       testID="visit-row"
     >
       <View style={s.thumb} testID="visit-thumb">
-        {v.place?.cover ? (
+        {own ? (
+          <Image source={own} style={s.thumbImage} contentFit="cover" transition={150} aria-hidden />
+        ) : v.place?.cover ? (
           <Image source={{ uri: v.place.cover }} style={s.thumbImage} contentFit="cover" transition={150} aria-hidden />
         ) : (
           <Glyph name="location-outline" size={ICON.action} color={colors.textTertiary} />
@@ -84,6 +98,21 @@ export function VisitRow({ v, name, meta, divided, onOpen, onMenu, onNote }: {
       )}
     </PressableScale>
   );
+}
+
+/**
+ * Each visit's first photo, for its row (see the header): signed for
+ * the whole list at once, and nothing at all with `checkin_photos` off.
+ */
+export function useVisitThumbs(visits: readonly Checkin[]): (v: Checkin) => { uri: string; cacheKey: string } | undefined {
+  const on = useFlag('checkin_photos');
+  const firsts = useMemo(() => visits.flatMap((v) => v.photos?.slice(0, 1) ?? []), [visits]);
+  const linkOf = useSignedPhotos(firsts, on);
+  return (v) => {
+    const first = v.photos?.[0];
+    const uri = first ? linkOf(first) : null;
+    return first && uri ? { uri, cacheKey: first.id } : undefined;
+  };
 }
 
 /**

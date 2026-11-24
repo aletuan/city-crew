@@ -7,7 +7,7 @@ import React from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { Alert, Keyboard } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { cleanup, fireEvent, fontSizeOf, render, screen, waitFor, within } from '../uitest/render';
+import { cleanup, fireEvent, fontSizeOf, propsWhere, render, screen, waitFor, within } from '../uitest/render';
 import type { Nav } from '../nav';
 import type { Checkin } from '../lib/checkin';
 import { VISIT_RECENTS_KEY } from '../lib/recents';
@@ -17,8 +17,13 @@ const data = vi.hoisted(() => ({
   removeCheckin: vi.fn(async (_id: string) => {}),
   saveCheckin: vi.fn(async (_id: string, _said: unknown) => {}),
   asked: vi.fn(() => {}),
+  signCheckinPhotos: vi.fn(async (paths: readonly string[]): Promise<Record<string, string>> =>
+    Object.fromEntries(paths.map((p) => [p, `https://signed/${p}`]))),
 }));
-vi.mock('../lib/data', () => ({ removeCheckin: data.removeCheckin, saveCheckin: data.saveCheckin }));
+vi.mock('../lib/data', () => ({
+  removeCheckin: data.removeCheckin, saveCheckin: data.saveCheckin,
+  SIGNED_FOR_S: 3600, signCheckinPhotos: data.signCheckinPhotos,
+}));
 vi.mock('../lib/checkins', () => ({ useMyCheckins: () => { data.asked(); return data.visits; } }));
 vi.mock('../lib/city', () => {
   const m = {
@@ -44,6 +49,8 @@ vi.mock('../lib/i18n', () => ({
 const alert = vi.spyOn(Alert, 'alert').mockImplementation(() => {});
 
 import VisitedScreen from './VisitedScreen';
+import { appFlags } from '../lib/flags';
+import { forgetSignedPhotos } from '../components/useSignedPhotos';
 
 const nav = () => {
   const n = { navigate: vi.fn(), goBack: vi.fn() };
@@ -58,6 +65,8 @@ const visit = (id: string, slug: string, at: string, over: Partial<Checkin> = {}
 
 beforeEach(() => {
   vi.clearAllMocks();
+  appFlags.set('checkin_photos', false);
+  forgetSignedPhotos();
   i18n.lang = 'en';
   data.visits = { data: [], loading: false, loaded: true, error: null, loadedAt: 1, fromCache: false, reload: vi.fn() };
   data.removeCheckin.mockReset().mockResolvedValue(undefined);
@@ -197,6 +206,36 @@ describe('VisitedScreen', () => {
       expect(box.borderTopLeftRadius).toBe('12px');
     }
     expect(new Set(boxes.map((b) => b.className)).size).toBe(1);
+  });
+
+  // K4 of docs/checkin-photos-plan.md: a visit's own first photo leads
+  // its row, behind `checkin_photos`; the press is still the place's.
+  it('leads with the visit’s own first photo when it has one, signed for the whole list at once', async () => {
+    const ph = (id: string) => ({ id, path: `me/k/${id}.jpg`, width: 1, height: 1 });
+    data.visits.data = [
+      visit('k3', 'cong', '2026-10-08T03:00:00Z', { photos: [ph('p1'), ph('p2')] }),
+      visit('k2', 'bare', '2026-10-07T03:00:00Z', { photos: [] }),
+      visit('k1', 'old', '2026-10-06T03:00:00Z'),
+    ];
+    show();
+    // Off: the place's cover, and nothing asked.
+    expect(screen.getAllByTestId('visit-row')[0].querySelector('img')!.getAttribute('src')).toBe('https://x/cong.jpg');
+    expect(data.signCheckinPhotos).not.toHaveBeenCalled();
+    cleanup();
+
+    appFlags.set('checkin_photos', true);
+    const { raw } = show();
+    await waitFor(() => expect(document.querySelector('img[src="https://signed/me/k/p1.jpg"]')).not.toBeNull());
+    expect(data.signCheckinPhotos).toHaveBeenCalledTimes(1);
+    expect(data.signCheckinPhotos).toHaveBeenCalledWith(['me/k/p1.jpg']);
+    const rows = screen.getAllByTestId('visit-row');
+    expect(rows[0].querySelector('img')!.getAttribute('src')).toBe('https://signed/me/k/p1.jpg');
+    expect(propsWhere((p) => (p.source as { uri?: string } | undefined)?.uri === 'https://signed/me/k/p1.jpg').source)
+      .toEqual({ uri: 'https://signed/me/k/p1.jpg', cacheKey: 'p1' });
+    expect(rows[1].querySelector('img')!.getAttribute('src')).toBe('https://x/bare.jpg');
+    expect(rows[2].querySelector('img')!.getAttribute('src')).toBe('https://x/old.jpg');
+    fireEvent.click(rows[0]);
+    expect(raw.navigate).toHaveBeenCalledWith('PlaceDetail', { slug: 'cong' });
   });
 
   // The search box, always there under the title. Tapping into it opens
