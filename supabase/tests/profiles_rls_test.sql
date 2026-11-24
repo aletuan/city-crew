@@ -175,6 +175,55 @@ begin
   assert gone = 1, 'a person could not delete their own avatar';
 end $$;
 
+-- Two names a person, no more (`avatars_two_names.sql`): the face and
+-- the wall go in; any other name, a subfolder, or a rename out of one of
+-- the two is refused, in the person's own folder too.
+do $$
+declare
+  me constant text := '11111111-1111-1111-1111-111111111111';
+  why text; wrote int; renamed int; refused int := 0; mime text[];
+begin
+  set local role rls_client;
+  set local test.uid = '11111111-1111-1111-1111-111111111111';
+  insert into storage.objects (bucket_id, name, owner) values ('avatars', me || '/avatar.jpg', me::uuid);
+  insert into storage.objects (bucket_id, name, owner) values ('avatars', me || '/wall.jpg', me::uuid);
+  get diagnostics wrote = row_count;
+  begin
+    insert into storage.objects (bucket_id, name, owner) values ('avatars', me || '/movie.jpg', me::uuid);
+  exception when insufficient_privilege then refused := refused + 1;
+  end;
+  begin
+    insert into storage.objects (bucket_id, name, owner) values ('avatars', me || '/x/avatar.jpg', me::uuid);
+  exception when insufficient_privilege then refused := refused + 1;
+  end;
+  begin
+    insert into storage.objects (bucket_id, name, owner) values ('avatars', me || '/avatar.png', me::uuid);
+  exception when insufficient_privilege then refused := refused + 1;
+  end;
+  reset role;
+  assert wrote = 1, 'the wall could not be written';
+  assert refused = 3, format('a third name, a subfolder and another extension are refused, %s were', refused);
+
+  -- A minute on, the face may be replaced, but not renamed into a third file.
+  update storage.objects set updated_at = now() - interval '2 minutes' where bucket_id = 'avatars' and name like me || '/%';
+  set local role rls_client;
+  set local test.uid = '11111111-1111-1111-1111-111111111111';
+  begin
+    with u as (
+      update storage.objects set name = me || '/hosted.jpg'
+       where bucket_id = 'avatars' and name = me || '/avatar.jpg' returning 1
+    ) select count(*) into renamed from u;
+  exception when insufficient_privilege then renamed := -1;
+  end;
+  reset role;
+  assert renamed <> 1, 'an avatar was renamed into a third file';
+
+  select allowed_mime_types into mime from storage.buckets where id = 'avatars';
+  assert mime = array['image/jpeg'], format('the bucket takes JPEG alone, took %s', mime);
+
+  delete from storage.objects where bucket_id = 'avatars' and name like me || '/%';
+end $$;
+
 update public.profiles set bio = 'Coffee' where id = '11111111-1111-1111-1111-111111111111';
 
 select 'all profile RLS checks passed' as result;

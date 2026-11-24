@@ -107,7 +107,8 @@ echo "→ rls, exercised"
 for f in "$ROOT"/supabase/migrations/*_mobile_editor_auth.sql \
          "$ROOT"/supabase/migrations/*_own_collection_members.sql \
          "$ROOT"/supabase/migrations/*_avatars_bucket.sql \
-         "$ROOT"/supabase/migrations/*_avatar_cooldown.sql; do
+         "$ROOT"/supabase/migrations/*_avatar_cooldown.sql \
+         "$ROOT"/supabase/migrations/*_avatars_two_names.sql; do
   run "$DB" -f "$f" >/dev/null
 done
 run "$DB" -f "$HERE/profiles_rls_test.sql"
