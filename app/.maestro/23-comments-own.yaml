@@ -90,14 +90,10 @@ env:
     visible:
       id: "collection-name"
     timeout: 10000
+# Public is one press in the form's access control (24 Nov 2026); a new
+# list starts there already, and the press makes it certain.
 - tapOn:
-    id: "collection-form-seen"
-- tapOn:
-    id: "sheet-action-public"
-- extendedWaitUntil:
-    notVisible:
-      id: "sheet-action-public"
-    timeout: 10000
+    id: "collection-form-seen-public"
 - tapOn:
     id: "collection-name"
 - inputText: "Maestro Comments"

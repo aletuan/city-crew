@@ -107,7 +107,6 @@ vi.mock('../nav', async (orig) => ({
 import CollectionFormScreen from './CollectionFormScreen';
 import { NOT_SHAREABLE } from '../lib/data/shares';
 import { colors } from '../theme';
-import { CHIP_SLOP } from '../components/ui';
 
 type BeforeRemove = (e: { preventDefault: () => void; data: { action: unknown } }) => void;
 /** A navigator that, like the real one, asks every `beforeRemove`
@@ -132,32 +131,16 @@ const nav = () => ({
 
 const routeWith = (params?: object) => ({ params }) as RootRoute<'CollectionForm'>;
 
-/** The line at the form's head, pressed, and an answer in the sheet it
- *  opens. The sheet's row runs its press after the sheet has gone
- *  (`SheetRows`), hence the wait. */
-/** The props React committed for the first element `pick` accepts —
- *  for a press's reach, which react-native-web does not draw. */
-const propsWhere = (match: (p: Record<string, unknown>) => boolean): Record<string, unknown> => {
-  type Fiber = { child: Fiber | null; sibling: Fiber | null; memoizedProps: Record<string, unknown> | null };
-  const host = document.body.firstElementChild as unknown as Record<string, { stateNode: { current: Fiber } }>;
-  const key = Object.keys(host).find((k) => k.startsWith('__reactContainer'))!;
-  const stack: Fiber[] = [host[key].stateNode.current];
-  while (stack.length) {
-    const f = stack.pop()!;
-    const p = f.memoizedProps;
-    if (p && typeof p === 'object' && match(p)) return p;
-    if (f.sibling) stack.push(f.sibling);
-    if (f.child) stack.push(f.child);
-  }
-  throw new Error('no matching element in the committed tree');
-};
+/** The answer chosen in the access control, by its key. */
+const chosen = () => (['public', 'friends', 'private'] as const)
+  .find((v) => screen.getByTestId(`collection-form-seen-${v}`).getAttribute('aria-checked') === 'true');
+const gloss = () => screen.getByTestId('collection-form-seen-gloss').textContent;
 
-/** Friends, chosen in the picker the row opens: the friends ticked by
- *  their place in the list, then Done. The pill takes its words from the
- *  ticks, so the wait is on them. */
+/** Friends, chosen in the picker its answer opens: the friends ticked by
+ *  their place in the list, then Done. The answer moves only once the
+ *  ticks are saved, so the wait is on it. */
 const tickFriends = async (...rows: number[]) => {
-  fireEvent.click(screen.getByTestId('collection-form-seen'));
-  fireEvent.click(screen.getByTestId('sheet-action-friends'));
+  fireEvent.click(screen.getByTestId('collection-form-seen-friends'));
   await waitFor(() => expect(screen.getByTestId('share-friend-0')).toBeTruthy(), { timeout: 3000 });
   // The faces mount from the sheet's timer, and a face can be in the
   // tree before its press handler is wired — `pick` below has the same
@@ -167,17 +150,14 @@ const tickFriends = async (...rows: number[]) => {
   await act(async () => {});
   for (const i of rows) fireEvent.click(screen.getByTestId(`share-friend-${i}`));
   fireEvent.click(screen.getByTestId('share-save'));
-  await waitFor(() => expect(screen.getByTestId('collection-form-seen').textContent!.startsWith('Friends')).toBe(true), { timeout: 3000 });
+  await waitFor(() => expect(chosen()).toBe('friends'), { timeout: 3000 });
   await act(async () => {});
 };
 
-const pick = async (v: 'public' | 'friends' | 'private') => {
-  fireEvent.click(screen.getByTestId('collection-form-seen'));
-  fireEvent.click(screen.getByTestId(`sheet-action-${v}`));
-  const word = { public: 'Public', friends: 'Friends', private: 'Private' }[v];
-  await waitFor(() => expect(screen.getByTestId('collection-form-seen').textContent!.startsWith(word)).toBe(true), { timeout: 3000 });
-  // The sheet changes audience from a timer, outside fireEvent's act.
-  // waitFor can see the committed words before react-native-web's
+const pick = async (v: 'public' | 'private') => {
+  fireEvent.click(screen.getByTestId(`collection-form-seen-${v}`));
+  await waitFor(() => expect(chosen()).toBe(v), { timeout: 3000 });
+  // waitFor can see the committed answer before react-native-web's
   // usePressEvents effect has reconfigured Save from disabled to enabled.
   // Flush that effect before the next press; waiting longer AFTER a
   // dropped press cannot deliver it (CI 44797970177, and local before it).
@@ -311,11 +291,10 @@ describe('creating a collection from a bookmark', () => {
   // stays where it was.
   it('does not take Friends with nobody ticked', async () => {
     render(<CollectionFormScreen navigation={nav()} route={routeWith()} />);
-    fireEvent.click(screen.getByTestId('collection-form-seen'));
-    fireEvent.click(screen.getByTestId('sheet-action-friends'));
+    fireEvent.click(screen.getByTestId('collection-form-seen-friends'));
     await waitFor(() => expect(screen.getByTestId('share-save')).toBeTruthy(), { timeout: 3000 });
     expect(screen.getByTestId('share-save').getAttribute('aria-disabled')).toBe('true');
-    expect(screen.getByTestId('collection-form-seen').textContent).toBe('Public');
+    expect(chosen()).toBe('public');
   });
 
   it('records no save for a plain new collection', async () => {
@@ -393,49 +372,50 @@ describe('what stops a submit before it writes', () => {
     expect(screen.queryByText(/Private until you say so/)).toBeNull();
   });
 
-  // A list of your own being made starts Public, and says so in the line
-  // at the form's head, which opens the plane's sheet (owner, 20 Nov
-  // 2026). No "Send a link": there is no list to send yet.
-  it('starts a new list Public, in a line that opens the Share sheet', () => {
+  // A list of your own being made starts Public, in three answers side by
+  // side, one press each (owner, 24 Nov 2026): the pill and its sheet are
+  // gone from the form, "Send a link" with them.
+  it('starts a new list Public, among three answers that are each one press', () => {
     render(<CollectionFormScreen navigation={nav()} route={routeWith()} />);
-    const line = screen.getByRole('button', { name: 'Public, Everyone can see it' });
-    expect(line.getAttribute('data-testid')).toBe('collection-form-seen');
-    // A pill (owner, 20 Nov 2026): the answer's name alone, the chevron
-    // against it rather than at the row's far end, in the chip's shape,
-    // as wide as its answer.
-    expect(line.textContent).toBe('Public');
-    const face = line.firstElementChild!;
-    expect([...face.children].map((c) => c.getAttribute('data-icon') ?? c.textContent)).toEqual(['globe-outline', 'Public', 'chevron-down']);
-    expect(viewStyleOf(face)).toMatchObject({ borderRadius: 999, minHeight: 32, backgroundColor: colors.surfaceGlass });
-    expect(viewStyleOf(line).alignSelf).toBe('flex-start');
-    // 32 drawn, 44 to the thumb, as every chip.
-    expect(propsWhere((p) => p.testID === 'collection-form-seen' && 'hitSlop' in p).hitSlop).toEqual(CHIP_SLOP);
+    expect(chosen()).toBe('public');
+    const segs = (['public', 'friends', 'private'] as const).map((v) => screen.getByTestId(`collection-form-seen-${v}`));
+    expect(segs.map((el) => el.textContent)).toEqual(['Public', 'Friends', 'Private']);
+    expect(segs.map((el) => el.querySelector('[data-icon]')!.getAttribute('data-icon'))).toEqual(['globe-outline', 'people-outline', 'lock-closed-outline']);
+    expect(screen.getByRole('radio', { name: 'Public, Shown in Explore and in search' })).toBeTruthy();
+    expect(gloss()).toBe('Shown in Explore and in search');
+    // The chips' material, 44 tall: a well, the chosen one lifted with
+    // the accent's words.
+    expect(viewStyleOf(screen.getByTestId('collection-form-seen'))).toMatchObject({ height: 44, backgroundColor: colors.surfaceGlass });
+    expect(viewStyleOf(segs[0].firstElementChild!)).toMatchObject({ backgroundColor: colors.bgElevated });
+    expect(viewStyleOf(segs[1].firstElementChild!).backgroundColor).toBeUndefined();
     expect(screen.queryByText('Who can see your list?')).toBeNull();
-    fireEvent.click(line);
-    expect(screen.getByText('Who can see your list?')).toBeTruthy();
-    expect(['public', 'friends', 'private'].map((k) => screen.getByTestId(`sheet-action-${k}`).getAttribute('aria-selected'))).toEqual(['true', 'false', 'false']);
-    expect(screen.getByTestId('sheet-action-friends').textContent).toBe('FriendsOnly the friends you choose');
-    expect(screen.getByTestId('sheet-action-public').textContent).toBe('PublicShown in Explore and in search');
     expect(screen.queryByTestId('collection-send-link')).toBeNull();
     // A list not yet made has no shares to read.
     expect(shares.asked.at(-1)).toBeNull();
   });
 
-  it('moves the line to the answer chosen, and the sheet’s tick with it', async () => {
+  it('moves to the answer pressed, and says what it means under it', async () => {
     render(<CollectionFormScreen navigation={nav()} route={routeWith()} />);
     await pick('private');
-    expect(screen.getByTestId('collection-form-seen').textContent).toBe('Private');
-    fireEvent.click(screen.getByTestId('collection-form-seen'));
-    expect(screen.getByTestId('sheet-action-private').getAttribute('aria-selected')).toBe('true');
+    expect(gloss()).toBe('Only you can see it');
+    expect(screen.getByRole('radio', { name: 'Private, Only you can see it' })).toBeTruthy();
+    expect(screen.getByTestId('collection-form-seen-private').querySelector('[data-icon]')!.getAttribute('data-color')).toBe(colors.accent);
   });
 
-  it('counts the friends ticked in the line, and keeps them when it is opened again', async () => {
+  // Friends is whom: the count under the control is the way back to the
+  // picker, and the picker opens with the ticks kept.
+  it('counts the friends ticked under the control, and opens the picker again from there', async () => {
     render(<CollectionFormScreen navigation={nav()} route={routeWith()} />);
     await tickFriends(0, 1);
-    expect(screen.getByTestId('collection-form-seen').textContent).toBe('Friends · 2');
-    expect(screen.getByTestId('collection-form-seen').querySelector('[data-icon="people-outline"]')).toBeTruthy();
-    fireEvent.click(screen.getByTestId('collection-form-seen'));
-    expect(screen.getByTestId('sheet-action-friends').getAttribute('aria-selected')).toBe('true');
+    expect(gloss()).toBe('2 friends chosen');
+    fireEvent.click(screen.getByTestId('collection-form-seen-gloss'));
+    await waitFor(() => expect(screen.getByTestId('share-save')).toBeTruthy(), { timeout: 3000 });
+  });
+
+  it('says one friend in the singular', async () => {
+    render(<CollectionFormScreen navigation={nav()} route={routeWith()} />);
+    await tickFriends(0);
+    expect(gloss()).toBe('1 friend chosen');
   });
 
   // Chosen and not saved, it is a change like a name: leaving asks.
@@ -472,16 +452,13 @@ describe('what stops a submit before it writes', () => {
     expect([getComputedStyle(row).paddingTop, getComputedStyle(row).paddingBottom]).toEqual(['22px', '20px']);
   });
 
-  it('asks who can see it in a row under the fields: its name and question over the answer', () => {
+  it('names the control under the fields, the meaning under the control', () => {
     render(<CollectionFormScreen navigation={nav()} route={routeWith()} />);
     const name = screen.getByText('Access');
-    const ask = screen.getByText('Who can see this collection?');
-    const answer = screen.getByTestId('collection-form-seen');
+    const control = screen.getByTestId('collection-form-seen');
     const words = screen.getByPlaceholderText('What ties these together?');
     const after = (a: Element, b: Element) => !!(a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING);
-    expect([after(words, name), after(name, ask), after(ask, answer)]).toEqual([true, true, true]);
-    // One row: the answer is beside the name, not a line of its own.
-    expect(name.parentElement!.parentElement).toBe(answer.parentElement);
+    expect([after(words, name), after(name, control), after(control, screen.getByTestId('collection-form-seen-gloss'))]).toEqual([true, true, true]);
   });
 
   it('keeps the row when the answer cannot be changed, with the answer as words', () => {
@@ -512,8 +489,8 @@ describe('what stops a submit before it writes', () => {
     unmount();
     render(<CollectionFormScreen navigation={nav()} route={routeWith({ addPlaceSlug: 'heim' })} />);
     // A list made from a place's save is one of your own: Public, and
-    // the line can be pressed.
-    expect(screen.getByRole('button', { name: 'Public, Everyone can see it' })).toBeTruthy();
+    // the answer can be changed.
+    expect(chosen()).toBe('public');
     expect(screen.getByText('Name it, and the place you just saved goes in first.')).toBeTruthy();
     expect(screen.queryByText(/nothing is copied until/)).toBeNull();
   });
@@ -583,45 +560,42 @@ describe('renaming a list', () => {
       catalog.data = [HEIM];
       saved.data = [{ ...(listOf([HEIM]) as object), ...over }];
       render(<CollectionFormScreen navigation={nav()} route={routeWith({ slug: 'night-bar' })} />);
-      return screen.getByTestId('collection-form-seen');
+      return chosen();
     };
     const shared = (list: string) => [{ collection_id: list, user_id: 'friend-1', created_at: '2026-11-14T00:00:00Z' }];
 
     it('says a public list is public, to everyone', () => {
-      const line = seenAs({ is_public: true });
-      expect(line.textContent).toBe('Public');
-      expect(line.querySelector('[data-icon="globe-outline"]')).toBeTruthy();
+      expect(seenAs({ is_public: true })).toBe('public');
       expect(screen.queryByText(/will show to everyone/)).toBeNull();
       // The owner's shares, asked for by the owner's id.
       expect(shares.asked.at(-1)).toBe('u1');
     });
 
     it('says a private list is private', () => {
-      const line = seenAs({ is_public: false });
-      expect(line.textContent).toBe('Private');
-      expect(line.querySelector('[data-icon="lock-closed-outline"]')).toBeTruthy();
+      expect(seenAs({ is_public: false })).toBe('private');
     });
 
     it('says a list shared with friends is the friends’', () => {
       shares.data = shared('c1');
-      const line = seenAs({ is_public: false });
-      expect(line.textContent).toBe('Friends · 1');
-      expect(line.querySelector('[data-icon="people-outline"]')).toBeTruthy();
+      expect(seenAs({ is_public: false })).toBe('friends');
+      expect(gloss()).toBe('1 friend chosen');
     });
 
     // Public wins over the shares, as on the page: the policies read it so.
     it('says public of a public list that is also shared, and private of one whose shares are another list’s', () => {
       shares.data = shared('c1');
-      expect(seenAs({ is_public: true }).textContent).toBe('Public');
+      expect(seenAs({ is_public: true })).toBe('public');
       cleanup();
       shares.data = shared('some-other-list');
-      expect(seenAs({ is_public: false }).textContent).toBe('Private');
+      expect(seenAs({ is_public: false })).toBe('private');
     });
 
     it('speaks the reader’s language', () => {
       lang.now = 'vi';
       try {
-        expect(seenAs({ is_public: true }).textContent).toBe('Công khai');
+        seenAs({ is_public: true });
+        expect(screen.getByTestId('collection-form-seen-public').textContent).toBe('Công khai');
+        expect(gloss()).toBe('Hiện trên Khám phá và trong tìm kiếm');
       } finally {
         lang.now = 'en';
       }
@@ -633,14 +607,12 @@ describe('renaming a list', () => {
       expect(screen.queryByText(/goes in first/)).toBeNull();
     });
 
-    // Pressed, the line opens the plane's sheet, as on the list's page —
-    // "Send a link" included (owner, 20 Nov 2026).
-    it('opens the Share sheet from the line, ticked where the list stands', () => {
-      fireEvent.click(seenAs({ is_public: false }));
-      expect(screen.getByText('Who can see your list?')).toBeTruthy();
-      expect(['public', 'friends', 'private'].map((k) => screen.getByTestId(`sheet-action-${k}`).getAttribute('aria-selected'))).toEqual(['false', 'false', 'true']);
-      expect(screen.getByTestId('sheet-action-friends').textContent).toBe('FriendsOnly the friends you choose');
-      expect(screen.getByTestId('collection-send-link')).toBeTruthy();
+    // No sheet and no "Send a link" in the form: that is sharing, and the
+    // list's page has it (owner, 24 Nov 2026).
+    it('offers the three answers on a rename too, with no "Send a link"', () => {
+      expect(seenAs({ is_public: false })).toBe('private');
+      expect(screen.queryByTestId('collection-send-link')).toBeNull();
+      expect(screen.queryByText('Who can see your list?')).toBeNull();
     });
 
     const renameOver = (isPublic: boolean) => {
@@ -722,8 +694,9 @@ describe('renaming a list', () => {
       shares.data = [{ collection_id: 'c1', user_id: 'lan', created_at: '2026-11-14T00:00:00Z' }];
       renameOver(false);
       expect(saveButton().getAttribute('aria-disabled')).toBe('true');
-      fireEvent.click(screen.getByTestId('collection-form-seen'));
-      fireEvent.click(screen.getByTestId('sheet-action-friends'));
+      // Back into the picker from the line that names the friends.
+      expect(chosen()).toBe('friends');
+      fireEvent.click(screen.getByTestId('collection-form-seen-gloss'));
       await waitFor(() => expect(screen.getByTestId('share-friend-0')).toBeTruthy(), { timeout: 3000 });
       // The same flush `tickFriends` makes, for the same reason: a face can
       // be in the tree before its press handler is wired, and a click in
