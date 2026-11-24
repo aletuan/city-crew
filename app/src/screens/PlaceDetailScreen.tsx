@@ -41,7 +41,7 @@ import { useSession } from '../lib/auth';
 import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Glyph, ICON } from '../components/ui/glyph';
-import { addCheckin, coverOf, fmtCount, isFree, photosOf, removeCheckin, usePlaceBySlug, usePlacePhotos, withPhotos } from '../lib/data';
+import { addCheckin, coverOf, fmtCount, isFree, photosOf, usePlaceBySlug, usePlacePhotos, withPhotos } from '../lib/data';
 import { useMyCheckins } from '../lib/checkins';
 import { reviewAfterCheckin } from '../lib/askReview';
 import { canRepeat, latestCheckin, visitsAt } from '../lib/checkin';
@@ -61,6 +61,7 @@ import {
 import { cityTz } from '../lib/clock';
 import { clockOf, dateline, groupHours, openState } from '../lib/format';
 import { useI18n } from '../lib/i18n';
+import { useRemoveCheckin } from '../lib/useRemoveCheckin';
 import { localized, localizedLang } from '../lib/localized';
 import { blurbCredit, blurbIcon, blurbLink } from '../lib/blurbSource';
 import { mapsRouteUrl, mapsSearchUrl } from '../lib/maps';
@@ -150,6 +151,7 @@ export default function PlaceDetailScreen({ navigation, route }: { navigation: N
   // The reader's visits — the one copy the whole app shares, so the
   // reload after a tap here is what the profile's count draws too.
   const visits = useMyCheckins();
+  const removeVisit = useRemoveCheckin(visits.reload);
   const [checkinMenu, setCheckinMenu] = useState(false);
   const [checking, setChecking] = useState(false);
   // How many lines the address wanted before anything clamped it, and
@@ -469,12 +471,7 @@ export default function PlaceDetailScreen({ navigation, route }: { navigation: N
   // this is the one place a visit is taken back (#831).
   const undoCheckin = async (id: string) => {
     if (visitsHere.length <= 1) setCheckinMenu(false);
-    try {
-      await removeCheckin(id);
-      visits.reload();
-    } catch (e) {
-      Alert.alert(t('Could not remove it', 'Không bỏ được', '削除できませんでした', '无法删除', '無法刪除'), (e as Error).message);
-    }
+    await removeVisit(id);
   };
   // "Again" is the sheet's one commit, so it is drawn as every sheet's
   // commit is — the wide gradient CTA under the history — and not as a

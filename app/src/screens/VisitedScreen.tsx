@@ -41,7 +41,7 @@
 // honour is a trap.
 
 import React, { useMemo, useRef, useState } from 'react';
-import { ActivityIndicator, Alert, Keyboard, ScrollView, StyleSheet, Text, type TextInput, View } from 'react-native';
+import { ActivityIndicator, Keyboard, ScrollView, StyleSheet, Text, type TextInput, View } from 'react-native';
 import { Image } from 'expo-image';
 import { Glyph, ICON } from '../components/ui/glyph';
 import ActionSheet, { type SheetAction } from '../components/ActionSheet';
@@ -54,9 +54,9 @@ import {
 import { useCityList } from '../lib/city';
 import { cityShortById } from '../lib/cityName';
 import { useMyCheckins } from '../lib/checkins';
-import { removeCheckin } from '../lib/data';
 import { clockOf, numericDate } from '../lib/format';
 import { useI18n } from '../lib/i18n';
+import { useRemoveCheckin } from '../lib/useRemoveCheckin';
 import { localized } from '../lib/localized';
 import { RECENTS_SHOWN, rememberSearch, VISIT_RECENTS_KEY } from '../lib/recents';
 import { NO_RECENTS, RECENTS, useStored } from '../lib/stored';
@@ -78,6 +78,7 @@ const THUMB = 56;
 export default function VisitedScreen({ navigation }: { navigation: Nav }) {
   const { t, lang } = useI18n();
   const visits = useMyCheckins();
+  const removeVisit = useRemoveCheckin(visits.reload);
   const { cities } = useCityList();
   const [menuFor, setMenuFor] = useState<Checkin | null>(null);
   const clearance = useTabBarClearance();
@@ -173,19 +174,11 @@ export default function VisitedScreen({ navigation }: { navigation: Nav }) {
     return parts.join(' · ');
   };
 
-  const remove = async (v: Checkin) => {
-    try {
-      await removeCheckin(v.id);
-      visits.reload();
-    } catch (e) {
-      Alert.alert(t('Could not remove it', 'Không bỏ được', '削除できませんでした', '无法删除', '無法刪除'), (e as Error).message);
-    }
-  };
   const actions: SheetAction[] = [{
     key: 'remove', icon: 'trash-outline', destructive: true,
     title: t('Remove this visit', 'Bỏ lần ghé này', 'この訪問を削除', '删除这次打卡', '刪除這次打卡'),
     desc: t('Only this one; your other visits stay.', 'Chỉ lần này; các lần khác vẫn giữ.', 'この1件だけ。他の訪問は残ります。', '仅删除这一次，其他打卡记录保留。', '僅刪除這一次，其他打卡記錄保留。'),
-    onPress: () => { const v = menuFor; setMenuFor(null); if (v) void remove(v); },
+    onPress: () => { const v = menuFor; setMenuFor(null); if (v) void removeVisit(v.id); },
   }];
 
   // Places and cities, not visits: "30 lần ghé · 30 địa điểm" said one
