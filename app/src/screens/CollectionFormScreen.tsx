@@ -183,7 +183,7 @@ export default function CollectionFormScreen({ navigation, route }: {
         returnKeyType="done"
       />
       <FieldRule />
-      <SeenLine aud={aud} making={makingOwn(editing, copyFrom)} />
+      <SeenLine aud={aud} />
       <FieldRule />
       </View>
       {/* No chips here (owner, 16 Nov 2026). The list's kinds were shown
