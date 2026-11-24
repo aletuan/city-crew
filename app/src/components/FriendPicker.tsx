@@ -96,7 +96,7 @@ export type PickRow = {
 };
 
 export default function FriendPicker({
-  open, title, subtitle, rows, people, none, note, cta, rowTestID, onToggle, onClose,
+  open, title, subtitle, rows, people, none, note, cta, leave, rowTestID, onToggle, onClose,
 }: {
   open: boolean;
   title: string;
@@ -112,6 +112,14 @@ export default function FriendPicker({
    *  the box's two margins gave it (`gap`). */
   note?: { icon: Icon; text: string };
   cta: { icon: Icon; label: string; testID: string; disabled: boolean; onPress: () => void };
+  /** The word on the quiet way out, when "Not now" is not what leaving
+   *  means. On the trip's sheet and the list page's it is: the plan and
+   *  the list are there, and friends can be chosen later. On the
+   *  collection form's (owner, 24 Nov 2026) leaving takes back the press
+   *  on "Friends", and "later" promised a choice the form does not keep:
+   *  there it is "Cancel". The default stays with the two sheets that
+   *  mean it. */
+  leave?: string;
   /** Each row's id, by its index. A function rather than a prefix so
    *  that the template is written at the call site, where the Maestro id
    *  check (`scripts/maestroIds.test.ts`) reads it: `invite-friend-${i}`
@@ -175,7 +183,7 @@ export default function FriendPicker({
         />
 
         <PressableScale onPress={onClose} accessibilityRole="button" contentStyle={s.later}>
-          <Text style={s.laterText}>{t('Not now', 'Để sau', 'あとで', '以后再说', '以後再說')}</Text>
+          <Text style={s.laterText}>{leave ?? t('Not now', 'Để sau', 'あとで', '以后再说', '以後再說')}</Text>
         </PressableScale>
       </Animated.View>
     </Modal>

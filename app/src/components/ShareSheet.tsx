@@ -78,7 +78,12 @@ export default function ShareSheet({
   history: readonly ShareRow[];
   sending: boolean;
   /** Nothing is written by the press: the collection's form keeps the ticks
-   *  until its own Save (owner, 22 Nov 2026), and the button says "Done". */
+   *  until its own Save (owner, 22 Nov 2026), and the button says "Done".
+   *  The words follow (owner, 24 Nov 2026): the way out is "Cancel", since
+   *  leaving takes the form's answer back to what it was, and the
+   *  sentence does not say the list "will become private" — in the form
+   *  nothing becomes anything until Save, and on a public list the
+   *  warning read as a thing already done. */
   later?: boolean;
   onClose: () => void;
   onSave: (add: string[], remove: string[]) => void;
@@ -132,7 +137,7 @@ export default function ShareSheet({
     <FriendPicker
       open={open}
       title={t('Share with friends', 'Chia sẻ với bạn bè', '友達と共有', '与好友分享', '與好友分享')}
-      subtitle={isPublic
+      subtitle={isPublic && !later
         ? t(
           'This list will become private: only the friends you choose can see and use it.',
           'Bộ sưu tập sẽ chuyển sang riêng tư: chỉ những người bạn mà bạn chọn mới xem và dùng được.',
@@ -157,6 +162,7 @@ export default function ShareSheet({
         '你还没有好友。添加好友后再回来分享吧。', '你還沒有好友。新增好友後再回來分享吧。',
       )}
       cta={{ ...button, testID: 'share-save' }}
+      leave={later ? t('Cancel', 'Huỷ', 'キャンセル', '取消', '取消') : undefined}
       rowTestID={(i) => `share-friend-${i}`}
       onToggle={(id) => setPicked((cur) => {
         const next = new Set(cur);

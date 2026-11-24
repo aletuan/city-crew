@@ -80,6 +80,26 @@ describe('later', () => {
     fireEvent.click(screen.getByTestId('share-friend-0'));
     expect(cta().textContent).toBe('Keep private');
   });
+
+  // Leaving the form's picker takes the answer back, so the way out is
+  // "Cancel"; and nothing becomes private until the form's Save, so a
+  // public list is not told it will (owner, 24 Nov 2026).
+  it('leaves by Cancel, and does not warn a public list that it will become private', () => {
+    const onClose = vi.fn();
+    show({ later: true, isPublic: true, onClose });
+    expect(screen.queryByText('Not now')).toBeNull();
+    expect(screen.queryByText(/will become private/)).toBeNull();
+    expect(screen.getByText('Only the friends you choose can see and use this list.')).toBeTruthy();
+    fireEvent.click(screen.getByText('Cancel'));
+    expect(onClose).toHaveBeenCalledOnce();
+  });
+
+  it('keeps Not now and the warning on the list\'s own page', () => {
+    show({ isPublic: true });
+    expect(screen.getByText('Not now')).toBeTruthy();
+    expect(screen.queryByText('Cancel')).toBeNull();
+    expect(screen.getByText(/will become private/)).toBeTruthy();
+  });
 });
 
 describe('the list', () => {

@@ -294,7 +294,15 @@ describe('creating a collection from a bookmark', () => {
     fireEvent.click(screen.getByTestId('collection-form-seen-friends'));
     await waitFor(() => expect(screen.getByTestId('share-save')).toBeTruthy(), { timeout: 3000 });
     expect(screen.getByTestId('share-save').getAttribute('aria-disabled')).toBe('true');
-    expect(chosen()).toBe('public');
+    // The control shows Friends while the picker is open over it (owner,
+    // 24 Nov 2026) — shown, not kept: leaving is not a change to save —
+    // and falls back to Public on Cancel.
+    expect(chosen()).toBe('friends');
+    expect(gloss()).toBe('Only the friends you choose');
+    expect(leave()).toBe(false);
+    fireEvent.click(screen.getByText('Cancel'));
+    await waitFor(() => expect(chosen()).toBe('public'));
+    expect(gloss()).toBe('Shown in Explore and in search');
   });
 
   it('records no save for a plain new collection', async () => {
