@@ -358,6 +358,9 @@ describe('closed, and opened again', () => {
   it('leaves through Not now and through the page behind it', () => {
     const onClose = vi.fn();
     show({ onClose });
+    // The trip's way out is still "Not now": "Cancel" is the collection
+    // form's alone (24 Nov 2026).
+    expect(screen.queryByText('Cancel')).toBeNull();
     fireEvent.click(screen.getByText('Not now'));
     fireEvent.click(screen.getByLabelText('Close'));
     expect(onClose).toHaveBeenCalledTimes(2);
