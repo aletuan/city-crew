@@ -11,7 +11,7 @@ vi.mock('../supabase', async () => {
 });
 
 import { DAILY_LIMIT } from '../quota';
-import { addCheckin, fetchMyCheckins, removeCheckin, saveCheckin } from './checkins';
+import { addCheckin, fetchMyCheckins, fetchPersonCheckins, likeCheckin, removeCheckin, saveCheckin } from './checkins';
 
 const fake = () => h.fake!;
 beforeEach(() => fake().reset());
@@ -163,5 +163,64 @@ describe('the cover, when no photo is flagged', () => {
     fake().replies({ data: [{ id: 'k', city_id: null, at: '2026-10-01T03:00:00Z', places: { slug: 'p', name_en: 'P', name_vi: 'P', i18n: null } }] });
     const [row] = await fetchMyCheckins('u1');
     expect(row.place?.cover).toBeNull();
+  });
+});
+
+describe('fetchPersonCheckins', () => {
+  it('asks the function for this person, and reads a row as the page holds it', async () => {
+    fake().replies({ data: [{
+      id: 'k1', place_slug: 'cong', name_en: 'Cong', name_vi: 'Cộng', i18n: { ja: { name: 'コン' } }, categories: ['cafes'],
+      cover: 'https://x/cover.jpg', city_id: 'hanoi', day: '2026-11-24', note: 'Crisp sourdough.', audience: 'friends', likes: 2, liked: true,
+    }] });
+    expect(await fetchPersonCheckins('u1')).toEqual([{
+      id: 'k1', place_slug: 'cong',
+      place: { name_en: 'Cong', name_vi: 'Cộng', cover: 'https://x/cover.jpg', i18n: { ja: { name: 'コン' } }, categories: ['cafes'] },
+      city_id: 'hanoi', day: '2026-11-24', note: 'Crisp sourdough.', audience: 'friends', likes: 2, liked: true,
+    }]);
+    expect(fake().log).toEqual([{ op: 'rpc', fn: 'person_checkins', payload: { p_person: 'u1' }, filters: [] }]);
+  });
+
+  it('reads what the server left empty as empty: no note, no picture, no answer, no hearts', async () => {
+    fake().replies({ data: [{
+      id: 'k1', place_slug: 'cong', name_en: null, name_vi: null, i18n: null, categories: null,
+      cover: null, city_id: null, day: '2026-11-24', note: null, audience: null, likes: null, liked: null,
+    }] });
+    expect(await fetchPersonCheckins('u1')).toEqual([{
+      id: 'k1', place_slug: 'cong', place: { name_en: '', name_vi: '', cover: null, i18n: null, categories: [] },
+      city_id: null, day: '2026-11-24', note: null, audience: null, likes: 0, liked: false,
+    }]);
+  });
+
+  it('takes only the two answers there are, and a heart only on the word true', async () => {
+    fake().replies({ data: [
+      { id: 'a', place_slug: 'p', day: '2026-11-24', audience: 'private', liked: 'yes', likes: '3' },
+      { id: 'b', place_slug: 'p', day: '2026-11-24', audience: 'public' },
+    ] });
+    const [a, b] = await fetchPersonCheckins('u1');
+    expect([a.audience, a.liked, a.likes]).toEqual(['private', false, 0]);
+    expect(b.audience).toBeNull();
+  });
+
+  it('is nobody’s page when the server answers nothing, and throws what it said', async () => {
+    fake().replies({ data: null });
+    expect(await fetchPersonCheckins('u1')).toEqual([]);
+    fake().reset();
+    fake().replies({ error: { message: 'down' } });
+    await expect(fetchPersonCheckins('u1')).rejects.toThrow('down');
+  });
+});
+
+describe('likeCheckin', () => {
+  it('asks the function to set the reader’s heart, or to take it back', async () => {
+    await likeCheckin('k1', true);
+    await likeCheckin('k1', false);
+    expect(fake().log).toEqual([
+      { op: 'rpc', fn: 'like_checkin', payload: { p_id: 'k1', p_on: true }, filters: [] },
+      { op: 'rpc', fn: 'like_checkin', payload: { p_id: 'k1', p_on: false }, filters: [] },
+    ]);
+  });
+  it('throws what the server said', async () => {
+    fake().replies({ error: { message: 'checkin:unseen' } });
+    await expect(likeCheckin('k1', true)).rejects.toThrow('checkin:unseen');
   });
 });

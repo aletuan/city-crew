@@ -7,6 +7,7 @@
 // used, in the person page's test.
 
 import React from 'react';
+import { Text } from 'react-native';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, fireEvent, render, screen } from '../uitest/render';
 import type { Preview, PreviewComment } from '../lib/comments';
@@ -123,5 +124,20 @@ describe('the newest comments', () => {
     expect(screen.getByTestId('activity-comments-count').textContent).toBe('3');
     expect(screen.queryByText(/says a/)).toBeNull();
     expect(screen.queryByTestId('activity-previews')).toBeNull();
+  });
+});
+
+describe('what a card draws under its words', () => {
+  it('draws it after the description’s place, inside the card’s press, and nothing when there is none', () => {
+    const { rerender } = render(
+      <ActivityCard
+        who="Lan" did=" checked in" title="Cộng" meta="Cafés" liked={false} likes={0} onOpen={() => {}}
+        under={<Text testID="under-it">a note to edit</Text>}
+      />,
+    );
+    expect(screen.getByTestId('activity-open').contains(screen.getByTestId('under-it'))).toBe(true);
+    expect(screen.queryByTestId('activity-desc')).toBeNull();
+    rerender(<ActivityCard who="Lan" did=" checked in" title="Cộng" meta="Cafés" liked={false} likes={0} onOpen={() => {}} />);
+    expect(screen.queryByTestId('under-it')).toBeNull();
   });
 });

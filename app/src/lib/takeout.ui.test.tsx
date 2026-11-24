@@ -53,6 +53,7 @@ const reads = vi.hoisted(() => ({
     comments: [{ collection_slug: 'cafes', in_reply_to: 'trang', is_reply: true, text: 'hi', at: '2026-11-19T03:00:00Z', people: [], places: ['cong'] }],
     hearts: [{ collection_slug: 'cafes', author: 'trang', at: '2026-11-19T04:00:00Z' }],
   })),
+  fetchMyCheckinHearts: vi.fn(async () => [{ place_slug: 'cong', liked_at: '2026-11-24T04:00:00Z' }]),
   fetchProfilesById: vi.fn(async (ids: string[]) => Object.fromEntries(ids.map((id) => [id, {
     id, handle: `${id}_handle`, full_name: `Private Name ${id}`, avatar_url: `https://faces/${id}.jpg`,
   }]))),
@@ -86,6 +87,7 @@ vi.mock('./data/export', () => ({
   fetchMyShares: reads.fetchMyShares,
   fetchMyTripSources: reads.fetchMyTripSources,
   fetchMyCommentTakeout: reads.fetchMyCommentTakeout,
+  fetchMyCheckinHearts: reads.fetchMyCheckinHearts,
 }));
 vi.mock('expo-file-system', () => {
   class File {
@@ -158,6 +160,13 @@ describe('useTakeout', () => {
       expect(reads.fetchMyCheckins).toHaveBeenCalledWith('me');
       expect(JSON.parse(world.written[0].body).checkins)
         .toEqual([{ place_slug: 'cong', city_id: 'hanoi', at: '2026-09-20T03:00:00.000Z', note: null, seen_by: 'private' }]);
+    });
+
+    it('carries the hearts set on friends’ check-ins', async () => {
+      mount();
+      await run();
+      expect(reads.fetchMyCheckinHearts).toHaveBeenCalledOnce();
+      expect(JSON.parse(world.written[0].body).checkin_hearts).toEqual([{ place_slug: 'cong', at: '2026-11-24T04:00:00.000Z' }]);
     });
 
     it('asks for every other end of an edge, and every block — never for the reader', async () => {

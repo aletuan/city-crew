@@ -446,10 +446,10 @@ describe('VisitedScreen', () => {
     expect(within(sheet).getByTestId('checkin-sheet-name').textContent).toBe('cong en');
     expect(within(sheet).getByTestId('checkin-sheet-when').textContent).toBe('8 Oct');
     expect((within(sheet).getByTestId('checkin-sheet-note') as HTMLTextAreaElement).value).toBe('Crisp sourdough.');
-    // An old visit is edited, not just made; and nobody is asked who
-    // sees it before friends can.
+    // An old visit is edited, not just made; and one never answered
+    // opens as private, whatever the reader answers nowadays.
     expect(within(sheet).queryByTestId('checkin-sheet-done')).toBeNull();
-    expect(within(sheet).queryByTestId('checkin-sheet-seen')).toBeNull();
+    expect(within(sheet).getByTestId('checkin-sheet-seen-private').getAttribute('aria-checked')).toBe('true');
   });
 
   it('saves the words to the visit whose line was pressed, and asks the list again', async () => {

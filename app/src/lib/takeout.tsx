@@ -26,7 +26,7 @@ import {
   fetchPreferences, fetchProfilesById,
 } from './data';
 import {
-  fetchMyCommentTakeout, fetchMyHistory, fetchMyLikedCollections, fetchMyShares, fetchMySubmittedPlaces, fetchMyTripSources,
+  fetchMyCheckinHearts, fetchMyCommentTakeout, fetchMyHistory, fetchMyLikedCollections, fetchMyShares, fetchMySubmittedPlaces, fetchMyTripSources,
 } from './data/export';
 import { buildExport, exportFilename, exportLang } from './export';
 
@@ -86,7 +86,7 @@ export function useTakeout() {
       const { File, Paths, Sharing } = await nativeIO();
       if (!(await Sharing.isAvailableAsync())) throw new Error('sharing_unavailable');
 
-      const [collections, likes, trips, preferences, friendships, blocked, submitted, history, checkins, shares, tripSources, comments] =
+      const [collections, likes, trips, preferences, friendships, blocked, submitted, history, checkins, shares, tripSources, comments, checkinHearts] =
         await Promise.all([
           fetchMyCollections(uid),
           fetchMyLikedCollections(uid),
@@ -100,6 +100,7 @@ export function useTakeout() {
           fetchMyShares(uid),
           fetchMyTripSources(uid),
           fetchMyCommentTakeout(),
+          fetchMyCheckinHearts(),
         ]);
 
       // Already keyed by id, and the export wants only the handle out of
@@ -128,7 +129,7 @@ export function useTakeout() {
           created_at: (session?.user as { created_at?: string } | undefined)?.created_at ?? null,
         },
         profile, preferences, collections, likes, trips, tripSources,
-        friendships, shares, blocked, handles, submitted, history, checkins, comments,
+        friendships, shares, blocked, handles, submitted, history, checkins, comments, checkinHearts,
       }, now, exportLang(lang));
 
       // The cache directory, not documents: this is a copy the reader is

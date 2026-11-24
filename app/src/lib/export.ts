@@ -107,6 +107,8 @@ export type ExportInput = {
   /** What the account wrote and liked in comments, from
    *  `fetchMyCommentTakeout` — other people already handles. */
   comments: CommentTakeout;
+  /** The hearts set on visits, from `fetchMyCheckinHearts`. */
+  checkinHearts: { place_slug: string; liked_at: string }[];
 };
 
 export type ExportBundle = {
@@ -163,6 +165,9 @@ export type ExportBundle = {
   }[];
   /** Every heart you set on a comment: where, and whose comment. */
   comment_hearts: { collection_slug: string; author_handle: string | null; at: string }[];
+  /** Every heart you set on a friend's check-in: the place, and when.
+   *  Not whose check-in — that it was made is theirs to say. */
+  checkin_hearts: { place_slug: string; at: string }[];
 };
 
 /**
@@ -402,5 +407,6 @@ export function buildExport(input: ExportInput, now: Date, lang: ExportLang): Ex
       author_handle: h.author,
       at: isoUtc(h.at) ?? '',
     })),
+    checkin_hearts: input.checkinHearts.map((h) => ({ place_slug: h.place_slug, at: isoUtc(h.liked_at) ?? '' })),
   };
 }

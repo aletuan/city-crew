@@ -3,7 +3,7 @@
 
 import { supabase } from '../supabase';
 import type { I18nDoc } from '../localized';
-import type { Audience, Checkin } from '../checkin';
+import type { Audience, Checkin, PersonCheckin } from '../checkin';
 import { DAILY_LIMIT, refusedByPolicy } from '../quota';
 import { fetchPlaceId } from './guide';
 
@@ -103,5 +103,42 @@ export async function saveCheckin(id: string, said: { note: string | null; audie
 /** Undo one visit. RLS keeps this to the caller's own rows. */
 export async function removeCheckin(id: string): Promise<void> {
   const { error } = await supabase.from('checkins').delete().eq('id', id);
+  if (error) throw new Error(error.message);
+}
+
+/**
+ * A person's visits as this reader may see them (`person_checkins`):
+ * all of your own, a friend's shared ones, nobody else's — the server
+ * decides, and answers a stranger with no rows rather than a refusal.
+ * The newest at each place, newest first, by day.
+ *
+ * Read as untrusted, as a thread's rows are (`fetchThread`): the
+ * generated types call every column present, and the function answers
+ * null for a note nobody wrote, a place with no picture, and — on
+ * anybody's page but your own — who sees it.
+ */
+export async function fetchPersonCheckins(personId: string): Promise<PersonCheckin[]> {
+  const { data, error } = await supabase.rpc('person_checkins', { p_person: personId });
+  if (error) throw new Error(error.message);
+  return (data ?? []).map((r) => ({
+    id: r.id,
+    place_slug: r.place_slug,
+    place: {
+      name_en: r.name_en ?? '', name_vi: r.name_vi ?? '', cover: r.cover ?? null,
+      i18n: (r.i18n as I18nDoc | null) ?? null, categories: r.categories ?? [],
+    },
+    city_id: r.city_id ?? null,
+    day: r.day,
+    note: r.note ?? null,
+    audience: r.audience === 'friends' || r.audience === 'private' ? r.audience : null,
+    likes: typeof r.likes === 'number' ? r.likes : 0,
+    liked: r.liked === true,
+  }));
+}
+
+/** Set or take back the reader's heart on a visit they can see. The
+ *  server refuses one they cannot — and a private visit, anybody's. */
+export async function likeCheckin(id: string, on: boolean): Promise<void> {
+  const { error } = await supabase.rpc('like_checkin', { p_id: id, p_on: on });
   if (error) throw new Error(error.message);
 }

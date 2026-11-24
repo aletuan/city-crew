@@ -139,6 +139,7 @@ import { usePersonMenu } from '../components/PersonMenu';
 import PersonRole from '../components/RoleBadge';
 import { useDuckOnScroll } from '../components/tabBarDuck';
 import { useProfile, useSession } from '../lib/auth';
+import { useVisitCards } from './person/CheckinAct';
 import Shared, { useReach } from './person/Shared';
 import { Requests } from './person/Requests';
 import { FindField, usePageFind } from './person/Find';
@@ -270,7 +271,9 @@ export default function PersonScreen({ navigation, route, home }: {
   const wall = useWall({ person, own, open, coverFor, places: places.data, reload: who.reload });
   const { news, log } = useFreshNews();
   const { invites } = useInvitations();
-  const refresh = usePullControl(own ? [who, crew.ships, crew.blocks, news, log, invites] : [who, crew.ships]);
+  // Their visits, as cards among the lists — `person/CheckinAct`.
+  const seen = useVisitCards({ me, person, onPlace: (slug) => navigation.navigate('PlaceDetail', { slug }) });
+  const refresh = usePullControl(own ? [who, crew.ships, crew.blocks, news, log, invites, seen.read] : [who, crew.ships, seen.read]);
   // The same button, small, for the header once the row has scrolled
   // away — a thing to do only (`actsOnly`): a fact is not worth the
   // header's room. Switched off for now: `TOP_FRIEND_ON`.
@@ -327,6 +330,8 @@ export default function PersonScreen({ navigation, route, home }: {
         me={me}
         person={person}
         lists={find.on ? find.found : lists}
+        visits={seen.visits(find.on)}
+        visitCard={seen.card}
         reasonOf={find.on ? find.reasonOf : undefined}
         missed={find.on && find.none}
         copyOf={copyOf}
@@ -395,6 +400,7 @@ export default function PersonScreen({ navigation, route, home }: {
       <CoverBar bar={bar} onBack={onBack} backTestID="person-back" tools={tools} />
       {menu.node}
       {wall.sheet}
+      {seen.sheet}
     </Screen>
   );
 }

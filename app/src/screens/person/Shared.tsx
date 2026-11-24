@@ -15,6 +15,11 @@
 // needs no new table — a collection's `created_at` and its likes were
 // already here — and that is why it is the first step.
 //
+// A second thing since 24 Nov 2026: they checked in somewhere. A visit
+// is a card of its own, about the place (`person/CheckinAct`), in the
+// same column and ordered with the lists by day (`person.actsOn`) —
+// handed in drawn (`visitCard`), so this file stays about the column.
+//
 // ── the grid, kept for two days and then gone (owner, 19 Nov 2026) ──
 //
 // It was kept beside the feed at first, on this argument: a feed is for
@@ -85,7 +90,7 @@
 // write and the optimistic count, so a like made here shows everywhere.
 // A row from a launch cache with no id cannot be liked and draws none.
 
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { type NativeScrollEvent, type NativeSyntheticEvent, StyleSheet, Text, View } from 'react-native';
 import { Image } from 'expo-image';
 import ActivityCard, { type ActivityMark, type CardCopy } from '../../components/ActivityCard';
@@ -93,16 +98,20 @@ import { Card, fireHaptic, PressableScale, SECONDARY_CONTROL_H } from '../../com
 import { Glyph, ICON } from '../../components/ui/glyph';
 import { agoLabel } from '../../lib/ago';
 import { useLikes } from '../../lib/catalog';
+import type { PersonCheckin } from '../../lib/checkin';
 import { nearEnd } from '../../lib/feed';
 import type { Collection, FriendProfile } from '../../lib/data';
 import { atHandle } from '../../lib/handle';
 import { useI18n } from '../../lib/i18n';
 import { localized } from '../../lib/localized';
-import type { ListSeen } from '../../lib/person';
+import { actsOn, type ListSeen } from '../../lib/person';
 import { useSaveActions } from '../../lib/save';
 import { SEEN_GLYPH, seenName } from '../../lib/shares';
 import { colors, font, radius, space, type } from '../../theme';
 import { useCardComments } from './useCardComments';
+
+/** No visits, the same array every render: `actsOn` is memoised on it. */
+const NO_VISITS: PersonCheckin[] = [];
 
 /** How many cards the feed draws at first, and adds at each "Show more". */
 export const PAGE = 5;
@@ -191,12 +200,17 @@ function FirstOfYours({ onCreate }: { onCreate: () => void }) {
   );
 }
 
-export default function Shared({ me, person, lists, seenOf, coverFor, onOpen, onComments, copyOf, reasonOf, missed, reach = 0, onCreate }: {
+export default function Shared({ me, person, lists, visits = NO_VISITS, visitCard, seenOf, coverFor, onOpen, onComments, copyOf, reasonOf, missed, reach = 0, onCreate }: {
   me: string | null;
   person: FriendProfile;
   /** The collections this reader may see here, newest first
    *  (`person.listsOn`). */
   lists: Collection[];
+  /** The visits this reader may see here, newest first, and the card
+   *  for one — `person/CheckinAct`. In the same column as the lists, by
+   *  day (`person.actsOn`). */
+  visits?: PersonCheckin[];
+  visitCard?: (v: PersonCheckin) => React.ReactNode;
   /** Who can see each (`person.seenOn`). */
   seenOf: (c: Collection) => ListSeen;
   coverFor: (c: Collection) => string | undefined;
@@ -222,18 +236,23 @@ export default function Shared({ me, person, lists, seenOf, coverFor, onOpen, on
   const { askToSignIn } = useSaveActions();
   const [shown, setShown] = useState(PAGE);
 
+  // What they did, lists and visits in one column — `person.actsOn`.
+  const acts = useMemo(() => actsOn(lists, visits), [lists, visits]);
+  const drawn = acts.slice(0, shown);
+
   // A new reach: five more, while there are more.
   const counted = useRef(reach);
   useEffect(() => {
     if (reach === counted.current) return;
     counted.current = reach;
-    setShown((n) => (n < lists.length ? n + PAGE : n));
-  }, [reach, lists.length]);
+    setShown((n) => (n < acts.length ? n + PAGE : n));
+  }, [reach, acts.length]);
 
   // The covers of the cards that would be added next, on their way into
   // memory before they are asked for. A string, so the effect runs when
   // the set changes and not on every render that builds a new array.
-  const ahead = lists.slice(shown, shown + PAGE).map(coverFor).filter(Boolean).join(' ');
+  const ahead = acts.slice(shown, shown + PAGE)
+    .map((a) => (a.kind === 'list' ? coverFor(a.list) : a.visit.place.cover)).filter(Boolean).join(' ');
   useEffect(() => {
     if (ahead) Image.prefetch(ahead.split(' '), 'memory-disk').catch(() => {});
   }, [ahead]);
@@ -251,10 +270,32 @@ export default function Shared({ me, person, lists, seenOf, coverFor, onOpen, on
   // What each card shows of its thread, for the cards drawn — nothing,
   // with the switch off.
   const talkOf = useCardComments(
-    lists.slice(0, shown), (c) => seenOf(c).kind === 'public', (c) => localized(c, 'title', lang), onComments,
+    drawn.flatMap((a) => (a.kind === 'list' ? [a.list] : [])), (c) => seenOf(c).kind === 'public', (c) => localized(c, 'title', lang), onComments,
   );
 
-  const none = lists.length === 0;
+  const listCard = (c: Collection) => (
+    <ActivityCard
+      key={c.slug}
+      testID="person-act"
+      face={person.avatar_url}
+      who={person.full_name || atHandle(person.handle)}
+      did={t(' created a collection', ' đã tạo bộ sưu tập', 'さんがコレクションを作成', ' 创建了合集', ' 建立了合集')}
+      when={c.created_at ? agoLabel(c.created_at, Date.now(), lang, t) : undefined}
+      mark={marks(seenOf(c), t)}
+      title={localized(c, 'title', lang)}
+      uri={coverFor(c)}
+      meta={reasonOf?.(c) ?? placesWord(c.collection_places.length)}
+      desc={localized(c, 'desc', lang)}
+      liked={!!c.id && myLikes.includes(c.id)}
+      likes={likes[c.slug] ?? 0}
+      onOpen={() => onOpen(c)}
+      onHeart={c.id && seenOf(c).kind !== 'private' ? () => heart(c) : undefined}
+      {...talkOf(c)}
+      copy={copyOf?.(c)}
+    />
+  );
+
+  const none = acts.length === 0;
   return (
     <>
       {missed ? (
@@ -289,28 +330,8 @@ export default function Shared({ me, person, lists, seenOf, coverFor, onOpen, on
         </Card>
       ) : (
         <View style={s.feed} testID="person-activity">
-          {lists.slice(0, shown).map((c) => (
-            <ActivityCard
-              key={c.slug}
-              testID="person-act"
-              face={person.avatar_url}
-              who={person.full_name || atHandle(person.handle)}
-              did={t(' created a collection', ' đã tạo bộ sưu tập', 'さんがコレクションを作成', ' 创建了合集', ' 建立了合集')}
-              when={c.created_at ? agoLabel(c.created_at, Date.now(), lang, t) : undefined}
-              mark={marks(seenOf(c), t)}
-              title={localized(c, 'title', lang)}
-              uri={coverFor(c)}
-              meta={reasonOf?.(c) ?? placesWord(c.collection_places.length)}
-              desc={localized(c, 'desc', lang)}
-              liked={!!c.id && myLikes.includes(c.id)}
-              likes={likes[c.slug] ?? 0}
-              onOpen={() => onOpen(c)}
-              onHeart={c.id && seenOf(c).kind !== 'private' ? () => heart(c) : undefined}
-              {...talkOf(c)}
-              copy={copyOf?.(c)}
-            />
-          ))}
-          {lists.length > shown ? (
+          {drawn.map((a) => (a.kind === 'visit' ? visitCard?.(a.visit) : listCard(a.list)))}
+          {acts.length > shown ? (
             <PressableScale
               onPress={() => setShown((n) => n + PAGE)}
               haptic="selection"

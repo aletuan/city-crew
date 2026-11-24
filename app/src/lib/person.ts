@@ -9,6 +9,7 @@
 // the database: both are reads the Collections tab already makes. These
 // functions are the whole of its arithmetic, kept out of the screen so
 // they can be read and tested without one.
+import type { PersonCheckin } from './checkin';
 import { visibilityOf } from './shares';
 import type { Collection } from './types';
 
@@ -157,3 +158,36 @@ export function seenOn(c: Collection, own: boolean, shares: number): ListSeen {
   return visibilityOf(false, shares) === 'friends' ? { kind: 'friends', n: shares } : { kind: 'private' };
 }
 
+/** One thing on a person's page: a list they made, or a visit. */
+export type Act =
+  | { kind: 'list'; key: string; list: Collection }
+  | { kind: 'visit'; key: string; visit: PersonCheckin };
+
+/**
+ * What a person did, newest first: their lists and their visits in one
+ * column (owner, 24 Nov 2026 — a visit is something done to a *place*,
+ * and stands on the page beside a list rather than inside one;
+ * `docs/collection-feed-plan.md`, principle 2).
+ *
+ * A list has an instant and a visit has only a day (`PersonCheckin`), so
+ * the two are ordered by day, on the reader's calendar for the list.
+ * Within one day the visits stand first, in the order they came (newest
+ * first already), then the lists in theirs: a visit is the smaller and
+ * more frequent act, and the day's news is more often where somebody
+ * went than what they filed. A list that does not say when it was made
+ * is last, as `listsOn` leaves it.
+ */
+export function actsOn(lists: readonly Collection[], visits: readonly PersonCheckin[]): Act[] {
+  const dayOf = (c: Collection): string => {
+    const at = madeAt(c);
+    if (!at) return '';
+    const d = new Date(at);
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  };
+  const acts: (Act & { day: string; rank: number })[] = [
+    ...visits.map((v, i) => ({ kind: 'visit' as const, key: `visit:${v.id}`, visit: v, day: v.day, rank: i })),
+    ...lists.map((c, i) => ({ kind: 'list' as const, key: `list:${c.slug}`, list: c, day: dayOf(c), rank: visits.length + i })),
+  ];
+  acts.sort((a, b) => (a.day === b.day ? a.rank - b.rank : a.day < b.day ? 1 : -1));
+  return acts.map(({ day: _day, rank: _rank, ...act }) => act as Act);
+}
