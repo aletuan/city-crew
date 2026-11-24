@@ -38,13 +38,11 @@
 // header is who. The confirmation dialog that follows keeps the handle,
 // because by then the sheet — and the name — is gone.
 
-import React, { useEffect, useRef } from 'react';
-import { Animated, Modal, Pressable, StyleSheet, Text, View } from 'react-native';
+import React from 'react';
+import { StyleSheet, Text, View } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { Glyph, ICON } from './ui/glyph';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { PressableScale } from './ui';
-import { useI18n } from '../lib/i18n';
+import { PressableScale, Sheet } from './ui';
 import { colors, display, font, radius, space } from '../theme';
 
 /** The title's stated line (16pt, the system face gives 19.1) and the
@@ -106,30 +104,15 @@ export default function ActionSheet({ visible, header, actions, children, onClos
   children?: React.ReactNode;
   onClose: () => void;
 }) {
-  const { t } = useI18n();
-  const insets = useSafeAreaInsets();
-  const rise = useRef(new Animated.Value(1)).current;
-  useEffect(() => {
-    if (!visible) { rise.setValue(1); return; }
-    Animated.spring(rise, { toValue: 0, useNativeDriver: true, speed: 14, bounciness: 3 }).start();
-  }, [visible, rise]);
-
   return (
-    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose} statusBarTranslucent>
-      <Pressable style={s.backdrop} onPress={onClose} accessibilityLabel={t('Close', 'Đóng', '閉じる', '关闭', '關閉')} />
-      <Animated.View
-        style={[s.sheet, {
-          paddingBottom: insets.bottom + foot,
-          transform: [{ translateY: rise.interpolate({ inputRange: [0, 1], outputRange: [0, 360] }) }],
-        }]}
-      >
-        <View style={s.grabber} />
+    // The chrome is `ui/Sheet`'s; the 2 under the grabber and the 12
+    // between the header and the rows are this sheet's own, kept as
+    // measured when it moved there (24 Nov 2026).
+    <Sheet visible={visible} onClose={onClose} foot={foot} grabberGap={2} style={s.sheet}>
+      {header}
 
-        {header}
-
-        {children ?? <SheetRows actions={actions ?? []} onClose={onClose} />}
-      </Animated.View>
-    </Modal>
+      {children ?? <SheetRows actions={actions ?? []} onClose={onClose} />}
+    </Sheet>
   );
 }
 
@@ -287,19 +270,7 @@ export const sheetBody = {
 } as const;
 
 const s = StyleSheet.create({
-  backdrop: { ...StyleSheet.absoluteFill, backgroundColor: 'rgba(6,5,8,0.62)' },
-  sheet: {
-    position: 'absolute', left: 0, right: 0, bottom: 0,
-    paddingHorizontal: space.page, paddingTop: 10,
-    backgroundColor: colors.bgElevated,
-    borderTopLeftRadius: 28, borderTopRightRadius: 28,
-    borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.borderGlassSoft,
-    gap: 12,
-  },
-  grabber: {
-    width: 38, height: 4, borderRadius: 2, alignSelf: 'center',
-    backgroundColor: colors.textTertiary, marginBottom: 2,
-  },
+  sheet: { gap: 12 },
 
   group: {
     backgroundColor: colors.surfaceCard,
