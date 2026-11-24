@@ -121,7 +121,8 @@ Làm thành ba phần; hai phần đầu đã xong, phần ba chờ feed cộng 
   vào xuất dữ liệu; xoá tài khoản theo cascade.
 - **Thẻ gộp trên feed cộng đồng (chưa làm, issue #1599).** Nhiều bạn
   cùng check-in một địa điểm thì một thẻ. Cần feed ở bước 2 trước.
-- Chưa làm: bình luận trên check-in; ảnh (bước 5, Moment).
+- Chưa làm: bình luận trên check-in. Ảnh kèm check-in có kế hoạch riêng:
+  `docs/checkin-photos-plan.md`.
 
 ### Bước 4. Chuyến đi làm lý do nổi lên
 
