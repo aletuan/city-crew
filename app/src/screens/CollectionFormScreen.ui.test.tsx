@@ -725,6 +725,12 @@ describe('renaming a list', () => {
       fireEvent.click(screen.getByTestId('collection-form-seen'));
       fireEvent.click(screen.getByTestId('sheet-action-friends'));
       await waitFor(() => expect(screen.getByTestId('share-friend-0')).toBeTruthy(), { timeout: 3000 });
+      // The same flush `tickFriends` makes, for the same reason: a face can
+      // be in the tree before its press handler is wired, and a click in
+      // that gap is dropped. This test opened the picker by hand and
+      // lacked it — it failed once in the full `test:tz` run on 24 Nov
+      // 2026 and 0 of 12 alone.
+      await act(async () => {});
       fireEvent.click(screen.getByTestId('share-friend-1'));
       fireEvent.click(screen.getByTestId('share-save'));
       await waitFor(() => expect(saveButton().getAttribute('aria-disabled')).not.toBe('true'), { timeout: 3000 });
