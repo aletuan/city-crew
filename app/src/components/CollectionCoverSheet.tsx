@@ -16,13 +16,10 @@
 // So no rows that scroll sideways here: a grid that scrolls down.
 
 import React from 'react';
-import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { ScrollView, StyleSheet, View } from 'react-native';
 import { useI18n } from '../lib/i18n';
-import { colors, display, space } from '../theme';
 import { CoverGrid, type CoverChoice } from './CoverGrid';
-import { Glyph, ICON } from './ui/glyph';
-import { GradientCta, PressableScale } from './ui';
+import { GradientCta, Sheet } from './ui';
 
 /** Short of the cover, as the person page's sheet is: the cover and the
  *  card's first lines end about 330pt down a 844pt phone; 60% leaves 338. */
@@ -42,21 +39,12 @@ export function CollectionCoverSheet({ visible, onClose, choices, opened, picked
   busy: boolean;
 }) {
   const { t } = useI18n();
-  const insets = useSafeAreaInsets();
   return (
-    <Modal visible={visible} transparent animationType="fade" statusBarTranslucent onRequestClose={onClose}>
-      {/* Clear, like the person page's: still a press, so a tap above
-          the sheet closes it. */}
-      <Pressable style={s.backdrop} onPress={onClose} />
-      <View style={[s.sheet, { paddingBottom: insets.bottom + 16 }]} testID="cover-sheet">
-        <View style={s.grabber} />
-        <View style={s.head}>
-          <Text style={s.title}>{t('Cover', 'Ảnh bìa', 'カバー', '封面', '封面')}</Text>
-          <PressableScale onPress={onClose} accessibilityRole="button" accessibilityLabel={t('Close', 'Đóng', '閉じる', '关闭', '關閉')}
-            hitSlop={8} style={s.close} contentStyle={s.closeFace} testID="cover-close">
-            <Glyph name="close" size={ICON.nav} color={colors.textSecondary} />
-          </PressableScale>
-        </View>
+    // `ui/Sheet`, clear: the page behind is the preview, so it is not
+    // dimmed, and a tap above the sheet still closes it. The fade alone,
+    // no spring, as it came.
+    <Sheet visible={visible} onClose={onClose} scrim={false} rise={false} maxHeight={SHEET_MAX}
+      title={t('Cover', 'Ảnh bìa', 'カバー', '封面', '封面')} closeTestID="cover-close" testID="cover-sheet">
         <ScrollView style={s.body} showsVerticalScrollIndicator={false}>
           <CoverGrid choices={choices} opened={opened} picked={picked} autoUri={autoUri} onPick={onPick} />
         </ScrollView>
@@ -64,25 +52,11 @@ export function CollectionCoverSheet({ visible, onClose, choices, opened, picked
           <GradientCta wide label={t('Save', 'Lưu', '保存', '保存', '儲存')} onPress={onSave}
             busy={busy} disabled={busy || picked === opened} testID="cover-save" />
         </View>
-      </View>
-    </Modal>
+    </Sheet>
   );
 }
 
 const s = StyleSheet.create({
-  backdrop: { ...StyleSheet.absoluteFill },
-  sheet: {
-    position: 'absolute', left: 0, right: 0, bottom: 0, maxHeight: SHEET_MAX,
-    paddingHorizontal: space.page, paddingTop: 10,
-    backgroundColor: colors.bgElevated,
-    borderTopLeftRadius: 28, borderTopRightRadius: 28,
-    borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.borderGlassSoft,
-  },
-  grabber: { alignSelf: 'center', width: 38, height: 4, borderRadius: 2, backgroundColor: colors.textTertiary, marginBottom: 12 },
-  head: { alignItems: 'center', justifyContent: 'center', marginBottom: 12 },
-  title: { color: colors.text, fontSize: 18, fontFamily: display.bold },
-  close: { position: 'absolute', right: 0 },
-  closeFace: { width: 36, height: 36, alignItems: 'center', justifyContent: 'center' },
   body: { flexGrow: 0 },
   commit: { marginTop: 12 },
 });
