@@ -42,7 +42,6 @@
 
 import React, { useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, Keyboard, ScrollView, StyleSheet, Text, type TextInput, View } from 'react-native';
-import { Image } from 'expo-image';
 import { Glyph, ICON } from '../components/ui/glyph';
 import ActionSheet, { type SheetAction } from '../components/ActionSheet';
 import { Card, Empty, PressableScale, Screen, UnderlineChoice, useTabBarClearance } from '../components/ui';
@@ -60,20 +59,9 @@ import { useRemoveCheckin } from '../lib/useRemoveCheckin';
 import { localized } from '../lib/localized';
 import { RECENTS_SHOWN, rememberSearch, VISIT_RECENTS_KEY } from '../lib/recents';
 import { NO_RECENTS, RECENTS, useStored } from '../lib/stored';
-import { colors, display, font, space, type } from '../theme';
+import { colors, display, font, space } from '../theme';
 import type { Nav } from '../nav';
-
-const LINE = 21;
-/** The thumbnail's side: 56, the size a content thumbnail takes in a
- *  list that is about the content (Apple Music's lists, Spotify's).
- *  It opened at 48 and was taken to 44 to match the face on Activity;
- *  the owner's eye on the phone said both were too small, and the
- *  reason is fair — a picture of a place has a whole room in it and
- *  needs the pixels to read, where a face reads at 44. So a place's
- *  picture and a person's face are two sizes on purpose, each the size
- *  its subject needs. Radius 12 keeps the 48:10 proportion. Two lines
- *  of text stand about 41pt; the row is 80 with the padding. */
-const THUMB = 56;
+import { VisitNoteSheet, VisitRow } from './visited/VisitRow';
 
 export default function VisitedScreen({ navigation }: { navigation: Nav }) {
   const { t, lang } = useI18n();
@@ -81,6 +69,7 @@ export default function VisitedScreen({ navigation }: { navigation: Nav }) {
   const removeVisit = useRemoveCheckin(visits.reload);
   const { cities } = useCityList();
   const [menuFor, setMenuFor] = useState<Checkin | null>(null);
+  const [noteFor, setNoteFor] = useState<Checkin | null>(null);
   const clearance = useTabBarClearance();
 
   // The box, always there under the title; and under the box, only once
@@ -325,47 +314,18 @@ export default function VisitedScreen({ navigation }: { navigation: Nav }) {
               <View key={sec.key} style={s.month}>
                 <Text style={s.eyebrow} testID="visit-month">{monthTitle(lang, sec.year, sec.month)}</Text>
                 <Card>
-                  {sec.data.map((v, i) => {
-                    const opens = !!v.place_slug;
-                    return (
-                      <PressableScale
-                        key={v.id}
-                        contentStyle={[s.row, i > 0 && s.rowDivider]}
-                        onPress={opens ? () => { noteSearch(); navigation.navigate('PlaceDetail', { slug: v.place_slug }); } : undefined}
-                        // A button only when it goes somewhere — the same
-                        // condition as the chevron, so what VoiceOver hears
-                        // and what the eye sees agree.
-                        accessibilityRole={opens ? 'button' : undefined}
-                        testID="visit-row"
-                      >
-                        <View style={s.thumb} testID="visit-thumb">
-                          {v.place?.cover ? (
-                            <Image source={{ uri: v.place.cover }} style={s.thumbImage} contentFit="cover" transition={150} aria-hidden />
-                          ) : (
-                            <Glyph name="location-outline" size={ICON.action} color={colors.textTertiary} />
-                          )}
-                        </View>
-                        <View style={{ flex: 1, gap: 2 }}>
-                          <Text style={s.name} numberOfLines={2} testID="visit-name">{nameOf(v)}</Text>
-                          <Text style={s.meta} testID="visit-meta">{metaOf(v)}</Text>
-                        </View>
-                        {opens ? (
-                          <Glyph name="chevron-forward" size={ICON.action} color={colors.textTertiary} style={s.rowEnd} />
-                        ) : (
-                          <PressableScale
-                            onPress={() => setMenuFor(v)}
-                            scaleTo={0.85}
-                            hitSlop={{ top: 12, bottom: 12, left: 10, right: 10 }}
-                            style={s.rowEnd}
-                            accessibilityRole="button"
-                            accessibilityLabel={t('Options', 'Tuỳ chọn', 'オプション', '选项', '選項')}
-                          >
-                            <Glyph name="ellipsis-horizontal" size={ICON.nav} color={colors.textTertiary} />
-                          </PressableScale>
-                        )}
-                      </PressableScale>
-                    );
-                  })}
+                  {sec.data.map((v, i) => (
+                    <VisitRow
+                      key={v.id}
+                      v={v}
+                      name={nameOf(v)}
+                      meta={metaOf(v)}
+                      divided={i > 0}
+                      onOpen={v.place_slug ? () => { noteSearch(); navigation.navigate('PlaceDetail', { slug: v.place_slug }); } : undefined}
+                      onMenu={() => setMenuFor(v)}
+                      onNote={() => setNoteFor(v)}
+                    />
+                  ))}
                 </Card>
               </View>
             ))}
@@ -385,6 +345,9 @@ export default function VisitedScreen({ navigation }: { navigation: Nav }) {
           </View>
         ) : null}
       />
+      {/* The words about one visit, written or changed — `VisitNote` on
+          its row is the way in. */}
+      <VisitNoteSheet v={noteFor} nameOf={nameOf} onDone={() => setNoteFor(null)} reload={visits.reload} />
     </Screen>
   );
 }
@@ -415,22 +378,6 @@ const s = StyleSheet.create({
     color: colors.textTertiary, fontSize: 13, fontWeight: font.semibold,
     letterSpacing: 1.1, textTransform: 'uppercase', marginTop: 6,
   },
-  // Centred: a 56pt picture beside two lines of text wants its middle
-  // on theirs, where a 19pt glyph wanted the first line's. 12 of
-  // padding puts the 56 in an 80pt row.
-  row: {
-    flexDirection: 'row', alignItems: 'center', gap: 12,
-    paddingHorizontal: space.cardPadding, paddingVertical: 12,
-  },
-  rowDivider: { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.borderGlassSoft },
-  rowEnd: { alignSelf: 'center' },
-  thumb: {
-    width: THUMB, height: THUMB, borderRadius: 12, overflow: 'hidden',
-    backgroundColor: colors.surfaceGlassStrong, alignItems: 'center', justifyContent: 'center',
-  },
-  thumbImage: { width: THUMB, height: THUMB },
-  name: { color: colors.text, fontSize: 15, lineHeight: LINE, fontWeight: font.medium },
-  meta: { color: colors.textTertiary, ...type.meta },
   sheetTitle: { color: colors.text, fontSize: 18, fontFamily: display.semibold },
   sheetMeta: { color: colors.textTertiary, fontSize: 14 },
 });

@@ -157,7 +157,7 @@ describe('useTakeout', () => {
       await run();
       expect(reads.fetchMyCheckins).toHaveBeenCalledWith('me');
       expect(JSON.parse(world.written[0].body).checkins)
-        .toEqual([{ place_slug: 'cong', city_id: 'hanoi', at: '2026-09-20T03:00:00.000Z' }]);
+        .toEqual([{ place_slug: 'cong', city_id: 'hanoi', at: '2026-09-20T03:00:00.000Z', note: null, seen_by: 'private' }]);
     });
 
     it('asks for every other end of an edge, and every block — never for the reader', async () => {

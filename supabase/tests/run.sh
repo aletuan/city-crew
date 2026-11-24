@@ -514,6 +514,20 @@ for f in "$ROOT"/supabase/migrations/*_checkins.sql "$ROOT"/supabase/migrations/
   run "$DB" -f "$f" >/dev/null
 done
 run "$DB" -f "$HERE/checkins_test.sql"
+# A note and who sees it (24 Nov 2026), on the rows the test above left.
+#
+# First the table as the live project has it, not as a bare Postgres
+# does: Supabase's default privileges give `anon` and `authenticated`
+# UPDATE on every table in `public`. Without this line the migration's
+# revoke takes back a grant that was never made, and the test's "a visit's
+# instant and place are not the owner's to edit" passes on a database
+# where they never were — the function grants above were once green the
+# same way.
+run "$DB" -c "grant update on table public.checkins to anon, authenticated;"
+for f in "$ROOT"/supabase/migrations/*_checkin_notes.sql; do
+  run "$DB" -f "$f" >/dev/null
+done
+run "$DB" -f "$HERE/checkin_notes_test.sql"
 
 # The owner's chips on a collection (15 Oct 2026): two columns and their
 # checks. Needs only `collections`, which every block above has had.

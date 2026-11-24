@@ -123,25 +123,31 @@ export type Database = {
       checkins: {
         Row: {
           at: string
+          audience: string | null
           city_id: string | null
           created_at: string
           id: string
+          note: string | null
           place_id: string
           user_id: string
         }
         Insert: {
           at?: string
+          audience?: string | null
           city_id?: string | null
           created_at?: string
           id?: string
+          note?: string | null
           place_id: string
           user_id: string
         }
         Update: {
           at?: string
+          audience?: string | null
           city_id?: string | null
           created_at?: string
           id?: string
+          note?: string | null
           place_id?: string
           user_id?: string
         }

@@ -3,13 +3,14 @@
 
 import { supabase } from '../supabase';
 import type { I18nDoc } from '../localized';
-import type { Checkin } from '../checkin';
+import type { Audience, Checkin } from '../checkin';
 import { DAILY_LIMIT, refusedByPolicy } from '../quota';
 import { fetchPlaceId } from './guide';
 
 type PhotoRow = { photo_uri: string; is_cover: boolean; is_hidden: boolean; sort_order: number };
 type CheckinRow = {
   id: string; city_id: string | null; at: string;
+  note?: string | null; audience?: Audience | null;
   places: {
     slug: string; name_en: string; name_vi: string; i18n?: I18nDoc | null;
     categories?: string[] | null;
@@ -39,7 +40,7 @@ function coverUri(photos: PhotoRow[] | undefined): string | null {
 export async function fetchMyCheckins(ownerId: string): Promise<Checkin[]> {
   const { data, error } = await supabase
     .from('checkins')
-    .select('id, city_id, at, places(slug, name_en, name_vi, i18n, categories, place_photos(photo_uri, is_cover, is_hidden, sort_order))')
+    .select('id, city_id, at, note, audience, places(slug, name_en, name_vi, i18n, categories, place_photos(photo_uri, is_cover, is_hidden, sort_order))')
     .eq('user_id', ownerId)
     .order('at', { ascending: false });
   if (error) throw new Error(error.message);
@@ -47,6 +48,7 @@ export async function fetchMyCheckins(ownerId: string): Promise<Checkin[]> {
   // types a to-one embed as an array and the runtime does not.
   return ((data ?? []) as unknown as CheckinRow[]).map((r) => ({
     id: r.id, place_slug: r.places?.slug ?? '', city_id: r.city_id, at: r.at,
+    note: r.note ?? null, audience: r.audience ?? null,
     place: r.places
       ? {
         name_en: r.places.name_en, name_vi: r.places.name_vi, i18n: r.places.i18n ?? null,
@@ -66,14 +68,36 @@ export async function fetchMyCheckins(ownerId: string): Promise<Checkin[]> {
  * refuses a second visit inside ten minutes; the pill never offers one
  * (`canRepeat`), so reaching that refusal takes two phones, and the cap
  * sentence is a fair thing for the second to hear.
+ *
+ * Answers the new row's id, for the sheet that comes up over the visit
+ * to write its note and who sees it to (`saveCheckin`). No note and no
+ * answer go in with the row: see `lib/checkin` for why they follow it.
  */
-export async function addCheckin(input: { ownerId: string; placeSlug: string; cityId: string | null }): Promise<void> {
+export async function addCheckin(input: { ownerId: string; placeSlug: string; cityId: string | null }): Promise<string> {
   const placeId = await fetchPlaceId(input.placeSlug);
   if (!placeId) throw new Error('place_not_found');
-  const { error } = await supabase
+  const { data, error } = await supabase
     .from('checkins')
-    .insert({ user_id: input.ownerId, place_id: placeId, city_id: input.cityId });
+    .insert({ user_id: input.ownerId, place_id: placeId, city_id: input.cityId })
+    .select('id')
+    .single();
   if (error) throw new Error(refusedByPolicy(error) ? DAILY_LIMIT : error.message);
+  return (data as { id: string }).id;
+}
+
+/**
+ * A visit's words, and who sees it when that was asked, written by its
+ * owner — the two columns the grant allows; the place and the instant
+ * are not edited.
+ *
+ * `audience` left out is left alone, not written as private: a note
+ * added to an old visit must not answer a question its owner was never
+ * asked, and null is how the table says "never asked".
+ */
+export async function saveCheckin(id: string, said: { note: string | null; audience?: Audience }): Promise<void> {
+  const patch = said.audience ? { note: said.note, audience: said.audience } : { note: said.note };
+  const { error } = await supabase.from('checkins').update(patch).eq('id', id);
+  if (error) throw new Error(error.message);
 }
 
 /** Undo one visit. RLS keeps this to the caller's own rows. */

@@ -11,7 +11,7 @@ vi.mock('../supabase', async () => {
 });
 
 import { DAILY_LIMIT } from '../quota';
-import { addCheckin, fetchMyCheckins, removeCheckin } from './checkins';
+import { addCheckin, fetchMyCheckins, removeCheckin, saveCheckin } from './checkins';
 
 const fake = () => h.fake!;
 beforeEach(() => fake().reset());
@@ -20,7 +20,7 @@ describe('fetchMyCheckins', () => {
   it('reads the owner’s rows newest first, with the place’s slug flattened in', async () => {
     fake().replies({ data: [
       {
-        id: 'k2', city_id: 'hanoi', at: '2026-10-08T03:00:00+07:00',
+        id: 'k2', city_id: 'hanoi', at: '2026-10-08T03:00:00+07:00', note: 'Crisp sourdough.', audience: 'friends',
         places: {
           slug: 'cong', name_en: 'Cong', name_vi: 'Cộng', i18n: null, categories: ['cafes', 'eats'],
           // The cover wins over sort order; a hidden one never shows.
@@ -40,15 +40,16 @@ describe('fetchMyCheckins', () => {
     const rows = await fetchMyCheckins('u1');
     const [call] = fake().log;
     expect(call.table).toBe('checkins');
-    expect(call.payload).toBe('id, city_id, at, places(slug, name_en, name_vi, i18n, categories, place_photos(photo_uri, is_cover, is_hidden, sort_order))');
+    expect(call.payload).toBe('id, city_id, at, note, audience, places(slug, name_en, name_vi, i18n, categories, place_photos(photo_uri, is_cover, is_hidden, sort_order))');
     expect(call.filters).toEqual([['user_id', 'u1']]);
     expect(call.order).toEqual(['at', { ascending: false }]);
     expect(rows).toEqual([
-      { id: 'k2', place_slug: 'cong', city_id: 'hanoi', at: '2026-10-08T03:00:00+07:00', place: { name_en: 'Cong', name_vi: 'Cộng', i18n: null, cover: 'https://x/cover.jpg', categories: ['cafes', 'eats'] } },
+      { id: 'k2', place_slug: 'cong', city_id: 'hanoi', at: '2026-10-08T03:00:00+07:00', note: 'Crisp sourdough.', audience: 'friends', place: { name_en: 'Cong', name_vi: 'Cộng', i18n: null, cover: 'https://x/cover.jpg', categories: ['cafes', 'eats'] } },
       // A row whose place is gone has no slug to show; it still counts.
-      { id: 'k1', place_slug: '', city_id: null, at: '2026-10-01T03:00:00Z', place: null },
+      // No note and no answer on it: nulls, never holes.
+      { id: 'k1', place_slug: '', city_id: null, at: '2026-10-01T03:00:00Z', note: null, audience: null, place: null },
       // No categories on the row: an empty list, never a hole.
-      { id: 'k0', place_slug: 'bare', city_id: 'hanoi', at: '2026-09-01T03:00:00Z', place: { name_en: 'Bare', name_vi: 'Bare', i18n: { ja: { name: 'ベア' } }, cover: null, categories: [] } },
+      { id: 'k0', place_slug: 'bare', city_id: 'hanoi', at: '2026-09-01T03:00:00Z', note: null, audience: null, place: { name_en: 'Bare', name_vi: 'Bare', i18n: { ja: { name: 'ベア' } }, cover: null, categories: [] } },
     ]);
   });
   it('throws the database’s words when the read fails', async () => {
@@ -63,8 +64,9 @@ describe('fetchMyCheckins', () => {
 
 describe('addCheckin', () => {
   it('finds the place by slug and writes one row for the owner, no id of its own', async () => {
-    fake().replies({ data: { id: 'place-uuid' } }, { data: null, error: null });
-    await addCheckin({ ownerId: 'u1', placeSlug: 'cong', cityId: 'hanoi' });
+    fake().replies({ data: { id: 'place-uuid' } }, { data: { id: 'k9' }, error: null });
+    // The new row's id comes back, for the sheet that writes its note.
+    expect(await addCheckin({ ownerId: 'u1', placeSlug: 'cong', cityId: 'hanoi' })).toBe('k9');
     const [lookup, insert] = fake().log;
     expect(lookup.table).toBe('places');
     expect(insert.table).toBe('checkins');
@@ -89,6 +91,26 @@ describe('addCheckin', () => {
     fake().reset();
     fake().replies({ data: { id: 'p' } }, { data: null, error: { code: '08006', message: 'connection lost' } });
     await expect(addCheckin({ ownerId: 'u1', placeSlug: 'cong', cityId: null })).rejects.toThrow('connection lost');
+  });
+});
+
+describe('saveCheckin', () => {
+  it('writes the note and who sees it to the one row, and nothing else', async () => {
+    fake().replies({ data: null, error: null });
+    await saveCheckin('k1', { note: 'Crisp sourdough.', audience: 'friends' });
+    const [call] = fake().log;
+    expect([call.table, call.op]).toEqual(['checkins', 'update']);
+    expect(call.payload).toEqual({ note: 'Crisp sourdough.', audience: 'friends' });
+    expect(call.filters).toEqual([['id', 'k1']]);
+  });
+  it('leaves who sees it alone when that was not asked', async () => {
+    fake().replies({ data: null, error: null });
+    await saveCheckin('k1', { note: null });
+    expect(fake().log[0].payload).toEqual({ note: null });
+  });
+  it('says so when the write fails', async () => {
+    fake().replies({ data: null, error: { message: 'connection lost' } });
+    await expect(saveCheckin('k1', { note: null, audience: 'private' })).rejects.toThrow('connection lost');
   });
 });
 
