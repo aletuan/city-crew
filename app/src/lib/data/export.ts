@@ -226,3 +226,13 @@ export async function fetchMyCommentTakeout(): Promise<CommentTakeout> {
   }
   return { comments, hearts };
 }
+
+/** The hearts this account set on visits: the place and the instant —
+ *  not whose visit, which is theirs. Through a function for the reason
+ *  the comments are: `checkin_likes` is closed to clients
+ *  (`20261124150000_checkin_friends`). */
+export async function fetchMyCheckinHearts(): Promise<{ place_slug: string; liked_at: string }[]> {
+  const { data, error } = await supabase.rpc('checkin_hearts_takeout');
+  if (error) throw new Error(error.message);
+  return (data ?? []).map((r) => ({ place_slug: r.place_slug, liked_at: r.liked_at }));
+}

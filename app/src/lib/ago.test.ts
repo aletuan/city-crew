@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { agoLabel, RELATIVE_DAYS, type Say } from './ago';
+import { agoLabel, dayLabel, RELATIVE_DAYS, type Say } from './ago';
 import { numericDate } from './format';
 
 const NOW = Date.parse('2026-11-17T09:00:00Z');
@@ -36,5 +36,35 @@ describe('agoLabel', () => {
     expect(agoLabel(iso, NOW, 'en', en)).toBe(numericDate('en', new Date(iso)));
     expect(agoLabel(iso, NOW, 'vi', vi)).toBe(numericDate('vi', new Date(iso)));
     expect(agoLabel(iso, NOW, 'en', en)).not.toMatch(/ago/);
+  });
+});
+
+describe('dayLabel', () => {
+  // The reader's calendar says 17 Nov.
+  const today = new Date(2026, 10, 17, 9);
+
+  it('says today, and yesterday, by the calendar and not by the hours between', () => {
+    expect(dayLabel('2026-11-17', today, 'en', en)).toBe('today');
+    expect(dayLabel('2026-11-16', today, 'vi', vi)).toBe('hôm qua');
+    // A minute past midnight: the day before is still "yesterday".
+    expect(dayLabel('2026-11-16', new Date(2026, 10, 17, 0, 1), 'en', en)).toBe('yesterday');
+    // A minute before midnight: today is still "today".
+    expect(dayLabel('2026-11-17', new Date(2026, 10, 17, 23, 59), 'en', en)).toBe('today');
+  });
+
+  it('says today for a day ahead of the reader’s own', () => {
+    expect(dayLabel('2026-11-18', today, 'en', en)).toBe('today');
+  });
+
+  it('counts days up to a week, then writes the date', () => {
+    expect(dayLabel('2026-11-15', today, 'en', en)).toBe('2 days ago');
+    expect(dayLabel('2026-11-10', today, 'vi', vi)).toBe(`${RELATIVE_DAYS} ngày trước`);
+    expect(dayLabel('2026-11-09', today, 'vi', vi)).toBe('09/11');
+    expect(dayLabel('2026-01-05', today, 'en', en)).toBe('5 Jan');
+  });
+
+  it('counts whole days across a night the clocks changed', () => {
+    // New York fell back on 1 Nov 2026: that night was 25 hours long.
+    expect(dayLabel('2026-10-31', new Date(2026, 10, 2, 0, 30), 'en', en)).toBe('2 days ago');
   });
 });

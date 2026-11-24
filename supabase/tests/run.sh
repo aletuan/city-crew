@@ -784,6 +784,18 @@ for f in "$ROOT"/supabase/migrations/*_comment_takeout.sql; do
 done
 run "$DB" -f "$HERE/comment_takeout_test.sql"
 
+# A visit a friend can see, and a heart on it (24 Nov 2026). Here and not
+# beside the other check-in blocks: it asks `friends_with` and
+# `blocked_with`, and reads `place_photos` and `cities`, all of which
+# exist by now.
+echo "→ check-ins for friends"
+# The day a visit is told by is the city's own (`cities.tz`); the stub
+# table has never needed its clock before.
+for f in "$ROOT"/supabase/migrations/*_city_clock.sql "$ROOT"/supabase/migrations/*_checkin_friends.sql; do
+  run "$DB" -f "$f" >/dev/null
+done
+run "$DB" -f "$HERE/checkin_friends_test.sql"
+
 # A list may be made public from the start (20 Nov 2026). After the daily
 # caps, whose insert policy it rewrites with one clause taken out.
 echo "→ lists born public"

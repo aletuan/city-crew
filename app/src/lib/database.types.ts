@@ -1751,9 +1751,38 @@ export type Database = {
       is_local_guide:
         | { Args: never; Returns: boolean }
         | { Args: { p_city_id: string }; Returns: boolean }
+      like_checkin: {
+        Args: { p_id: string; p_on: boolean }
+        Returns: undefined
+      }
       like_comment: {
         Args: { p_id: string; p_on: boolean }
         Returns: undefined
+      }
+      person_checkins: {
+        Args: { p_person: string }
+        Returns: {
+          audience: string
+          categories: string[]
+          city_id: string
+          cover: string
+          day: string
+          i18n: Json
+          id: string
+          liked: boolean
+          likes: number
+          name_en: string
+          name_vi: string
+          note: string
+          place_slug: string
+        }[]
+      }
+      checkin_hearts_takeout: {
+        Args: never
+        Returns: {
+          liked_at: string
+          place_slug: string
+        }[]
       }
       likes_on_list: {
         Args: { cid: string }

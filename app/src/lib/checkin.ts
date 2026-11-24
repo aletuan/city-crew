@@ -78,20 +78,22 @@ export type Checkin = {
 export type Audience = 'private' | 'friends';
 
 /**
- * Whether the sheet asks who sees the visit. **Off**, and the note ships
- * alone, until the change that gives a friend somewhere to see a visit:
- * the read for friends (date, not the hour; blocks kept), its sentence
- * in the privacy policy, and the card on a person's page — step 2. A
- * control that said "Friends" a release before any friend could see
- * anything would be a promise the app did not keep, and an answer
- * collected under it would be one given about a screen nobody had seen.
- * So until then no answer is written at all, and every visit reads as
- * private (`audienceOf`).
+ * Whether the sheet asks who sees the visit. On since the change that
+ * gave a friend somewhere to see one (24 Nov 2026, the afternoon): the
+ * read for friends, by day and never by hour
+ * (`20261124150000_checkin_friends.sql`), its sentence in the privacy
+ * policy, and the card on a person's page (`person/CheckinAct`).
  *
- * A constant and not an `app_flags` row: turning it on without that code
- * is exactly the mistake above, and a row can be turned on without it.
+ * It shipped off for the morning, with the note alone. A control that
+ * said "Friends" before any friend could see anything would have been a
+ * promise the app did not keep, and an answer collected under it one
+ * given about a screen nobody had seen.
+ *
+ * Still a constant and not an `app_flags` row: off without that code is
+ * the only state it could be switched to, and that is a release, not a
+ * switch.
  */
-export const AUDIENCE_ON: boolean = false;
+export const AUDIENCE_ON: boolean = true;
 
 /** A note's length: a remark's, not a review's — the migration's bound. */
 export const NOTE_MAX = 280;
@@ -279,3 +281,24 @@ export function textMatches(hay: readonly string[], query: string): boolean {
   const text = hay.map((h) => fold(h)).join(' ');
   return words.every((w) => text.includes(w));
 }
+
+/**
+ * A visit as a person's page holds it (`person_checkins`): the place by
+ * what a card draws of it, the **day** — a friend is never told the
+ * hour, so the page is not either, your own included — the note, and
+ * its hearts.
+ */
+export type PersonCheckin = {
+  id: string;
+  place_slug: string;
+  place: NonNullable<Checkin['place']>;
+  city_id: string | null;
+  /** `YYYY-MM-DD`, on the clock of the city the visit was made in. */
+  day: string;
+  note: string | null;
+  /** Who sees it — on your own page. Null on anybody else's: every row
+   *  there is one its owner answered 'friends', and the answer is theirs. */
+  audience: Audience | null;
+  likes: number;
+  liked: boolean;
+};

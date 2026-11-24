@@ -35,3 +35,28 @@ export function agoLabel(iso: string, now: number, lang: string, t: Say): string
   if (ago.n > RELATIVE_DAYS) return numericDate(lang, new Date(iso));
   return t(`${ago.n} days ago`, `${ago.n} ngày trước`, `${ago.n}日前`, `${ago.n} 天前`, `${ago.n} 天前`);
 }
+
+/**
+ * A day told as a distance: "today", "yesterday", "4 days ago", and past
+ * a week the date — `agoLabel` with nothing finer than a day, for a
+ * thing whose hour is not the reader's to know (a friend's visit,
+ * `PersonCheckin.day`).
+ *
+ * `day` is `YYYY-MM-DD` and so is today, counted on the reader's own
+ * calendar: two dates a day apart are "yesterday" whatever the clocks
+ * said. A day that is somehow ahead of the reader's — a visit made in
+ * Melbourne's morning, read in Hà Nội the evening before — is "today",
+ * not a negative distance.
+ */
+export function dayLabel(day: string, now: Date, lang: string, t: Say): string {
+  const [y, m, d] = day.split('-').map(Number);
+  // Noon, both: a difference of whole days survives a daylight-saving
+  // night, where midnights 23 or 25 hours apart would round wrong.
+  const then = new Date(y, m - 1, d, 12);
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 12);
+  const n = Math.round((today.getTime() - then.getTime()) / 86_400_000);
+  if (n <= 0) return t('today', 'hôm nay', '今日', '今天', '今天');
+  if (n === 1) return t('yesterday', 'hôm qua', '昨日', '昨天', '昨天');
+  if (n > RELATIVE_DAYS) return numericDate(lang, then);
+  return t(`${n} days ago`, `${n} ngày trước`, `${n}日前`, `${n} 天前`, `${n} 天前`);
+}

@@ -26,7 +26,7 @@ const bare = (over: Partial<ExportInput> = {}): ExportInput => ({
   profile: { handle: 'dang', full_name: 'Tran Hai Dang', location: '', bio: '', interests: '', avatar_url: 'https://x/y.jpg' },
   preferences: { categories: ['cafes'], budget_vnd: null, history_on: true },
   collections: [], likes: [], trips: [], tripSources: [], friendships: [], shares: { mine: [], withMe: [] }, blocked: [],
-  handles: {}, submitted: [], history: [], checkins: [], comments: { comments: [], hearts: [] },
+  handles: {}, submitted: [], history: [], checkins: [], comments: { comments: [], hearts: [] }, checkinHearts: [],
   ...over,
 });
 
@@ -354,6 +354,14 @@ describe('buildExport — comments', () => {
   it('writes a comment whose time it cannot read with no time, rather than a parse failure', () => {
     const odd = { comments: [{ ...written.comments[1], at: 'not a date' }], hearts: [] };
     expect(buildExport(bare({ comments: odd }), NOW, 'en').comments[0].at).toBe('');
+  });
+
+  it('writes each heart set on a visit: the place and when, never whose visit', () => {
+    const b = buildExport(bare({ checkinHearts: [
+      { place_slug: 'cong', liked_at: '2026-11-24T04:00:00+07:00' }, { place_slug: 'pho', liked_at: 'not a date' },
+    ] }), NOW, 'en');
+    expect(b.checkin_hearts).toEqual([{ place_slug: 'cong', at: '2026-11-23T21:00:00.000Z' }, { place_slug: 'pho', at: '' }]);
+    expect(buildExport(bare(), NOW, 'en').checkin_hearts).toEqual([]);
   });
 
   it('has both sections, empty, for an account that has written nothing', () => {

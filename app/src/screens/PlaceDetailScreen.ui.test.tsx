@@ -624,8 +624,8 @@ describe('PlaceDetailScreen — title, rating, facts', () => {
     const sheet = await screen.findByTestId('checkin-sheet');
     expect(within(sheet).getByTestId('checkin-sheet-name').textContent).toBe('Cộng Cà Phê - Old Quarter');
     expect(within(sheet).getByTestId('checkin-sheet-done')).toBeTruthy();
-    // Who sees it is not asked until friends can see a visit at all.
-    expect(within(sheet).queryByTestId('checkin-sheet-seen')).toBeNull();
+    // Who sees it: Friends, for a reader who has never answered.
+    expect(within(sheet).getByTestId('checkin-sheet-seen-friends').getAttribute('aria-checked')).toBe('true');
     expect(spies.review).not.toHaveBeenCalled();
   });
 
@@ -640,23 +640,37 @@ describe('PlaceDetailScreen — title, rating, facts', () => {
     expect(spies.reloadCheckins).toHaveBeenCalledTimes(1);
     fireEvent.change(screen.getByTestId('checkin-sheet-note'), { target: { value: 'Crisp sourdough.' } });
     fireEvent.click(screen.getByTestId('checkin-sheet-save'));
-    await waitFor(() => expect(spies.saveCheckin).toHaveBeenCalledWith('k-new', { note: 'Crisp sourdough.' }));
+    await waitFor(() => expect(spies.saveCheckin).toHaveBeenCalledWith('k-new', { note: 'Crisp sourdough.', audience: 'friends' }));
     await waitFor(() => expect(spies.review).toHaveBeenCalledWith(2));
     expect(spies.reloadCheckins).toHaveBeenCalledTimes(2);
     document.querySelectorAll('[class*="r-animationKeyframes"]').forEach((el) => fireEvent.animationEnd(el));
     await waitFor(() => expect(screen.queryByTestId('checkin-sheet')).toBeNull());
   });
 
-  it('asks for the review all the same when the sheet goes with nothing written, and does not ask the list twice', async () => {
+  it('opens on the answer the reader gave last, and writes the answer with the visit even when no word is', async () => {
+    state.checkin = true;
+    state.uid = 'u1';
+    // Their last answer, at another place: Only me.
+    state.checkins = [{ ...visit('k0', 60 * 48), place_slug: 'elsewhere', audience: 'private' } as (typeof state.checkins)[number]];
+    show();
+    fireEvent.click(screen.getByTestId('detail-checkin'));
+    const sheet = await screen.findByTestId('checkin-sheet');
+    expect(within(sheet).getByTestId('checkin-sheet-seen-private').getAttribute('aria-checked')).toBe('true');
+    fireEvent.click(screen.getByTestId('checkin-sheet-save'));
+    await waitFor(() => expect(spies.saveCheckin).toHaveBeenCalledWith('k-new', { note: null, audience: 'private' }));
+    await waitFor(() => expect(spies.review).toHaveBeenCalledWith(2));
+  });
+
+  it('asks for the review all the same when the sheet goes with no word written', async () => {
     state.checkin = true;
     state.uid = 'u1';
     show();
     fireEvent.click(screen.getByTestId('detail-checkin'));
     await screen.findByTestId('checkin-sheet');
+    expect(spies.review).not.toHaveBeenCalled();
     fireEvent.click(screen.getByTestId('checkin-sheet-save'));
     await waitFor(() => expect(spies.review).toHaveBeenCalledWith(1));
-    expect(spies.saveCheckin).not.toHaveBeenCalled();
-    expect(spies.reloadCheckins).toHaveBeenCalledTimes(1);
+    expect(spies.reloadCheckins).toHaveBeenCalledTimes(2);
   });
 
   it('raises no sheet over a visit that was refused', async () => {

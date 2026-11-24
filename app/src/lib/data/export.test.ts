@@ -17,7 +17,7 @@ vi.mock('../supabase', async () => {
 const fake = () => h.fake!;
 
 import {
-  fetchMyCommentTakeout, fetchMyHistory, fetchMyLikedCollections, fetchMyShares, fetchMySubmittedPlaces, fetchMyTripSources,
+  fetchMyCheckinHearts, fetchMyCommentTakeout, fetchMyHistory, fetchMyLikedCollections, fetchMyShares, fetchMySubmittedPlaces, fetchMyTripSources,
 } from './export';
 import { PAGE_ROWS } from './pages';
 
@@ -244,5 +244,20 @@ describe('fetchMyCommentTakeout', () => {
   it('throws what the server said', async () => {
     fake().replies({ error: { message: 'down' } });
     await expect(fetchMyCommentTakeout()).rejects.toThrow('down');
+  });
+});
+
+describe('fetchMyCheckinHearts', () => {
+  it('asks the takeout function, and reads the place and the instant of each heart', async () => {
+    fake().replies({ data: [{ place_slug: 'cong', liked_at: '2026-11-24T04:00:00Z' }] });
+    expect(await fetchMyCheckinHearts()).toEqual([{ place_slug: 'cong', liked_at: '2026-11-24T04:00:00Z' }]);
+    expect(fake().log).toEqual([{ op: 'rpc', fn: 'checkin_hearts_takeout', payload: undefined, filters: [] }]);
+  });
+  it('is none when the server answers nothing, and throws what it said', async () => {
+    fake().replies({ data: null });
+    expect(await fetchMyCheckinHearts()).toEqual([]);
+    fake().reset();
+    fake().replies({ error: { message: 'down' } });
+    await expect(fetchMyCheckinHearts()).rejects.toThrow('down');
   });
 });

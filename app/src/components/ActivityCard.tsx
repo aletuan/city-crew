@@ -109,7 +109,7 @@ function CopyFoot({ copy }: { copy: CardCopy }) {
 }
 
 export default function ActivityCard({
-  face, who, did, when, mark, title, uri, meta, desc, liked, likes, onOpen, onHeart, comments, onComments, commentsOff, copy, testID,
+  face, who, did, when, mark, title, uri, meta, desc, under, liked, likes, onOpen, onHeart, comments, onComments, commentsOff, copy, testID,
 }: {
   /** Whose face, as `Avatar` takes it. */
   face?: string | null;
@@ -125,6 +125,11 @@ export default function ActivityCard({
   uri?: string;
   meta: string;
   desc?: string | null;
+  /** Drawn under the words, in the description's place, by a card whose
+   *  last line is a control of its own — a visit's note on its owner's
+   *  page, which a press edits (`VisitNote`). Inside the card's press,
+   *  and React Native gives the press to the inner one. */
+  under?: React.ReactNode;
   liked: boolean;
   likes: number;
   onOpen: () => void;
@@ -194,6 +199,7 @@ export default function ActivityCard({
           <Text style={s.title} numberOfLines={2}>{title}</Text>
           <Text style={s.meta} numberOfLines={1}>{meta}</Text>
           {desc ? <Text style={s.desc} numberOfLines={2} testID="activity-desc">{desc}</Text> : null}
+          {under}
         </View>
       </PressableScale>
       {onHeart ? (

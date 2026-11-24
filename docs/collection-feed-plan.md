@@ -19,10 +19,16 @@ marketing hay hạ tầng.
 1. **Tương tác nào cũng phải gắn vào một bộ sưu tập hoặc một địa
    điểm.** Không gắn được thì không làm. Vì vậy bình luận tự do và nhắn
    tin chưa nằm trong kế hoạch.
-2. **Một thẻ là một bộ sưu tập, không phải một tương tác.** Mỗi bộ xuất
-   hiện một lần trong feed, kèm một dòng lý do cho biết vì sao nó nổi
-   lên ("Trang vừa tạo", "Minh và 2 người bạn đã thích"). Không lặp thẻ
-   khi một bộ có nhiều lượt thích.
+2. **Một thẻ là một bộ sưu tập hoặc một địa điểm, không phải một tương
+   tác.** Mỗi bộ xuất hiện một lần trong feed, kèm một dòng lý do cho
+   biết vì sao nó nổi lên ("Trang vừa tạo", "Minh và 2 người bạn đã
+   thích"). Không lặp thẻ khi một bộ có nhiều lượt thích.
+   **Check-in là tương tác với địa điểm, nên thẻ của nó là thẻ địa
+   điểm** (owner, 24/11/2026): địa điểm không nhất thiết thuộc bộ sưu
+   tập nào và có thể thuộc nhiều bộ, và hiện không có gì nối check-in
+   với bộ sưu tập. Bản đầu của kế hoạch coi check-in là một lý do nổi
+   lên của *bộ sưu tập*; cách đó đã bỏ. Việc check-in đẩy thứ hạng địa
+   điểm và bộ sưu tập chứa nó là issue #1596, để sau.
 3. **Một loại thẻ, dùng ở mọi nơi** (`app/src/components/ActivityCard.tsx`).
    Mục Hoạt động trên trang cá nhân là feed chung lọc theo một người.
 4. **Giai đoạn này chỉ thả tim.** Thả tim vào thẻ bộ sưu tập chính là
@@ -91,15 +97,31 @@ chưa.
   thích trên trang hoạt động của từng bộ; đưa tên lên feed chung là
   phơi rộng hơn, phải sửa câu chữ.
 
-### Bước 3. Check-in cho bạn bè, và thả tim vào check-in
+### Bước 3. Check-in cho bạn bè, và thả tim vào check-in — xong phần trang cá nhân (24/11/2026)
 
-- Check-in thành một lý do nổi lên của bộ sưu tập ("Dương vừa check-in
-  ở một quán trong bộ này"), chỉ bạn bè thấy, chỉ ghi ngày không ghi giờ.
-- **Migration: có.** Bảng lượt thích check-in, quyền truy cập chỉ cho
-  bạn bè của người check-in; kiểm tra và mở quyền đọc bảng `checkins`
-  cho bạn bè nếu hiện chỉ chính chủ đọc được.
-- Sửa chính sách quyền riêng tư; thêm bảng mới vào xuất dữ liệu và xoá
-  tài khoản.
+Làm thành ba phần; hai phần đầu đã xong, phần ba chờ feed cộng đồng.
+
+- **Ghi chú (xong, #1597).** Chạm Check-in vẫn ghi ngay; sau đó một bảng
+  trượt lên với ô ghi chú (≤ 280 ký tự). Check-in cũ chưa có ghi chú
+  hiện lời mời bút chì trên danh sách check-in.
+  Migration `20261124120000_checkin_notes.sql`.
+- **Thẻ địa điểm trên trang cá nhân, quyền xem, tim (xong).** Bảng sau
+  check-in hỏi "Chỉ mình tôi / Bạn bè" (mặc định Bạn bè, nhớ lựa chọn
+  gần nhất; check-in cũ là Chỉ mình tôi). Mục Hoạt động trên trang cá
+  nhân xếp check-in chung cột với bộ sưu tập theo ngày
+  (`person.actsOn`), mỗi địa điểm một thẻ với lần ghé mới nhất
+  (`person/CheckinAct`, vẫn là `ActivityCard`). Bạn bè thấy địa điểm,
+  **ngày** (không giờ) và ghi chú, và thả tim được; chủ trang thấy mọi
+  lần ghé của mình kèm dấu ai xem được, và sửa ghi chú ngay trên thẻ.
+  Tim thuộc về từng lần check-in, không thuộc về địa điểm.
+  Migration `20261124150000_checkin_friends.sql`: bảng `checkin_likes`
+  (đóng với client), `person_checkins`, `like_checkin`,
+  `checkin_hearts_takeout`. Bảng `checkins` vẫn chỉ chính chủ đọc: bạn
+  bè đọc qua hàm, vì policy không giấu được giờ. Đã sửa chính sách, đã
+  vào xuất dữ liệu; xoá tài khoản theo cascade.
+- **Thẻ gộp trên feed cộng đồng (chưa làm, issue #1599).** Nhiều bạn
+  cùng check-in một địa điểm thì một thẻ. Cần feed ở bước 2 trước.
+- Chưa làm: bình luận trên check-in; ảnh (bước 5, Moment).
 
 ### Bước 4. Chuyến đi làm lý do nổi lên
 
