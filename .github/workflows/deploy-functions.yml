@@ -1,0 +1,161 @@
+# Deploys the Edge Functions to the live Supabase project when they change
+# on main. Until this file existed nothing did: a merged function was a
+# function that had not shipped, and the only way to tell was to remember.
+#
+# One-time setup (without it this workflow skips gracefully, as the EAS
+# one does):
+#   1. https://supabase.com/dashboard/account/tokens → generate a token
+#   2. Repo → Settings → Secrets and variables → Actions → Secrets:
+#        SUPABASE_ACCESS_TOKEN = <the token>
+#
+# ── which functions ──
+#
+# A push deploys the functions whose own folder changed. A change under
+# `_shared/` deploys all of them: every function imports from it, and
+# working out which ones import which file would be a second source of
+# truth about something the bundler already knows. Redeploying a function
+# that did not change costs seconds and changes nothing.
+#
+# `workflow_dispatch` takes `all`, or function names separated by spaces,
+# for the day a deploy half-failed or a function was changed on the
+# dashboard and should be put back.
+#
+# ── what this does not do ──
+#
+# - Migrations. They are still applied by hand (CLAUDE.md, "Supabase"). A
+#   function that needs a column deploys before the column exists if both
+#   merge in one PR; apply the migration first.
+# - Roll back. A bad deploy is fixed by merging the fix, or by re-running
+#   this on the last good commit from the Actions tab.
+# - Secrets for the functions (`supabase secrets set`). They live in the
+#   project and are not touched here.
+# - Delete. A function removed from the repo stays live until it is
+#   deleted by hand. `find-address` and `backfill-phones-once` are live and
+#   not in the repo; this workflow neither knows nor touches them.
+# - Set `verify_jwt`. Every function is live with it on, which is the CLI's
+#   default, so there is no config.toml. One that must be public gets a
+#   `[functions.<name>] verify_jwt = false` entry in `supabase/config.toml`
+#   in the same PR that makes it so.
+#
+# The check after the deploy asks the project what is live, not whether the
+# CLI exited 0: it fails when a function that should have been deployed is
+# not ACTIVE, or was not updated within the run.
+
+name: Deploy Edge Functions
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'supabase/functions/**'
+  workflow_dispatch:
+    inputs:
+      functions:
+        description: "'all', or function names separated by spaces"
+        default: all
+        required: true
+
+# One deploy at a time, and a second push waits instead of cancelling the
+# first: a cancelled deploy is a half-deployed set.
+concurrency:
+  group: deploy-functions
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+env:
+  PROJECT_REF: amdvitzpogaejzzqroco
+  SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Skip when SUPABASE_ACCESS_TOKEN is not configured
+        if: env.SUPABASE_ACCESS_TOKEN == ''
+        run: echo "No SUPABASE_ACCESS_TOKEN secret — skipping. See the header of this workflow file for setup."
+
+      - uses: actions/checkout@v5
+        if: env.SUPABASE_ACCESS_TOKEN != ''
+        with:
+          fetch-depth: 0
+
+      - name: Work out which functions
+        id: which
+        if: env.SUPABASE_ACCESS_TOKEN != ''
+        env:
+          INPUT: ${{ github.event.inputs.functions }}
+          BEFORE: ${{ github.event.before }}
+        run: |
+          set -euo pipefail
+          all=$(find supabase/functions -mindepth 1 -maxdepth 1 -type d ! -name '_*' -printf '%f\n' | sort)
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            if [ "$INPUT" = "all" ]; then picked="$all"; else picked=$(printf '%s\n' $INPUT | sort -u); fi
+          else
+            # A new branch or a force push has no usable "before": deploy all.
+            if [ -z "$BEFORE" ] || [ "$BEFORE" = "0000000000000000000000000000000000000000" ] \
+              || ! git cat-file -e "$BEFORE^{commit}" 2>/dev/null; then
+              changed=$(git ls-files supabase/functions)
+            else
+              changed=$(git diff --name-only "$BEFORE" "${{ github.sha }}" -- supabase/functions)
+            fi
+            if printf '%s\n' "$changed" | grep -q '^supabase/functions/_shared/'; then
+              picked="$all"
+            else
+              picked=$(printf '%s\n' "$changed" | sed -n 's|^supabase/functions/\([^/_][^/]*\)/.*|\1|p' | sort -u)
+            fi
+          fi
+          # Only what still exists in the tree: a deleted folder is in the
+          # diff and is not deployable.
+          deploy=""
+          for f in $picked; do
+            case "$f" in *[!A-Za-z0-9-]*) echo "skip $f: not a function name"; continue;; esac
+            if [ -f "supabase/functions/$f/index.ts" ]; then deploy="$deploy $f"; else echo "skip $f: no supabase/functions/$f/index.ts"; fi
+          done
+          deploy=$(echo $deploy)
+          echo "deploying: ${deploy:-nothing}"
+          echo "names=$deploy" >> "$GITHUB_OUTPUT"
+
+      - uses: supabase/setup-cli@v1
+        if: env.SUPABASE_ACCESS_TOKEN != '' && steps.which.outputs.names != ''
+        with:
+          version: latest
+
+      - name: Deploy
+        if: env.SUPABASE_ACCESS_TOKEN != '' && steps.which.outputs.names != ''
+        run: |
+          set -euo pipefail
+          date -u +%s > /tmp/started
+          # --use-api bundles on Supabase's side: no Docker needed here.
+          supabase functions deploy ${{ steps.which.outputs.names }} \
+            --project-ref "$PROJECT_REF" --use-api
+
+      - name: Check what is live
+        if: env.SUPABASE_ACCESS_TOKEN != '' && steps.which.outputs.names != ''
+        run: |
+          set -euo pipefail
+          started=$(cat /tmp/started)
+          supabase functions list --project-ref "$PROJECT_REF" -o json > /tmp/live.json
+          python3 - "$started" ${{ steps.which.outputs.names }} <<'PY'
+          import json, sys
+          started = int(sys.argv[1]) * 1000
+          live = {f["slug"]: f for f in json.load(open("/tmp/live.json"))}
+          def ua(f):
+              # Milliseconds on the API; seconds would be a unit change worth surviving.
+              v = f.get("updated_at")
+              return None if v is None else (v * 1000 if v < 10**11 else v)
+          bad = []
+          for name in sys.argv[2:]:
+              f = live.get(name)
+              if f is None:
+                  bad.append(f"{name}: not on the project")
+              elif f.get("status") != "ACTIVE":
+                  bad.append(f"{name}: status {f.get('status')}")
+              elif ua(f) is not None and ua(f) < started - 60_000:
+                  bad.append(f"{name}: not updated by this run (version {f.get('version')})")
+              else:
+                  print(f"ok {name} v{f.get('version')}")
+          if bad:
+              print("\n".join(bad)); sys.exit(1)
+          PY
