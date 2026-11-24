@@ -2181,6 +2181,18 @@ describe('PlaceDetailScreen — what is this place, said without interruption', 
     expect(credit.textContent).toContain('chinne on tiktok');
   });
 
+  // And with no name either: the platform is all that is known, and with no
+  // mark to stand for it, the platform's own word is the whole line.
+  it('names only the source when it has neither a mark nor a name', () => {
+    show(place({
+      ...blurb, reviewer_source: 'tiktok', reviewer_name: null, reviewer_url: null,
+    }));
+    const credit = screen.getByTestId('blurb-credit');
+    expect(credit.querySelector('[data-icon^="logo-"]')).toBeNull();
+    expect(credit.textContent).toBe('tiktok');
+    expect(credit.getAttribute('aria-label')).toBe('tiktok');
+  });
+
   it('tells the reader when the source will not open', async () => {
     openURL.mockRejectedValueOnce(new Error('nope'));
     show(place({
