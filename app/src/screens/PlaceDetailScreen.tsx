@@ -165,6 +165,18 @@ export default function PlaceDetailScreen({ navigation, route }: { navigation: N
         testID={`detail-place-${place.slug}`}
         contentContainerStyle={{ paddingBottom: tabClearance }}
         showsVerticalScrollIndicator={false}
+        // For the sheet that follows a check-in, which is drawn in a
+        // `Modal` but is this scroll view's descendant in React's tree
+        // (`CheckinPill`, in the score row) — and React Native's touch
+        // responders follow that tree, not the screen. A scroll view's
+        // default ('never') takes any tap made while the keyboard is up,
+        // puts the keyboard away, and drops the tap. So the first press
+        // on Done only lowered the keyboard and the sheet sat there until
+        // a second (owner's recording, 24 Nov 2026: keyboard down at
+        // 0:37.3, Done answering at 0:38.7). 'handled' lets a press that
+        // a button takes go to the button. The page has no field of its
+        // own, so nothing else here changes.
+        keyboardShouldPersistTaps="handled"
       >
         {/* ── hero carousel ──
             `PhotoCarousel`'s paging, given the screen's width and the
