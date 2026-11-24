@@ -48,6 +48,9 @@ vi.mock('react-native-safe-area-context', () => {
 // The hold on the tab bar: what the page asks of it, and with whose navigator.
 const away = vi.hoisted(() => vi.fn());
 vi.mock('../components/tabBarDuck', () => ({ useTabBarAway: away }));
+// The catalog's lists: where a reader who is not the owner learns whose list it is.
+const lists = vi.hoisted(() => ({ data: [] as { id: string; owner_id?: string | null }[] }));
+vi.mock('../lib/catalog', () => ({ useCollections: () => lists }));
 const state = vi.hoisted(() => ({ lang: 'en' as 'en' | 'vi', me: 'me' as string | null }));
 const askToSignIn = vi.hoisted(() => vi.fn());
 vi.mock('../lib/auth', () => {
@@ -122,6 +125,7 @@ beforeEach(() => {
   data.postComment.mockImplementation(async () => 'k-new');
   state.lang = 'en';
   state.me = 'me';
+  lists.data = [];
 });
 afterEach(() => { cleanup(); vi.useRealTimers(); });
 
@@ -552,6 +556,40 @@ describe('tags', () => {
 
 // C6. Whether a thread is closed and whose list it is come with the
 // field's own answer (`comment_taggable`).
+// A chip on what the list's owner wrote (owner, 24 Nov 2026), at every depth.
+describe('the Author chip', () => {
+  const chips = () => screen.queryAllByTestId('comment-author').map((c) => c.closest('[data-testid="comment-row"]')!.textContent);
+  const thread = () => [row('a', null, { author: 'boss' }), row('a1', 'a', { author: 'u-a1' }), row('a2', 'a', { author: 'boss' })];
+
+  it('marks the owner\'s comments and answers, as the catalog names the owner', async () => {
+    lists.data = [{ id: 'c1', owner_id: 'boss' }];
+    await show(thread());
+    expect(chips()).toHaveLength(2);
+    expect(chips().every((c) => c!.includes('Author'))).toBe(true);
+    expect(screen.getAllByTestId('comment-row')[1].textContent).not.toContain('Author');
+  });
+
+  it('marks the reader\'s own comments on their own list, with no catalog to say so', async () => {
+    data.fetchTaggable.mockImplementation(async () => ({ people: [], places: [], mine: true }));
+    await show([row('a', null, { author: 'me' }), row('b', null, { author: 'u-b' })]);
+    await flush();
+    expect(chips()).toHaveLength(1);
+    data.fetchTaggable.mockImplementation(async () => ({ people: [], places: [] }));
+  });
+
+  it('marks nobody when the list is not in the catalog', async () => {
+    await show(thread());
+    expect(chips()).toEqual([]);
+  });
+
+  it('is in Vietnamese in Vietnamese', async () => {
+    state.lang = 'vi';
+    lists.data = [{ id: 'c1', owner_id: 'boss' }];
+    await show(thread());
+    expect(screen.getAllByTestId('comment-author')[0].textContent).toBe('Tác giả');
+  });
+});
+
 describe('the owner\'s side', () => {
   const told = (over: Record<string, unknown>) => data.fetchTaggable.mockImplementation(async () => ({ people: [], places: [], ...over }));
   const alerts = () => vi.spyOn(Alert, 'alert').mockImplementation(() => {});

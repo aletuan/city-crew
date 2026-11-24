@@ -79,6 +79,7 @@ import { EmptyState, GradientCta, PressableScale, Screen } from '../components/u
 import { useTabBarAway } from '../components/tabBarDuck';
 import { agoLabel } from '../lib/ago';
 import { threadOf, type Branch } from '../lib/comments';
+import { useCollections } from '../lib/catalog';
 import { useTaggableQuery, useThreadQuery } from '../lib/data';
 import { nearEnd } from '../lib/feed';
 import { useProfile, useSession } from '../lib/auth';
@@ -157,6 +158,10 @@ export default function CommentsScreen({ navigation, route }: {
   // Delete your own, report somebody else's — `useCommentMenu`.
   // Closed by its owner, or the owner's to close — `useThreadOwner`.
   const owner = useThreadOwner(subject, taggable.data, taggable.reload);
+  // Whose list it is: the reader's own, or the catalog's word for it.
+  // A list the catalog does not hold gets no chip rather than a wrong one.
+  const { data: lists } = useCollections();
+  const ownerId = taggable.data.mine ? me : lists.find((c) => c.id === subject.id)?.owner_id ?? null;
   const { menuOf, node: menuSheet } = useCommentMenu(me, taggable.data.mine);
   // A heart on each, drawn on the press — `useCommentHearts`.
   const { heartsOf, toggle } = useCommentHearts(me, thread.loadedAt, askIn);
@@ -166,9 +171,9 @@ export default function CommentsScreen({ navigation, route }: {
     const more = b.replies.length - replies.length;
     return (
       <View key={b.root.id} style={s.branch} onLayout={focus.branchAt(b.root.id)} testID="comment-branch">
-        <CommentRow comment={b.root} when={agoLabel(b.root.created_at, now, lang, t)} onPerson={onPerson} onPlace={onPlace} onReply={() => reply(b.root)} replyOff={!!owner.closed} onMore={menuOf(b.root)} hearts={heartsOf(b.root)} onHeart={() => toggle(b.root)} {...focus.rowProps(b.root.id)} />
+        <CommentRow comment={b.root} when={agoLabel(b.root.created_at, now, lang, t)} byOwner={!!ownerId && b.root.author === ownerId} onPerson={onPerson} onPlace={onPlace} onReply={() => reply(b.root)} replyOff={!!owner.closed} onMore={menuOf(b.root)} hearts={heartsOf(b.root)} onHeart={() => toggle(b.root)} {...focus.rowProps(b.root.id)} />
         {replies.map((r) => (
-          <CommentRow key={r.id} comment={r} when={agoLabel(r.created_at, now, lang, t)} onPerson={onPerson} onPlace={onPlace} onReply={() => reply(r)} replyOff={!!owner.closed} onMore={menuOf(r)} hearts={heartsOf(r)} onHeart={() => toggle(r)} {...focus.rowProps(r.id)} />
+          <CommentRow key={r.id} comment={r} when={agoLabel(r.created_at, now, lang, t)} byOwner={!!ownerId && r.author === ownerId} onPerson={onPerson} onPlace={onPlace} onReply={() => reply(r)} replyOff={!!owner.closed} onMore={menuOf(r)} hearts={heartsOf(r)} onHeart={() => toggle(r)} {...focus.rowProps(r.id)} />
         ))}
         {more > 0 ? (
           <PressableScale
