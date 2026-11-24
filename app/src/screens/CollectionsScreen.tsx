@@ -6,8 +6,8 @@
 // surfaces and thin warm hairlines — not from shadows.
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Keyboard, type NativeScrollEvent, type NativeSyntheticEvent, SectionList, Text, type TextInput, type SectionListProps, useWindowDimensions, View } from 'react-native';
-import { useFocusEffect, useScrollToTop } from '@react-navigation/native';
+import { SectionList, Text, type SectionListProps, useWindowDimensions, View } from 'react-native';
+import { useFocusEffect } from '@react-navigation/native';
 import { Glyph, ICON } from '../components/ui/glyph';
 import { useTourAnchor } from '../components/SignupTour';
 import {
@@ -20,19 +20,17 @@ import {
   TABS_ROW_GAP,
   useTabBarClearance,
 } from '../components/ui';
-import { useDuckOnScroll, useTabBarDucked } from '../components/tabBarDuck';
+import { useTabBarDucked } from '../components/tabBarDuck';
 import { DockOffer, DockSlot, useDockOffer } from '../components/DockSlot';
 import { AddPill } from '../components/add';
-import { createDuckTracker } from '../lib/duck';
 import { useSession } from '../lib/auth';
 import { useCityList, useCurrentCity } from '../lib/city';
 import { cityShortById } from '../lib/cityName';
 import {
-  listsWord, pairUp, placesOf as placesCount, reasonFor as shelfReason, type ShelfRow,
+  listsWord, pairUp, placesOf as placesCount, type ShelfRow,
 } from '../lib/collectionShelf';
 import ActionSheet from '../components/ActionSheet';
 import { CityRow } from '../components/CityRow';
-import { categoryLabel } from '../lib/categories';
 import {
   Collection, coverUriOf, fetchProfilesById, type FriendProfile, membersOf, useMyListShares, useSharedWithMe,
 } from '../lib/data';
@@ -42,9 +40,7 @@ import { useListRank } from '../lib/tasteProfile';
 import { leadingCity, mosaicGroups, mosaicRows, type MosaicRow } from '../lib/collectionMosaic';
 import { derivedKinds } from '../lib/collectionKinds';
 import { useCoverOpen } from '../lib/useCoverOpen';
-import { COLLECTION_RECENTS_KEY, RECENTS_SHOWN, rememberSearch } from '../lib/recents';
-import { NO_RECENTS, oneOf, RECENTS, useStored } from '../lib/stored';
-import { cityInQuery, collectionKinds, siftCollections, type SiftMember } from '../lib/search';
+import { oneOf, useStored } from '../lib/stored';
 import { useMyLists, useSaveActions } from '../lib/save';
 import { useI18n } from '../lib/i18n';
 import { classifyLoadFail } from '../lib/loadfail';
@@ -54,6 +50,9 @@ import type { Nav } from '../nav';
 import { GuestNotice, FirstCollection, CommunityEmpty } from './collections/empties';
 import { CollectionTile, MosaicCard, type ShelfKit } from './collections/cards';
 import { ShelfTop, TabsRow, type ShelfHead } from './collections/header';
+import { useShelfSearch } from './collections/useShelfSearch';
+import { useShelfScroll } from './collections/useShelfScroll';
+import { useShelfSift } from './collections/useShelfSift';
 import { s } from './collections/styles';
 
 type ListRow = ShelfRow<Collection> | MosaicRow<Collection>;
@@ -144,47 +143,10 @@ export default function CollectionsScreen({ navigation, route }: {
   const rank = useListRank();
   const { data: places, loading: placesLoading, loaded: placesLoaded, reload: placesReload } = usePlaces();
   const tabClearance = useTabBarClearance();
-  const duckScroll = useDuckOnScroll();
-  // Its tab, pressed again here, scrolls back to the top — the last step
-  // of the walk back that ExploreScreen's `tabPress` note describes.
-  const scrollRef = useRef<SectionList<ListRow, Section>>(null);
-  // Typed through, as on Explore: React Navigation's idea of a scrollable
-  // and React Native 0.88's SectionList do not meet, though the list
-  // answers `getScrollResponder` as it always did.
-  useScrollToTop(scrollRef as unknown as Parameters<typeof useScrollToTop>[0]);
-  const toTop = () => scrollRef.current?.getScrollResponder()?.scrollTo({ y: 0, animated: true });
-
-  // Keep the natural header's geometry. The overlay pins only tabs and
-  // layouts on descent; reversing reveals the full header in place.
-  // The tab bar's tracker supplies hysteresis and overscroll clamping.
-  const tabsYRef = useRef(0);
-  const topHRef = useRef(0);
-  const [headerTracker] = useState(() => createDuckTracker({ topSlack: 0 }));
-  const [pinned, setPinned] = useState(false);
-  const [headerExpanded, setHeaderExpanded] = useState(false);
-  // The city block under the pinned row, once its own heading has gone
-  // under the row (see `onSeen`); null while a heading is in view. Its key
-  // only — the city's id, '' for "elsewhere" — never the section's object:
-  // see the freeze noted at `onSeen`.
-  const [atKey, setAtKey] = useState<string | null>(null);
-  const [jumpOpen, setJumpOpen] = useState(false);
-  // How tall the pinned tabs are, so a jump lands its heading just
-  // under them rather than behind them.
-  const tabsHRef = useRef(0);
-  const [deep, setDeep] = useState(false);
-  const onShelfScroll = (e: NativeSyntheticEvent<NativeScrollEvent>) => {
-    duckScroll?.(e);
-    const { contentOffset, contentSize, layoutMeasurement } = e.nativeEvent;
-    const maxY = Math.max(0, contentSize.height - layoutMeasurement.height);
-    const y = Math.min(maxY, Math.max(0, contentOffset.y));
-    const direction = headerTracker.report(y, maxY);
-    if (direction) setHeaderExpanded(direction === 'show');
-    // Keep the revealed header until the natural one is fully at rest.
-    const nowPinned = tabsYRef.current > 0 && (y >= tabsYRef.current || (pinned && y > 0));
-    if (nowPinned !== pinned) setPinned(nowPinned);
-    const nowDeep = topHRef.current > 0 && y >= topHRef.current;
-    if (nowDeep !== deep) setDeep(nowDeep);
-  };
+  const {
+    scrollRef, toTop, tabsYRef, topHRef, tabsHRef, pinned, headerExpanded,
+    atKey, setAtKey, jumpOpen, setJumpOpen, deep, onShelfScroll,
+  } = useShelfScroll<ListRow, Section>();
   const ducked = useTabBarDucked();
   // Counting and filtering need the places catalog — until it's in, hold
   // the skeleton rather than showing raw DB membership numbers.
@@ -319,7 +281,8 @@ export default function CollectionsScreen({ navigation, route }: {
   useEffect(() => {
     if (route.params?.tab) setTab(route.params.tab);
     if (route.params?.at) scrollRef.current?.getScrollResponder()?.scrollTo({ y: 0, animated: false });
-  }, [route.params?.tab, route.params?.at]);
+  // `scrollRef` is a ref, the same object every render (`useShelfScroll`).
+  }, [route.params?.tab, route.params?.at, scrollRef]);
   // An empty library greets with the community shelf instead of an empty
   // room — decided once per visit, the first time the answer lands, and
   // never re-decided under the reader's thumb (the Crew screen's rule).
@@ -356,178 +319,16 @@ export default function CollectionsScreen({ navigation, route }: {
     navigation.navigate('CollectionForm');
   };
 
-  // The search over what is already here. Everything it reads — both
-  // lists, every member — is in memory, so this is a filter that runs on
-  // the keystroke, offline, with no query behind it. It answers by a
-  // list's own words, by the places inside it, by their city, and by
-  // @handle; the arithmetic lives in `siftCollections`, under the gate,
-  // beside the rules it shares with the search box on Explore.
-  //
-  // It was a glyph in the header and a field that existed only while
-  // wanted. The owner's review (14 Oct 2026): the check-ins screen had
-  // meanwhile grown a box under its title with a panel of chips behind
-  // it, and a reader who had learned that screen looked for the same
-  // thing here. So this is that box, with that panel — recent searches,
-  // then the cities, then the kinds of place — opened by focus, folded by
-  // a choice (see `answered`) and let go of by Cancel. One city and one
-  // kind at a time, a chosen chip tapped again lets go.
-  //
-  // What the panel adds that the words could not: a chip asks about the
-  // *places* in a list. Under "Cafés" a list is listed for the cafés in
-  // it, and the card says how many of its places those are, because a
-  // list of eight with three cafés and a list of three cafés are
-  // different answers to the same chip.
-  //
-  // Since 25 Oct 2026 the cities and the kinds are two `UnderlineChoice`
-  // rows, each with "All" first, where they were two wraps of chips (the
-  // owner, on the review board that took Explore's boxes away). With
-  // seven cities and nine kinds the wraps were five lines of chips; the
-  // rows are two, and scroll, so the panel is a band under the box rather
-  // than a sheet over the shelf.
-  //
-  // And later that day the owner moved them out of the panel altogether:
-  // the city and the kind are a sheet from below now, opened by Explore's
-  // filter glyph beside the title (a filter sheet), so the box was for
-  // words and the glyph for narrowing, on both screens. On 7 Nov 2026 the
-  // kinds came back under the box and the sheet went — see `searching`.
-  const [query, setQuery] = useState('');
-  const q = query.trim();
-  const [panel, setPanel] = useState(false);
-  const [kind, setKind] = useState<string | null>(null);
-  // One way in for words and kinds since 7 Nov 2026 (owner): the box is
-  // not on the page at rest. The dock opens it — a reader is offered the
-  // search once they have scrolled into the shelf, and the 🔍 that stood
-  // beside the title went the same day (owner: fewer things at the top;
-  // a shelf too short to scroll is one read at a glance) — where it stood — under the tabs — with the kinds as a row under it
-  // and what was searched before; results keep the shelf's own layout.
-  // The filter glyph and its sheet went: a city was three ways in (the
-  // sheet, the box, and Mosaic's blocks with their ▾), and the kind was a
-  // second door to the same answer. A city is typed now — the sift
-  // already reads members' cities — and Mosaic is drawn by city anyway.
-  // The 25 Oct move of the filters out of the box is undone in part.
-  // Open from the dock until Cancel, which also lets go of
-  // the words and the kind: so while anything narrows the shelf, the box
-  // that holds it is on the page.
-  const [searching, setSearching] = useState(false);
-  const open = searching;
-  const inputRef = useRef<React.ComponentRef<typeof TextInput>>(null);
-  // Cancel is the box's: it lets go of the words and the kind, and puts
-  // the box away (7 Nov 2026 — they are one tool again).
-  //
-  // Before: Cancel let go of the words and closed the panel.
-  // It let go of the city and the kind too while they were chosen in the
-  // panel; since they moved to the sheet (25 Oct 2026) they are the
-  // sheet's, shown under the box with a ✕ each, and outlive a search.
-  const cancel = () => {
-    setPanel(false); setQuery(''); setKind(null); setSearching(false);
-    inputRef.current?.blur();
-    Keyboard.dismiss();
-  };
-  // A chip is an answer, and the keyboard asks for words. Tapped, it
-  // puts the keyboard away (the owner, 14 Oct 2026: the keyboard stood
-  // over the results of every chip) — and since 24 Oct the panel folds
-  // with it, down to the chips that are on.
-  //
-  // It used to stay up until Cancel, for the reason VisitedScreen gives:
-  // closing it on a blur would take the chips out from under the reader
-  // mid-choice. Here that left the reader with no way to read the shelf.
-  // The panel was not in the list then, as VisitedScreen's is, so it did
-  // not scroll away; with seven cities and nine kinds it stood over all but
-  // a fifth of the screen, and the only way out was Cancel, which let go
-  // of the chips it was meant to keep (the owner's screenshot, 24 Oct
-  // 2026). Folded, what it chose stays in sight under the box, so a
-  // filter is never one nobody can see; the shelf gets the screen, and
-  // the box opens the panel again for a second choice. Dragging the shelf
-  // folds it too: that is the reader asking to read.
-  //
-  // The folded row was chips, each with a ✕, behind a "Filters" chip.
-  // Since 25 Oct 2026 it is the review board's: Explore's filter glyph,
-  // with no word beside it (the owner: the glyph says it), then what is
-  // chosen as words with no ground, each a tap back into the panel and
-  // each with its own ✕. Left from the board: its "Clear all", which
-  // turned letting go of one of two choices into two taps (it shipped in
-  // a draft and came out the same day — the owner asked why the ✕ had
-  // gone; with two choices at most, a ✕ each is enough, and Cancel lets
-  // go of everything); its filter sheet, a fourth way of choosing beside
-  // the underline rows Explore, this panel and the visits panel now
-  // share; and several cities at once, which the owner took out of every
-  // filter on 24 Oct.
-  const answered = () => { inputRef.current?.blur(); Keyboard.dismiss(); setPanel(false); };
-  const fold = () => { if (panel) answered(); };
-  // The dock: open the box (it takes focus as it mounts — see
-  // `autoFocus` on it), or, open already, put the keyboard back in it.
-  const openSearch = () => {
-    if (open) inputRef.current?.focus();
-    else setSearching(true);
-  };
-
-  // What this box remembered, in its own drawer — the visits screen's
-  // mechanism, for its reasons: kept when a search *worked* (a card
-  // opened, or the return key), never on a keystroke.
-  const [recents, keepRecents] = useStored(COLLECTION_RECENTS_KEY, NO_RECENTS, RECENTS);
-  const noteSearch = () => {
-    const next = rememberSearch(recents, query);
-    if (next !== recents) keepRecents(next);
-  };
-  const suggestions = recents
-    .filter((term) => term.toLowerCase().includes(q.toLowerCase()) && term.trim() !== q)
-    .slice(0, RECENTS_SHOWN);
+  const {
+    query, setQuery, q, panel, setPanel, kind, setKind, open, inputRef,
+    cancel, answered, fold, openSearch, noteSearch, suggestions, keepRecents,
+  } = useShelfSearch();
 
   // Guests have one shelf and no switch; see the tabs below.
   const onYours = !!session && tab === 'yours';
-  // Every member with the words a reader types for its city — the sift
-  // matches "da nang" against a member's city as it does against its
-  // name. Built once per catalog, not per keystroke.
-  const pairOf = useCallback((c: Collection): { c: Collection; members: SiftMember[] } => ({
-    c,
-    members: membersOf(c, places).map((p): SiftMember => ({ ...p, city_name: cityName(p.city_id) })),
-  }), [places, cityName]);
-  // Yours is your own lists and then the ones shared with you, sifted as
-  // one shelf so a search and a kind reach both, and split again into
-  // their two sections (`sections`). Kept whole, an empty shared list
-  // included, where Community drops its empty ones: a list somebody gave
-  // you is not a dead end at the desk, and one missing would read as a
-  // share that never arrived.
-  const shelf = useMemo(
-    () => (onYours ? [...mine.data, ...shared.data] : community).map(pairOf),
-    // `community` is derived from `cols.data`, `me` and `places`, all listed.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [onYours, mine.data, shared.data, cols.data, me, places, pairOf],
-  );
-  const sharedSlugs = useMemo(() => new Set(shared.data.map((c) => c.slug)), [shared.data]);
-  // The kinds a shelf can offer: only what its lists actually hold, so no
-  // kind leads to an empty shelf.
-  const kindChoices = useMemo(() => collectionKinds(shelf), [shelf]);
-  const asked = !!(q || kind);
-  // A city typed whole is a city chosen (owner, 7 Nov 2026): "Đà Lạt" lists
-  // the lists with a place there, not every list whose words begin "da"
-  // and "lat" somewhere — "After Dark … until late" came back for it. It
-  // stands in for the city filter that went the same day; anything more
-  // or less than a city's name stays words.
-  const cityAsked = useMemo(
-    () => cityInQuery(q, cities.map((c) => ({ id: c.id, names: [c.short_en, c.short_vi, c.short_ja, c.name_en, c.name_vi, c.name_ja] }))),
-    [q, cities],
-  );
-  const words = cityAsked ? '' : q;
-
-  const hits = useMemo(
-    () => siftCollections(shelf, { query: words, city: cityAsked, kind }),
-    [shelf, words, cityAsked, kind],
-  );
-  const hitBy = useMemo(() => new Map(hits.map((h) => [h.c.slug, h])), [hits]);
-  // The chips' own labels, as the cards' reasons print them. The words themselves are `lib/collectionShelf`'s.
-  const chosen = [
-    kind ? categoryLabel(kind, t) : null,
-    cityAsked ? cityName(cityAsked) : null,
-  ].filter((x): x is string => !!x);
-  // Each kind's row figure: the lists the words so far would leave with
-  // that kind chosen, so a kind that would empty the shelf says 0 and is
-  // drawn off rather than hidden.
-  const kindCounts = useMemo(
-    () => new Map(kindChoices.map((k) => [k, siftCollections(shelf, { query: words, city: cityAsked, kind: k }).length])),
-    [shelf, words, cityAsked, kindChoices],
-  );
-  const wordsCount = useMemo(() => siftCollections(shelf, { query: words, city: cityAsked, kind: null }).length, [shelf, words, cityAsked]);
+  const { sharedSlugs, kindChoices, asked, kindCounts, wordsCount, reasonFor, sifted } = useShelfSift({
+    onYours, mine, shared, community, cols, me, places, cities, cityName, q, kind, t,
+  });
   const placesOf = (n: number) => placesCount(n, t);
   // Who can see a list of yours: Public, Friends or Private
   // (`lib/shares.visibilityOf`), from its flag and its shares.
@@ -540,19 +341,9 @@ export default function CollectionsScreen({ navigation, route }: {
     friends: t('Friends', 'Bạn bè', '友達', '好友', '好友'),
     private: t('Private', 'Riêng tư', '非公開', '私密', '私密'),
   })[seenFor(c)];
-  const reasonFor = (slug: string) => shelfReason(hitBy.get(slug), chosen, t);
   // `loaded`, not `!loading`: the focus refresh flips `loading` back on,
   // and hiding the list for that made a visit look like a double load.
   const mineReady = mine.loaded;
-  // The shelf, as the sift ordered it — the catalog's own order, newest
-  // first, when nothing is asked; lists found by their own words first
-  // and then by hits when it is. Community at rest is not shown in this
-  // order: the Mosaic ranks each city's block (`groups`) and the grid is
-  // ranked whole (`sections`).
-  // Memoised with `hits`: the city blocks and the sections are built from
-  // it, and a new array every render rebuilt them every render — see the
-  // freeze noted at `onSeen`.
-  const sifted = useMemo(() => hits.map((h) => h.c), [hits]);
 
   // Community explores by default and remembers a switch to the grid;
   // Yours is the grid. Guests explore in Mosaic too.
