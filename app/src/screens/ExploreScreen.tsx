@@ -38,6 +38,7 @@ import { canDrawMap } from '../components/MiniMap';
 import { Toast, type ToastNote } from '../components/Toast';
 import PlacesMap from '../components/PlacesMap';
 import MapPlaceCard from '../components/MapPlaceCard';
+import MapStrip from '../components/MapStrip';
 import { distanceKm } from '../lib/geo';
 import { useBrowseTaste } from '../lib/tasteProfile';
 import { useFlag } from '../lib/useFlag';
@@ -421,9 +422,10 @@ export default function ExploreScreen({ navigation }: { navigation: Nav }) {
   const shown = useMemo(() => filteredFor(appliedFilters), [filteredFor, appliedFilters]);
 
   // The map's own selection — the pin the reader has tapped, and the
-  // strip that stands for it. Cleared implicitly rather than watched: if
-  // a chip or a sort takes the selected place out of `shown`, `find`
-  // below simply returns null and the strip goes with it.
+  // strip that stands for it. If a chip or a sort takes the selected place
+  // out of `shown`, `find` below returns null and the strip sinks away;
+  // as it goes it clears the choice too (`MapStrip` › `onGone`), so the
+  // place does not come back with "All" once the reader has moved on.
   const [selectedSlug, setSelectedSlug] = useState<string | null>(null);
   const selected = useMemo(() => shown.find((p) => p.slug === selectedSlug) ?? null, [shown, selectedSlug]);
   const selectedKm = selected && sortOrigin && selected.lat != null && selected.lng != null
@@ -1071,8 +1073,8 @@ export default function ExploreScreen({ navigation }: { navigation: Nav }) {
                 // fitted pin should not land under them.
                 edgePadding={{ top: 24, right: 64, bottom: tabClearance + 124, left: 40 }}
               />
-              {selected ? (
-                <View style={[s.mapStrip, { bottom: tabClearance + 12 }]}>
+              <MapStrip style={[s.mapStrip, { bottom: tabClearance + 12 }]} onGone={() => setSelectedSlug(null)}>
+                {selected ? (
                   <MapPlaceCard
                     place={selected}
                     distanceKm={selectedKm}
@@ -1082,8 +1084,8 @@ export default function ExploreScreen({ navigation }: { navigation: Nav }) {
                     now={new Date()}
                     onPress={() => navigation.navigate('PlaceDetail', { slug: selected.slug })}
                   />
-                </View>
-              ) : null}
+                ) : null}
+              </MapStrip>
             </View>
           </View>
         )}
