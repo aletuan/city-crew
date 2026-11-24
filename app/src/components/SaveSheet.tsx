@@ -5,15 +5,14 @@
 // saving to one, and a sheet that closes itself makes the second save a
 // whole journey again.
 
-import React, { useEffect, useRef } from 'react';
-import { Animated, Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import React from 'react';
+import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Glyph, ICON } from './ui/glyph';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Collection, holds, Place } from '../lib/data';
 import { useI18n } from '../lib/i18n';
 import { localized } from '../lib/localized';
-import { colors, display, font, space } from '../theme';
-import { PressableScale } from './ui';
+import { colors, display, font } from '../theme';
+import { PressableScale, Sheet } from './ui';
 
 export default function SaveSheet({ place, collections, onClose, onToggle, onNew }: {
   /** The place being saved; null keeps the sheet shut. */
@@ -24,102 +23,71 @@ export default function SaveSheet({ place, collections, onClose, onToggle, onNew
   onNew: () => void;
 }) {
   const { t, lang } = useI18n();
-  const insets = useSafeAreaInsets();
-  const rise = useRef(new Animated.Value(1)).current;
   const visible = !!place;
 
-  useEffect(() => {
-    if (!visible) { rise.setValue(1); return; }
-    Animated.spring(rise, { toValue: 0, useNativeDriver: true, speed: 14, bounciness: 3 }).start();
-  }, [visible, rise]);
-
   return (
-    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose} statusBarTranslucent>
-      <Pressable style={s.backdrop} onPress={onClose} accessibilityLabel={t('Close', 'Đóng', '閉じる', '关闭', '關閉')} />
-      <Animated.View
-        style={[
-          s.sheet,
-          {
-            paddingBottom: insets.bottom + 16,
-            transform: [{ translateY: rise.interpolate({ inputRange: [0, 1], outputRange: [0, 320] }) }],
-          },
-        ]}
+    <Sheet visible={visible} onClose={onClose} riseFrom={320} grabberGap={14}>
+      <Text style={s.title}>{t('Save to', 'Lưu vào', '保存先', '保存到', '儲存到')}</Text>
+      {place ? (
+        <Text testID={`save-place-${place.slug}`} style={s.subtitle} numberOfLines={1}>
+          {localized(place, 'name', lang)}
+        </Text>
+      ) : null}
+
+      {/* Capped so a long list cannot push the sheet past the screen; it
+          scrolls inside instead. */}
+      <ScrollView style={s.list} contentContainerStyle={{ paddingVertical: 4 }} showsVerticalScrollIndicator={false}>
+        {collections.map((c, i) => {
+          const on = place ? holds(c, place.slug) : false;
+          return (
+            <PressableScale
+              key={c.slug}
+              onPress={() => place && onToggle(c, place)}
+              accessibilityRole="checkbox"
+              accessibilityState={{ checked: on }}
+              // What react-native-web keeps of the state, which drops
+              // `accessibilityState` — the form `switchOrDoor` uses too.
+              aria-checked={on}
+              testID={`save-row-${i}`}
+              style={{ alignSelf: 'stretch' }}
+              contentStyle={s.row}
+            >
+              <View style={[s.tick, on && s.tickOn]}>
+                {on ? <Glyph name="checkmark" size={ICON.text} color={colors.accentInk} /> : null}
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={s.rowText} numberOfLines={1}>{t(c.title_en, c.title_vi, c.title_ja)}</Text>
+                <Text style={s.rowMeta} numberOfLines={1}>
+                  {c.collection_places.length === 0
+                    ? t('Empty', 'Trống', '空', '空', '空')
+                    : `${c.collection_places.length} ${t(c.collection_places.length === 1 ? 'place' : 'places', 'địa điểm', 'スポット', '个地点', '個地點')}`}
+                </Text>
+              </View>
+            </PressableScale>
+          );
+        })}
+      </ScrollView>
+
+      <PressableScale
+        onPress={onNew}
+        accessibilityRole="button"
+        style={{ alignSelf: 'stretch' }}
+        contentStyle={s.newRow}
       >
-        <View style={s.grabber} />
-        <Text style={s.title}>{t('Save to', 'Lưu vào', '保存先', '保存到', '儲存到')}</Text>
-        {place ? (
-          <Text testID={`save-place-${place.slug}`} style={s.subtitle} numberOfLines={1}>
-            {localized(place, 'name', lang)}
-          </Text>
-        ) : null}
+        <View style={s.newIcon}>
+          <Glyph name="add" size={ICON.action} color={colors.accent} />
+        </View>
+        <Text style={s.newText}>{t('New collection', 'Bộ sưu tập mới', '新しいコレクション', '新建合集', '新增合集')}</Text>
+      </PressableScale>
 
-        {/* Capped so a long list cannot push the sheet past the screen; it
-            scrolls inside instead. */}
-        <ScrollView style={s.list} contentContainerStyle={{ paddingVertical: 4 }} showsVerticalScrollIndicator={false}>
-          {collections.map((c, i) => {
-            const on = place ? holds(c, place.slug) : false;
-            return (
-              <PressableScale
-                key={c.slug}
-                onPress={() => place && onToggle(c, place)}
-                accessibilityRole="checkbox"
-                accessibilityState={{ checked: on }}
-                // What react-native-web keeps of the state, which drops
-                // `accessibilityState` — the form `switchOrDoor` uses too.
-                aria-checked={on}
-                testID={`save-row-${i}`}
-                style={{ alignSelf: 'stretch' }}
-                contentStyle={s.row}
-              >
-                <View style={[s.tick, on && s.tickOn]}>
-                  {on ? <Glyph name="checkmark" size={ICON.text} color={colors.accentInk} /> : null}
-                </View>
-                <View style={{ flex: 1 }}>
-                  <Text style={s.rowText} numberOfLines={1}>{t(c.title_en, c.title_vi, c.title_ja)}</Text>
-                  <Text style={s.rowMeta} numberOfLines={1}>
-                    {c.collection_places.length === 0
-                      ? t('Empty', 'Trống', '空', '空', '空')
-                      : `${c.collection_places.length} ${t(c.collection_places.length === 1 ? 'place' : 'places', 'địa điểm', 'スポット', '个地点', '個地點')}`}
-                  </Text>
-                </View>
-              </PressableScale>
-            );
-          })}
-        </ScrollView>
-
-        <PressableScale
-          onPress={onNew}
-          accessibilityRole="button"
-          style={{ alignSelf: 'stretch' }}
-          contentStyle={s.newRow}
-        >
-          <View style={s.newIcon}>
-            <Glyph name="add" size={ICON.action} color={colors.accent} />
-          </View>
-          <Text style={s.newText}>{t('New collection', 'Bộ sưu tập mới', '新しいコレクション', '新建合集', '新增合集')}</Text>
-        </PressableScale>
-
-        <PressableScale onPress={onClose} accessibilityRole="button" contentStyle={s.done} testID="save-done">
-          <Text style={s.doneText}>{t('Done', 'Xong', '完了', '完成', '完成')}</Text>
-        </PressableScale>
-      </Animated.View>
-    </Modal>
+      <PressableScale onPress={onClose} accessibilityRole="button" contentStyle={s.done} testID="save-done">
+        <Text style={s.doneText}>{t('Done', 'Xong', '完了', '完成', '完成')}</Text>
+      </PressableScale>
+    </Sheet>
   );
 }
 
 const s = StyleSheet.create({
-  backdrop: { ...StyleSheet.absoluteFill, backgroundColor: 'rgba(6,5,8,0.62)' },
-  sheet: {
-    position: 'absolute', left: 0, right: 0, bottom: 0,
-    paddingHorizontal: space.page, paddingTop: 10,
-    backgroundColor: colors.bgElevated,
-    borderTopLeftRadius: 28, borderTopRightRadius: 28,
-    borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.borderGlassSoft,
-  },
-  grabber: {
-    width: 38, height: 4, borderRadius: 2, alignSelf: 'center',
-    backgroundColor: colors.textTertiary, marginBottom: 14,
-  },
   title: { color: colors.text, fontSize: 20, fontFamily: display.bold },
   subtitle: { color: colors.textTertiary, fontSize: 14, marginTop: 2, marginBottom: 6 },
 

@@ -36,7 +36,9 @@
 //   flattened, so moving a sheet here changes nothing on screen.
 // - `pull`: the pull-down to close (`useSheetDrag`), on the whole panel
 //   (`'sheet'`) or, for a sheet whose body scrolls and keeps its own
-//   gesture, on the grabber and `head` only (`'head'`). `riseFrom` is how
+//   gesture, on the grabber and `head` only (`'head'`). A sheet may move
+//   it between the two as its height changes: the grabber and `head` sit
+//   in one wrapper either way. `riseFrom` is how
 //   far under the spring starts: 360 here, 320 on the settings sheets and
 //   60 on the legal documents, which are 90% of the screen tall and would
 //   otherwise spend the spring's first half off it.
@@ -57,7 +59,15 @@
 // 8 above the grabber they keep through `style`.
 //
 // Moved here so far: `ActionSheet`, `CollectionCoverSheet`, `person/Wall`,
-// and the six above.
+// the six above, and the rest of the menus — `AuthSheet`, `AvatarPicker`,
+// `FriendPicker`, `SaveSheet`, `ExploreFilterSheet`.
+//
+// Not here, on purpose: `CheckinSheet` and `CommentQuick` ride the
+// keyboard. Their panel stands in a dock that the keyboard lifts, with
+// its ground carried on under the keys, and the check-in's spring also
+// grows its tick; that is a second kind of sheet, and three more props
+// here for one caller each would make this one harder to read than the
+// copy they replace.
 
 import React, { useEffect, useRef } from 'react';
 import { useSheetDrag } from '../sheetDrag';
@@ -75,7 +85,7 @@ export const SHEET_SCRIM = 'rgba(6,5,8,0.62)';
 export function Sheet({
   visible, onClose, children, title, closeTestID, testID,
   scrim = true, rise = true, riseFrom = 360, maxHeight, foot = 16, grabberGap = 12, style,
-  pull, head, backdropLabel, backdropTestID, onDismiss,
+  pull, head, grabTestID, backdropLabel, backdropTestID, onDismiss,
 }: {
   visible: boolean;
   onClose: () => void;
@@ -95,6 +105,8 @@ export function Sheet({
   pull?: 'sheet' | 'head';
   /** What sits with the grabber in the part that can be pulled. */
   head?: React.ReactNode;
+  /** The grabber-and-head part's testID, where a sheet's tests name it. */
+  grabTestID?: string;
   backdropLabel?: string;
   backdropTestID?: string;
   onDismiss?: () => void;
@@ -125,7 +137,13 @@ export function Sheet({
         style={[s.panel, { paddingBottom: insets.bottom + foot, maxHeight }, style, { transform: moves }]}
         testID={testID}
       >
-        {pull === 'head' ? <View {...handlers} testID="sheet-grab">{grabber}{head}</View> : <>{grabber}{head}</>}
+        {/* One wrapper whether or not it is pulled, so a sheet that moves
+            its pull with its height (the Explore filter) keeps its head. */}
+        {head != null || pull === 'head' ? (
+          <View {...(pull === 'head' ? handlers : null)} testID={grabTestID ?? (pull === 'head' ? 'sheet-grab' : undefined)}>
+            {grabber}{head}
+          </View>
+        ) : grabber}
         {title != null ? (
           <View style={s.head}>
             <Text style={s.title}>{title}</Text>

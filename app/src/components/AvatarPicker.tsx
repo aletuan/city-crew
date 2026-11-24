@@ -14,17 +14,16 @@
 // after: the circle the sheet uncovers is the news, already in view.
 
 import React, { useRef, useState } from 'react';
-import { ActivityIndicator, Alert, Modal, Platform, Pressable, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
+import { ActivityIndicator, Alert, Platform, Pressable, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import { Image } from 'expo-image';
 import * as ImagePicker from 'expo-image-picker';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { Glyph, ICON } from './ui/glyph';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuthActions, useProfile, useSession } from '../lib/auth';
 import { AVATAR_PRESETS, presetOf, type AvatarPreset } from '../lib/avatars';
 import { useI18n } from '../lib/i18n';
 import { colors, display, font, onPhoto, radius, space } from '../theme';
-import { GradientCta, PressableScale, SECONDARY_CONTROL_H, successHaptic } from './ui';
+import { GradientCta, PressableScale, SECONDARY_CONTROL_H, Sheet, successHaptic } from './ui';
 import { avatarSource, PRESET_IMAGES } from './avatarImages';
 import { useFailText } from './authUi';
 
@@ -45,7 +44,6 @@ export default function AvatarPicker({ size = 88, showCamera = true }: {
   const { email } = useSession();
   const { profile } = useProfile();
   const { setAvatar, setAvatarPreset, clearAvatar } = useAuthActions();
-  const insets = useSafeAreaInsets();
   const { width } = useWindowDimensions();
   const [sheet, setSheet] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -156,79 +154,71 @@ export default function AvatarPicker({ size = 88, showCamera = true }: {
         </View>
       </PressableScale>
 
-      <Modal
-        visible={sheet}
-        transparent
-        animationType="fade"
-        statusBarTranslucent
-        onRequestClose={() => setSheet(false)}
-        onDismiss={flush}
-      >
-        <Pressable style={s.backdrop} onPress={() => setSheet(false)} />
-        <View style={[s.sheet, { paddingBottom: insets.bottom + 16 }]} testID="avatar-sheet">
-          <View style={s.grabber} />
-          <View style={s.head}>
-            <Text style={s.sheetTitle}>{t('Profile photo', 'Ảnh đại diện', 'プロフィール写真', '头像', '大頭貼')}</Text>
-            <PressableScale
-              onPress={() => setSheet(false)}
-              accessibilityRole="button"
-              accessibilityLabel={t('Close', 'Đóng', '閉じる', '关闭', '關閉')}
-              hitSlop={8}
-              style={s.close}
-              contentStyle={s.closeFace}
-            >
-              <Glyph name="close" size={ICON.nav} color={colors.textSecondary} />
-            </PressableScale>
-          </View>
-          <View style={s.grid}>
-            {AVATAR_PRESETS.map((p) => {
-              const on = chosen === p.key;
-              return (
-                <Pressable
-                  key={p.key}
-                  onPress={() => setChosen(p.key)}
-                  accessibilityRole="button"
-                  accessibilityLabel={t(p.en, p.vi, p.ja, p.zh, p.hant)}
-                  aria-selected={on}
-                  testID={`avatar-preset-${p.key}`}
-                  style={[s.cell, { width: cell, height: cell, borderRadius: cell / 2 }, on && s.cellOn]}
-                >
-                  <Image source={PRESET_IMAGES[p.key]} style={s.cellImage} contentFit="cover" accessible={false} />
-                  {on && (
-                    <View style={s.tickRing}>
-                      <View style={s.tick}>
-                        <Glyph name="checkmark" size={ICON.meta} color={colors.accentInk} />
-                      </View>
-                    </View>
-                  )}
-                </Pressable>
-              );
-            })}
-          </View>
-          <View style={s.rule} />
-          <View style={s.pair}>
-            <Source icon="images-outline" label={t('Library', 'Thư viện', 'ライブラリ', '相册', '相簿')}
-              a11y={t('Choose from library', 'Chọn từ thư viện', 'ライブラリから選ぶ', '从相册选择', '從相簿選擇')} onPress={fromLibrary} />
-            <Source icon="camera-outline" label={t('Camera', 'Chụp ảnh', 'カメラ', '相机', '相機')}
-              a11y={t('Take a photo', 'Chụp ảnh', '写真を撮る', '拍照', '拍照')} onPress={fromCamera} />
-          </View>
-          <View style={s.commit}>
-            <GradientCta
-              wide
-              label={t('Use this avatar', 'Dùng avatar này', 'このアバターにする', '使用这个头像', '使用這個大頭貼')}
-              onPress={wear}
-              disabled={!chosen || chosen === worn}
-              testID="avatar-use"
-            />
-          </View>
-          {/* Nothing to remove until there is something there. */}
-          {profile.avatar_url ? (
-            <PressableScale onPress={remove} accessibilityRole="button" contentStyle={s.remove}>
-              <Text style={s.removeText}>{t('Remove photo', 'Xoá ảnh', '写真を削除', '移除头像', '移除大頭貼')}</Text>
-            </PressableScale>
-          ) : null}
+      {/* No spring: this sheet came in with the fade alone, as the cover
+          sheets did. */}
+      <Sheet visible={sheet} onClose={() => setSheet(false)} onDismiss={flush} rise={false}
+        style={s.sheet} testID="avatar-sheet">
+        <View style={s.head}>
+          <Text style={s.sheetTitle}>{t('Profile photo', 'Ảnh đại diện', 'プロフィール写真', '头像', '大頭貼')}</Text>
+          <PressableScale
+            onPress={() => setSheet(false)}
+            accessibilityRole="button"
+            accessibilityLabel={t('Close', 'Đóng', '閉じる', '关闭', '關閉')}
+            hitSlop={8}
+            style={s.close}
+            contentStyle={s.closeFace}
+          >
+            <Glyph name="close" size={ICON.nav} color={colors.textSecondary} />
+          </PressableScale>
         </View>
-      </Modal>
+        <View style={s.grid}>
+          {AVATAR_PRESETS.map((p) => {
+            const on = chosen === p.key;
+            return (
+              <Pressable
+                key={p.key}
+                onPress={() => setChosen(p.key)}
+                accessibilityRole="button"
+                accessibilityLabel={t(p.en, p.vi, p.ja, p.zh, p.hant)}
+                aria-selected={on}
+                testID={`avatar-preset-${p.key}`}
+                style={[s.cell, { width: cell, height: cell, borderRadius: cell / 2 }, on && s.cellOn]}
+              >
+                <Image source={PRESET_IMAGES[p.key]} style={s.cellImage} contentFit="cover" accessible={false} />
+                {on && (
+                  <View style={s.tickRing}>
+                    <View style={s.tick}>
+                      <Glyph name="checkmark" size={ICON.meta} color={colors.accentInk} />
+                    </View>
+                  </View>
+                )}
+              </Pressable>
+            );
+          })}
+        </View>
+        <View style={s.rule} />
+        <View style={s.pair}>
+          <Source icon="images-outline" label={t('Library', 'Thư viện', 'ライブラリ', '相册', '相簿')}
+            a11y={t('Choose from library', 'Chọn từ thư viện', 'ライブラリから選ぶ', '从相册选择', '從相簿選擇')} onPress={fromLibrary} />
+          <Source icon="camera-outline" label={t('Camera', 'Chụp ảnh', 'カメラ', '相机', '相機')}
+            a11y={t('Take a photo', 'Chụp ảnh', '写真を撮る', '拍照', '拍照')} onPress={fromCamera} />
+        </View>
+        <View style={s.commit}>
+          <GradientCta
+            wide
+            label={t('Use this avatar', 'Dùng avatar này', 'このアバターにする', '使用这个头像', '使用這個大頭貼')}
+            onPress={wear}
+            disabled={!chosen || chosen === worn}
+            testID="avatar-use"
+          />
+        </View>
+        {/* Nothing to remove until there is something there. */}
+        {profile.avatar_url ? (
+          <PressableScale onPress={remove} accessibilityRole="button" contentStyle={s.remove}>
+            <Text style={s.removeText}>{t('Remove photo', 'Xoá ảnh', '写真を削除', '移除头像', '移除大頭貼')}</Text>
+          </PressableScale>
+        ) : null}
+      </Sheet>
     </>
   );
 }
@@ -284,16 +274,8 @@ const s = StyleSheet.create({
     backgroundColor: colors.badgeSolid,
   },
 
-  backdrop: { ...StyleSheet.absoluteFill, backgroundColor: 'rgba(6,5,8,0.62)' },
-  sheet: {
-    position: 'absolute', left: 0, right: 0, bottom: 0,
-    alignItems: 'center', gap: 4,
-    paddingHorizontal: space.page, paddingTop: 10,
-    backgroundColor: colors.bgElevated,
-    borderTopLeftRadius: 28, borderTopRightRadius: 28,
-    borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.borderGlassSoft,
-  },
-  grabber: { width: 38, height: 4, borderRadius: 2, backgroundColor: colors.textTertiary, marginBottom: 12 },
+  // The panel centres the grid and the two sources under it.
+  sheet: { alignItems: 'center', gap: 4 },
   // The title centred on the sheet, the × at its edge without pushing it.
   head: { alignSelf: 'stretch', alignItems: 'center', justifyContent: 'center', marginBottom: 14 },
   sheetTitle: { color: colors.text, fontSize: 18, fontFamily: display.bold },
