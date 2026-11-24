@@ -331,6 +331,7 @@ export default function PersonScreen({ navigation, route, home }: {
         person={person}
         lists={find.on ? find.found : lists}
         visits={seen.visits(find.on)}
+        holding={seen.holding(find.on)}
         visitCard={seen.card}
         reasonOf={find.on ? find.reasonOf : undefined}
         missed={find.on && find.none}

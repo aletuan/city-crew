@@ -91,7 +91,7 @@
 // A row from a launch cache with no id cannot be liked and draws none.
 
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { type NativeScrollEvent, type NativeSyntheticEvent, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, type NativeScrollEvent, type NativeSyntheticEvent, StyleSheet, Text, View } from 'react-native';
 import { Image } from 'expo-image';
 import ActivityCard, { type ActivityMark, type CardCopy } from '../../components/ActivityCard';
 import { Card, fireHaptic, PressableScale, SECONDARY_CONTROL_H } from '../../components/ui';
@@ -200,7 +200,7 @@ function FirstOfYours({ onCreate }: { onCreate: () => void }) {
   );
 }
 
-export default function Shared({ me, person, lists, visits = NO_VISITS, visitCard, seenOf, coverFor, onOpen, onComments, copyOf, reasonOf, missed, reach = 0, onCreate }: {
+export default function Shared({ me, person, lists, visits = NO_VISITS, visitCard, holding, seenOf, coverFor, onOpen, onComments, copyOf, reasonOf, missed, reach = 0, onCreate }: {
   me: string | null;
   person: FriendProfile;
   /** The collections this reader may see here, newest first
@@ -211,6 +211,10 @@ export default function Shared({ me, person, lists, visits = NO_VISITS, visitCar
    *  day (`person.actsOn`). */
   visits?: PersonCheckin[];
   visitCard?: (v: PersonCheckin) => React.ReactNode;
+  /** The visits have not answered yet: nothing of the column is drawn,
+   *  so that they do not land among lists already on the page
+   *  (`useVisitCards`, which also says for how long at most). */
+  holding?: boolean;
   /** Who can see each (`person.seenOn`). */
   seenOf: (c: Collection) => ListSeen;
   coverFor: (c: Collection) => string | undefined;
@@ -298,7 +302,9 @@ export default function Shared({ me, person, lists, visits = NO_VISITS, visitCar
   const none = acts.length === 0;
   return (
     <>
-      {missed ? (
+      {holding ? (
+        <ActivityIndicator color={colors.accent} style={s.wait} testID="person-activity-wait" />
+      ) : missed ? (
         <Card style={s.none} testID="person-find-none">
           <Text style={s.noneTitle}>
             {t('Nothing found', 'Không tìm thấy', '見つかりませんでした', '没有找到', '沒有找到')}
@@ -352,6 +358,9 @@ export default function Shared({ me, person, lists, visits = NO_VISITS, visitCar
 const TOP = 22;
 
 const s = StyleSheet.create({
+  // Where the first card's reason line will be: the page's own spinner
+  // stands 20 under the head (`PersonScreen`'s `spinner`), and so does this.
+  wait: { marginTop: 20 },
   // No heading over the feed since 20 Nov 2026 (owner). "Activity" stood
   // here in the small capitals the place page heads a fact with, with a
   // count and then "Account ›" on its right; once the gear took the

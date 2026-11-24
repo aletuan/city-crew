@@ -6,6 +6,8 @@
 // its card.
 
 import React from 'react';
+import { Text } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { act, cleanup, fireEvent, render, screen, waitFor, within } from '../../uitest/render';
 import type { PersonCheckin } from '../../lib/checkin';
@@ -33,7 +35,8 @@ const i18n = vi.hoisted(() => ({ lang: 'en' }));
 vi.mock('../../lib/i18n', () => ({ useI18n: () => ({ lang: i18n.lang, t: (en: string, vi?: string) => (i18n.lang === 'vi' ? vi : en) ?? en }) }));
 vi.mock('react-native-safe-area-context', () => ({ useSafeAreaInsets: () => ({ top: 0, bottom: 0, left: 0, right: 0 }) }));
 
-import { useVisitCards } from './CheckinAct';
+import { cacheKey } from '../../lib/data/cache';
+import { HOLD_MS, useVisitCards } from './CheckinAct';
 
 const LAN: FriendProfile = { id: 'lan', handle: 'lan', full_name: 'Lan Pham', avatar_url: '' } as FriendProfile;
 const ME: FriendProfile = { id: 'me', handle: 'andy', full_name: '', avatar_url: '' } as FriendProfile;
@@ -47,7 +50,12 @@ const visit = (id: string, over: Partial<PersonCheckin> = {}): PersonCheckin => 
 const onPlace = vi.fn();
 function Page({ me, person, searching = false }: { me: string | null; person: FriendProfile | null; searching?: boolean }) {
   const seen = useVisitCards({ me, person, onPlace });
-  return <>{seen.visits(searching).map(seen.card)}{seen.sheet}</>;
+  return (
+    <>
+      {seen.holding(searching) ? <Text testID="holding">wait</Text> : null}
+      {seen.visits(searching).map(seen.card)}{seen.sheet}
+    </>
+  );
 }
 const show = async (me: string | null, person: FriendProfile | null, rows: PersonCheckin[] = [], searching = false) => {
   data.fetchPersonCheckins.mockResolvedValue(rows);
@@ -65,7 +73,13 @@ beforeEach(() => {
   mine.loadedAt = 1;
   i18n.lang = 'en';
 });
-afterEach(cleanup);
+afterEach(async () => {
+  cleanup();
+  // What a page kept of its visits must not be the next test's first frame.
+  for (const who of ['me', 'someone-else']) {
+    for (const page of ['lan', 'me', 'minh']) await AsyncStorage.removeItem(cacheKey('personvisits', page, who));
+  }
+});
 
 describe('when the visits are asked for', () => {
   it('asks for the person whose page it is, as somebody signed in', async () => {
@@ -105,6 +119,120 @@ describe('when the visits are asked for', () => {
     theirs.rerender(<Page me="me" person={LAN} />);
     await act(async () => { await Promise.resolve(); });
     expect(data.fetchPersonCheckins).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('the column waiting for the visits', () => {
+  // A read that answers when the test says.
+  const pending = () => {
+    let answer: (rows: PersonCheckin[]) => void = () => {};
+    let fail: (e: Error) => void = () => {};
+    data.fetchPersonCheckins.mockImplementation(() => new Promise<unknown[]>((ok, no) => { answer = ok; fail = no; }));
+    return { answer: (rows: PersonCheckin[]) => act(async () => { answer(rows); await Promise.resolve(); }), fail: () => act(async () => { fail(new Error('down')); await Promise.resolve(); }) };
+  };
+  const mount = async (me: string | null, person: FriendProfile | null, searching = false) => {
+    const r = render(<Page me={me} person={person} searching={searching} />);
+    await act(async () => { await Promise.resolve(); await Promise.resolve(); });
+    return r;
+  };
+  const holding = () => screen.queryByTestId('holding') !== null;
+
+  it('waits until they answer, then does not', async () => {
+    const read = pending();
+    await mount('me', LAN);
+    expect(holding()).toBe(true);
+    await read.answer([visit('k1')]);
+    expect(holding()).toBe(false);
+    expect(cards()).toHaveLength(1);
+  });
+
+  it('stops waiting when the read fails: the lists are still worth drawing', async () => {
+    const read = pending();
+    await mount('me', LAN);
+    await read.fail();
+    expect(holding()).toBe(false);
+  });
+
+  it('gives up waiting after the hold, and not a moment before', async () => {
+    vi.useFakeTimers();
+    try {
+      pending();
+      render(<Page me="me" person={LAN} />);
+      expect(HOLD_MS).toBe(1200);
+      act(() => { vi.advanceTimersByTime(HOLD_MS - 1); });
+      expect(holding()).toBe(true);
+      act(() => { vi.advanceTimersByTime(1); });
+      expect(holding()).toBe(false);
+    } finally { vi.useRealTimers(); }
+  });
+
+  it('waits afresh for the next person’s page', async () => {
+    vi.useFakeTimers();
+    try {
+      pending();
+      const r = render(<Page me="me" person={LAN} />);
+      act(() => { vi.advanceTimersByTime(HOLD_MS); });
+      expect(holding()).toBe(false);
+      r.rerender(<Page me="me" person={{ ...LAN, id: 'minh', handle: 'minh' } as FriendProfile} />);
+      expect(holding()).toBe(true);
+    } finally { vi.useRealTimers(); }
+  });
+
+  it('never waits where nothing is asked — a guest, check-ins off — nor while the page is searched', async () => {
+    pending();
+    await mount(null, LAN);
+    expect(holding()).toBe(false);
+    cleanup();
+    flags.place_checkin = false;
+    await mount('me', LAN);
+    expect(holding()).toBe(false);
+    cleanup();
+    flags.place_checkin = true;
+    await mount('me', LAN, true);
+    expect(holding()).toBe(false);
+  });
+
+  // Not even for the frame it takes "nothing to ask" to come back: a
+  // guest's page must not open on a spinner.
+  it('does not wait on the first frame either, where nothing is asked', () => {
+    render(<Page me={null} person={LAN} />);
+    expect(holding()).toBe(false);
+  });
+
+  it('does not wait again when your own visits are asked again: the cards stay while the new answer comes', async () => {
+    const own = await show('me', ME, [visit('k1', { audience: 'private' })]);
+    expect(holding()).toBe(false);
+    pending();
+    mine.loadedAt = 2;
+    own.rerender(<Page me="me" person={ME} />);
+    await act(async () => { await Promise.resolve(); });
+    expect(holding()).toBe(false);
+    expect(cards()).toHaveLength(1);
+  });
+
+  it('draws a page opened before from what it kept, before the network answers', async () => {
+    await show('me', LAN, [visit('k1', { note: 'Kept.' })]);
+    await act(async () => { await Promise.resolve(); await Promise.resolve(); });
+    cleanup();
+    const read = pending();
+    await mount('me', LAN);
+    await waitFor(() => expect(cards()).toHaveLength(1));
+    expect(holding()).toBe(false);
+    expect(screen.getByTestId('activity-desc').textContent).toBe('Kept.');
+    // And the fresh answer replaces it.
+    await read.answer([]);
+    expect(cards()).toHaveLength(0);
+  });
+
+  it('keeps one reader’s copy of a page from another reader', async () => {
+    await show('me', LAN, [visit('k1')]);
+    await act(async () => { await Promise.resolve(); await Promise.resolve(); });
+    cleanup();
+    pending();
+    await mount('someone-else', LAN);
+    await act(async () => { await Promise.resolve(); await Promise.resolve(); });
+    expect(cards()).toHaveLength(0);
+    expect(holding()).toBe(true);
   });
 });
 
