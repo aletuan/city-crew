@@ -816,6 +816,10 @@ for f in "$ROOT"/supabase/migrations/*_checkin_photos.sql; do
   run "$DB" -f "$f" >/dev/null
 done
 run "$DB" -f "$HERE/checkin_photos_test.sql"
+for f in "$ROOT"/supabase/migrations/*_checkin_photo_orphans.sql; do
+  run "$DB" -f "$f" >/dev/null
+done
+run "$DB" -f "$HERE/checkin_photo_orphans_test.sql"
 
 # A list may be made public from the start (20 Nov 2026). After the daily
 # caps, whose insert policy it rewrites with one clause taken out.
