@@ -38,6 +38,17 @@ chứ không kiểm tên tệp, nên ai cũng dùng được làm hosting miễn
    Giờ chụp không bao giờ hiện, như giờ ghé.
 3. **Thêm ảnh ở bảng check-in**, cả ngay sau khi chạm Check-in lẫn khi
    sửa một lần ghé cũ (`CheckinSheet`). Không có màn hình đăng riêng.
+   **Không giới hạn thời gian** (chủ dự án, 24/11/2026): một lần ghé
+   ba tháng trước vẫn thêm ảnh được. Ảnh lấy từ thư viện, nên không xác
+   minh được nó thuộc lần ghé đó dù thêm ngay hay thêm sau; thời hạn chỉ
+   làm hẹp khoảng hở đó, mà cái giá là 142 lần ghé đã có (của 19 tài
+   khoản, ngày 24/11) mãi không có ảnh. Swarm, app gần nhất về cách dùng
+   check-in, cũng cho thêm ảnh vào check-in cũ; Instagram thì không, vì
+   ở đó một bài là một lần xuất bản. Thêm ảnh không đẩy thẻ lên đầu
+   trang (thẻ xếp theo ngày ghé), và hạn mức ảnh mỗi ngày chặn lạm dụng.
+   Đã cân nhắc và bỏ: 7 ngày sau lần ghé (quy tắc khó hiểu, bỏ rơi lịch
+   sử); chỉ nhận ảnh chụp đúng ngày ghé theo EXIF (sửa được, và ảnh chụp
+   màn hình hay ảnh qua app chat mất thông tin này).
 4. **Ảnh check-in không tự thành ảnh của địa điểm.** Đó là ảnh của người
    dùng, không phải giấy phép cho catalog. Nếu sau này muốn mời người
    dùng tặng ảnh cho địa điểm thì đó là một tính năng khác, có đồng ý
@@ -172,9 +183,8 @@ Mỗi bước một PR, theo thứ tự. Cờ `checkin_photos` tắt suốt cả
 1. **Xuất dữ liệu có kèm chính các tấm ảnh không?** File xuất hiện là
    một JSON tạo trên máy. Kèm link ký (hết hạn sau vài ngày) thì dễ; kèm
    ảnh thật thì phải đổi sang tệp nén. Chốt trước K5.
-2. **Thêm ảnh cho lần ghé cũ có giới hạn thời gian không?** Kế hoạch
-   này cho phép không giới hạn, vì hạn mức ngày đã chặn lạm dụng. Chốt
-   trước K3.
+2. ~~**Thêm ảnh cho lần ghé cũ có giới hạn thời gian không?**~~ Không
+   giới hạn — quyết định 3.
 3. **15 ảnh mỗi ngày và 300 ảnh mỗi tài khoản** là số chọn. Xem lại sau
    hai tuần có dữ liệu.
 4. ~~**Check-in không có giới hạn tổng mỗi ngày.**~~ Đã đặt 50 mỗi
