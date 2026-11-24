@@ -10,78 +10,47 @@
 // in its own script. The chosen row wears the tint and a tick instead
 // (the tick stays: colour alone must never be the whole signal).
 
-import React, { useEffect, useRef } from 'react';
-import { Animated, Modal, Pressable, StyleSheet, Text, View } from 'react-native';
+import React from 'react';
+import { StyleSheet, Text, View } from 'react-native';
 import { Glyph, ICON } from './ui/glyph';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LANGS, useI18n } from '../lib/i18n';
 import { colors, font, radius, space } from '../theme';
-import { PressableScale } from './ui';
-import { useSheetDrag } from './sheetDrag';
+import { PressableScale, Sheet } from './ui';
 
 export function LanguageSwitcherModal({ visible, onClose }: { visible: boolean; onClose: () => void }) {
   const { t, lang, setLang } = useI18n();
-  const insets = useSafeAreaInsets();
-  // The house entrance (SaveSheet's, via PersonSheet): the modal only
-  // fades — the scrim brightens in place — while the sheet alone rises
-  // on a native-driven spring. See CitySwitcher for the longer note.
-  const rise = useRef(new Animated.Value(1)).current;
-  const { drag, handlers } = useSheetDrag(visible, onClose);
-  useEffect(() => {
-    if (!visible) { rise.setValue(1); return; }
-    Animated.spring(rise, { toValue: 0, useNativeDriver: true, speed: 14, bounciness: 3 }).start();
-  }, [visible, rise]);
   return (
-    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose} statusBarTranslucent>
-      <Pressable style={s.backdrop} onPress={onClose} accessibilityLabel={t('Close', 'Đóng', '閉じる', '关闭', '關閉')} />
-      <Animated.View
-        {...handlers}
-        style={[s.sheet, {
-          paddingBottom: 14 + insets.bottom,
-          transform: [{ translateY: rise.interpolate({ inputRange: [0, 1], outputRange: [0, 320] }) }, { translateY: drag }],
-        }]}
-      >
-        <View style={s.handle} />
-        <Text style={s.title}>{t('Choose a language', 'Chọn ngôn ngữ', '言語を選択', '选择语言', '選擇語言')}</Text>
-        {LANGS.map((l, i) => {
-          const active = l.id === lang;
-          return (
-            <View key={l.id}>
-              {i > 0 && <View style={s.sep} />}
-              <PressableScale
-                haptic="selection"
-                contentStyle={[s.row, active && s.rowOn]}
-                accessibilityRole="radio"
-                accessibilityState={{ selected: active }}
-                onPress={() => { setLang(l.id); onClose(); }}
-                testID={`lang-${l.id}`}
-              >
-                <Text style={[s.rowTitle, { flex: 1 }, active && { color: colors.accent }]}>
-                  {l.label}
-                </Text>
-                {active && <Glyph name="checkmark" size={ICON.action} color={colors.accent} />}
-              </PressableScale>
-            </View>
-          );
-        })}
-      </Animated.View>
-    </Modal>
+    <Sheet visible={visible} onClose={onClose} pull="sheet" riseFrom={320} foot={14} style={s.sheet}>
+      <Text style={s.title}>{t('Choose a language', 'Chọn ngôn ngữ', '言語を選択', '选择语言', '選擇語言')}</Text>
+      {LANGS.map((l, i) => {
+        const active = l.id === lang;
+        return (
+          <View key={l.id}>
+            {i > 0 && <View style={s.sep} />}
+            <PressableScale
+              haptic="selection"
+              contentStyle={[s.row, active && s.rowOn]}
+              accessibilityRole="radio"
+              accessibilityState={{ selected: active }}
+              onPress={() => { setLang(l.id); onClose(); }}
+              testID={`lang-${l.id}`}
+            >
+              <Text style={[s.rowTitle, { flex: 1 }, active && { color: colors.accent }]}>
+                {l.label}
+              </Text>
+              {active && <Glyph name="checkmark" size={ICON.action} color={colors.accent} />}
+            </PressableScale>
+          </View>
+        );
+      })}
+    </Sheet>
   );
 }
 
 const s = StyleSheet.create({
-  // SaveSheet's backdrop, so the five sheets dim the room identically.
-  backdrop: { ...StyleSheet.absoluteFill, backgroundColor: 'rgba(6,5,8,0.62)' },
-  sheet: {
-    position: 'absolute', left: 0, right: 0, bottom: 0,
-    backgroundColor: colors.bgElevated,
-    borderTopLeftRadius: radius.card + 6, borderTopRightRadius: radius.card + 6,
-    paddingHorizontal: space.cardPadding, paddingTop: 8,
-  },
-  handle: {
-    alignSelf: 'center', width: 36, height: 4, borderRadius: 2,
-    backgroundColor: colors.borderGlass, marginBottom: 12,
-  },
+  // The settings sheets' inner margin and the 8 above the grabber; the
+  // rest of the chrome is `Sheet`'s.
+  sheet: { paddingHorizontal: space.cardPadding, paddingTop: 8 },
   title: {
     color: colors.text, fontSize: 18, fontWeight: font.semibold,
     marginBottom: 12, paddingHorizontal: 4,

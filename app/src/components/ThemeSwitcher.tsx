@@ -128,7 +128,7 @@
 // tag; one axis crossed, the other kept.
 
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { Alert, Animated, Modal, Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
+import { Alert, ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { Glyph, ICON } from './ui/glyph';
@@ -140,8 +140,7 @@ import { LOOK_DEFS, lookOf, needsRestart, PINNED, type Pinned } from '../lib/loo
 import { orderLooks, parseSeen, popularLooks, SEEN_LOOKS_KEY, serializeSeen, unseenLooks } from '../lib/lookLabels';
 import { Pref, Return, Scheme, useScheme } from '../lib/theme';
 import { colors, font, PALETTES, pillInk, radius, space } from '../theme';
-import { PressableScale } from './ui';
-import { useSheetDrag } from './sheetDrag';
+import { PressableScale, Sheet } from './ui';
 
 const OPTIONS: { id: Pref; icon: keyof typeof Ionicons.glyphMap }[] = [
   // The phone's own mark for "this device" — the same glyph iOS uses in
@@ -369,144 +368,125 @@ export function ThemeSwitcherModal({ visible, onClose, returnTo }: {
   };
   const insets = useSafeAreaInsets();
   const room = Math.max(height - insets.top - insets.bottom - 100, 240);
-  // The house entrance (SaveSheet's, via PersonSheet): the modal only
-  // fades — the scrim brightens in place — while the sheet alone rises
-  // on a native-driven spring. See CitySwitcher for the longer note.
-  // It matters most here of the three: the whole screen repaints behind
-  // this sheet, and the calmer the sheet's own motion, the more that
-  // repaint reads as the event.
-  const rise = useRef(new Animated.Value(1)).current;
-  const { drag, handlers } = useSheetDrag(visible, onClose);
-  useEffect(() => {
-    if (!visible) { rise.setValue(1); return; }
-    Animated.spring(rise, { toValue: 0, useNativeDriver: true, speed: 14, bounciness: 3 }).start();
-  }, [visible, rise]);
   return (
-    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose} onDismiss={relaunch} statusBarTranslucent>
-      <Pressable style={s.backdrop} onPress={onClose} accessibilityLabel={t('Close', 'Đóng', '閉じる', '关闭', '關閉')} testID="theme-close" />
-      <Animated.View
-        style={[s.sheet, {
-          paddingBottom: 14 + insets.bottom,
-          transform: [{ translateY: rise.interpolate({ inputRange: [0, 1], outputRange: [0, 320] }) }, { translateY: drag }],
-        }]}
-      >
-        {/* The pull lives on the handle and title only: below them is a
-            list that scrolls, and keeps its own gesture. */}
-        <View {...handlers} testID="sheet-grab">
-          <View style={s.handle} />
-          <Text style={s.title}>{t('Theme', 'Giao diện', 'テーマ', '主题', '主題')}</Text>
-        </View>
-        <ScrollView style={{ maxHeight: room }} bounces={false} showsVerticalScrollIndicator={false}>
-        {grounds.map((o, i) => {
-          const active = o.id === pref;
-          return (
-            <View key={o.id}>
-              {i > 0 && <View style={s.sep} />}
-              <PressableScale
-                haptic="selection"
-                contentStyle={[s.row, active && s.rowOn]}
-                accessibilityRole="radio"
-                accessibilityState={{ selected: active }}
-                // The sheet stays open — see the note in the header.
-                onPress={() => choose(o.id)}
-                // For the iOS smoke flows, with the tick's own id below;
-                // see `.maestro/README.md`.
-                testID={`theme-${o.id}`}
-              >
-                <Glyph name={o.icon} size={ICON.action} color={active ? colors.accent : colors.textTertiary} />
-                <View style={{ flex: 1 }}>
-                  <Text style={[s.rowTitle, active && { color: colors.accent }]}>
-                    {schemeLabel(o.id, t)}
-                  </Text>
-                  {o.id === 'system' && (
-                    <Text style={s.rowNote}>{systemNow(pref === 'system', scheme, t)}</Text>
-                  )}
-                </View>
-                {active && <Glyph name="checkmark" size={ICON.action} color={colors.accent} testID={`theme-${o.id}-on`} />}
-              </PressableScale>
-            </View>
-          );
-        })}
-        {palettes.length > 0 && (
-          <>
-            <Text style={s.section}>{t('Colours', 'Bảng màu', 'カラー', '颜色', '顏色')}</Text>
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              // Pages settle on the sheet's left edge rather than wherever
-              // momentum died, as Explore's cards settle on the page
-              // margin. The trailing padding is what lets the last page
-              // reach that edge too: without it the strip ends a sliver
-              // short and the last page can never be the one in front.
-              snapToInterval={stride}
-              snapToAlignment="start"
-              decelerationRate="fast"
-              contentContainerStyle={{ gap: PAGE_GAP, paddingRight: PEEK }}
+    <Sheet
+      visible={visible}
+      onClose={onClose}
+      onDismiss={relaunch}
+      backdropTestID="theme-close"
+      // The pull lives on the handle and title only: below them is a
+      // list that scrolls, and keeps its own gesture.
+      pull="head"
+      head={<Text style={s.title}>{t('Theme', 'Giao diện', 'テーマ', '主题', '主題')}</Text>}
+      // The house entrance, `Sheet`'s: the scrim fades, the sheet alone
+      // rises. It matters most here: the whole screen repaints behind this
+      // sheet, and the calmer its own motion, the more that repaint reads
+      // as the event.
+      riseFrom={320}
+      foot={14}
+      style={s.sheet}
+    >
+      <ScrollView style={{ maxHeight: room }} bounces={false} showsVerticalScrollIndicator={false}>
+      {grounds.map((o, i) => {
+        const active = o.id === pref;
+        return (
+          <View key={o.id}>
+            {i > 0 && <View style={s.sep} />}
+            <PressableScale
+              haptic="selection"
+              contentStyle={[s.row, active && s.rowOn]}
+              accessibilityRole="radio"
+              accessibilityState={{ selected: active }}
+              // The sheet stays open — see the note in the header.
+              onPress={() => choose(o.id)}
+              // For the iOS smoke flows, with the tick's own id below;
+              // see `.maestro/README.md`.
+              testID={`theme-${o.id}`}
             >
-              {pages.map((cards, i) => (
-                // A last page of three keeps its empty cell: the cards
-                // are one size on every page, and a stretched card would
-                // be the one card drawn differently.
-                <View key={i} style={[s.grid, { width: pageW }]} testID={`look-page-${i}`}>
-                  {cards.map((o) => {
-                    const active = o.id === pref;
-                    const word = wordOn(o.id as Pinned);
-                    return (
-                      <PressableScale
-                        key={o.id}
-                        haptic="selection"
-                        style={s.cardCell}
-                        contentStyle={[s.card, active && s.rowOn]}
-                        accessibilityRole="radio"
-                        accessibilityState={{ selected: active }}
-                        onPress={() => choose(o.id)}
-                        testID={`theme-${o.id}`}
-                      >
-                        <Swatch look={o.id as Pinned} />
-                        {word && (
-                          <View style={s.word} testID={`theme-${o.id}-${word}`}>
-                            {word === 'popular'
-                              ? <Glyph name="people" size={ICON.tiny} color={pillInk[scheme]} />
-                              : <View style={[s.wordDot, { backgroundColor: pillInk[scheme] }]} testID={`theme-${o.id}-new-dot`} />}
-                            <Text style={[s.wordText, { color: pillInk[scheme] }]}>
-                              {word === 'popular' ? t('Popular', 'Phổ biến', '人気', '热门', '熱門') : t('New', 'Mới', '新着', '新', '新')}
-                            </Text>
-                          </View>
-                        )}
-                        <View style={s.cardLabel}>
-                          <Glyph name={o.icon} size={ICON.text} color={active ? colors.accent : colors.textTertiary} />
-                          <Text style={[s.cardTitle, active && { color: colors.accent }]} numberOfLines={1}>
-                            {schemeLabel(o.id, t)}
+              <Glyph name={o.icon} size={ICON.action} color={active ? colors.accent : colors.textTertiary} />
+              <View style={{ flex: 1 }}>
+                <Text style={[s.rowTitle, active && { color: colors.accent }]}>
+                  {schemeLabel(o.id, t)}
+                </Text>
+                {o.id === 'system' && (
+                  <Text style={s.rowNote}>{systemNow(pref === 'system', scheme, t)}</Text>
+                )}
+              </View>
+              {active && <Glyph name="checkmark" size={ICON.action} color={colors.accent} testID={`theme-${o.id}-on`} />}
+            </PressableScale>
+          </View>
+        );
+      })}
+      {palettes.length > 0 && (
+        <>
+          <Text style={s.section}>{t('Colours', 'Bảng màu', 'カラー', '颜色', '顏色')}</Text>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            // Pages settle on the sheet's left edge rather than wherever
+            // momentum died, as Explore's cards settle on the page
+            // margin. The trailing padding is what lets the last page
+            // reach that edge too: without it the strip ends a sliver
+            // short and the last page can never be the one in front.
+            snapToInterval={stride}
+            snapToAlignment="start"
+            decelerationRate="fast"
+            contentContainerStyle={{ gap: PAGE_GAP, paddingRight: PEEK }}
+          >
+            {pages.map((cards, i) => (
+              // A last page of three keeps its empty cell: the cards
+              // are one size on every page, and a stretched card would
+              // be the one card drawn differently.
+              <View key={i} style={[s.grid, { width: pageW }]} testID={`look-page-${i}`}>
+                {cards.map((o) => {
+                  const active = o.id === pref;
+                  const word = wordOn(o.id as Pinned);
+                  return (
+                    <PressableScale
+                      key={o.id}
+                      haptic="selection"
+                      style={s.cardCell}
+                      contentStyle={[s.card, active && s.rowOn]}
+                      accessibilityRole="radio"
+                      accessibilityState={{ selected: active }}
+                      onPress={() => choose(o.id)}
+                      testID={`theme-${o.id}`}
+                    >
+                      <Swatch look={o.id as Pinned} />
+                      {word && (
+                        <View style={s.word} testID={`theme-${o.id}-${word}`}>
+                          {word === 'popular'
+                            ? <Glyph name="people" size={ICON.tiny} color={pillInk[scheme]} />
+                            : <View style={[s.wordDot, { backgroundColor: pillInk[scheme] }]} testID={`theme-${o.id}-new-dot`} />}
+                          <Text style={[s.wordText, { color: pillInk[scheme] }]}>
+                            {word === 'popular' ? t('Popular', 'Phổ biến', '人気', '热门', '熱門') : t('New', 'Mới', '新着', '新', '新')}
                           </Text>
-                          {active && <Glyph name="checkmark" size={ICON.text} color={colors.accent} testID={`theme-${o.id}-on`} />}
                         </View>
-                      </PressableScale>
-                    );
-                  })}
-                </View>
-              ))}
-            </ScrollView>
-          </>
-        )}
-        </ScrollView>
-      </Animated.View>
-    </Modal>
+                      )}
+                      <View style={s.cardLabel}>
+                        <Glyph name={o.icon} size={ICON.text} color={active ? colors.accent : colors.textTertiary} />
+                        <Text style={[s.cardTitle, active && { color: colors.accent }]} numberOfLines={1}>
+                          {schemeLabel(o.id, t)}
+                        </Text>
+                        {active && <Glyph name="checkmark" size={ICON.text} color={colors.accent} testID={`theme-${o.id}-on`} />}
+                      </View>
+                    </PressableScale>
+                  );
+                })}
+              </View>
+            ))}
+          </ScrollView>
+        </>
+      )}
+      </ScrollView>
+    </Sheet>
   );
 }
 
 const s = StyleSheet.create({
-  // SaveSheet's backdrop, so the five sheets dim the room identically.
-  backdrop: { ...StyleSheet.absoluteFill, backgroundColor: 'rgba(6,5,8,0.62)' },
-  sheet: {
-    position: 'absolute', left: 0, right: 0, bottom: 0,
-    backgroundColor: colors.bgElevated,
-    borderTopLeftRadius: radius.card + 6, borderTopRightRadius: radius.card + 6,
-    paddingHorizontal: space.cardPadding, paddingTop: 8,
-  },
-  handle: {
-    alignSelf: 'center', width: 36, height: 4, borderRadius: 2,
-    backgroundColor: colors.borderGlass, marginBottom: 12,
-  },
+  // The settings sheets' inner margin and the 8 above the grabber; the
+  // rest of the chrome is `Sheet`'s.
+  sheet: { paddingHorizontal: space.cardPadding, paddingTop: 8 },
   title: {
     color: colors.text, fontSize: 18, fontWeight: font.semibold,
     marginBottom: 12, paddingHorizontal: 4,

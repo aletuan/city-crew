@@ -42,8 +42,7 @@
 
 import React, { useEffect, useRef, useState } from 'react';
 import {
-  Animated, Keyboard, Modal, Platform, Pressable, ScrollView, StyleSheet, Text,
-  TextInput, useWindowDimensions, View,
+  Keyboard, Platform, ScrollView, StyleSheet, Text, TextInput, useWindowDimensions, View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Glyph, ICON } from './ui/glyph';
@@ -53,8 +52,7 @@ import { useI18n } from '../lib/i18n';
 import { useFlag } from '../lib/useFlag';
 import { cityBook } from '../lib/cityBook';
 import { colors, font, radius, space } from '../theme';
-import { PressableScale } from './ui';
-import { useSheetDrag } from './sheetDrag';
+import { PressableScale, Sheet } from './ui';
 import { CityRow } from './CityRow';
 
 /** Under this many live places a city is introduced as new — a promise
@@ -101,11 +99,6 @@ export function CitySwitcherModal({ visible, onClose }: { visible: boolean; onCl
     folded: lang !== 'ja',
   });
 
-  // The house entrance (SaveSheet's, via PersonSheet): the modal only
-  // fades — the scrim brightens in place, the way a room dims — while
-  // the sheet alone rises on a native-driven spring. Modal's own
-  // animationType="slide" moved the whole window, scrim included, and
-  // read as a wall climbing the screen.
   // ── the keyboard ──
   //
   // The sheet is pinned to the bottom of the screen, so a keyboard raised
@@ -130,13 +123,8 @@ export function CitySwitcherModal({ visible, onClose }: { visible: boolean; onCl
     return () => { up.remove(); down.remove(); };
   }, []);
 
-  const rise = useRef(new Animated.Value(1)).current;
-  const { drag, handlers } = useSheetDrag(visible, onClose);
-  useEffect(() => {
-    if (!visible) { rise.setValue(1); return; }
-    setQuery('');
-    Animated.spring(rise, { toValue: 0, useNativeDriver: true, speed: 14, bounciness: 3 }).start();
-  }, [visible, rise]);
+  // Each opening starts from the whole list, not the last search.
+  useEffect(() => { if (visible) setQuery(''); }, [visible]);
 
   const locate = async () => {
     if (locating) return;
@@ -174,111 +162,97 @@ export function CitySwitcherModal({ visible, onClose }: { visible: boolean; onCl
   };
 
   return (
-    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose} statusBarTranslucent>
-      <Pressable style={s.backdrop} onPress={onClose} accessibilityLabel={t('Close', 'Đóng', '閉じる', '关闭', '關閉')} />
-      <Animated.View
-        testID="city-sheet"
-        style={[s.sheet, {
-          // Stands on the keyboard when there is one. The home-indicator
-          // inset goes with it: that strip is under the keyboard now, and
-          // paying for it twice leaves a band of empty sheet above the keys.
-          bottom: kb,
-          paddingBottom: 14 + (kb ? 0 : insets.bottom),
-          // Lifted, the sheet has less room, and a sheet taller than what
-          // is left would push its own rows off the top of the screen.
-          maxHeight: (winH - kb) * 0.92,
-          transform: [{ translateY: rise.interpolate({ inputRange: [0, 1], outputRange: [0, 360] }) }, { translateY: drag }],
-        }]}
+    <Sheet
+      visible={visible}
+      onClose={onClose}
+      testID="city-sheet"
+      // The pull lives on the handle and title only: below them is a
+      // list that scrolls, and keeps its own gesture.
+      pull="head"
+      head={<Text style={s.title}>{t('Choose a city', 'Chọn thành phố', '都市を選択', '选择城市', '選擇城市')}</Text>}
+      style={[s.sheet, {
+        // Stands on the keyboard when there is one. The home-indicator
+        // inset goes with it: that strip is under the keyboard now, and
+        // paying for it twice leaves a band of empty sheet above the keys.
+        bottom: kb,
+        paddingBottom: 14 + (kb ? 0 : insets.bottom),
+        // Lifted, the sheet has less room, and a sheet taller than what
+        // is left would push its own rows off the top of the screen.
+        maxHeight: (winH - kb) * 0.92,
+      }]}
+    >
+      <View style={s.search}>
+        <Glyph name="search-outline" size={ICON.action} color={colors.textTertiary} />
+        <TextInput
+          style={s.searchInput}
+          value={query}
+          onChangeText={setQuery}
+          placeholder={t('Search cities…', 'Tìm thành phố…', '都市を検索…', '搜索城市…', '搜尋城市…')}
+          placeholderTextColor={colors.textTertiary}
+          autoCorrect={false}
+          autoCapitalize="none"
+          returnKeyType="search"
+          accessibilityLabel={t('Search cities', 'Tìm thành phố', '都市を検索', '搜索城市', '搜尋城市')}
+          testID="city-search"
+        />
+      </View>
+
+      <PressableScale haptic="selection" contentStyle={s.locWell} onPress={locate}>
+        <Glyph name="navigate-outline" size={ICON.action} color={colors.accent} />
+        <View style={{ flex: 1 }}>
+          <Text style={s.rowTitle}>
+            {locating ? t('Locating…', 'Đang định vị…', '位置情報を取得中…', '定位中…', '定位中…') : t('Use my location', 'Dùng vị trí của tôi', '現在地を使う', '使用我的位置', '使用我的位置')}
+          </Text>
+          <Text style={s.rowSub}>
+            {mode === 'auto'
+              ? (here
+                ? t(`On · you're in ${here}`, `Đang bật · đang ở ${here}`, `オン · ${here}にいます`, `已开启 · 你在${here}`, `已開啟 · 你在${here}`)
+                : t('On · nearest city is selected for you', 'Đang bật · chọn thành phố gần bạn nhất', 'オン · 最寄りの都市を自動選択', '已开启 · 自动选择最近的城市', '已開啟 · 自動選擇最近的城市'))
+              : t('Currently picking manually', 'Bạn đang tự chọn', '現在は手動で選択中', '当前为手动选择', '目前為手動選擇')}
+          </Text>
+        </View>
+      </PressableScale>
+      {note ? <Text style={s.note}>{note}</Text> : null}
+
+      {/* Scrolls, and keeps taps while the keyboard is up: without
+          `keyboardShouldPersistTaps` the first tap on a row only
+          dismisses the keyboard, so choosing a city you have just
+          searched for takes two taps and feels broken. */}
+      <ScrollView
+        style={s.list}
+        keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
       >
-        {/* The pull lives on the handle and title only: below them is a
-            list that scrolls, and keeps its own gesture. */}
-        <View {...handlers} testID="sheet-grab">
-          <View style={s.handle} />
-          <Text style={s.title}>{t('Choose a city', 'Chọn thành phố', '都市を選択', '选择城市', '選擇城市')}</Text>
-        </View>
-
-        <View style={s.search}>
-          <Glyph name="search-outline" size={ICON.action} color={colors.textTertiary} />
-          <TextInput
-            style={s.searchInput}
-            value={query}
-            onChangeText={setQuery}
-            placeholder={t('Search cities…', 'Tìm thành phố…', '都市を検索…', '搜索城市…', '搜尋城市…')}
-            placeholderTextColor={colors.textTertiary}
-            autoCorrect={false}
-            autoCapitalize="none"
-            returnKeyType="search"
-            accessibilityLabel={t('Search cities', 'Tìm thành phố', '都市を検索', '搜索城市', '搜尋城市')}
-            testID="city-search"
-          />
-        </View>
-
-        <PressableScale haptic="selection" contentStyle={s.locWell} onPress={locate}>
-          <Glyph name="navigate-outline" size={ICON.action} color={colors.accent} />
-          <View style={{ flex: 1 }}>
-            <Text style={s.rowTitle}>
-              {locating ? t('Locating…', 'Đang định vị…', '位置情報を取得中…', '定位中…', '定位中…') : t('Use my location', 'Dùng vị trí của tôi', '現在地を使う', '使用我的位置', '使用我的位置')}
-            </Text>
-            <Text style={s.rowSub}>
-              {mode === 'auto'
-                ? (here
-                  ? t(`On · you're in ${here}`, `Đang bật · đang ở ${here}`, `オン · ${here}にいます`, `已开启 · 你在${here}`, `已開啟 · 你在${here}`)
-                  : t('On · nearest city is selected for you', 'Đang bật · chọn thành phố gần bạn nhất', 'オン · 最寄りの都市を自動選択', '已开启 · 自动选择最近的城市', '已開啟 · 自動選擇最近的城市'))
-                : t('Currently picking manually', 'Bạn đang tự chọn', '現在は手動で選択中', '当前为手动选择', '目前為手動選擇')}
-            </Text>
-          </View>
-        </PressableScale>
-        {note ? <Text style={s.note}>{note}</Text> : null}
-
-        {/* Scrolls, and keeps taps while the keyboard is up: without
-            `keyboardShouldPersistTaps` the first tap on a row only
-            dismisses the keyboard, so choosing a city you have just
-            searched for takes two taps and feels broken. */}
-        <ScrollView
-          style={s.list}
-          keyboardShouldPersistTaps="handled"
-          showsVerticalScrollIndicator={false}
-        >
-          {book.recent.length > 0 && (
-            <>
-              <Text style={s.section} accessibilityRole="header">{t('Recent', 'Gần đây', '最近', '最近', '最近')}</Text>
-              {book.recent.map((c, i) => cityRow(c, `city-recent-${i}`, i > 0))}
-            </>
-          )}
-          {/* Headed only beside a recent section, and only over something:
-              alone, it is the list and needs no name; with every city
-              already recent, it would name nothing. */}
-          {book.recent.length > 0 && book.others.length > 0 && (
-            <Text style={[s.section, s.sectionNext]} accessibilityRole="header">
-              {t('Other cities', 'Thành phố khác', 'その他の都市', '其他城市', '其他城市')}
-            </Text>
-          )}
-          {book.others.map((c, i) => cityRow(c, `city-row-${i}`, i > 0))}
-          {/* Only a search can come back empty-handed. */}
-          {query.trim() !== '' && book.others.length === 0 && (
-            <Text style={s.empty}>
-              {t('No city by that name', 'Chưa có thành phố này', 'その名前の都市はありません', '没有这个城市', '沒有這個城市')}
-            </Text>
-          )}
-        </ScrollView>
-      </Animated.View>
-    </Modal>
+        {book.recent.length > 0 && (
+          <>
+            <Text style={s.section} accessibilityRole="header">{t('Recent', 'Gần đây', '最近', '最近', '最近')}</Text>
+            {book.recent.map((c, i) => cityRow(c, `city-recent-${i}`, i > 0))}
+          </>
+        )}
+        {/* Headed only beside a recent section, and only over something:
+            alone, it is the list and needs no name; with every city
+            already recent, it would name nothing. */}
+        {book.recent.length > 0 && book.others.length > 0 && (
+          <Text style={[s.section, s.sectionNext]} accessibilityRole="header">
+            {t('Other cities', 'Thành phố khác', 'その他の都市', '其他城市', '其他城市')}
+          </Text>
+        )}
+        {book.others.map((c, i) => cityRow(c, `city-row-${i}`, i > 0))}
+        {/* Only a search can come back empty-handed. */}
+        {query.trim() !== '' && book.others.length === 0 && (
+          <Text style={s.empty}>
+            {t('No city by that name', 'Chưa có thành phố này', 'その名前の都市はありません', '没有这个城市', '沒有這個城市')}
+          </Text>
+        )}
+      </ScrollView>
+    </Sheet>
   );
 }
 
 const s = StyleSheet.create({
-  // SaveSheet's backdrop, so the five sheets dim the room identically.
-  backdrop: { ...StyleSheet.absoluteFill, backgroundColor: 'rgba(6,5,8,0.62)' },
-  sheet: {
-    position: 'absolute', left: 0, right: 0, bottom: 0,
-    backgroundColor: colors.bgElevated,
-    borderTopLeftRadius: radius.card + 6, borderTopRightRadius: radius.card + 6,
-    paddingHorizontal: space.cardPadding, paddingTop: 8,
-  },
-  handle: {
-    alignSelf: 'center', width: 36, height: 4, borderRadius: 2,
-    backgroundColor: colors.borderGlass, marginBottom: 12,
-  },
+  // The settings sheets' inner margin and the 8 above the grabber; the
+  // rest of the chrome is `Sheet`'s.
+  sheet: { paddingHorizontal: space.cardPadding, paddingTop: 8 },
   title: {
     color: colors.text, fontSize: 18, fontWeight: font.semibold,
     marginBottom: 12, paddingHorizontal: 4,
