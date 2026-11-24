@@ -57,6 +57,17 @@
 // press every button has. Nothing else: no confetti, and the badges and
 // the banner a visit can earn are where they were. Reduce Motion takes
 // the rise and the tick's landing both and leaves the dim's fade.
+//
+// ── photos ──
+//
+// Up to three, under the note, behind `checkin_photos` (K3 of
+// `docs/checkin-photos-plan.md`). They do not keep the sheet's rules
+// for the words: each goes up as it is picked and away as its removal
+// is confirmed (`useVisitPhotos` says why), so a tap outside an old
+// visit's sheet still leaves the note as it was and keeps the photos.
+// Every way out waits for one still going, with the button busy, and
+// reports the visit changed if a photo did — the page below is asked
+// again either way.
 
 import React, { useEffect, useRef, useState } from 'react';
 import { Alert, Animated, Modal, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
@@ -67,9 +78,12 @@ import { saveCheckin } from '../lib/data';
 import { numericDate } from '../lib/format';
 import { useI18n } from '../lib/i18n';
 import { SEEN_GLYPH } from '../lib/shares';
+import { useFlag } from '../lib/useFlag';
 import { colors, display, font, space } from '../theme';
 import { useRide } from './CommentQuick';
 import Segmented from './Segmented';
+import { useVisitPhotos } from './useVisitPhotos';
+import VisitPhotos, { TILE } from './VisitPhotos';
 import { GradientCta, useReducedMotion } from './ui';
 import { Glyph, ICON } from './ui/glyph';
 
@@ -96,6 +110,8 @@ const COUNT_FROM = NOTE_MAX - 40;
  *  (head 44, field 96, control and gloss 74, button 52, the gaps and the
  *  insets), so it comes from under the screen's foot and not from mid-air. */
 const RISE = 360;
+/** The photo row adds its tile and the sheet's gap of 14 to that height. */
+const PHOTOS_RISE = TILE + 14;
 
 export default function CheckinSheet({ visit, onClose, withAudience = false }: {
   visit: SheetVisit | null;
@@ -127,6 +143,14 @@ function Body({ visit, onClose, withAudience, backRef }: {
   const [text, setText] = useState(visit.note ?? '');
   const [audience, setAudience] = useState<Audience>(visit.audience);
   const [busy, setBusy] = useState(false);
+  const photosOn = useFlag('checkin_photos');
+  const photos = useVisitPhotos(visit.id, photosOn, !visit.fresh);
+  // A photo still going up holds every way out, the button busy meanwhile.
+  const waitPhotos = async () => {
+    if (!photos.sending) return;
+    setBusy(true);
+    await photos.settled();
+  };
 
   // 1 → 0: the sheet up from under the foot, and the tick from small.
   const rise = useRef(new Animated.Value(1)).current;
@@ -137,6 +161,7 @@ function Body({ visit, onClose, withAudience, backRef }: {
 
   const keep = async () => {
     if (busy) return;
+    await waitPhotos();
     const note = cleanNote(text);
     // What there is to write. The words, when they changed. Who sees it,
     // when that is asked and either the answer changed or the visit is
@@ -144,7 +169,7 @@ function Body({ visit, onClose, withAudience, backRef }: {
     // friend see the visit at all, so it is written even unchanged.
     const said = note !== visit.note;
     const answered = withAudience && (visit.fresh || audience !== visit.audience);
-    if (!said && !answered) { onClose(false); return; }
+    if (!said && !answered) { onClose(photos.changed()); return; }
     setBusy(true);
     try {
       await saveCheckin(visit.id, answered ? { note, audience } : { note });
@@ -158,8 +183,13 @@ function Body({ visit, onClose, withAudience, backRef }: {
     }
   };
   // The ways out that are not the button — see the header.
-  const leave = () => { if (visit.fresh) void keep(); else onClose(false); };
-  useEffect(() => { backRef.current = leave; });
+  const leave = async () => {
+    if (visit.fresh) return keep();
+    if (busy) return;
+    await waitPhotos();
+    onClose(photos.changed());
+  };
+  useEffect(() => { backRef.current = () => { void leave(); }; });
 
   const gloss = audience === 'friends'
     ? t('Your friends see the place, the day and your note.', 'Bạn bè thấy địa điểm, ngày ghé và ghi chú của bạn.', '友達には場所・日付・メモが表示されます。', '好友可以看到地点、日期和你的备注。', '好友可以看到地點、日期和你的備註。')
@@ -169,7 +199,7 @@ function Body({ visit, onClose, withAudience, backRef }: {
     <>
       <Pressable
         style={s.backdrop}
-        onPress={leave}
+        onPress={() => { void leave(); }}
         accessibilityLabel={t('Close', 'Đóng', '閉じる', '关闭', '關閉')}
         testID="checkin-sheet-close"
       />
@@ -178,7 +208,7 @@ function Body({ visit, onClose, withAudience, backRef }: {
           <Animated.View
             style={[s.sheet, {
               paddingBottom: insets.bottom + 16,
-              transform: [{ translateY: rise.interpolate({ inputRange: [0, 1], outputRange: [0, RISE] }) }],
+              transform: [{ translateY: rise.interpolate({ inputRange: [0, 1], outputRange: [0, photosOn ? RISE + PHOTOS_RISE : RISE] }) }],
             }]}
             testID="checkin-sheet"
           >
@@ -223,6 +253,8 @@ function Body({ visit, onClose, withAudience, backRef }: {
                 <Text style={s.count} testID="checkin-sheet-count">{`${text.length}/${NOTE_MAX}`}</Text>
               ) : null}
             </View>
+
+            {photosOn ? <VisitPhotos photos={photos} /> : null}
 
             {withAudience ? (
               <View style={s.seen}>

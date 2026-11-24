@@ -40,6 +40,7 @@ export * from './people';
 export * from './guide';
 export * from './gallery';
 export * from './checkins';
+export * from './checkinPhotos';
 export * from './invites';
 export * from './shares';
 export * from './comments';

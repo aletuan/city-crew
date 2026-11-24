@@ -329,3 +329,51 @@ export type PersonCheckin = {
   likes: number;
   liked: boolean;
 };
+
+// ── photos on a visit (K3 of docs/checkin-photos-plan.md) ──
+
+/** How many photos a visit may carry: the owner's number (24 Nov 2026),
+ *  held by the database too (`checkin_photo_slot`). */
+export const PHOTOS_PER_VISIT = 3;
+
+/** A photo of the reader's own visit, as `checkin_photos` hands it back. */
+export type CheckinPhoto = {
+  id: string;
+  path: string;
+  width: number;
+  height: number;
+  /** Taken down by the desk: drawn as a gap its owner may clear, never as
+   *  the picture (the bucket will not sign it). */
+  hidden?: boolean;
+};
+
+/**
+ * Why a photo did not go up, in the words the sheet has for it.
+ *
+ *  · `full`, `day`, `account` — `checkin_photo_slot`'s three caps;
+ *  · `image` — `_shared/jpeg.ts` or the size checks said it is not a
+ *    picture this can store;
+ *  · `signed_out` — the session went;
+ *  · `other` — anything else, the network first among them: the one kind
+ *    worth trying again as it is.
+ */
+export type PhotoRefusal = 'full' | 'day' | 'account' | 'image' | 'signed_out' | 'other';
+
+const IMAGE_CODES = new Set(['not_jpeg', 'malformed', 'truncated', 'no_image', 'too_large', 'too_big']);
+
+export function photoRefusalOf(status: number | undefined, code: string | undefined): PhotoRefusal {
+  if (code === 'photo:full') return 'full';
+  if (code === 'photo:day') return 'day';
+  if (code === 'photo:account') return 'account';
+  if (code && IMAGE_CODES.has(code)) return 'image';
+  if (status === 401) return 'signed_out';
+  return 'other';
+}
+
+/** A refusal carried as a throw, so a caller can tell one from another. */
+export class PhotoError extends Error {
+  constructor(readonly why: PhotoRefusal) {
+    super(why);
+    this.name = 'PhotoError';
+  }
+}

@@ -10,6 +10,7 @@ import { Alert, Animated } from 'react-native';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { act, cleanup, fireEvent, propsWhere, render, screen, viewStyleOf } from '../uitest/render';
 import { NOTE_MAX } from '../lib/checkin';
+import { appFlags } from '../lib/flags';
 
 const data = vi.hoisted(() => ({
   saveCheckin: vi.fn(async (_id: string, _said: { note: string | null; audience?: string }) => {}),
@@ -22,6 +23,27 @@ const i18n = vi.hoisted(() => ({ lang: 'en' }));
 vi.mock('../lib/i18n', () => ({ useI18n: () => ({ lang: i18n.lang, t: (en: string, vi?: string) => (i18n.lang === 'vi' ? vi : en) ?? en }) }));
 const motion = vi.hoisted(() => ({ still: false }));
 vi.mock('./ui', async (orig) => ({ ...(await orig<Record<string, unknown>>()), useReducedMotion: () => motion.still }));
+// The photos' own behaviour is `VisitPhotos.ui.test.tsx`'s; here they are a
+// hook the sheet waits on and asks whether anything changed.
+const pics = vi.hoisted(() => ({
+  args: [] as unknown[],
+  sending: false,
+  changed: false,
+  settle: () => {},
+  wait: null as Promise<void> | null,
+}));
+vi.mock('./useVisitPhotos', () => ({
+  useVisitPhotos: (...args: unknown[]) => {
+    pics.args = args;
+    return {
+      tiles: [], room: 3, sending: pics.sending,
+      add: async () => {}, retry: () => {}, remove: () => {},
+      // One wait for everyone who asks, as the hook's queue is.
+      settled: () => (pics.wait ??= new Promise<void>((r) => { pics.settle = () => { pics.sending = false; r(); }; })),
+      changed: () => pics.changed,
+    };
+  },
+}));
 
 import CheckinSheet, { type SheetVisit } from './CheckinSheet';
 
@@ -41,6 +63,8 @@ beforeEach(() => {
   data.saveCheckin.mockImplementation(async () => {});
   i18n.lang = 'en';
   motion.still = false;
+  Object.assign(pics, { args: [], sending: false, changed: false, wait: null });
+  appFlags.set('checkin_photos', false);
 });
 afterEach(() => { cleanup(); });
 
@@ -262,5 +286,84 @@ describe('CheckinSheet', () => {
   it('keeps the home indicator’s margin under its button', () => {
     show(FRESH);
     expect(viewStyleOf(screen.getByTestId('checkin-sheet')).paddingBottom).toBe(34 + 16);
+  });
+
+  // ── photos ──
+
+  describe('photos', () => {
+    const on = () => appFlags.set('checkin_photos', true);
+    const tap = (id: string) => act(async () => { fireEvent.click(screen.getByTestId(id)); for (let i = 0; i < 6; i += 1) await Promise.resolve(); });
+    const rise = () => {
+      const t = propsWhere((p) => p.testID === 'checkin-sheet').style as unknown as unknown[];
+      const flat = (t.flat(3) as { transform?: { translateY: { __getValue: () => number } }[] }[]).find((x) => x?.transform);
+      return flat!.transform![0].translateY.__getValue();
+    };
+
+    // Held where it starts, so the interpolation reads the rise's height.
+    const hold = () => vi.spyOn(Animated, 'spring').mockReturnValue({ start: () => {} } as never);
+
+    it('draws no photo row with the switch off, and asks for none', () => {
+      const spring = hold();
+      show(OLD);
+      expect(screen.queryByTestId('visit-photos')).toBeNull();
+      expect(pics.args).toEqual(['k1', false, true]);
+      expect(rise()).toBe(360);
+      spring.mockRestore();
+    });
+
+    it('draws the row under the note with the switch on, asking an old visit for its photos', () => {
+      on();
+      const spring = hold();
+      show(OLD);
+      expect(screen.getByTestId('visit-photos')).toBeTruthy();
+      expect(pics.args).toEqual(['k1', true, true]);
+      // Rises from its own, taller height: the tile and a gap more.
+      expect(rise()).toBe(360 + 72 + 14);
+      cleanup();
+      // A fresh visit has none to ask for.
+      show(FRESH);
+      expect(pics.args).toEqual(['k9', true, false]);
+      spring.mockRestore();
+    });
+
+    it('reports an old visit changed when a photo went up, whichever way it is closed', async () => {
+      on();
+      pics.changed = true;
+      show(OLD);
+      await tap('checkin-sheet-close');
+      expect(onClose).toHaveBeenLastCalledWith(true);
+      cleanup(); onClose.mockClear();
+      show(OLD);
+      await tap('checkin-sheet-save');
+      expect(onClose).toHaveBeenLastCalledWith(true);
+      expect(data.saveCheckin).not.toHaveBeenCalled();
+    });
+
+    it('waits for a photo still going up before an old visit closes, busy meanwhile', async () => {
+      on();
+      pics.sending = true;
+      show(OLD);
+      await tap('checkin-sheet-close');
+      expect(onClose).not.toHaveBeenCalled();
+      expect(screen.getByTestId('checkin-sheet-save').getAttribute('aria-busy')).toBe('true');
+      // A second tap while waiting does not close twice.
+      await tap('checkin-sheet-close');
+      pics.changed = true;
+      await act(async () => { pics.settle(); for (let i = 0; i < 6; i += 1) await Promise.resolve(); });
+      expect(onClose).toHaveBeenCalledTimes(1);
+      expect(onClose).toHaveBeenCalledWith(true);
+    });
+
+    it('waits for a photo before a fresh visit writes its note', async () => {
+      on();
+      pics.sending = true;
+      show(FRESH);
+      type('Quiet upstairs.');
+      await tap('checkin-sheet-save');
+      expect(data.saveCheckin).not.toHaveBeenCalled();
+      await act(async () => { pics.settle(); for (let i = 0; i < 6; i += 1) await Promise.resolve(); });
+      expect(data.saveCheckin).toHaveBeenCalledWith('k9', { note: 'Quiet upstairs.' });
+      expect(onClose).toHaveBeenCalledWith(true, false);
+    });
   });
 });

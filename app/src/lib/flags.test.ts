@@ -43,6 +43,7 @@ describe('flagsStore', () => {
       place_checkin: false,
       city_place_counts: false,
       comments: false,
+      checkin_photos: false,
     });
   });
 

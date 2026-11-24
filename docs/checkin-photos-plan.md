@@ -184,8 +184,17 @@ Mỗi bước một PR, theo thứ tự. Cờ `checkin_photos` tắt suốt cả
   `checkin_photos_usage` (`20261125000000_checkin_photo_orphans.sql`) và
   `cron.sql` chạy mỗi ngày (áp tay, như các cron khác), `delete-account`
   xoá ảnh check-in theo dòng trước khi xoá tài khoản.
-- **K3. Thêm ảnh trong `CheckinSheet`:** tối đa ba ô, thêm, bỏ, tiến độ
-  tải, lỗi từng ảnh. Sau cờ.
+- **K3. Thêm ảnh trong `CheckinSheet` — xong (25/11/2026).** Tối đa ba
+  ô, thêm, bỏ, tiến độ tải, lỗi từng ảnh. Sau cờ `checkin_photos`.
+  Đã làm: `useVisitPhotos` (ảnh lên ngay khi chọn và đi ngay khi xác nhận
+  bỏ, không chờ nút Xong; lên lần lượt từng ảnh, thu nhỏ trên máy như ảnh
+  của local guide — 1200px, 0,74; hạn mức và tệp không phải ảnh nói một
+  lần rồi bỏ ô, lỗi mạng giữ ô để chạm thử lại với cùng dữ liệu),
+  `VisitPhotos` (ô 72, co lại trên iPhone 320pt — 61), `lib/data/checkinPhotos`
+  (đọc dòng, link ký một giờ, gọi function, đọc mã từ chối). Mọi lối ra
+  khỏi sheet chờ ảnh đang lên, nút bận trong lúc chờ, và báo đã đổi nếu
+  có ảnh lên hay đi — trang bên dưới tải lại. `prune-checkin-photos`
+  chạy mỗi ngày từ bước này.
 - **K4. Hiển thị:** thẻ trên trang cá nhân, danh sách check-in, trình
   xem ảnh, link ký và cache. Sau cờ.
 - **K5. Kiểm duyệt và pháp lý:** báo cáo, ẩn ở Data Desk, khoá tài
