@@ -8,16 +8,12 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { SectionList, Text, type SectionListProps, useWindowDimensions, View } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
-import { Glyph, ICON } from '../components/ui/glyph';
 import { useTourAnchor } from '../components/SignupTour';
 import {
   AmbientWarmth,
-  Empty,
   fireHaptic,
-  PressableScale,
   Screen,
   Skeleton,
-  TABS_ROW_GAP,
   useTabBarClearance,
 } from '../components/ui';
 import { useTabBarDucked } from '../components/tabBarDuck';
@@ -27,17 +23,16 @@ import { useSession } from '../lib/auth';
 import { useCityList, useCurrentCity } from '../lib/city';
 import { cityShortById } from '../lib/cityName';
 import {
-  listsWord, pairUp, placesOf as placesCount, type ShelfRow,
+  pairUp, placesOf as placesCount,
 } from '../lib/collectionShelf';
 import ActionSheet from '../components/ActionSheet';
-import { CityRow } from '../components/CityRow';
 import {
   Collection, coverUriOf, fetchProfilesById, type FriendProfile, membersOf, useMyListShares, useSharedWithMe,
 } from '../lib/data';
 import { sharesByList, visibilityOf as seenOf } from '../lib/shares';
 import { useCollections, useLikes, usePlaces } from '../lib/catalog';
 import { useListRank } from '../lib/tasteProfile';
-import { leadingCity, mosaicGroups, mosaicRows, type MosaicRow } from '../lib/collectionMosaic';
+import { leadingCity, mosaicGroups, mosaicRows } from '../lib/collectionMosaic';
 import { derivedKinds } from '../lib/collectionKinds';
 import { useCoverOpen } from '../lib/useCoverOpen';
 import { oneOf, useStored } from '../lib/stored';
@@ -45,35 +40,24 @@ import { useMyLists, useSaveActions } from '../lib/save';
 import { useI18n } from '../lib/i18n';
 import { classifyLoadFail } from '../lib/loadfail';
 import { LoadFailBanner, LoadFailEmpty } from '../components/loadFail';
-import { colors, space } from '../theme';
+import { space } from '../theme';
 import type { Nav } from '../nav';
-import { GuestNotice, FirstCollection, CommunityEmpty } from './collections/empties';
-import { CollectionTile, MosaicCard, type ShelfKit } from './collections/cards';
+import { GuestNotice } from './collections/empties';
+import type { ShelfKit } from './collections/cards';
+import { CityHead, JumpRows, SharedHead } from './collections/cityHeads';
+import { type ListRow, type Section, ShelfFoot, ShelfRowView } from './collections/rows';
 import { ShelfTop, TabsRow, type ShelfHead } from './collections/header';
 import { useShelfSearch } from './collections/useShelfSearch';
 import { useShelfScroll } from './collections/useShelfScroll';
 import { useShelfSift } from './collections/useShelfSift';
 import { s } from './collections/styles';
 
-type ListRow = ShelfRow<Collection> | MosaicRow<Collection>;
 
 /** Yours keeps its two layouts; Community adds the editorial Mosaic. */
 // Community's two looks, Mosaic first (owner, 5 Nov 2026). The list view
 // went on 7 Nov 2026, from both tabs: Yours is the grid alone, with no
 // switch, and a phone that remembered 'row' falls back to Mosaic here.
 const COMMUNITY_VIEWS = oneOf('tile', 'mosaic');
-
-/** A section of the list: yours, the lists friends shared with you, or
- *  the community's, with its rows. The rows are named here, not only by
- *  the list: React Native 0.88 types a section handed back to a render
- *  prop as possibly the extra fields alone. */
-type Section = {
-  own: boolean;
-  data: ListRow[];
-  city?: { id: string | null; count: number };
-  /** The lists friends shared with you, and how many. */
-  shared?: { count: number };
-};
 
 /**
  * A row's key — and a section's, because the list asks for both.
@@ -451,72 +435,6 @@ export default function CollectionsScreen({ navigation, route }: {
   const cityWord = (id: string | null) => (id
     ? cityName(id)
     : t('Elsewhere', 'Nơi khác', 'その他の街', '其他城市', '其他城市'));
-  // The sheet's rows are Explore's city rows (owner, 7 Nov 2026): it was
-  // a menu of acts — a pin on every row saying the same thing six times,
-  // "12 collections" under each name, a tick — beside an app whose other
-  // city list is names on the left and figures in a column on the right,
-  // the one on screen in the tint. "Elsewhere" goes last, under a rule,
-  // and names the cities it gathers: a reader after Hội An could not know
-  // to look in it.
-  //
-  // No figures (owner, the same day): the block's heading and the pinned
-  // bar already say "12 collections", and nobody picks a city to jump to
-  // by how many lists it holds.
-  //
-  // Rejected, on the owner's question: Explore's "Use my location" and
-  // "Recent". This sheet is a jump within the shelf, not the app's city —
-  // nothing chosen here is kept — and the reader's own city already
-  // leads it (`mosaicGroups`' `home`), so "my location" would repeat the
-  // first row, or else become a third place to set a city, which the
-  // 6 Nov note above ruled out. "Recent" earns its room in a list of
-  // dozens; here five or six rows are read at a glance, and a recent
-  // section would repeat them and make the sheet longer than its list.
-  const jumpRows = (groups ?? []).map((g, i) => {
-    const there = g.city == null;
-    return (
-      <CityRow
-        key={g.city ?? 'elsewhere'}
-        title={cityWord(g.city)}
-        sub={there && g.within?.length ? g.within.map(cityName).join(' · ') : null}
-        active={atCity ? atCity.id === g.city : i === 0}
-        divided={i > 0}
-        onPress={() => jumpTo(i)}
-        testID={`collections-jump-${g.city ?? 'elsewhere'}`}
-      />
-    );
-  });
-  const cityHead = (city: { id: string | null; count: number }, pinnedCopy: boolean) => (
-    <PressableScale
-      onPress={() => setJumpOpen(true)}
-      contentStyle={pinnedCopy ? [s.cityBar, !session && s.cityBarAlone] : s.cityHead}
-      // Under the tabs the bar takes their 14 below for its reach up, so
-      // the target is 14 + the line + 12 — past 44 — with nothing of the
-      // tabs' own under it.
-      hitSlop={pinnedCopy && session ? { top: TABS_ROW_GAP } : undefined}
-      testID={pinnedCopy ? 'collections-city-bar' : `collection-mosaic-city-${city.id ?? 'elsewhere'}`}
-      accessibilityRole="button"
-      accessibilityLabel={`${cityWord(city.id)}, ${listsWord(city.count, t)}`}
-      accessibilityHint={t('Go to another city', 'Đến thành phố khác', '別の都市へ移動', '前往其他城市', '前往其他城市')}
-    >
-      <Text style={s.cityHeadName} numberOfLines={1}>{cityWord(city.id)}</Text>
-      <Glyph name="chevron-down" size={ICON.text} color={colors.textSecondary} style={s.cityHeadChevron} />
-      <Text style={s.cityHeadCount}>{listsWord(city.count, t)}</Text>
-    </PressableScale>
-  );
-
-  // The heading over the lists friends shared with you (see `sections`):
-  // a city block's heading in size and place, so Yours reads as one shelf
-  // in two parts, but no ▾ — there is nowhere to jump to — and so not a
-  // button. The count is lists, as a city's is.
-  const sharedHead = (count: number) => (
-    <View style={s.cityHead} testID="collections-shared-head">
-      <Text style={s.cityHeadName} numberOfLines={1} accessibilityRole="header">
-        {t('Shared with you', 'Được chia sẻ với bạn', 'あなたと共有', '与你共享', '與你共享')}
-      </Text>
-      <Text style={s.cityHeadCount}>{listsWord(count, t)}</Text>
-    </View>
-  );
-
   // Not while the panel is up: the box it would focus is already open.
   const dock = useDockOffer(ducked && deep && !panel && !holding && !(pinned && headerExpanded), navigation);
   // The dock's search: the box, at the top of the list, focused — which
@@ -622,42 +540,13 @@ export default function CollectionsScreen({ navigation, route }: {
                 <GuestNotice navigation={navigation} />
               </>
             )}
-            renderItem={({ item, section }) => {
-              if (item.kind === 'mosaic') {
-                const width = winW - space.page * 2;
-                return (
-                  <View style={s.gridRow} testID={`collection-mosaic-row-${item.layout}`}>
-                    {item.layout === 'feature'
-                      ? <MosaicCard entry={item.items[0]} width={width} height={Math.round(gcardW * 1.28)} featured kit={kit} />
-                      : item.layout === 'stack' ? (
-                        <>
-                          <MosaicCard entry={item.items[0]} width={gcardW} height={gcardH * 2 + space.cardGap} kit={kit} />
-                          <View style={{ gap: space.cardGap }}>
-                            {item.items.slice(1).map((entry) => <MosaicCard key={entry.c.slug} entry={entry} width={gcardW} height={gcardH} kit={kit} />)}
-                          </View>
-                        </>
-                      ) : item.items.map((entry) => <MosaicCard key={entry.c.slug} entry={entry} width={gcardW} height={gcardH} kit={kit} />)}
-                  </View>
-                );
-              }
-              // Otherwise a pair of tiles: the only shape left besides the
-              // Mosaic since the list view went (owner, 7 Nov 2026).
-              return (
-                <View style={s.gridRow}>
-                  {item.pair.map((c, j) => (
-                    <CollectionTile
-                      key={c.slug} c={c} own={item.own} shared={!!section.shared} at={item.at + j}
-                      width={gcardW} height={gcardH} kit={kit}
-                    />
-                  ))}
-                  {item.pair.length === 1 ? <View style={{ width: gcardW }} /> : null}
-                </View>
-              );
-            }}
+            renderItem={({ item, section }) => (
+              <ShelfRowView item={item} section={section} winW={winW} gcardW={gcardW} gcardH={gcardH} kit={kit} />
+            )}
             stickySectionHeadersEnabled={false}
-            renderSectionHeader={({ section }) => (section.shared ? sharedHead(section.shared.count) : !section.city ? null : section === sections[0]
+            renderSectionHeader={({ section }) => (section.shared ? <SharedHead count={section.shared.count} /> : !section.city ? null : section === sections[0]
               ? <View style={s.firstGap} testID="collections-first-gap" />
-              : cityHead(section.city, false))}
+              : <CityHead city={section.city} pinnedCopy={false} signedIn={!!session} cityWord={cityWord} onPress={() => setJumpOpen(true)} />)}
             onViewableItemsChanged={onSeen}
             // A jump to a block not yet drawn: go near it on the average
             // row, which draws it, then land on its heading.
@@ -669,36 +558,13 @@ export default function CollectionsScreen({ navigation, route }: {
                 if (sectionIndex >= 0) jumpTo(sectionIndex, true);
               }, 100);
             }}
-            renderSectionFooter={({ section }) => {
-              // Under a query, the only footer is the honest one: nothing
-              // matched. The creation rows stay out of it — "start your
-              // first collection" under a search that found nothing would
-              // be answering a question nobody asked.
-              if (asked) {
-                // Once, and only when nothing anywhere matched: on Yours
-                // the lists shared with you are a second section, and a
-                // miss among your own above a hit among theirs is not
-                // "nothing here".
-                if (sections.some((x) => x.data.length > 0)) return null;
-                return q
-                  ? <Empty text={t(`Nothing here matches "${q}".`, `Không có gì khớp với "${q}".`, `「${q}」に一致するものはありません。`, `没有与“${q}”匹配的内容。`, `沒有與「${q}」相符的內容。`)} />
-                  : <Empty text={t('No collections match that choice.', 'Không có bộ sưu tập nào khớp lựa chọn đó.', 'その条件に合うコレクションはありません。', '没有符合条件的合集。', '沒有符合條件的合集。')} />;
-              }
-              if (section.own) {
-                return section.data.length === 0
-                  ? <FirstCollection onPress={() => navigation.navigate('CollectionForm')} />
-                  : null;
-              }
-              return section.data.length === 0
-                ? (
-                  <CommunityEmpty
-                    signedIn={!!session}
-                    onCreate={() => navigation.navigate('CollectionForm')}
-                    onExplore={() => navigation.getParent()?.navigate('Explore')}
-                  />
-                )
-                : null;
-            }}
+            renderSectionFooter={({ section }) => (
+              <ShelfFoot
+                section={section} sections={sections} asked={asked} q={q} signedIn={!!session}
+                onCreate={() => navigation.navigate('CollectionForm')}
+                onExplore={() => navigation.getParent()?.navigate('Explore')}
+              />
+            )}
             contentContainerStyle={{ paddingBottom: tabClearance }}
             showsVerticalScrollIndicator={false}
             // The catalog too (owner, 23 Oct 2026): a community list draws
@@ -719,7 +585,7 @@ export default function CollectionsScreen({ navigation, route }: {
                 {headerExpanded ? <ShelfTop h={head} floating /> : <TabsRow h={head} floating />}
               </View>
             ) : null}
-            {groups && atCity ? cityHead(atCity, true) : null}
+            {groups && atCity ? <CityHead city={atCity} pinnedCopy signedIn={!!session} cityWord={cityWord} onPress={() => setJumpOpen(true)} /> : null}
           </View>
         ) : null}
         <ActionSheet
@@ -728,7 +594,7 @@ export default function CollectionsScreen({ navigation, route }: {
           header={<Text style={s.jumpTitle}>{t('Go to a city', 'Đến thành phố', '都市へ移動', '前往城市', '前往城市')}</Text>}
         >
           {/* No card around them, as Explore's list has none. */}
-          <View>{jumpRows}</View>
+          <JumpRows groups={groups} atCity={atCity} cityWord={cityWord} cityName={cityName} onJump={jumpTo} />
         </ActionSheet>
       </View>
       {/* Explore's dock, with this screen's two actions: the whole island
