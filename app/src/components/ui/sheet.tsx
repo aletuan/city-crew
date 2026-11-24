@@ -25,16 +25,42 @@
 //   the cover above them, so the page must not dim. Still a press: a tap
 //   above the sheet closes it.
 // - `rise`: the spring up from 360pt under, which the menus have had
-//   since `PersonSheet`. The cover sheets came in with the fade alone and
+//   since `PersonSheet`: the Modal only fades, so the scrim brightens in
+//   place the way a room dims, and the panel alone rises on the native
+//   driver. Modal's own animationType="slide" moved the whole window,
+//   scrim included, and read as a wall climbing the screen. The cover sheets came in with the fade alone and
 //   keep it until someone decides otherwise.
 // - `maxHeight`, `foot` (what is left under the last line, over the
 //   inset), `grabberGap` and `style` for the panel: the measured
 //   differences between the sheets that exist, kept rather than
 //   flattened, so moving a sheet here changes nothing on screen.
+// - `pull`: the pull-down to close (`useSheetDrag`), on the whole panel
+//   (`'sheet'`) or, for a sheet whose body scrolls and keeps its own
+//   gesture, on the grabber and `head` only (`'head'`). `riseFrom` is how
+//   far under the spring starts: 360 here, 320 on the settings sheets and
+//   60 on the legal documents, which are 90% of the screen tall and would
+//   otherwise spend the spring's first half off it.
+// - `backdropLabel` and `backdropTestID`, for a sheet whose tap above it
+//   means something other than "Close" (the reminder ask's "Not now"),
+//   and `onDismiss`, for one that has to act once the Modal has gone.
 //
-// Moved here so far: `ActionSheet`, `CollectionCoverSheet`, `person/Wall`.
+// The panel is `accessibilityViewIsModal` on every sheet: VoiceOver stops
+// at its edge instead of reading the dimmed page through it. Four of the
+// settings sheets had it and the menus did not; nothing in a menu wants
+// the page behind it read.
+//
+// The six settings sheets (About, the city, language and theme switchers,
+// the reminder ask, the legal documents) came here on 24 Nov 2026 with
+// the owner's choice of grabber: this one, 38 in `textTertiary`, not
+// their 36 in `borderGlass`. They also took the hairline along the top,
+// which they alone had gone without; their inner margin (16, not 22) and
+// 8 above the grabber they keep through `style`.
+//
+// Moved here so far: `ActionSheet`, `CollectionCoverSheet`, `person/Wall`,
+// and the six above.
 
 import React, { useEffect, useRef } from 'react';
+import { useSheetDrag } from '../sheetDrag';
 import { Animated, Modal, Pressable, type StyleProp, StyleSheet, Text, View, type ViewStyle } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useI18n } from '../../lib/i18n';
@@ -48,7 +74,8 @@ export const SHEET_SCRIM = 'rgba(6,5,8,0.62)';
 
 export function Sheet({
   visible, onClose, children, title, closeTestID, testID,
-  scrim = true, rise = true, maxHeight, foot = 16, grabberGap = 12, style,
+  scrim = true, rise = true, riseFrom = 360, maxHeight, foot = 16, grabberGap = 12, style,
+  pull, head, backdropLabel, backdropTestID, onDismiss,
 }: {
   visible: boolean;
   onClose: () => void;
@@ -63,6 +90,14 @@ export function Sheet({
   foot?: number;
   grabberGap?: number;
   style?: StyleProp<ViewStyle>;
+  riseFrom?: number;
+  /** Where a pull down closes the sheet from; no pull when absent. */
+  pull?: 'sheet' | 'head';
+  /** What sits with the grabber in the part that can be pulled. */
+  head?: React.ReactNode;
+  backdropLabel?: string;
+  backdropTestID?: string;
+  onDismiss?: () => void;
 }) {
   const { t } = useI18n();
   const insets = useSafeAreaInsets();
@@ -72,18 +107,25 @@ export function Sheet({
     if (!visible) { up.setValue(1); return; }
     Animated.spring(up, { toValue: 0, useNativeDriver: true, speed: 14, bounciness: 3 }).start();
   }, [visible, rise, up]);
+  const { drag, handlers } = useSheetDrag(visible, onClose, pull != null);
   const close = t('Close', 'Đóng', '閉じる', '关闭', '關閉');
+  const moves = [
+    ...(rise ? [{ translateY: up.interpolate({ inputRange: [0, 1], outputRange: [0, riseFrom] }) }] : []),
+    ...(pull ? [{ translateY: drag }] : []),
+  ];
+  const grabber = <View style={[s.grabber, { marginBottom: grabberGap }]} />;
 
   return (
-    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose} statusBarTranslucent>
-      <Pressable style={[s.backdrop, scrim && s.dim]} onPress={onClose} accessibilityLabel={close} />
+    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose} onDismiss={onDismiss} statusBarTranslucent>
+      <Pressable style={[s.backdrop, scrim && s.dim]} onPress={onClose}
+        accessibilityLabel={backdropLabel ?? close} testID={backdropTestID} />
       <Animated.View
-        style={[s.panel, { paddingBottom: insets.bottom + foot, maxHeight }, style, rise && {
-          transform: [{ translateY: up.interpolate({ inputRange: [0, 1], outputRange: [0, 360] }) }],
-        }]}
+        {...(pull === 'sheet' ? handlers : null)}
+        accessibilityViewIsModal
+        style={[s.panel, { paddingBottom: insets.bottom + foot, maxHeight }, style, { transform: moves }]}
         testID={testID}
       >
-        <View style={[s.grabber, { marginBottom: grabberGap }]} />
+        {pull === 'head' ? <View {...handlers} testID="sheet-grab">{grabber}{head}</View> : <>{grabber}{head}</>}
         {title != null ? (
           <View style={s.head}>
             <Text style={s.title}>{title}</Text>

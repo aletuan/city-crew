@@ -25,15 +25,13 @@
 // left the Modal's window holding every touch until the app was killed.
 // A share added here again has to close this sheet first.
 
-import React, { useEffect, useRef } from 'react';
-import { Animated, Modal, Pressable, StyleSheet, Text, View } from 'react-native';
+import React from 'react';
+import { StyleSheet, Text, View } from 'react-native';
 import { Glyph, ICON } from './ui/glyph';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { APP_INFO, type AppInfo, shortUpdateId, updateDate, versionLabel } from '../lib/appinfo';
 import { useI18n } from '../lib/i18n';
 import { colors, font, radius, space, type } from '../theme';
-import { PressableScale } from './ui';
-import { useSheetDrag } from './sheetDrag';
+import { PressableScale, Sheet } from './ui';
 
 function Row({ label, value, first }: { label: string; value: string; first?: boolean }) {
   return (
@@ -53,16 +51,6 @@ export default function AboutSheet({ visible, onClose, info = APP_INFO }: {
   info?: AppInfo;
 }) {
   const { t, lang } = useI18n();
-  const insets = useSafeAreaInsets();
-  // The house entrance, as in ThemeSwitcher: the modal fades, the sheet
-  // alone rises on a native-driven spring.
-  const rise = useRef(new Animated.Value(1)).current;
-  const { drag, handlers } = useSheetDrag(visible, onClose);
-  useEffect(() => {
-    if (!visible) { rise.setValue(1); return; }
-    Animated.spring(rise, { toValue: 0, useNativeDriver: true, speed: 14, bounciness: 3 }).start();
-  }, [visible, rise]);
-
   const close = t('Close', 'Đóng', '閉じる', '关闭', '關閉');
   const update = info.update
     ? [info.update.at && updateDate(info.update.at, lang), shortUpdateId(info.update.id)]
@@ -72,68 +60,42 @@ export default function AboutSheet({ visible, onClose, info = APP_INFO }: {
     : t('Shipped with the build', 'Có sẵn trong bản cài', 'ビルドに同梱', '随安装包附带', '隨安裝包附帶');
 
   return (
-    <Modal
-      visible={visible}
-      transparent
-      animationType="fade"
-      onRequestClose={onClose}
-      statusBarTranslucent
-    >
-      <Pressable style={s.backdrop} onPress={onClose} accessibilityLabel={close} />
-      <Animated.View
-        {...handlers}
-        accessibilityViewIsModal
-        style={[s.sheet, {
-          paddingBottom: 14 + insets.bottom,
-          transform: [{ translateY: rise.interpolate({ inputRange: [0, 1], outputRange: [0, 320] }) }, { translateY: drag }],
-        }]}
-      >
-        <View style={s.handle} />
-        <Text style={s.title} accessibilityRole="header">
-          {t('Version info', 'Thông tin phiên bản', 'バージョン情報', '版本信息', '版本資訊')}
-        </Text>
-        <View style={s.card}>
-          <Row
-            first
-            label={t('Version', 'Phiên bản', 'バージョン', '版本', '版本')}
-            value={versionLabel(info) ?? t('Unknown', 'Không rõ', '不明', '未知', '未知')}
-          />
-          {/* No channel is Expo Go or a development build — always us. */}
-          <Row
-            label={t('Channel', 'Kênh', 'チャンネル', '渠道', '渠道')}
-            value={info.channel ?? t('Development', 'Bản phát triển', '開発版', '开发版', '開發版')}
-          />
-          <Row label={t('Update', 'Bản cập nhật', 'アップデート', '更新', '更新')} value={update} />
-          {/* Which updates this build can take: only ones published for the
-              same runtime. Worth a line because it is the answer to "why
-              did this phone not get it?" */}
-          <Row label="Runtime" value={info.runtime ?? '—'} />
-        </View>
-        {/* "Close", not "Done": nothing was being done here. It reads what
-            the documents beside it say (LegalSheet): glyph and word, in
-            the quieter colour. */}
-        <PressableScale onPress={onClose} haptic="selection" accessibilityRole="button" contentStyle={s.done}>
-          <Glyph name="close" size={ICON.action} color={colors.textSecondary} />
-          <Text style={s.doneText}>{close}</Text>
-        </PressableScale>
-      </Animated.View>
-    </Modal>
+    <Sheet visible={visible} onClose={onClose} pull="sheet" riseFrom={320} foot={14} style={s.sheet}>
+      <Text style={s.title} accessibilityRole="header">
+        {t('Version info', 'Thông tin phiên bản', 'バージョン情報', '版本信息', '版本資訊')}
+      </Text>
+      <View style={s.card}>
+        <Row
+          first
+          label={t('Version', 'Phiên bản', 'バージョン', '版本', '版本')}
+          value={versionLabel(info) ?? t('Unknown', 'Không rõ', '不明', '未知', '未知')}
+        />
+        {/* No channel is Expo Go or a development build — always us. */}
+        <Row
+          label={t('Channel', 'Kênh', 'チャンネル', '渠道', '渠道')}
+          value={info.channel ?? t('Development', 'Bản phát triển', '開発版', '开发版', '開發版')}
+        />
+        <Row label={t('Update', 'Bản cập nhật', 'アップデート', '更新', '更新')} value={update} />
+        {/* Which updates this build can take: only ones published for the
+            same runtime. Worth a line because it is the answer to "why
+            did this phone not get it?" */}
+        <Row label="Runtime" value={info.runtime ?? '—'} />
+      </View>
+      {/* "Close", not "Done": nothing was being done here. It reads what
+          the documents beside it say (LegalSheet): glyph and word, in
+          the quieter colour. */}
+      <PressableScale onPress={onClose} haptic="selection" accessibilityRole="button" contentStyle={s.done}>
+        <Glyph name="close" size={ICON.action} color={colors.textSecondary} />
+        <Text style={s.doneText}>{close}</Text>
+      </PressableScale>
+    </Sheet>
   );
 }
 
 const s = StyleSheet.create({
-  // The five sheets' backdrop, so this one dims the room the same way.
-  backdrop: { ...StyleSheet.absoluteFill, backgroundColor: 'rgba(6,5,8,0.62)' },
-  sheet: {
-    position: 'absolute', left: 0, right: 0, bottom: 0,
-    backgroundColor: colors.bgElevated,
-    borderTopLeftRadius: radius.card + 6, borderTopRightRadius: radius.card + 6,
-    paddingHorizontal: space.cardPadding, paddingTop: 8,
-  },
-  handle: {
-    alignSelf: 'center', width: 36, height: 4, borderRadius: 2,
-    backgroundColor: colors.borderGlass, marginBottom: 12,
-  },
+  // The settings sheets' inner margin and the 8 above the grabber; the
+  // rest of the chrome is `Sheet`'s.
+  sheet: { paddingHorizontal: space.cardPadding, paddingTop: 8 },
   title: {
     color: colors.text, fontSize: 18, fontWeight: font.semibold,
     marginBottom: 12, paddingHorizontal: 4,
