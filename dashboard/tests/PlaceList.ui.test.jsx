@@ -100,6 +100,18 @@ describe('PlaceList', () => {
     expect(within(a).getByText('featured')).toBeTruthy();
     expect(a.querySelector('.srcwho').textContent).toBe('@minh');
     expect(screen.getByRole('button', { name: 'Grid' }).getAttribute('aria-pressed')).toBe('true');
+    // A card's box selects as a row's does, without following the card's
+    // link — one SelectBox for both since 24 Nov 2026. The batch bar takes
+    // the toolbar while anything is chosen, so it is let go before the
+    // switch below.
+    fireEvent.click(within(a).getByRole('checkbox', { name: 'Select cafe-a' }));
+    expect(screen.getByText('1 selected')).toBeTruthy();
+    // The class, not `.checked`: the box is drawn by `.selectbox.checked`,
+    // and the native tick is undone after the click by the same
+    // preventDefault that keeps the card's link from opening.
+    expect(screen.getByRole('checkbox', { name: 'Select cafe-a' }).className).toContain('checked');
+    expect(screen.getByRole('heading', { name: 'Places' })).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
     fireEvent.click(screen.getByRole('button', { name: 'List' }));
     expect(rows()).toHaveLength(3);
     expect(localStorage.getItem('citycrew.dashboard.view')).toBe('row');
