@@ -367,6 +367,29 @@ function Facts({ place }) {
   );
 }
 
+/**
+ * A card's or a row's select box: the grid and the list each had their own
+ * copy, word for word, until 24 Nov 2026. The tap is stopped here, because
+ * the box sits inside the link that opens the place, and selecting a place
+ * must not open it.
+ */
+function SelectBox({ place, on, onToggle }) {
+  return (
+    <span
+      className="selecthit"
+      onClick={(e) => { e.preventDefault(); e.stopPropagation(); onToggle(place.slug); }}
+    >
+      <input
+        type="checkbox"
+        className={`selectbox ${on ? 'checked' : ''}`}
+        checked={on}
+        readOnly
+        aria-label={`Select ${place.name_en}`}
+      />
+    </span>
+  );
+}
+
 export default function PlaceList() {
   const { cities, city, setCity } = useCity();
 
@@ -878,18 +901,7 @@ export default function PlaceList() {
                     {p.cover_url
                       ? <img src={p.cover_url} alt="" loading="lazy" />
                       : null}
-                    <span
-                      className="selecthit"
-                      onClick={(e) => { e.preventDefault(); e.stopPropagation(); toggleSelect(p.slug); }}
-                    >
-                      <input
-                        type="checkbox"
-                        className={`selectbox ${selected.has(p.slug) ? 'checked' : ''}`}
-                        checked={selected.has(p.slug)}
-                        readOnly
-                        aria-label={`Select ${p.name_en}`}
-                      />
-                    </span>
+                    <SelectBox place={p} on={selected.has(p.slug)} onToggle={toggleSelect} />
                     <span className={`stamp ${p.review_status}`}>{p.review_status}</span>
                   </div>
                   <div className="gcard-body">
@@ -916,18 +928,7 @@ export default function PlaceList() {
                     {p.cover_url
                       ? <img className="thumb" src={p.cover_url} alt="" loading="lazy" />
                       : <div className="thumb" />}
-                    <span
-                      className="selecthit"
-                      onClick={(e) => { e.preventDefault(); e.stopPropagation(); toggleSelect(p.slug); }}
-                    >
-                      <input
-                        type="checkbox"
-                        className={`selectbox ${selected.has(p.slug) ? 'checked' : ''}`}
-                        checked={selected.has(p.slug)}
-                        readOnly
-                        aria-label={`Select ${p.name_en}`}
-                      />
-                    </span>
+                    <SelectBox place={p} on={selected.has(p.slug)} onToggle={toggleSelect} />
                   </div>
                   <div className="names">
                     <div className="en">{p.name_en} {p.is_featured && <span className="tag featured">featured</span>}</div>
