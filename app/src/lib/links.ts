@@ -66,8 +66,10 @@ export const instagramUrl = (handle: string): string =>
 export const threadsUrl = (handle: string): string =>
   `https://www.threads.com/@${handle}`;
 
-/** A handle as it is written for a reader. */
-export const atHandle = (handle: string): string => `@${handle}`;
+// The @ a reader sees is `lib/handle.atHandle`'s. There was a second one
+// here, `@` and the string, and the two shared a name: a file importing
+// this one printed `@@name` for a value stored with its @, where the other
+// strips it first. One function now, the careful one (24 Nov 2026).
 
 /** The hosts that a handle row already covers. */
 const INSTAGRAM = 'instagram.com';

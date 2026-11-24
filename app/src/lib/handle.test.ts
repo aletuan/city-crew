@@ -9,6 +9,9 @@ describe('atHandle', () => {
   it('gives both stored conventions the same shape', () => {
     expect(atHandle('@hanoicrew')).toBe('@hanoicrew');
     expect(atHandle('anh')).toBe('@anh');
+    // A venue's Instagram or Threads handle, which may hold a dot: the place
+    // page prints these through the same function since 24 Nov 2026.
+    expect(atHandle('cab.cafesg')).toBe('@cab.cafesg');
   });
 
   it('never doubles the sign', () => {

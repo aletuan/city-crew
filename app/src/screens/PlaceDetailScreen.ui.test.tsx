@@ -1418,6 +1418,16 @@ describe('PlaceDetailScreen — website, Instagram and Threads', () => {
     expect(openURL).toHaveBeenCalledWith('https://www.threads.com/@sweet.as.hanoi');
   });
 
+  // Handles are stored bare, but a row typed in by hand with its @ still
+  // prints one: the card goes through `lib/handle.atHandle`, which strips
+  // the stored @ before putting its own back. The second `atHandle` that
+  // used to live in `lib/links` did not, and drew "@@".
+  it('draws one @ for a handle that was stored with its own', () => {
+    show(place({ instagram_handle: '@cab.cafesg', threads_handle: '@@sweet.as.hanoi' }));
+    expect(screen.getByTestId('detail-instagram').textContent).toBe('@cab.cafesg');
+    expect(screen.getByTestId('detail-threads').textContent).toBe('@sweet.as.hanoi');
+  });
+
   // Ionicons' own monochrome marks, not the brands' full-colour ones. Two
   // saturated logos in a grey gutter pull the eye off the words, and that
   // column is the point of the card.
