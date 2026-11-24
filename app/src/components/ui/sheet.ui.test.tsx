@@ -57,6 +57,19 @@ describe('Sheet', () => {
     expect(screen.getByTestId('top').contains(title)).toBe(true);
   });
 
+  it('dims the page as dark as it is told: the default, none, or a number', () => {
+    const ink = (scrim?: boolean | number) => {
+      const { unmount } = render(<Sheet visible onClose={() => {}} scrim={scrim}><Text>Body</Text></Sheet>);
+      const b = viewStyleOf(screen.getByLabelText('Close')).backgroundColor;
+      unmount();
+      return b;
+    };
+    expect(ink()).toBe('rgba(6,5,8,0.62)');
+    expect(ink(false)).toBeUndefined();
+    // The start sheet's, lighter so the plan behind stays legible.
+    expect(ink(0.32)).toBe('rgba(6,5,8,0.32)');
+  });
+
   it('names the tap above it as the caller says, and closes on it', () => {
     const onClose = vi.fn();
     render(
