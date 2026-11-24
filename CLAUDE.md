@@ -138,6 +138,13 @@ migration committed and merged is not a migration that has run. Apply it
 yourself, and check that the repo still describes the schema — a merge
 has silently dropped an applied migration from the tree before.
 
+**Edge Functions deploy themselves, migrations do not.**
+`.github/workflows/deploy-functions.yml` deploys the functions whose folder
+changed on main (all of them for a change under `_shared/`), from the
+`SUPABASE_ACCESS_TOKEN` secret, and checks the project afterwards. When a
+function needs a migration, apply the migration first. `find-address` and
+`backfill-phones-once` are live and not in the repo; nothing removes them.
+
 ## The EAS channel, and what it decides
 
 A channel is stamped into a binary at build time and never changes.
