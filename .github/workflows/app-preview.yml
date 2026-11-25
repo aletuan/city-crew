@@ -44,6 +44,16 @@
 # The deploy that broke is the one this note exists to explain: iOS and
 # Android had both bundled to 97% when the web bundle failed the whole run.
 
+# ── why it waits for migrations ──
+#
+# An update is on phones minutes after the merge, and a migration in the
+# same merge is not on the live project until somebody approves it
+# (`apply-migrations.yml`). A screen that selects a new column would fail
+# for everyone in between, so the publish waits until every migration in
+# the commit is live — `.github/actions/wait-for-migrations` has the
+# limits. It needs SUPABASE_ACCESS_TOKEN to read the history; without it
+# the publish goes ahead as it used to.
+
 name: Publish app preview
 
 on:
@@ -64,6 +74,11 @@ jobs:
       - name: Skip when EXPO_TOKEN is not configured
         if: env.EXPO_TOKEN == ''
         run: echo "No EXPO_TOKEN secret — skipping EAS publish. See the header of this workflow file for setup."
+      - uses: ./.github/actions/wait-for-migrations
+        if: env.EXPO_TOKEN != ''
+        with:
+          token: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          project-ref: amdvitzpogaejzzqroco
       - uses: actions/setup-node@v5
         if: env.EXPO_TOKEN != ''
         with:

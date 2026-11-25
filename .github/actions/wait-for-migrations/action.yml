@@ -1,0 +1,112 @@
+# Holds a deploy until every migration in the commit is on the live
+# project.
+#
+# A merge starts three things at once: the Edge Functions deploy, the EAS
+# Update, and `apply-migrations.yml` — and only the last one waits, for a
+# person to press Approve. So a function or a screen that reads a new
+# column was live minutes before the column was, and failed until somebody
+# approved. The order was kept by remembering to merge the migration
+# first (CLAUDE.md said so); this keeps it for you.
+#
+# It asks the live history the question the drift job asks, and waits on
+# one answer only: a file in this commit that live has not run
+# (`pending` in `data/scripts/migration-drift.mjs`, which says why the
+# other disagreements do not hold a deploy).
+#
+# ── what it does not do ──
+#
+# - Guard the other direction. A migration that drops or renames
+#   something the live function still reads breaks that function from the
+#   moment it is approved until the new one deploys. No waiting fixes
+#   that: add in one pull request, remove in a later one.
+# - Tell which function needs which migration. Any migration waiting
+#   holds every deploy, related or not; working out the relation would be
+#   a second source of truth about what the code reads.
+# - Wait for ever. Thirty minutes, as the drift job waits, then red with
+#   nothing deployed. Approve the migration and re-run the job.
+#
+# Without a token it says so and lets the deploy go on, as it went before
+# this existed: a fork or a fresh clone of the repo has no live project
+# to be behind.
+#
+# ── when the step is red ──
+#
+# Nothing was deployed or published in any of these; fix, then re-run
+# the job (Actions → the run → Re-run failed jobs).
+#
+# - "Still not applied after 15 asks": a migration in the commit is not
+#   on live. Either nobody has pressed Approve on the "Apply migrations"
+#   run, or the `APPLY_MIGRATIONS` repository variable is not `on` and
+#   that workflow did nothing (then apply by hand — CLAUDE.md,
+#   "Supabase"). The lines above the error name the files.
+# - "The project answered 401" (or 403): SUPABASE_ACCESS_TOKEN has
+#   expired or cannot read the project. Replace the secret
+#   (`deploy-functions.yml` has where it comes from). The drift job and
+#   the function deploy use the same token and will be red with it.
+# - "The project answered 5xx": the Management API, after three asks.
+#   Re-run; nothing here is wrong.
+# - "came back empty or unreadable": the API answered 200 with no
+#   history. Re-run; if it repeats, the project is paused or the query
+#   is being refused — look at the project before anything else.
+#
+# A step that never ends is not this one: it stops itself after
+# `tries` × 2 minutes.
+
+name: Wait for migrations
+description: Wait until every migration in this commit is on the live project.
+
+inputs:
+  token:
+    description: A Supabase access token that can read the project (SUPABASE_ACCESS_TOKEN).
+    required: false
+    default: ''
+  project-ref:
+    description: The live project's ref.
+    required: true
+  tries:
+    description: How many times to ask, two minutes apart.
+    required: false
+    default: '15'
+
+runs:
+  using: composite
+  steps:
+    - name: Wait for the migrations in this commit
+      shell: bash
+      env:
+        SUPABASE_ACCESS_TOKEN: ${{ inputs.token }}
+        PROJECT_REF: ${{ inputs.project-ref }}
+        TRIES: ${{ inputs.tries }}
+      run: |
+        set -uo pipefail
+        if [ -z "$SUPABASE_ACCESS_TOKEN" ]; then
+          echo "No SUPABASE_ACCESS_TOKEN — cannot read the live history; not waiting."
+          exit 0
+        fi
+        for i in $(seq 1 "$TRIES"); do
+          # A 5xx is the API, not the history — see migration-drift.yml.
+          for ask in 1 2 3; do
+            code=$(curl -sS -o /tmp/live.json -w '%{http_code}' \
+              -X POST "https://api.supabase.com/v1/projects/$PROJECT_REF/database/query" \
+              -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" \
+              -H 'Content-Type: application/json' \
+              -d '{"query":"select version, name from supabase_migrations.schema_migrations order by version"}')
+            case "$code" in 5*) echo "The API answered $code; asking again in 20 seconds."; sleep 20;; *) break;; esac
+          done
+          if [ "$code" != "200" ] && [ "$code" != "201" ]; then
+            echo "The project answered $code:"; head -c 500 /tmp/live.json; echo
+            exit 2
+          fi
+          node data/scripts/migration-drift.mjs /tmp/live.json --pending
+          status=$?
+          # 0: all on live. 2: the answer could not be read — waiting will
+          # not fix that. 1: a migration is still waiting to be applied.
+          if [ "$status" -eq 0 ]; then exit 0; fi
+          if [ "$status" -ne 1 ]; then exit "$status"; fi
+          if [ "$i" -eq "$TRIES" ]; then
+            echo "::error::Still not applied after $TRIES asks. Nothing was deployed: approve the migration (Actions → Apply migrations), then re-run this job."
+            exit 1
+          fi
+          echo "Waiting for it to be applied; asking again in 2 minutes ($i of $TRIES)."
+          sleep 120
+        done
