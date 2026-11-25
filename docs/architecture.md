@@ -295,8 +295,14 @@ Ghi ra để không ai tưởng là có chủ ý:
   `Asks`, `WhenWhere`, `Seeds`, `PlanCta`, `DayPicker`; và `SearchScreen`
   (461 / 40 → 132 / 19) ra `screens/search/`: năm hook trong
   `useSearch.ts`, `Row`, `rows.tsx`, `SearchEmpty`, `AddingTo`, `google.tsx`.
-  Danh sách còn 25 file; hàm màn hình lớn nhất trên đó giờ là
-  `SignUpScreen` (365 dòng) và `PlanEditScreen` (317).
+  Tiếp đó `PlanEditScreen` (317 / 24 → 127 / 11) ra `screens/planEdit/`:
+  `usePickedPlan`, `useNarration`, `useSavePlan` trong `usePlan.ts`, và
+  `Facts`, `Hint`, `StopRows`, `PlanFoot`, `Gone` trong `parts.tsx`;
+  `SignUpScreen` (365 / 16 → 11 / 4) ra `screens/signUp/`: `useSignUp`,
+  `FormStep` và ba bước còn lại trong `steps.tsx`, cả bốn vẽ trong một
+  `AuthScreen` của màn. Danh sách còn 23 file; hàm màn hình lớn nhất
+  trên đó giờ là `GalleryScreen` (287 / 46) và `EditProfileScreen`
+  (258 / 27).
 - ~~**`lib/save.tsx`** nằm sai tầng~~ Ngày 20/10/2026 phần vẽ hai sheet
   chuyển ra `components/SaveSheets.tsx`; `lib/save.tsx` chỉ còn trạng thái,
   và ngoại lệ trong lint đã bỏ.

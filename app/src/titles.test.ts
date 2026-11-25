@@ -69,8 +69,12 @@ export function openTags(code: string, name: string): string[] {
 }
 export const screenTags = (code: string) => openTags(code, 'Screen');
 
-/** The ways in, which keep the larger title — see the note above. */
-const WAYS_IN = ['screens/ForgotPasswordScreen.tsx', 'screens/SignInScreen.tsx', 'screens/SignUpScreen.tsx'];
+/** The ways in, which keep the larger title — see the note above. Sign-up's
+ *  headers are drawn by its steps (`screens/signUp/`) since 25 Nov 2026. */
+const WAYS_IN = [
+  'screens/ForgotPasswordScreen.tsx', 'screens/SignInScreen.tsx',
+  'screens/signUp/FormStep.tsx', 'screens/signUp/steps.tsx',
+];
 
 describe('page titles', () => {
   const tags = sources(ROOT).flatMap((f) => screenTags(readFileSync(f, 'utf8')).map((tag) => ({ f, tag })));
