@@ -85,59 +85,25 @@
 //   only once set by hand.
 
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { Alert, Animated, ScrollView, StyleSheet, Text, View } from 'react-native';
-import Ionicons from '@expo/vector-icons/Ionicons';
-import { Glyph, ICON } from '../components/ui/glyph';
+import { Alert, ScrollView, View } from 'react-native';
 import {
-  AmbientWarmth, Card, GradientCta, IconSubtitle, RoundIconButton, Screen, fireHaptic, successHaptic, useTabBarClearance,
+  AmbientWarmth, IconSubtitle, RoundIconButton, Screen, useTabBarClearance,
 } from '../components/ui';
-import LegRow from '../components/LegRow';
-import StopCard from '../components/StopCard';
-import { RailColumn } from '../components/rail';
 import { useEdgeSwipeBack, useListDrag } from '../components/useListDrag';
-import {
-  cachedNarration, derivedTitle, factLine, freshen, narratableOf, prefetchNarration,
-  type Narration,
-} from '../lib/assist';
+import { derivedTitle } from '../lib/assist';
 import { DEFAULT_TZ } from '../lib/clock';
 import { useSession } from '../lib/auth';
-import { useCollections, usePlaces } from '../lib/catalog';
-import { useCurrentCity } from '../lib/city';
-import { clampDay, fromISO, todayISO } from '../lib/day';
-import { saveTrip, usePlacePhotos, withPhotos } from '../lib/data';
-import { reviewAfterTripSaved } from '../lib/askReview';
-import { spendVnd } from '../lib/trips';
-import { clockOf, dateline, fmtVnd } from '../lib/format';
-import { fmtDistance } from '../lib/geo';
-import { modeIcon, overallMode } from '../lib/travel';
+import { fromISO } from '../lib/day';
+import { dateline } from '../lib/format';
 import { useI18n } from '../lib/i18n';
-import {
-  legsOfPlan, move, nudge, outOfOrder, remove, windowOf, type Editable,
-} from '../lib/itinerary';
-import { planTrips } from '../lib/planner';
-import { startMinOf } from '../lib/remind';
-import { scheduleTripReminder } from '../lib/reminders';
-import { useMyLists, useSaveActions } from '../lib/save';
-import { useNoteEvent, usePlanProfile } from '../lib/tasteProfile';
+import { legsOfPlan, move, type Editable } from '../lib/itinerary';
 import { summaryLine } from '../lib/sketch';
-import { useFlag } from '../lib/useFlag';
-import { COMPANY, draftFrom, seedMembers, sourceIdsOf, type TripDraft } from '../lib/trip';
 import type { Place } from '../lib/types';
 import type { Nav, RootRoute } from '../nav';
-import { colors, font, radius, space, type } from '../theme';
-
-/** One fact of the evening, worn as a chip under the title. Not a control:
- *  no role, no press — the glyph is the accent's because the reference
- *  colours it so, and because a grey glyph on a grey chip was the one
- *  thing on the page with no contrast of its own. */
-function Fact({ icon, text }: { icon: string; text: string }) {
-  return (
-    <View style={s.chip}>
-      <Glyph name={icon as keyof typeof Ionicons.glyphMap} size={ICON.text} color={colors.accent} />
-      <Text style={s.chipText}>{text}</Text>
-    </View>
-  );
-}
+import { space } from '../theme';
+import { Facts, Gone, Hint, PlanFoot, StopRows } from './planEdit/parts';
+import { s } from './planEdit/styles';
+import { useNarration, usePickedPlan, useSavePlan } from './planEdit/usePlan';
 
 export default function PlanEditScreen({ navigation, route }: {
   navigation: Nav;
@@ -146,93 +112,14 @@ export default function PlanEditScreen({ navigation, route }: {
   const { t, lang } = useI18n();
   const clearance = useTabBarClearance();
   const p = route.params;
-  const { data: places } = usePlaces();
-  const { city } = useCurrentCity();
   const { session } = useSession();
-  const mine = useMyLists();
-  const { askToSignIn } = useSaveActions();
-  const cols = useCollections();
-  const { taste, budgetVnd } = usePlanProfile();
-  const note = useNoteEvent();
 
-  const day = clampDay(p.date || todayISO());
-  const draft: TripDraft = useMemo(() => draftFrom(p, day), [p, day]);
-
-  // Resolved here the way the options screen resolves them, because the
-  // rebuild below is only faithful if it gets the same inputs. The planner
-  // still has no business knowing what a collection is.
-  const pinned = useMemo(() => {
-    return seedMembers(p.from, [...mine.data, ...cols.data], places);
-  }, [p.from, mine.data, cols.data, places]);
-
-  // Rebuilt from the same pure inputs the options screen used, so the plan
-  // the reader tapped is the plan they get. Serialising stops through
-  // navigation would work too and would drift the first time either screen
-  // changed what a stop holds.
-  //
-  // "The same inputs" has to mean all of them. This once passed the seed
-  // alone, which quietly dropped two: a day seeded from a collection lost
-  // its pinned places on the way here, and a plan reached through
-  // Regenerate was redrawn without the slugs that draw had been told to
-  // avoid — so the reader tapped one evening and opened another.
-  const picked = useMemo(() => {
-    const plans = planTrips(draft, places, city?.id ?? null, {
-      seed: p.seed, startMin: p.startMin, pinned, avoid: p.avoid, taste, budgetVnd, tz: city?.tz ?? DEFAULT_TZ,
-    });
-    return plans.find((pl) => pl.lens === p.lens) ?? plans[0] ?? null;
-  }, [draft, places, city?.id, city?.tz, p.seed, p.startMin, p.lens, p.avoid, pinned, taste, budgetVnd]);
+  // The plan the reader tapped — see `usePickedPlan`.
+  const { day, picked, city } = usePickedPlan(p);
 
   const [stops, setStops] = useState<Editable<Place>[] | null>(null);
-  const [saving, setSaving] = useState(false);
   /** Set the moment a save lands, so the way out it takes is not stopped. */
   const saved = useRef(false);
-
-  /** What the model was — or would be — asked about, in exactly the shape
-   *  the options screen prefetched with, so the cache key matches. */
-  const asked = useMemo(() => narratableOf(picked?.stops ?? []), [picked]);
-
-  /**
-   * The words, read from the cache the options screen filled.
-   *
-   * This screen used to ask for them itself, on arrival — the deliberate
-   * thrift of narrating only the plan the reader picked — and paid for it
-   * in the worst currency: the card rendered its facts, and the model's
-   * sentences rewrote them under the reader up to four seconds in. The
-   * asking now starts on the sketch screen, whose last step holds until
-   * the words settle, with the options screen prefetching again as a
-   * backstop for Regenerate — so by the time a card is tapped the answer
-   * is normally sitting in `cachedNarration` for the first render to use.
-   *
-   * The effect covers the two ways that can miss. A tap faster than the
-   * model joins the in-flight call — `prefetchNarration` dedupes on key —
-   * and lands one update, into lines whose height is already reserved. And
-   * a failed generation is *cached as empty*, so this screen opens on
-   * facts and stays on facts: the fallback is a state, not a retry loop.
-   *
-   * Still never re-asked when the reader edits — a line about a place is
-   * still true after the place above it moved, and a screen that flickered
-   * new prose under every tap would be unreadable. `freshen` below is what
-   * retires the lines that editing falsifies.
-   */
-  const [words, setWords] = useState<Narration>(() => (asked.length
-    ? cachedNarration(asked, lang)
-    : null) ?? { title: null, why: new Map(), fromModel: false });
-  useEffect(() => {
-    if (!asked.length) return;
-    const hit = cachedNarration(asked, lang);
-    // Same object the initial state read — React bails on the no-op. Here
-    // for the rare re-run where `picked` itself changed under the screen.
-    if (hit) { setWords(hit); return; }
-    let live = true;
-    void prefetchNarration(
-      asked,
-      { company: p.company, categories: p.categories, when: p.when, where: p.where },
-      lang,
-    ).then((n) => { if (live) setWords(n); });
-    // Left behind when the screen goes: a plan the reader has walked away
-    // from should not set state on its way out.
-    return () => { live = false; };
-  }, [asked, p.company, p.categories, p.when, p.where, lang]);
 
   // Seeded once from the planner, then owned entirely by the reader. A
   // `useEffect` syncing it back would fight every edit they make.
@@ -248,10 +135,6 @@ export default function PlanEditScreen({ navigation, route }: {
       : []),
     [stops, picked],
   );
-  // The planner plans over the catalog, which carries one photograph a
-  // place; the stop cards page through them all, so the rest are asked for
-  // here. By name in a fixed order, so dragging a stop is not a new question.
-  const stopPhotos = usePlacePhotos(current.length ? current.map((st) => st.place.slug).sort() : null);
 
   // Edits live only here until Save: `stops` stays null until the first
   // one. Leaving with them used to drop them without a word — the header's
@@ -288,46 +171,11 @@ export default function PlanEditScreen({ navigation, route }: {
     });
   }, [edited, navigation, t]);
 
-  /**
-   * The narration with the stale parts taken out.
-   *
-   * One value for drawing and for saving, deliberately: the bug this fixes
-   * put "A second stop to keep the conversation going" under the only stop
-   * of a trip, and that sentence did not just render — it went into the
-   * database, where nothing downstream can tell it was written about a plan
-   * that no longer exists.
-   *
-   * `picked.stops` is the list the model was handed. It is the planner's
-   * output and does not move when the reader edits, so it needs no state of
-   * its own — `current` is the edited copy, and the difference between them
-   * is exactly what has gone stale.
-   */
-  const live = useMemo(
-    () => freshen(words, picked?.stops.map((st) => st.place.slug) ?? [], current.map((st) => st.place.slug)),
-    [words, picked, current],
-  );
+  // The words, read from the cache the options screen filled, with the
+  // stale parts taken out — see `useNarration`.
+  const live = useNarration(picked, current, p);
 
-  // Taken once, on the way in. `openState` needs an instant, and a fresh
-  // `new Date()` per render would make every fact line a new object and
-  // re-open the question of whether a café is open on every keystroke.
-  const now = useMemo(() => new Date(), []);
   const legs = useMemo(() => legsOfPlan(current), [current]);
-  const wrong = useMemo(() => outOfOrder(current), [current]);
-  const [from, to] = windowOf(current);
-  // The same sum a saved trip is priced by, so the figure here is the one
-  // TripDetail will show for it.
-  const spend = spendVnd(current.map((s) => s.place));
-  // Behind the place detail's price switch (#598), like the options card
-  // and the saved trip: a per-person sum of prices the reader cannot see.
-  const showPrice = useFlag('place_price');
-  // The evening's facts, for the chips under the title. Distance is the
-  // legs summed — the figure the options card prints in its footer — and
-  // it wears the glyph of how the whole route is made: a walk only when
-  // every measured leg is one, as the map's directions decide it. Company
-  // comes from the table the wizard's tiles read, so "Friends" here is the
-  // tile the reader tapped there.
-  const km = legs.reduce((n, l) => n + (l?.km ?? 0), 0);
-  const company = COMPANY.find((c) => c.key === p.company);
 
   // ── the stop in the finger ──
   //
@@ -373,100 +221,11 @@ export default function PlanEditScreen({ navigation, route }: {
     ),
   );
 
-  const onSave = async () => {
-    // A guest's tap used to fall through this guard to nothing, with only
-    // the caption under the button to say why — the same dead control the
-    // bookmark and the heart were cured of. They raise the sign-in sheet
-    // with the thing reached for named in its title; so does this.
-    //
-    // Nothing to save is asked first: a guest with an empty plan was
-    // invited to sign in to save it (PLAN-02). The button is not offered
-    // then either; this is the guard behind it.
-    if (!city || !current.length) return;
-    if (!session?.user?.id) { askToSignIn('trip'); return; }
-    setSaving(true);
-    try {
-      const tripId = await saveTrip({
-        ownerId: session.user.id,
-        cityId: city.id,
-        title,
-        company: p.company,
-        categories: p.categories,
-        district: p.district,
-        atLat: p.atLat,
-        atLng: p.atLng,
-        day,
-        when: p.when,
-        generatedBy: live.fromModel ? 'rules+llm' : 'rules',
-        // The lists this plan started from, resolved off the same shelves
-        // its pins were (`pinned` above), and of those only the ones with
-        // a place among the stops saved, so each owner counts a trip their
-        // list gave something to.
-        fromCollections: sourceIdsOf(p.from, [...mine.data, ...cols.data], current.map((s) => s.place.slug)),
-        stops: current.map((s) => ({
-          placeSlug: s.place.slug,
-          arriveMin: s.arriveMin,
-          dwellMin: s.dwellMin,
-          // Only a model's sentence is stored. The fact line is derived
-          // from the place and would go stale the moment its hours change;
-          // saving it would freeze last August's opening time into a trip.
-          why: live.why.get(s.place.slug) ?? null,
-          whyLang: live.why.has(s.place.slug) ? lang : null,
-        })),
-      });
-      // The verdict the reader just delivered on a drafted evening, which
-      // is the clearest signal in the app: these ones they kept, that one
-      // they took out. Noted after the write, because a trip that failed to
-      // save is not a decision about anything.
-      // The evening-before nudge and the day's own, planted while the day
-      // and the first stop's hour are known. After the save and
-      // fire-and-forget: a reminder is a courtesy, and the reader is not
-      // kept waiting on the permission sheet's animation.
-      scheduleTripReminder(
-        { id: tripId, day, title, startMin: startMinOf(current.map((st) => ({ arrive_min: st.arriveMin }))) },
-        t,
-      );
-      // A rating ask from the second saved plan on; see `lib/review`.
-      reviewAfterTripSaved();
-      const kept = new Set(current.map((st) => st.place.slug));
-      for (const slug of kept) note(slug, 'plan_keep');
-      for (const st of picked?.stops ?? []) {
-        if (!kept.has(st.place.slug)) note(st.place.slug, 'plan_drop');
-      }
-      successHaptic();
-      // Reset, then leave — and for a long time this comment said "reset"
-      // over a line that only left. The Ideas stack kept the whole flow,
-      // so the next visit to the tab landed back on this editor with a
-      // live Save button: a screen that *looks* like "edit my saved trip"
-      // and *is* "insert a duplicate", because nothing here is wired to
-      // the saved row and TripDetail is view-only. The pop happens first,
-      // while this stack is still the visible one, so by the time the
-      // Trips tab shows there is nothing stale behind it; the wizard at
-      // the bottom keeps its answers, because it is the same mounted
-      // screen — completing the flow discards the flow, not the asks.
-      // Same pattern as the auth screens, which popToTop when theirs ends.
-      saved.current = true;
-      navigation.popToTop();
-      navigation.getParent()?.navigate('Trips');
-    } catch (e) {
-      Alert.alert(
-        t('Could not save', 'Không lưu được', '保存できませんでした', '无法保存', '無法儲存'),
-        e instanceof Error ? e.message : String(e),
-      );
-    } finally {
-      setSaving(false);
-    }
-  };
+  const { saving, onSave } = useSavePlan({
+    navigation, p, day, current, picked, live, title, onSaved: () => { saved.current = true; },
+  });
 
-  if (!picked) {
-    return (
-      <Screen compactTitle title={t('Plan a trip', 'Lên kế hoạch', 'プランを立てる', '规划行程', '規劃行程')} onBack={() => navigation.goBack()} backBare>
-        <Card style={s.card}><Text style={s.body}>
-          {t('That plan is no longer available.', 'Phương án đó không còn nữa.', 'そのプランはもう利用できません。', '这个计划已不可用。', '這個計畫已不可用。')}
-        </Text></Card>
-      </Screen>
-    );
-  }
+  if (!picked) return <Gone onBack={() => navigation.goBack()} />;
 
   return (
     <Screen
@@ -521,213 +280,34 @@ export default function PlanEditScreen({ navigation, route }: {
             answer the reader gave; the company chip states that answer
             instead, and the caption under Save says where inviting
             happens. */}
-        <View style={s.chips}>
-          {current.length > 0 && <Fact icon="time-outline" text={`${clockOf(from)}–${clockOf(to)}`} />}
-          {km > 0 && (
-            <Fact icon={modeIcon(overallMode(legs))} text={fmtDistance(km)} />
-          )}
-          {company && <Fact icon={company.icon} text={t(company.en, company.vi, company.ja, company.zh, company.hant)} />}
-          {showPrice && spend > 0 && (
-            <Fact icon="wallet-outline" text={`~${fmtVnd(spend)} / ${t('person', 'người', '人', '人', '人')}`} />
-          )}
-        </View>
+        <Facts current={current} legs={legs} companyKey={p.company} />
 
         {/* What the controls on the cards do, said once above them rather
             than as a letter-spaced eyebrow. "Hold", not "drag": the hold is
             what tells a move apart from a tap and a scroll, and a reader
             told to drag drags at once and scrolls. */}
-        {current.length > 0 && (
-        <View style={s.hint}>
-          <Glyph name="move-outline" size={ICON.text} color={colors.textTertiary} />
-          <Text style={s.hintText}>
-            {canArrange
-              ? t('Hold a stop to move it. Nudge its time with − and +.', 'Giữ một điểm để kéo đổi chỗ. Chỉnh giờ bằng − và +.', 'スポットを長押しして動かす。時刻は − と + で調整。', '长按地点即可移动。用 − 和 + 微调时间。', '長按地點即可移動。用 − 和 + 微調時間。')
-              : t('Nudge the time with − and +.', 'Chỉnh giờ bằng − và +.', '時刻は − と + で調整。', '用 − 和 + 微调时间。', '用 − 和 + 微調時間。')}
-          </Text>
-        </View>
-        )}
+        {current.length > 0 && <Hint canArrange={canArrange} />}
 
-        {current.map((stop, i) => {
-          return (
-          // The row the drag lifts: the card and the leg out of it, so a
-          // stop travels with its journey and the rows it passes step
-          // aside by the pair's height, which is what `onPitch` reports.
-          <Animated.View
-            key={stop.place.slug}
-            style={styleOf(i)}
-            onLayout={(e) => onPitch(stop.place.slug, e.nativeEvent.layout.height)}
-            testID={`drag-${stop.place.slug}`}
-          >
-            {/* The rail beside the card — `components/rail`, the one the
-                options card and the saved trip draw. The column stretches
-                to the row, so the line reaches the next mark across the
-                card and the leg under it; the last stop ends the line,
-                since a line running on past the evening's end points at
-                nothing. */}
-            <View style={s.stopRow}>
-              <RailColumn first={i === 0} last={i === current.length - 1} />
-              <View style={[s.column, i < current.length - 1 && s.columnGap]}>
-            <StopCard
-              place={withPhotos(stop.place, stopPhotos.data[stop.place.slug])}
-              arriveMin={stop.arriveMin}
-              dwellMin={stop.dwellMin}
-              pinned={stop.pinned}
-              // A sentence if one was written, and the facts behind it if
-              // not. Never nothing, and never a spinner: the plan is
-              // complete before the words arrive — and since the options
-              // screen started asking ahead, they normally arrived before
-              // this screen did. The rating is left out of the fallback —
-              // `factLine` would happily print it, but the card sets it
-              // beside the name, and a line that repeats the header one
-              // row down reads as a screen stuttering.
-              why={live.why.get(stop.place.slug)
-                || factLine({
-                  slug: stop.place.slug,
-                  name: stop.place.name_en,
-                  rating: null,
-                  openingHours: stop.place.opening_hours,
-                  arriveMin: stop.arriveMin,
-                }, now, city?.tz ?? DEFAULT_TZ, t)}
-              wrong={wrong.includes(i)}
-              canMoveUp={canArrange && i > 0}
-              canMoveDown={canArrange && i < current.length - 1}
-              onOpen={() => navigation.navigate('PlaceDetail', { slug: stop.place.slug })}
-              onHold={canArrange ? (pageY) => onLift(i, pageY) : undefined}
-              onRelease={onRelease}
-              onNudge={(delta) => setStops(nudge(current, i, delta))}
-              nameTestID={`plan-stop-name-${i}`}
-              timeTestID={`plan-stop-time-${i}`}
-              earlierTestID={`plan-stop-earlier-${i}`}
-              onRemove={() => { fireHaptic('light'); setStops(remove(current, i)); }}
-              onMove={(dir) => setStops(move(current, i, dir === 'up' ? i - 1 : i + 1))}
-            />
+        <StopRows
+          current={current}
+          legs={legs}
+          live={live}
+          tz={city?.tz ?? DEFAULT_TZ}
+          canArrange={canArrange}
+          drag={{ styleOf, onPitch, onLift, onRelease }}
+          setStops={setStops}
+          navigation={navigation}
+        />
 
-            {/* How you get to the next stop, under the card it leaves and
-                inside the rail's row, so the line runs past it. The same
-                glyph and the same "km · ≈ min" the options card and the
-                saved trip print, so one journey keeps one appearance; the
-                reference draws it as a bordered pill with a chevron, and a
-                chevron promises a screen that does not exist. */}
-            {legs[i] && <LegRow leg={legs[i]!} style={s.leg} />}
-              </View>
-            </View>
-          </Animated.View>
-          );
-        })}
-
-        {current.length === 0 && (
-          <Card style={s.card}><Text style={s.body}>
-            {t('Nothing left in this plan.', 'Không còn điểm nào trong plan này.', 'このプランには何も残っていません。', '这个计划里已经没有地点了。', '這個計畫裡已經沒有地點了。')}
-          </Text></Card>
-        )}
-
-        {/* One button, the width of the screen. It is the only thing here
-            that does anything. */}
-        {/* With the summary line gone, the air it carried above Save is
-            the wrapper's. */}
-        <View style={s.save} />
-        {/* An emptied plan has nothing to save, so it is not offered: the
-            button used to stay lit, a guest's tap asked them to sign in
-            to save nothing, and a reader's tap did nothing at all
-            (PLAN-02, 17 Oct 2026). What is offered is the way back to the
-            options this one was picked from — the plan was chosen there,
-            and choosing again is the one useful next step. No undo: the
-            owner's call, and the options are one tap away. */}
-        {current.length > 0 ? (
-          <GradientCta
-            icon="checkmark"
-            wide
-            label={saving
-              ? t('Saving…', 'Đang lưu…', '保存中…', '保存中…', '儲存中…')
-              : t('Save to Trips', 'Lưu vào Chuyến đi', '旅程に保存', '保存到行程', '儲存到行程')}
-            onPress={() => { if (!saving) void onSave(); }}
-            testID="plan-save"
-          />
-        ) : (
-          <GradientCta
-            icon="arrow-back"
-            wide
-            label={t('Choose another option', 'Chọn lại phương án', '別のプランを選ぶ', '选择其他方案', '選擇其他方案')}
-            onPress={() => navigation.goBack()}
-            testID="plan-choose-again"
-          />
-        )}
-
-        {/* A line under the button only for the guest, who has no other
-            way to know the tap will raise a sign-in sheet rather than
-            save. The signed-in reader had one too — "saved trips go to
-            Trips, where you can invite your crew" — and it went: the
-            button already says where the trip goes, the screen goes
-            there itself after the save, and the invite control is the
-            first thing on that tab. Before that it promised the times
-            "stay editable after saving", which TripDetail, being
-            view-only, never kept; a caption that has been wrong once and
-            redundant once is a caption the button does not need. */}
-        {!session?.user?.id && current.length > 0 && (
-          <Text style={s.note}>
-            {t(
-              'Sign in to save this trip.',
-              'Đăng nhập để lưu chuyến đi này.',
-              'この旅程を保存するにはサインインしてください。',
-              '登录后即可保存这个行程。', '登入後即可儲存這個行程。',
-            )}
-          </Text>
-        )}
+        <PlanFoot
+          count={current.length}
+          saving={saving}
+          onSave={onSave}
+          onBack={() => navigation.goBack()}
+          guest={!session?.user?.id}
+        />
       </ScrollView>
       </View>
     </Screen>
   );
 }
-
-const CAPTION = { fontSize: 13, fontWeight: font.regular } as const;
-
-const s = StyleSheet.create({
-  body: { ...type.body, color: colors.textSecondary },
-
-  // Wrapping, so a fourth chip (the spend, behind its switch) or a long
-  // Vietnamese company label takes a second line rather than running off
-  // the page. 8pt between chips both ways.
-  chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 18 },
-  // The filter chip's shape (`Chip` in ui/controls.tsx) at the filter chip's
-  // measurements, filled rather than outlined because these are read, not
-  // pressed — the outline is what the filter row uses to say "tap me".
-  chip: {
-    flexDirection: 'row', alignItems: 'center', gap: 7,
-    backgroundColor: colors.surfaceGlass, borderRadius: radius.pill,
-    paddingHorizontal: 14, paddingVertical: 8,
-  },
-  chipText: { color: colors.text, fontSize: 14, fontWeight: font.medium, fontVariant: ['tabular-nums'] },
-
-  hint: { flexDirection: 'row', alignItems: 'center', gap: 7, marginBottom: 10 },
-  // The responder that carries a lifted stop: the list's whole height.
-  dragArea: { flex: 1 },
-  hintText: { ...CAPTION, color: colors.textSecondary },
-
-  // The rail column is `components/rail`'s 16pt; the card takes the rest.
-  // 12pt between them, the same gap the identity band keeps between its
-  // well and the name, so the page's two left edges line up with the
-  // card's. `stretch`, so the rail's line spans the card and the leg.
-  stopRow: { flexDirection: 'row', alignItems: 'stretch', gap: 12 },
-  // The card and the leg out of it, in one column beside the rail. 12pt
-  // under a stop that has one after it: the leg row adds its own above
-  // the figure, so a stop with a measured leg is card, 12, figure, 12,
-  // next card — close to the 44pt the old leg row held — and a stop whose
-  // leg could not be measured still clears the next card.
-  column: { flex: 1 },
-  // The screen's own cards — the empty and the gone states — stretch to
-  // the column, as the stop card does inside `StopCard`.
-  card: { alignSelf: 'stretch' },
-  columnGap: { paddingBottom: 12 },
-
-
-
-
-
-
-  // `LegRow`'s place on this screen: 12pt under the card, in the card's
-  // column so the figure starts where the card does.
-  leg: { paddingTop: 12 },
-
-  save: { height: 18 },
-  note: { ...CAPTION, color: colors.textTertiary, marginTop: 12 },
-});
