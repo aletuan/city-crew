@@ -132,7 +132,7 @@ export function useExploreScroll({ navigation, mapMode, pickView, insets, shown,
    * focused, so the press that pops back to it does not also close the
    * map it pops back to.
    *
-   * The map is left the way its own "Close Map" leaves it, remembered
+   * The map is left the way its own "List" leaves it, remembered
    * and all — a press on the tab is the reader asking for the list, not
    * for a list this once.
    */

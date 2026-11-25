@@ -14,7 +14,7 @@ import React from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Dimensions } from 'react-native';
-import { act, fireEvent, render, screen, waitFor, within } from '../uitest/render';
+import { act, fireEvent, propsWhere, render, screen, waitFor, within } from '../uitest/render';
 import { switchOrDoor } from '../components/ExploreFilterSheet';
 import { pinImage } from '../components/mapPins';
 import { appFlags } from '../lib/flags';
@@ -1369,8 +1369,14 @@ describe('the map', () => {
     // The bar — and with it the switch — must survive the tap, or map mode
     // is a room with no door. In map mode there is exactly one copy.
     expect(screen.getByTestId('explore-view-pinned')).toBeTruthy();
-    expect(screen.getByRole('button', { name: 'Close Map' })).toBeTruthy();
-    await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Close Map' })); });
+    // Owner, 25 Nov 2026: over the map the way back is the filled pill,
+    // named for where it goes; on the list the pill is the pale one.
+    const face = (id: string) => (propsWhere((p) => p.testID === id).contentStyle as unknown[]).flat(3).filter(Boolean) as { backgroundColor?: string }[];
+    const back = screen.getByRole('button', { name: 'List' });
+    expect(back.textContent).toBe('List');
+    expect(face('explore-view-pinned').at(-1)!.backgroundColor).toBe(colors.text);
+    await act(async () => { fireEvent.click(back); });
+    expect(face('explore-view').at(-1)!.backgroundColor).toBe(colors.surfaceGlassStrong);
     expect(screen.getByTestId('explore-list')).toBeTruthy();
     expect(screen.queryByTestId('places-map')).toBeNull();
   });
@@ -1538,7 +1544,7 @@ describe('the map', () => {
     render(<ExploreScreen navigation={nav()} />);
     await waitFor(() => expect(screen.getByTestId('places-map')).toBeTruthy());
     await waitFor(() => expect(spies.setStatusBarStyle).toHaveBeenLastCalledWith('dark', true));
-    await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Close Map' })); });
+    await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'List' })); });
     await waitFor(() => expect(spies.setStatusBarStyle).toHaveBeenLastCalledWith('light', true));
   });
 });
