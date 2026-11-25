@@ -1339,6 +1339,25 @@ describe('the map', () => {
     expect(screen.queryByTestId('explore-list')).toBeNull();
   });
 
+  // The map's box starts under the floating bar by the bar's own
+  // measured height (`marginTop`, not padding: the map fills its parent
+  // absolutely and would ignore padding).
+  it('starts the map under the floating bar, by the height the bar reports', async () => {
+    state.places.data = [place('p1', { lat: 21, lng: 105 })];
+    render(<ExploreScreen navigation={nav()} />);
+    await waitFor(() => expect(screen.getByTestId('places-map')).toBeTruthy());
+    const bar = screen.getByTestId('explore-pinned-bar');
+    type Fiber = { return: Fiber | null; memoizedProps: Record<string, unknown> };
+    const key = Object.keys(bar).find((k) => k.startsWith('__reactFiber'))!;
+    let f = (bar as unknown as Record<string, Fiber>)[key];
+    while (f && !(f.memoizedProps.testID === 'explore-pinned-bar' && typeof f.memoizedProps.onLayout === 'function')) f = f.return!;
+    act(() => { (f.memoizedProps.onLayout as (e: unknown) => void)({ nativeEvent: { layout: { height: 131.6 } } }); });
+    // The map's parent: the box the bar's height is kept off.
+    let body = screen.getByTestId('places-map').parentElement!;
+    while (body && !body.style.marginTop) body = body.parentElement!;
+    expect(body.style.marginTop).toBe('132px');
+  });
+
   it('switches from the list to the map on the spot, and keeps the way back', async () => {
     await AsyncStorage.setItem('citycrew.explore.view', 'list');
     state.places.data = [place('p1', { lat: 21, lng: 105 })];
