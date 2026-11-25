@@ -196,7 +196,9 @@ mục Supabase.
 ## Dashboard
 
 `dashboard/` là web app Vite cho desk. Cùng mô hình với app: `api.js` nói
-thẳng với Supabase bằng session của editor, RLS quyết định ai được ghi gì,
+thẳng với Supabase bằng session của editor (từ 25/11/2026 nó chỉ ghép
+sáu file theo aggregate trong `src/api/`, như `lib/data/` của app; mỗi
+file là một factory nhận client, vì test nạp lại `api.js` cho từng ca), RLS quyết định ai được ghi gì,
 và gọi `fetch-place`, `scan-city`, `suspend-user`, `write-blurb` cho những
 thứ cần bí mật. Không có tầng nào giữa dashboard và database. Từ
 24/11/2026 dashboard có cùng trần kích thước hàm với app
