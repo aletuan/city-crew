@@ -165,3 +165,5 @@ export function useCrewActions({ me, ships, blocks, setDismissed, t }: {
     pending, askSuggested, dismiss, answer, cutEdge, bar, unblock,
   };
 }
+
+export type CrewActions = ReturnType<typeof useCrewActions>;

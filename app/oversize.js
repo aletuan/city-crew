@@ -47,8 +47,6 @@
 const CEILING = { lines: 150, complexity: 25 };
 
 const OVERSIZE = {
-  'src/screens/CrewScreen.tsx': { lines: 576, complexity: 32 },
-  'src/screens/ExploreScreen.tsx': { lines: 567, complexity: 49 },
   'src/screens/IdeasScreen.tsx': { lines: 493, complexity: 51 },
   'src/screens/SearchScreen.tsx': { lines: 461, complexity: 40 },
   'src/components/StartSheet.tsx': { lines: 409, complexity: 34 },

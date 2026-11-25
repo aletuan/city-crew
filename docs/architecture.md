@@ -68,7 +68,7 @@ Chiều mũi tên chỉ đi xuống. Hai điểm hay bị hiểu nhầm:
 | màn hình, component, provider, helper và Edge Function có sàn coverage theo từng file (bảng số ở `CLAUDE.md`) | `app/vitest.config.ts`; sàn là ratchet, nâng tay khi file tốt lên | `npm run coverage` |
 | Edge Function nào cũng có test nạp nó, hoặc một lý do có tên | `scripts/edgeFunctionTests.test.ts` | `npm test` |
 | một chuỗi tiếng Anh chỉ có một bản dịch ở mọi nơi | `scripts/translations.test.ts` | `npm test` |
-| hàm không dài quá 150 dòng code, độ phức tạp không quá 25; file đã vượt thì không được vượt con số của chính nó | `max-lines-per-function`, `complexity`; trần và danh sách ở `app/oversize.js` (29 file) và `dashboard/oversize.js` (7 file) | `npm run lint`; job `dashboard` |
+| hàm không dài quá 150 dòng code, độ phức tạp không quá 25; file đã vượt thì không được vượt con số của chính nó | `max-lines-per-function`, `complexity`; trần và danh sách ở `app/oversize.js` (27 file) và `dashboard/oversize.js` (7 file) | `npm run lint`; job `dashboard` |
 | màn nào cũng có cầu dao lỗi riêng | `ScreenBoundary.ui.test.tsx` đọc `App.tsx` | `npm test` |
 | taxonomy khớp ở app, dashboard và check constraint | `data/test/categories-sync.test.mjs` | job `data` |
 | policy RLS hỏi "bạn là ai" một lần mỗi truy vấn — viết `(select auth.uid())`, `(select is_editor())` — và không đọc lại chính bảng của nó | `supabase/tests/rls_ask_once_test.sql`; lượt chạy thứ hai của `run.sh` chạy lại mọi test RLS trên policy đã viết lại | job `migrations` |
@@ -284,8 +284,12 @@ Ghi ra để không ai tưởng là có chủ ý:
   Ngày 22–25/11/2026, sau code review, ba hàm màn hình lớn nhất xuống
   dưới trần và ra khỏi danh sách: `CollectionDetailScreen` (740 dòng /
   độ phức tạp 137 → 112 / 11), `PlaceDetailScreen` (→ 139 / 13),
-  `CollectionsScreen` (→ 148 / 19). Danh sách còn 29 file. File màn hình
-  dài nhất hiện là `ExploreScreen` (1.122 dòng) và `CrewScreen` (1.009).
+  `CollectionsScreen` (→ 148 / 19). Cùng ngày 25/11, `CrewScreen` (576 /
+  32 → 125 / 18) ra `screens/crew/`: `useIntros`, `useCrewSheets`, hai
+  tab và các mảnh của một dòng. `ExploreScreen` (567 / 49 → 143 / 23) ra
+  `screens/explore/`: `useExploreFilters`, `useExploreScroll`, `FilterBar`,
+  `ExploreList`, `ExploreMap`. Danh sách còn 27 file; hàm màn hình lớn
+  nhất trên đó giờ là `IdeasScreen` (493 / 51) và `SearchScreen` (461 / 40).
 - ~~**`lib/save.tsx`** nằm sai tầng~~ Ngày 20/10/2026 phần vẽ hai sheet
   chuyển ra `components/SaveSheets.tsx`; `lib/save.tsx` chỉ còn trạng thái,
   và ngoại lệ trong lint đã bỏ.
