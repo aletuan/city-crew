@@ -128,7 +128,7 @@ chỗ nào có lọc và vì sao.
 ngoài: `ThemeProvider` › `AppBoundary` › `Auth` › `I18n` › `City` ›
 `Catalog` › `Crew` › `Invitations` › `MyTrips` › `Checkins` › `Save` ›
 `Notice` › `Rewards` › `FreshNews` › `CommentQuick` › `TabBarDuck` ›
-`SignupTour`. Mười lăm provider của app; bản 27/09 ghi mười một, trước
+`SignupTour`. Mười sáu provider; bản 27/09 ghi mười một, trước
 khi có check-in, thông báo, phần thưởng, bình luận và tour đăng ký.
 
 Giữa chúng có năm component không vẽ gì, chỉ đồng bộ một thứ theo
