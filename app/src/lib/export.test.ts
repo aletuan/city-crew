@@ -313,8 +313,8 @@ describe('shared', () => {
     expect(JSON.stringify(out)).not.toMatch(/"(me|f1|f2)"/);
   });
 
-  it('is in format 5', () => {
-    expect(EXPORT_FORMAT_VERSION).toBe(5);
+  it('is in format 6', () => {
+    expect(EXPORT_FORMAT_VERSION).toBe(6);
   });
 });
 
@@ -392,16 +392,24 @@ describe('history and contributions', () => {
       .toEqual({ place_slug: null, event: 'open', city_id: null, at: '' });
   });
 
-  it('lists check-ins as place, city, instant, the note and who sees it', () => {
+  it('lists check-ins as place, city, instant, the note, who sees it and its photos by name', () => {
     const checkins = [
-      { id: 'k1', place_slug: 'p', city_id: 'hanoi', at: '2026-10-08T10:00:00+07:00', note: 'Crisp sourdough.', audience: 'friends' as const },
+      {
+        id: 'k1', place_slug: 'p', city_id: 'hanoi', at: '2026-10-08T10:00:00+07:00', note: 'Crisp sourdough.', audience: 'friends' as const,
+        photos: [
+          { id: 'ph1', path: 'u1/k1/ph1.jpg', width: 1200, height: 900 },
+          { id: 'ph2', path: 'u1/k1/ph2.jpg', width: 900, height: 1200 },
+        ],
+      },
       { id: 'k0', place_slug: '', city_id: null, at: 'nonsense' },
     ];
     expect(buildExport(bare({ checkins }), NOW, 'en').checkins).toEqual([
-      { place_slug: 'p', city_id: 'hanoi', at: '2026-10-08T03:00:00.000Z', note: 'Crisp sourdough.', seen_by: 'friends' },
+      // A name and a size: no account id, no visit id, no link.
+      { place_slug: 'p', city_id: 'hanoi', at: '2026-10-08T03:00:00.000Z', note: 'Crisp sourdough.', seen_by: 'friends',
+        photos: [{ file: 'ph1.jpg', width: 1200, height: 900 }, { file: 'ph2.jpg', width: 900, height: 1200 }] },
       // The row's own id is the database's business, and a gone place
       // leaves no slug to name. A visit never asked is private.
-      { place_slug: null, city_id: null, at: '', note: null, seen_by: 'private' },
+      { place_slug: null, city_id: null, at: '', note: null, seen_by: 'private', photos: [] },
     ]);
   });
 

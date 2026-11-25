@@ -60,8 +60,9 @@ import type {
 // `comments` and `comment_hearts`, what the account wrote and liked in
 // comments (C9 of docs/comments-plan.md). 5 since 21 Nov 2026:
 // `profile.wall_kind` and `profile.wall_ref`, the cover the account chose
-// for its page (docs/wall-plan.md), both null for automatic.
-export const EXPORT_FORMAT_VERSION = 5;
+// for its page (docs/wall-plan.md), both null for automatic. 6 since 25
+// Nov 2026: `photos` on each check-in, its photos by file name.
+export const EXPORT_FORMAT_VERSION = 6;
 
 /** The profile columns `lib/auth` reads. Declared here rather than
  *  imported because `auth.tsx` pulls in React, and this file is held to
@@ -147,8 +148,19 @@ export type ExportBundle = {
     with_you: { collection_slug: string; owner_handle: string; shared_at: string }[];
   };
   history: { place_slug: string | null; event: string; city_id: string | null; at: string }[];
-  /** Where and when, and nothing else — that is all a check-in is yet. */
-  checkins: { place_slug: string | null; city_id: string | null; at: string; note: string | null; seen_by: 'private' | 'friends' }[];
+  /**
+   * Where and when, the note, who sees it, and the visit's photos by
+   * name. A name and its size, never the picture and never a link (owner,
+   * 25 Nov 2026): the export is one text file, and a link to a private
+   * photo is a bearer token in whatever inbox the file is mailed to —
+   * the reason `takeout.tsx` gives for not handing the file itself out
+   * as one. The photos are a press away in the app, to save one by one.
+   * One the desk has hidden is not listed: it is not shown anywhere.
+   */
+  checkins: {
+    place_slug: string | null; city_id: string | null; at: string; note: string | null; seen_by: 'private' | 'friends';
+    photos: { file: string; width: number; height: number }[];
+  }[];
   places_added: { slug: string; name: string; submitted_at: string | null }[];
   /**
    * Every comment you wrote. Rule 6 draws the line here as it does for a
@@ -209,17 +221,17 @@ export function exportFilename(handle: string, now: Date): string {
  *  than no header. */
 const NOTES = {
   en: {
-    about: 'Everything City Crew holds about this account. Photographs are given as links rather than as image data — save them separately if you want to keep them.',
+    about: 'Everything City Crew holds about this account. Photographs are given as links rather than as image data — save them separately if you want to keep them. The photos on your check-ins are listed by file name only; save them from the app.',
     third_parties: 'Other people appear only by their public @handle. Nobody else\'s name, email or account id is in this file, and trips do not list who else was on them.',
     omitted: 'Reports and moderation records are not included: they name other people, and an export must not become a way of learning who reported whom. Comments are yours where you wrote them: what other people wrote, even in answer to you or tagging you, is theirs and is not here.',
   },
   vi: {
-    about: 'Toàn bộ những gì City Crew lưu về tài khoản này. Ảnh được ghi bằng đường dẫn chứ không phải dữ liệu ảnh — muốn giữ thì hãy lưu riêng.',
+    about: 'Toàn bộ những gì City Crew lưu về tài khoản này. Ảnh được ghi bằng đường dẫn chứ không phải dữ liệu ảnh — muốn giữ thì hãy lưu riêng. Ảnh kèm check-in chỉ được ghi tên tệp; muốn giữ thì lưu từ trong app.',
     third_parties: 'Người khác chỉ xuất hiện bằng @handle công khai. Không có tên, email hay id tài khoản của ai khác trong file này, và các chuyến đi không liệt kê những người cùng đi.',
     omitted: 'Báo cáo vi phạm và hồ sơ kiểm duyệt không nằm trong bản xuất: chúng nêu tên người khác, và một bản xuất không được trở thành cách để biết ai đã báo cáo ai. Bình luận là của bạn khi chính bạn viết: những gì người khác viết, kể cả để trả lời hay nhắc tới bạn, là của họ và không có ở đây.',
   },
   ja: {
-    about: 'City Crew がこのアカウントについて保持しているすべてです。写真は画像データではなくリンクとして記載されます。残したい場合は別途保存してください。',
+    about: 'City Crew がこのアカウントについて保持しているすべてです。写真は画像データではなくリンクとして記載されます。残したい場合は別途保存してください。チェックインの写真はファイル名のみ記載されます。残したい場合はアプリから保存してください。',
     third_parties: '他の人は公開 @handle のみで登場します。他人の名前・メールアドレス・アカウント ID はこのファイルに含まれず、旅程にも同行者は記載されません。',
     omitted: '通報および管理記録は含まれません。これらは他人の名前を含むため、エクスポートが「誰が誰を通報したか」を知る手段になってはならないからです。コメントは、あなた自身が書いたものだけが含まれます。他の人が書いたものは、あなたへの返信やメンションであっても、その人のものであり、ここには含まれません。',
   },
@@ -382,6 +394,9 @@ export function buildExport(input: ExportInput, now: Date, lang: ExportLang): Ex
       // unanswered visit is private (`audienceOf`).
       note: c.note ?? null,
       seen_by: audienceOf(c),
+      // The last part of the path: the rest is the account's id and the
+      // visit's, the database's business as the row's own id is.
+      photos: (c.photos ?? []).map((ph) => ({ file: ph.path.split('/').pop() as string, width: ph.width, height: ph.height })),
     })),
 
     places_added: input.submitted.map((p) => ({
