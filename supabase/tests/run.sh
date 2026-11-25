@@ -895,3 +895,12 @@ for f in "$ROOT"/supabase/migrations/*_checkin_public.sql; do
   run "$DB" -f "$f" >/dev/null
 done
 run "$DB" -f "$HERE/checkin_public_test.sql"
+
+# A check-in reported whole (owner, 25 Nov 2026): the report, the queue,
+# and the desk hiding the note or the whole visit. After public
+# check-ins, whose `checkin_seen` and `person_checkins` it makes again.
+echo "→ check-ins at the desk"
+for f in "$ROOT"/supabase/migrations/*_checkin_report.sql; do
+  run "$DB" -f "$f" >/dev/null
+done
+run "$DB" -f "$HERE/checkin_report_test.sql"

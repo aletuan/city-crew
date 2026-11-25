@@ -77,6 +77,16 @@ export function moderationApi({ supabase, db, invoke }) {
       db(await supabase.rpc('moderate_checkin_photo', { target: id, hide }));
     },
 
+    /**
+     * Hide a reported check-in's note, or the whole visit, or put either
+     * back (`part` is 'note' or 'visit'). Reversible, as a photo is: the
+     * row stays, and its owner still sees it marked — see the
+     * checkin_report migration.
+     */
+    moderateCheckin: async (id, part, hide) => {
+      db(await supabase.rpc('moderate_checkin', { target: id, part, hide }));
+    },
+
     /** A link to a check-in photo, for the desk's eyes: the bucket is
      *  private, and an editor may read it. An hour, as the app's are. */
     signCheckinPhoto: async (path) => {

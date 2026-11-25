@@ -1749,6 +1749,9 @@ option { background: var(--bg-elevated); color: var(--text-primary); }
 /* A reported check-in photo, whole: the desk judges the picture, not a crop of it. */
 .repphoto { display: block; max-width: 100%; max-height: 360px; border-radius: 12px; margin: 4px 0 10px; }
 .repphoto.off { opacity: 0.4; }
+/* A reported check-in's photos, each with its own button under it. */
+.repvisitphoto { margin: 0 0 12px; }
+.repvisitphoto .repphoto { max-height: 240px; margin-bottom: 6px; }
 .repacts { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
 
 /* Banned words: the list as chips, each with its own way out. */

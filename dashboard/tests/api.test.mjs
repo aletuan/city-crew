@@ -617,6 +617,14 @@ test('moderateCheckinPhoto names the photo and which way to the desk\'s function
   assert.deepEqual(client.calls.map((c) => c.args), [{ target: 'ph1', hide: true }, { target: 'ph1', hide: false }]);
 });
 
+test('moderateCheckin names the visit, the part and which way', async () => {
+  const { api, client } = await loadApi([{ data: null, error: null }, { data: null, error: null }]);
+  await api.moderateCheckin('k1', 'note', true);
+  await api.moderateCheckin('k1', 'visit', false);
+  assert.equal(client.calls[0].fn, 'moderate_checkin');
+  assert.deepEqual(client.calls.map((c) => c.args), [{ target: 'k1', part: 'note', hide: true }, { target: 'k1', part: 'visit', hide: false }]);
+});
+
 test('signCheckinPhoto asks the private bucket for an hour, and throws its words', async () => {
   const asked = [];
   const storageFrom = (name) => ({

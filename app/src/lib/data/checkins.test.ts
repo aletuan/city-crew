@@ -185,6 +185,7 @@ describe('fetchPersonCheckins', () => {
       place: { name_en: 'Cong', name_vi: 'Cộng', cover: 'https://x/cover.jpg', i18n: { ja: { name: 'コン' } }, categories: ['cafes'] },
       city_id: 'hanoi', day: '2026-11-24', note: 'Crisp sourdough.', audience: 'friends', likes: 2, liked: true,
       photos: [{ id: 'p1', path: 'u2/k1/p1.jpg', width: 1200, height: 900 }],
+      hidden: false, note_hidden: false,
     }]);
     expect(fake().log).toEqual([{ op: 'rpc', fn: 'person_checkins', payload: { p_person: 'u1' }, filters: [] }]);
   });
@@ -196,7 +197,7 @@ describe('fetchPersonCheckins', () => {
     }] });
     expect(await fetchPersonCheckins('u1')).toEqual([{
       id: 'k1', place_slug: 'cong', place: { name_en: '', name_vi: '', cover: null, i18n: null, categories: [] },
-      city_id: null, day: '2026-11-24', note: null, audience: null, likes: 0, liked: false, photos: [],
+      city_id: null, day: '2026-11-24', note: null, audience: null, likes: 0, liked: false, photos: [], hidden: false, note_hidden: false,
     }]);
   });
 
@@ -212,6 +213,16 @@ describe('fetchPersonCheckins', () => {
     expect(b.audience).toBeNull();
     expect(c.audience).toBe('public');
     expect(d.audience).toBe('friends');
+  });
+
+  it('takes the desk’s marks only on the word true', async () => {
+    fake().replies({ data: [
+      { id: 'a', place_slug: 'p', day: '2026-11-24', hidden: true, note_hidden: true },
+      { id: 'b', place_slug: 'p', day: '2026-11-24', hidden: 'yes', note_hidden: 1 },
+    ] });
+    const [a, b] = await fetchPersonCheckins('u1');
+    expect([a.hidden, a.note_hidden]).toEqual([true, true]);
+    expect([b.hidden, b.note_hidden]).toEqual([false, false]);
   });
 
   it('is nobody’s page when the server answers nothing, and throws what it said', async () => {

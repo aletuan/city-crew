@@ -14,10 +14,12 @@ export const REPORT_REASONS = ['spam', 'offensive', 'impersonation', 'other'] as
 
 export type ReportReason = (typeof REPORT_REASONS)[number];
 
-/** What a report can be about — the table's CHECK. A check-in photo
- *  since K5 of docs/checkin-photos-plan.md: the one picture a person
- *  uploads for others to see. */
-export type ReportKind = 'collection' | 'profile' | 'comment' | 'checkin_photo';
+/** What a report can be about — the table's CHECK. A check-in whole
+ *  since 25 Nov 2026 (`20261126090000_checkin_report.sql`): its note and
+ *  photos are one post to a reader, as a collection is. 'checkin_photo'
+ *  (K5) is a kind the table still holds for the reports filed under it,
+ *  and the app files no new ones. */
+export type ReportKind = 'collection' | 'profile' | 'comment' | 'checkin_photo' | 'checkin';
 
 /** What the column will take. Long enough for a paragraph of context,
  *  short enough that the queue stays readable. */

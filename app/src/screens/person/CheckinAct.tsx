@@ -44,11 +44,18 @@
 // was. The viewer is a `Modal` of its own: the page has none to draw it
 // in, as the photo sheet does.
 //
-// On somebody else's page the viewer carries a flag (K5): the photo is
-// reported to the desk, as a comment or a profile is. The viewer goes
-// first and the reasons follow once it has (`ActionSheet`'s 220ms, for
-// its reason). Your own photos have no flag: they are yours to take off
-// the visit, from its sheet.
+// ── a report ──
+//
+// Of the visit, whole, from the ⋯ on somebody else's card (owner, 25 Nov
+// 2026): its note and photos are one post to the reader, as a collection
+// is reported whole (`20261126090000_checkin_report.sql` has what that
+// was weighed against). The viewer's flag that reported one photo (K5)
+// is gone — one way to report a visit, and it is on the card. Your own
+// visits have no ⋯: they are yours to edit or take back.
+//
+// What the desk took down is said on your own card: a hidden visit wears
+// "Hidden by City Crew" for its mark, a hidden note a line under it.
+// Nobody else is sent either (`person_checkins`).
 //
 // ── while the page is searched ──
 //
@@ -58,9 +65,10 @@
 // explains itself as one.
 
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { Modal } from 'react-native';
-import ActivityCard from '../../components/ActivityCard';
+import { Modal, StyleSheet, Text } from 'react-native';
+import ActivityCard, { type ActivityMark } from '../../components/ActivityCard';
 import CheckinSheet from '../../components/CheckinSheet';
+import PersonSheet from '../../components/PersonSheet';
 import PhotoViewer from '../../components/PhotoViewer';
 import { useReport } from '../../components/reportFlow';
 import { useSignedPhotos } from '../../components/useSignedPhotos';
@@ -79,6 +87,7 @@ import { useI18n } from '../../lib/i18n';
 import { localized } from '../../lib/localized';
 import { SEEN_GLYPH } from '../../lib/shares';
 import { useFlag, useFlagsReady } from '../../lib/useFlag';
+import { colors } from '../../theme';
 
 const NONE: PersonCheckin[] = [];
 
@@ -187,14 +196,7 @@ export function useVisitCards({ me, person, onPlace }: {
   });
   const [viewing, setViewing] = useState<{ v: PersonCheckin; at: number } | null>(null);
   const { report, canReport, node: reportSheet } = useReport();
-  /** The viewer's flag, for a photo the reader may report. */
-  const reportOf = (v: PersonCheckin) => (photo: { id: string }) => {
-    setViewing(null);
-    const who = person as FriendProfile;
-    setTimeout(() => report({
-      kind: 'checkin_photo', id: photo.id, ownerId: who.id, name: nameOf(v), avatarUrl: who.avatar_url || undefined,
-    }), 220);
-  };
+  const [menuFor, setMenuFor] = useState<PersonCheckin | null>(null);
 
   const [noteFor, setNoteFor] = useState<PersonCheckin | null>(null);
   const nameOf = (v: PersonCheckin) => localized(v.place, 'name', lang);
@@ -216,11 +218,7 @@ export function useVisitCards({ me, person, onPlace }: {
         // Anybody else is told Public when it is and nothing for Friends
         // (`person_checkins`), so a card on somebody else's page wears
         // the friends' mark unless it says otherwise.
-        mark={v.audience === 'public'
-          ? { icon: SEEN_GLYPH.public, label: t('Public', 'Công khai', '公開', '公开', '公開') }
-          : shared
-            ? { icon: SEEN_GLYPH.friends, label: t('Friends', 'Bạn bè', '友達', '好友', '好友') }
-            : { icon: SEEN_GLYPH.private, label: t('Only me', 'Chỉ mình tôi', '自分のみ', '仅自己', '僅自己') }}
+        mark={markOf(v, shared, t)}
         title={nameOf(v)}
         // A visit with photos of its own draws none of the place's while
         // its links are on their way — the plain ground instead: the
@@ -234,7 +232,22 @@ export function useVisitCards({ me, person, onPlace }: {
         } : undefined}
         meta={[kind ? categoryLabel(kind, t) : null, cityShortById(cities, v.city_id, t)].filter(Boolean).join(' · ')}
         desc={own ? null : v.note}
-        under={own ? <VisitNote note={v.note} onEdit={() => setNoteFor(v)} /> : undefined}
+        under={own ? (
+          <>
+            <VisitNote note={v.note} onEdit={() => setNoteFor(v)} />
+            {v.note_hidden ? (
+              <Text style={s.taken} testID="person-visit-note-hidden">
+                {t('City Crew hid this note from others.', 'City Crew đã ẩn ghi chú này với người khác.', 'このメモは City Crew により他の人から非表示になりました。', 'City Crew 已对他人隐藏此备注。', 'City Crew 已對他人隱藏此備註。')}
+              </Text>
+            ) : null}
+          </>
+        ) : undefined}
+        // Your own is refused by `canReport` (`reportable`): yours to edit or
+        // take back, not to report.
+        onMore={canReport({ kind: 'checkin', id: v.id, ownerId: personId }) ? {
+          onPress: () => setMenuFor(v),
+          label: t('More about this check-in', 'Thêm về lần check-in này', 'このチェックインのその他', '关于此打卡的更多操作', '關於此打卡的更多操作'),
+        } : undefined}
         liked={liked}
         // The server's count, moved by the reader's own press and no
         // further: one heart is the most a press can change it by.
@@ -254,7 +267,6 @@ export function useVisitCards({ me, person, onPlace }: {
           index={Math.min(viewing.at, viewed.length - 1)}
           onIndex={(at) => setViewing({ ...viewing, at })}
           onClose={() => setViewing(null)}
-          onReport={canReport({ kind: 'checkin_photo', id: '', ownerId: personId }) ? reportOf(viewing.v) : undefined}
         />
       ) : null}
     </Modal>
@@ -276,6 +288,16 @@ export function useVisitCards({ me, person, onPlace }: {
         onClose={(saved) => { setNoteFor(null); if (saved) mine.reload(); }}
       />
       {viewer}
+      <VisitMenu
+        visit={menuFor}
+        person={person as FriendProfile | null}
+        name={menuFor ? nameOf(menuFor) : ''}
+        onReport={(v) => report({
+          kind: 'checkin', id: v.id, ownerId: personId,
+          name: nameOf(v), avatarUrl: (person as FriendProfile).avatar_url || undefined,
+        })}
+        onClose={() => setMenuFor(null)}
+      />
       {reportSheet}
     </>
   );
@@ -286,3 +308,54 @@ export function useVisitCards({ me, person, onPlace }: {
     card, sheet, read,
   };
 }
+
+type T = (en: string, vi: string, ja: string, zh: string, hant?: string) => string;
+
+/** A card's mark: what the desk did, before who sees it — a hidden visit
+ *  is seen by nobody but you, whatever it was answered. Anybody else is
+ *  told Public when it is and nothing for Friends (`person_checkins`),
+ *  so a card on somebody else's page wears the friends' mark unless it
+ *  says otherwise. */
+function markOf(v: PersonCheckin, shared: boolean, t: T): ActivityMark {
+  if (v.hidden) {
+    const said = t('Hidden by City Crew', 'Đã bị City Crew ẩn', 'City Crew により非表示', '已被 City Crew 隐藏', '已被 City Crew 隱藏');
+    return { icon: 'eye-off-outline', label: said, text: said };
+  }
+  if (v.audience === 'public') return { icon: SEEN_GLYPH.public, label: t('Public', 'Công khai', '公開', '公开', '公開') };
+  return shared
+    ? { icon: SEEN_GLYPH.friends, label: t('Friends', 'Bạn bè', '友達', '好友', '好友') }
+    : { icon: SEEN_GLYPH.private, label: t('Only me', 'Chỉ mình tôi', '自分のみ', '仅自己', '僅自己') };
+}
+
+/** The ⋯ on somebody else's card: who and which visit, and the report. */
+function VisitMenu({ visit, person, name, onReport, onClose }: {
+  visit: PersonCheckin | null;
+  person: FriendProfile | null;
+  name: string;
+  onReport: (v: PersonCheckin) => void;
+  onClose: () => void;
+}) {
+  const { t } = useI18n();
+  return (
+    <PersonSheet
+      visible={visit !== null}
+      name={person?.full_name || atHandle(person?.handle ?? '')}
+      // Which visit the menu is about: the place, as the card names it.
+      meta={visit ? name : undefined}
+      avatarUrl={person?.avatar_url || undefined}
+      actions={visit ? [{
+        key: 'report',
+        icon: 'flag-outline',
+        title: t('Report check-in', 'Báo cáo check-in', 'チェックインを報告', '举报打卡', '舉報打卡'),
+        onPress: () => onReport(visit),
+      }] : []}
+      onClose={onClose}
+    />
+  );
+}
+
+const s = StyleSheet.create({
+  // Under the note, in the byline's quiet ink and size: a fact about the
+  // note, not a second note.
+  taken: { color: colors.textTertiary, fontSize: 13, lineHeight: 17, marginTop: 2 },
+});

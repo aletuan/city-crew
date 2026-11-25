@@ -40,6 +40,9 @@ export const KIND = {
   // K5 of docs/checkin-photos-plan.md: the picture is the thing judged,
   // drawn on the card; the visit's note and its place stand beside it.
   checkin_photo: { label: 'check-in photo', icon: 'photo' },
+  // A check-in reported whole (20261126090000): the note and every photo
+  // are drawn, and the desk chooses what comes down.
+  checkin: { label: 'check-in', icon: 'pin' },
 };
 
 export function kindOf(row) {
@@ -47,8 +50,8 @@ export function kindOf(row) {
 }
 
 /** The kinds whose `title` says where, not what: a comment's list, a
- *  check-in photo's place. */
-const SAID_IN_A_PLACE = new Set(['comment', 'checkin_photo']);
+ *  check-in's place. */
+const SAID_IN_A_PLACE = new Set(['comment', 'checkin_photo', 'checkin']);
 
 /** The window the store expects, in hours. Not a setting: it is the
  *  number the guideline names, and the page exists to keep it. */

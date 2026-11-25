@@ -1815,7 +1815,9 @@ export type Database = {
           likes: number
           name_en: string
           name_vi: string
+          hidden: boolean
           note: string
+          note_hidden: boolean
           photos: Json
           place_slug: string
         }[]
