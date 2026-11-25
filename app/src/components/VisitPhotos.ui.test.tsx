@@ -23,8 +23,16 @@ vi.mock('../lib/data', () => data);
 // The app's queue reaches the function through its own file, not the barrel.
 vi.mock('../lib/data/checkinPhotos', () => ({ uploadCheckinPhoto: data.uploadCheckinPhoto }));
 vi.mock('../lib/i18n', () => ({ useI18n: () => ({ lang: 'en', t: (en: string) => en }) }));
+// The page's ink, told apart from the photo's: in this suite the dark
+// side resolves `colors.text` to the very hex `onPhoto.text` is, and an
+// ✕ drawn in the page's ink would pass for one drawn in the photo's.
+vi.mock('../theme', async (orig) => {
+  const real = await orig<typeof import('../theme')>();
+  return { ...real, colors: { ...real.colors, text: 'page-ink' } };
+});
 
 import VisitPhotos, { TILE, tileFor } from './VisitPhotos';
+import { onPhoto } from '../theme';
 import { useVisitPhotos, type VisitPhotos as Photos } from './useVisitPhotos';
 import { isWatched, resetVisitUploads, uploadsFor, uploadsGoing, uploadsSettled } from '../lib/visitUploads';
 
@@ -219,6 +227,11 @@ describe('adding', () => {
     expect(states()).toEqual(['visit-photo-failed']);
     const tile = screen.getByTestId('visit-photo');
     expect(tile.getAttribute('aria-label')).toBe('Photo 1 did not upload. Try again');
+    // Over the picture, in the picture's colours in both themes: the ✕
+    // and the retry arrow were the page's ink, near-black on the dark
+    // disc in the paper theme (25 Nov 2026).
+    const ink = (name: string) => document.querySelector(`[data-icon="${name}"]`)?.getAttribute('data-color');
+    expect([ink('close'), ink('refresh')]).toEqual([onPhoto.text, onPhoto.text]);
     fireEvent.click(tile);
     await act(() => uploadsSettled());
     expect(data.uploadCheckinPhoto).toHaveBeenCalledTimes(2);
