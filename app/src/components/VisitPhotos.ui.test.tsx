@@ -20,10 +20,13 @@ const data = vi.hoisted(() => ({
   removeCheckinPhoto: vi.fn(async (_id: string) => {}),
 }));
 vi.mock('../lib/data', () => data);
+// The app's queue reaches the function through its own file, not the barrel.
+vi.mock('../lib/data/checkinPhotos', () => ({ uploadCheckinPhoto: data.uploadCheckinPhoto }));
 vi.mock('../lib/i18n', () => ({ useI18n: () => ({ lang: 'en', t: (en: string) => en }) }));
 
 import VisitPhotos, { TILE, tileFor } from './VisitPhotos';
 import { useVisitPhotos, type VisitPhotos as Photos } from './useVisitPhotos';
+import { isWatched, resetVisitUploads, uploadsFor, uploadsGoing, uploadsSettled } from '../lib/visitUploads';
 
 const alert = vi.spyOn(Alert, 'alert').mockImplementation(() => {});
 const picker = vi.mocked(ImagePicker.launchImageLibraryAsync);
@@ -53,6 +56,7 @@ const STORED: CheckinPhoto[] = [
 ];
 
 beforeEach(() => {
+  resetVisitUploads();
   data.fetchCheckinPhotos.mockImplementation(async () => []);
   data.signCheckinPhotos.mockImplementation(async () => ({}));
   data.uploadCheckinPhoto.mockImplementation(async () => ({ id: 'p-new', path: 'u1/k1/p-new.jpg', width: 1200, height: 900 }));
@@ -146,7 +150,7 @@ describe('adding', () => {
     expect(shrink).toHaveBeenNthCalledWith(2, 'file://1.jpg', [], { compress: 0.74, format: 'jpeg', base64: true });
     expect(data.uploadCheckinPhoto).toHaveBeenCalledTimes(1);
     expect(states()).toEqual(['visit-photo-sending', 'visit-photo-sending']);
-    expect(hook.sending).toBe(true);
+    expect(uploadsGoing()).toBe(2);
     expect(hook.changed()).toBe(false);
     // Uploading: no ✕, and the label says so.
     expect(screen.queryAllByTestId('visit-photo-remove')).toHaveLength(0);
@@ -154,9 +158,9 @@ describe('adding', () => {
     await act(async () => { first({ id: 'p-a', path: 'u1/k1/p-a.jpg', width: 1200, height: 900 }); });
     await flush();
     expect(data.uploadCheckinPhoto).toHaveBeenNthCalledWith(2, 'k1', 'AAAA');
-    await act(() => hook.settled());
+    await act(() => uploadsSettled());
     expect(states()).toEqual(['visit-photo-done', 'visit-photo-done']);
-    expect(hook.sending).toBe(false);
+    expect(uploadsGoing()).toBe(0);
     expect(hook.changed()).toBe(true);
     expect(hook.room).toBe(1);
   });
@@ -172,7 +176,7 @@ describe('adding', () => {
     await show();
     pick({ width: 10, height: 10 }, { width: 10, height: 10 });
     await add();
-    await act(() => hook.settled());
+    await act(() => uploadsSettled());
     expect(data.uploadCheckinPhoto).toHaveBeenCalledTimes(1);
     expect(states()).toHaveLength(3);
   });
@@ -199,7 +203,7 @@ describe('adding', () => {
     data.uploadCheckinPhoto.mockRejectedValueOnce(new PhotoError(why));
     pick({ width: 10, height: 10 });
     await add();
-    await act(() => hook.settled());
+    await act(() => uploadsSettled());
     expect(alert).toHaveBeenCalledWith('Could not add your photo', text);
     expect(states()).toEqual([]);
     expect(hook.changed()).toBe(false);
@@ -210,26 +214,26 @@ describe('adding', () => {
     data.uploadCheckinPhoto.mockRejectedValueOnce(new Error('Network request failed'));
     pick({ width: 10, height: 10 });
     await add();
-    await act(() => hook.settled());
+    await act(() => uploadsSettled());
     expect(alert).not.toHaveBeenCalled();
     expect(states()).toEqual(['visit-photo-failed']);
     const tile = screen.getByTestId('visit-photo');
     expect(tile.getAttribute('aria-label')).toBe('Photo 1 did not upload. Try again');
     fireEvent.click(tile);
-    await act(() => hook.settled());
+    await act(() => uploadsSettled());
     expect(data.uploadCheckinPhoto).toHaveBeenCalledTimes(2);
     expect(data.uploadCheckinPhoto).toHaveBeenLastCalledWith('k1', 'AAAA');
     expect(states()).toEqual(['visit-photo-done']);
     expect(hook.changed()).toBe(true);
   });
-  it('waits, when asked to settle, for the photo still going up', async () => {
+  it('is not sent twice by a press on a tile still going up', async () => {
     await show();
     let answer!: (p: CheckinPhoto) => void;
     data.uploadCheckinPhoto.mockReturnValueOnce(new Promise((r) => { answer = r; }));
     pick({ width: 10, height: 10 });
     await add();
     let done = false;
-    void hook.settled().then(() => { done = true; });
+    void uploadsSettled().then(() => { done = true; });
     // A tile on its way is not sent a second time either.
     act(() => { hook.retry(hook.tiles[0]); });
     await flush();
@@ -243,7 +247,7 @@ describe('adding', () => {
     data.fetchCheckinPhotos.mockResolvedValueOnce(STORED.slice(0, 1));
     await show();
     act(() => { hook.retry(hook.tiles[0]); hook.retry({ ...hook.tiles[0], state: 'failed' }); });
-    await act(() => hook.settled());
+    await act(() => uploadsSettled());
     expect(data.uploadCheckinPhoto).not.toHaveBeenCalled();
   });
 });
@@ -254,11 +258,13 @@ describe('removing', () => {
     data.uploadCheckinPhoto.mockRejectedValueOnce(new Error('offline'));
     pick({ width: 10, height: 10 });
     await add();
-    await act(() => hook.settled());
+    await act(() => uploadsSettled());
     fireEvent.click(screen.getByTestId('visit-photo-remove'));
     expect(alert).not.toHaveBeenCalled();
     expect(data.removeCheckinPhoto).not.toHaveBeenCalled();
     expect(states()).toEqual([]);
+    // Let go in the app's queue too: no sheet opened later draws it again.
+    expect(uploadsFor('k1')).toEqual([]);
   });
   it('asks first, and Cancel keeps the photo', async () => {
     data.fetchCheckinPhotos.mockResolvedValueOnce(STORED.slice(0, 1));
@@ -293,5 +299,58 @@ describe('removing', () => {
     data.fetchCheckinPhotos.mockResolvedValueOnce(STORED);
     await show();
     expect(screen.getAllByTestId('visit-photo-remove').map((el) => el.getAttribute('aria-label'))).toEqual(['Remove photo 1', 'Remove photo 2']);
+  });
+});
+
+// Owner, 25 Nov 2026: Done no longer waits, so an upload outlives the
+// sheet it was chosen in (`lib/visitUploads`).
+describe('after the sheet has gone', () => {
+  it('keeps going, and a sheet opened again over the visit draws it going, then landed', async () => {
+    let answer!: (p: CheckinPhoto) => void;
+    data.uploadCheckinPhoto.mockReturnValueOnce(new Promise((r) => { answer = r; }));
+    const first = await show();
+    expect(isWatched('k1')).toBe(true);
+    pick({ width: 10, height: 10 });
+    await add();
+    first.unmount();
+    expect(isWatched('k1')).toBe(false);
+    expect(uploadsGoing()).toBe(1);
+
+    await show();
+    expect(states()).toEqual(['visit-photo-sending']);
+    expect(document.querySelector('img[src="file://0.jpg"]')).not.toBeNull();
+    await act(async () => { answer({ id: 'p-a', path: 'u1/k1/p-a.jpg', width: 1, height: 1 }); });
+    await act(() => uploadsSettled());
+    expect(states()).toEqual(['visit-photo-done']);
+    expect(hook.changed()).toBe(true);
+  });
+
+  it('draws one that failed with no sheet up as failed, and a press tries it again', async () => {
+    data.uploadCheckinPhoto.mockRejectedValueOnce(new Error('offline'));
+    const first = await show();
+    pick({ width: 10, height: 10 });
+    await add();
+    first.unmount();
+    await act(() => uploadsSettled());
+
+    data.fetchCheckinPhotos.mockResolvedValueOnce(STORED.slice(0, 1));
+    await show();
+    await flush();
+    // The stored photo first, the one still owed after it.
+    expect(states()).toEqual(['visit-photo-done', 'visit-photo-failed']);
+    fireEvent.click(screen.getAllByTestId('visit-photo')[1]);
+    await act(() => uploadsSettled());
+    expect(data.uploadCheckinPhoto).toHaveBeenCalledTimes(2);
+    expect(states()).toEqual(['visit-photo-done', 'visit-photo-done']);
+  });
+
+  it('says nothing about another visit’s uploads', async () => {
+    await show({ id: 'k2' });
+    const { sendVisitPhoto } = await import('../lib/visitUploads');
+    data.uploadCheckinPhoto.mockRejectedValueOnce(new PhotoError('day'));
+    act(() => { sendVisitPhoto({ key: 'x', visitId: 'k1', uri: 'file://x', image: 'AAAA' }); });
+    await act(() => uploadsSettled());
+    expect(alert).not.toHaveBeenCalled();
+    expect(states()).toEqual([]);
   });
 });

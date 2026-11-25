@@ -22,24 +22,21 @@ vi.mock('react-native-safe-area-context', () => ({
 const i18n = vi.hoisted(() => ({ lang: 'en' }));
 vi.mock('../lib/i18n', () => ({ useI18n: () => ({ lang: i18n.lang, t: (en: string, vi?: string) => (i18n.lang === 'vi' ? vi : en) ?? en }) }));
 const motion = vi.hoisted(() => ({ still: false }));
+const upload = vi.hoisted(() => vi.fn());
+vi.mock('../lib/data/checkinPhotos', () => ({ uploadCheckinPhoto: upload }));
 vi.mock('./ui', async (orig) => ({ ...(await orig<Record<string, unknown>>()), useReducedMotion: () => motion.still }));
 // The photos' own behaviour is `VisitPhotos.ui.test.tsx`'s; here they are a
-// hook the sheet waits on and asks whether anything changed.
+// hook the sheet asks whether anything changed.
 const pics = vi.hoisted(() => ({
   args: [] as unknown[],
-  sending: false,
   changed: false,
-  settle: () => {},
-  wait: null as Promise<void> | null,
 }));
 vi.mock('./useVisitPhotos', () => ({
   useVisitPhotos: (...args: unknown[]) => {
     pics.args = args;
     return {
-      tiles: [], room: 3, sending: pics.sending,
+      tiles: [], room: 3,
       add: async () => {}, retry: () => {}, remove: () => {},
-      // One wait for everyone who asks, as the hook's queue is.
-      settled: () => (pics.wait ??= new Promise<void>((r) => { pics.settle = () => { pics.sending = false; r(); }; })),
       changed: () => pics.changed,
     };
   },
@@ -63,7 +60,7 @@ beforeEach(() => {
   data.saveCheckin.mockImplementation(async () => {});
   i18n.lang = 'en';
   motion.still = false;
-  Object.assign(pics, { args: [], sending: false, changed: false, wait: null });
+  Object.assign(pics, { args: [], changed: false });
   appFlags.set('checkin_photos', false);
 });
 afterEach(() => { cleanup(); });
@@ -339,31 +336,29 @@ describe('CheckinSheet', () => {
       expect(data.saveCheckin).not.toHaveBeenCalled();
     });
 
-    it('waits for a photo still going up before an old visit closes, busy meanwhile', async () => {
+    // Owner, 25 Nov 2026: Done no longer waits for a photo going up — it
+    // went on spinning for 3.5–4 s. The upload is the app's
+    // (`lib/visitUploads`) and carries on after the sheet.
+    it('closes at once, an old visit or a fresh one, while a photo is still going up', async () => {
       on();
-      pics.sending = true;
+      const { sendVisitPhoto, uploadsGoing, resetVisitUploads } = await import('../lib/visitUploads');
+      let land!: () => void;
+      upload.mockReturnValueOnce(new Promise((r) => { land = () => r({ id: 'p', path: 'p', width: 1, height: 1 }); }));
+      sendVisitPhoto({ key: 'x', visitId: 'k1', uri: 'file://x', image: 'AAAA' });
       show(OLD);
       await tap('checkin-sheet-close');
-      expect(onClose).not.toHaveBeenCalled();
-      expect(screen.getByTestId('checkin-sheet-save').getAttribute('aria-busy')).toBe('true');
-      // A second tap while waiting does not close twice.
-      await tap('checkin-sheet-close');
-      pics.changed = true;
-      await act(async () => { pics.settle(); for (let i = 0; i < 6; i += 1) await Promise.resolve(); });
-      expect(onClose).toHaveBeenCalledTimes(1);
-      expect(onClose).toHaveBeenCalledWith(true);
-    });
+      expect(onClose).toHaveBeenCalledWith(false);
+      expect(uploadsGoing()).toBe(1);
+      cleanup(); onClose.mockClear();
 
-    it('waits for a photo before a fresh visit writes its note', async () => {
-      on();
-      pics.sending = true;
       show(FRESH);
       type('Quiet upstairs.');
       await tap('checkin-sheet-save');
-      expect(data.saveCheckin).not.toHaveBeenCalled();
-      await act(async () => { pics.settle(); for (let i = 0; i < 6; i += 1) await Promise.resolve(); });
       expect(data.saveCheckin).toHaveBeenCalledWith('k9', { note: 'Quiet upstairs.' });
       expect(onClose).toHaveBeenCalledWith(true, false);
+      expect(uploadsGoing()).toBe(1);
+      land();
+      resetVisitUploads();
     });
   });
 });

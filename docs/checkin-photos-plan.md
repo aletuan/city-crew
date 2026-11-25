@@ -200,6 +200,17 @@ Mỗi bước một PR, theo thứ tự. Cờ `checkin_photos` tắt suốt cả
   khỏi sheet chờ ảnh đang lên, nút bận trong lúc chờ, và báo đã đổi nếu
   có ảnh lên hay đi — trang bên dưới tải lại. `prune-checkin-photos`
   chạy mỗi ngày từ bước này.
+- **Sau K5 — nút Xong không chờ ảnh (25/11/2026).** Bản quay của chủ dự
+  án: Xong quay 3,5–4 giây khi còn ảnh đang tải. Log của `checkin-photo`:
+  1,9 / 2,7 / 4,4 giây cho ba ảnh khoảng 200 KB, 1,97 giây cho một lần xoá
+  49 byte — phần lớn là chi phí của mỗi lần gọi, không phải ảnh — và
+  function chạy ở Seoul trong khi database ở Singapore. Hai việc: app gọi
+  `checkin-photo` ở `ap-southeast-1` (số đo sau khi lên ghi vào
+  `data/checkinPhotos.ts`), và ảnh tải lên qua hàng đợi của app
+  (`lib/visitUploads`) thay vì của bảng check-in, nên Xong đóng ngay; ảnh
+  lên xong thì danh sách check-in được hỏi lại, lỗi mạng khi bảng đã đóng
+  thì hỏi Thử lại / Bỏ ảnh (`components/VisitUploads`). Đánh đổi: đóng
+  hẳn app khi ảnh chưa lên thì ảnh đó mất, chọn lại lần sau.
 - **K4. Hiển thị — xong (25/11/2026).** Thẻ trên trang cá nhân, danh
   sách check-in, trình xem ảnh, link ký và cache. Sau cờ.
   Đã làm: `ActivityCard` nhận `photo` — ảnh thứ nhất thay ảnh bìa và là

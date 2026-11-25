@@ -83,7 +83,7 @@ describe('uploadCheckinPhoto', () => {
   it('sends the visit and the bytes to the function and returns the stored photo', async () => {
     fake().replies({ data: { id: 'p9', path: 'u1/k1/p9.jpg', width: 1200, height: 800, extra: 'dropped' }, error: null });
     expect(await uploadCheckinPhoto('k1', 'AAAA')).toEqual({ id: 'p9', path: 'u1/k1/p9.jpg', width: 1200, height: 800 });
-    expect(fake().log).toEqual([{ fn: 'checkin-photo', op: 'invoke', payload: { checkin: 'k1', image: 'AAAA' }, filters: [] }]);
+    expect(fake().log).toEqual([{ fn: 'checkin-photo', op: 'invoke', payload: { checkin: 'k1', image: 'AAAA' }, filters: [], region: 'ap-southeast-1' }]);
   });
   it('reads the refusal from a body still to be parsed', async () => {
     refused({ status: 429, json: async () => ({ error: 'photo:day' }) });
@@ -111,7 +111,7 @@ describe('removeCheckinPhoto', () => {
   it('asks the function to take one photo away', async () => {
     fake().replies({ data: { removed: 'p9' }, error: null });
     await removeCheckinPhoto('p9');
-    expect(fake().log).toEqual([{ fn: 'checkin-photo', op: 'invoke', payload: { remove: 'p9' }, filters: [] }]);
+    expect(fake().log).toEqual([{ fn: 'checkin-photo', op: 'invoke', payload: { remove: 'p9' }, filters: [], region: 'ap-southeast-1' }]);
   });
   it('throws the refusal when it fails', async () => {
     refused({ status: 500, body: null });
