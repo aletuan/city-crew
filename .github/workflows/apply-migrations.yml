@@ -1,0 +1,106 @@
+# Apply the migrations a merge brought to the live project — after a
+# person says yes.
+#
+# Until 25 Nov 2026 nothing applied migrations; a person did, by hand,
+# and the history drifted (CLAUDE.md, "Supabase"). This job does the
+# applying and leaves the deciding where it was:
+#
+# - It waits for approval. The job runs in the `supabase-live`
+#   environment, whose required reviewer (set in Settings → Environments)
+#   has to press Approve before anything reaches the database.
+# - It does nothing until the `APPLY_MIGRATIONS` repository variable is
+#   `on`. GitHub creates an environment it has not seen with no reviewer
+#   at all, so a job that ran before the environment was set up would
+#   apply unapproved. The variable is turned on after the reviewer is set.
+# - It applies only what the live history lacks, oldest first, each file
+#   and its history row in one transaction under the file's own version,
+#   and refuses while the history disagrees in any other way or a file
+#   came out of order (`data/scripts/apply-migrations.mjs` has why).
+# - It checks afterwards: the live history must then match the repo,
+#   version for version (`migration-drift.mjs`).
+#
+# The access token is the one the function deploys and the drift check
+# already use; no database password.
+#
+# Edge Functions still deploy on the merge itself, without waiting for
+# this approval. A function that needs a new migration should merge after
+# the migration has been applied.
+
+name: Apply migrations
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'supabase/migrations/**'
+  workflow_dispatch:
+
+concurrency:
+  group: apply-migrations
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  apply:
+    if: vars.APPLY_MIGRATIONS == 'on'
+    environment: supabase-live
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      PROJECT_REF: amdvitzpogaejzzqroco
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+
+      - name: Apply what the live history lacks
+        run: |
+          set -uo pipefail
+          # One request to the Management API. A 5xx is the API, not the
+          # SQL, and is asked again (three times, 20 seconds apart); any
+          # other failure stops the job where it is.
+          ask() {  # ask <body file> <out file>
+            local code
+            for try in 1 2 3; do
+              code=$(curl -sS -o "$2" -w '%{http_code}' \
+                -X POST "https://api.supabase.com/v1/projects/$PROJECT_REF/database/query" \
+                -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" \
+                -H 'Content-Type: application/json' \
+                --data-binary @"$1")
+              case "$code" in 5*) echo "The API answered $code; asking again in 20 seconds."; sleep 20;; *) break;; esac
+            done
+            if [ "$code" != "200" ] && [ "$code" != "201" ]; then
+              echo "The project answered $code:"; head -c 2000 "$2"; echo
+              return 1
+            fi
+          }
+          echo '{"query":"select version, name from supabase_migrations.schema_migrations order by version"}' > /tmp/history.json
+
+          ask /tmp/history.json /tmp/live.json || exit 2
+          node data/scripts/apply-migrations.mjs plan /tmp/live.json > /tmp/apply.txt || exit 1
+          if [ ! -s /tmp/apply.txt ]; then
+            echo "Nothing to apply: the live history already has every file."
+            exit 0
+          fi
+          echo "To apply, in this order:"; sed 's/^/  /' /tmp/apply.txt
+
+          while read -r f; do
+            echo "::group::$f"
+            node data/scripts/apply-migrations.mjs body "$f" > /tmp/body.json || exit 1
+            if ! ask /tmp/body.json /tmp/out.json; then
+              echo "::endgroup::"
+              echo "$f failed and left nothing behind; the files after it were not applied."
+              exit 1
+            fi
+            echo "applied"
+            echo "::endgroup::"
+          done < /tmp/apply.txt
+
+          # The live history must now say what the repo says.
+          ask /tmp/history.json /tmp/live.json || exit 2
+          node data/scripts/migration-drift.mjs /tmp/live.json

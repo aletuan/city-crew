@@ -133,10 +133,20 @@ that reads like a race and is not one.
 
 Project ref **`amdvitzpogaejzzqroco`** (`citycrew-data`, ap-southeast-1).
 
-**CI tests migrations; nothing applies them to the live project.** A
-migration committed and merged is not a migration that has run. Apply it
-yourself, and check that the repo still describes the schema — a merge
-has silently dropped an applied migration from the tree before.
+**CI tests migrations; a merge applies them only once approved.**
+`.github/workflows/apply-migrations.yml` runs on a merge that touches
+`supabase/migrations/`, waits in the `supabase-live` environment for its
+reviewer to press Approve, then applies what the live history lacks —
+each file and its history row in one transaction, under the file's own
+version — and checks the history afterwards. It does nothing while the
+`APPLY_MIGRATIONS` repository variable is not `on`: GitHub gives an
+environment it has not seen no reviewer at all. Until that variable is
+on, a migration merged is not a migration that has run; apply it
+yourself, as below. It refuses to apply onto a history that disagrees
+with the repo, or a file merged out of order
+(`data/scripts/apply-migrations.mjs`). Edge Functions deploy on the
+merge without waiting, so a function that needs a new migration merges
+after the migration is live.
 
 `.github/workflows/migration-drift.yml` checks it for you: after a merge
 that touches `supabase/migrations/` it waits up to 30 minutes for the
@@ -144,7 +154,7 @@ migration to appear on live, and goes red if it does not; it also runs
 daily. Since 25 Nov 2026 the live history and the folder agree version
 for version, both ways (155 each), and the job holds them to it.
 
-**Apply a migration under its file's version.** The Supabase MCP's
+**By hand, apply a migration under its file's version.** The Supabase MCP's
 `apply_migration` stamps the minute it ran instead, which is how the two
 histories drifted apart. Run the file's SQL with `execute_sql` and record
 it in the same call:
