@@ -73,6 +73,7 @@ const state = vi.hoisted(() => ({
   likes: {} as Record<string, number>,
   common: { places: [] as unknown[], lists: [] as string[] },
   commonAsked: [] as [string | null, string | null][],
+  visitReads: 0,
   inCommonOn: true,
   topFriendOn: true,
   role: null as 'editor' | 'guide' | null,
@@ -145,6 +146,8 @@ vi.mock('../lib/data', async (orig) => ({
     state.roleAsked.push([me, person]);
     return { data: state.role, loading: false, error: null, reload: () => {} };
   },
+  // A person's visits, counted: the pull reads them again.
+  fetchPersonCheckins: async (_id: string) => { state.visitReads += 1; return []; },
   useSharedWithMe: (reader: string | null | undefined) => {
     state.lentAsked.push(reader);
     return { data: reader ? state.lent : [], loading: false, reload: () => {} };
@@ -256,6 +259,7 @@ beforeEach(() => {
   spies.toggleLike.mockClear();
   spies.askToSignIn.mockClear();
   state.common = { places: [], lists: [] };
+  state.visitReads = 0;
   state.commonAsked = [];
   state.inCommonOn = true;
   state.topFriendOn = true;
@@ -2096,6 +2100,23 @@ describe('pulling the page down', () => {
     expect(crew.blocks.reload).toHaveBeenCalledTimes(1);
     expect(news.news.reload).toHaveBeenCalledTimes(1);
     expect(news.log.reload).toHaveBeenCalledTimes(1);
+  });
+
+  // Their visits too (owner's question, 25 Nov 2026): a friend who checked
+  // in or added a photo since the page opened is a pull away, on their
+  // page as on yours. Nothing reads them on its own while the page stays
+  // up — no push, no timer; arriving on the page reads them once.
+  it('reads the visits again, on somebody else’s page as on your own', async () => {
+    const { appFlags } = await import('../lib/flags');
+    appFlags.set('place_checkin', true);
+    try {
+      await show('lan');
+      await waitFor(() => expect(state.visitReads).toBe(1));
+      act(() => { pullControl().onRefresh(); });
+      await waitFor(() => expect(state.visitReads).toBe(2));
+    } finally {
+      appFlags.reset();
+    }
   });
 
   it('on somebody else’s reads their profile and the friendships, and not your news', async () => {
