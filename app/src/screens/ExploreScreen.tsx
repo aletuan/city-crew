@@ -39,7 +39,7 @@ import { s } from './explore/styles';
 import { useExploreFilters } from './explore/useExploreFilters';
 import { useExploreScroll } from './explore/useExploreScroll';
 import { FilterBar } from './explore/FilterBar';
-import { ExploreList } from './explore/ExploreList';
+import { ExploreList, KeptUnder } from './explore/ExploreList';
 import { ExploreMap } from './explore/ExploreMap';
 
 /** The list or the map, as remembered: anything stored that is not "map" reads as the list. */
@@ -214,13 +214,16 @@ export default function ExploreScreen({ navigation }: { navigation: Nav }) {
             <LoadFailEmpty kind={fail} onRetry={reload} testID="explore-load-fail" />
           </View>
         )}
-        {!holding && !failedEmpty && !mapMode && (
-          <ExploreList
-            t={t} navigation={navigation} listRef={listRef} shown={shown} header={header} bar={bar(false)}
-            picked={picked} appliedFilters={appliedFilters} sortOrigin={sortOrigin} openPlace={openPlace}
-            tabClearance={tabClearance} pulling={pulling} setPulling={setPulling} reload={reload}
-            onScroll={onScroll} onViewable={onViewable} viewabilityConfig={viewabilityConfig}
-          />
+        {/* Kept under the map once drawn — see `KeptUnder`. */}
+        {!holding && !failedEmpty && (
+          <KeptUnder under={mapMode}>
+            <ExploreList
+              t={t} navigation={navigation} listRef={listRef} shown={shown} header={header} bar={bar(false)}
+              picked={picked} appliedFilters={appliedFilters} sortOrigin={sortOrigin} openPlace={openPlace}
+              tabClearance={tabClearance} pulling={pulling} setPulling={setPulling} reload={reload}
+              onScroll={onScroll} onViewable={onViewable} viewabilityConfig={viewabilityConfig}
+            />
+          </KeptUnder>
         )}
         {!holding && !failedEmpty && mapMode && city && (
           <ExploreMap

@@ -1,13 +1,24 @@
 // The map instead of the list: the floating filter row, the quick
 // filters a person on a street asks, the pins, and the picked place.
 //
+// Over the list, not in its place (owner's recording, 25 Nov 2026): the
+// list stays where it was underneath (`ExploreScreen` says why), and the
+// map comes up over it on the page's own ground, fading in over
+// `MAP_IN_MS`. The fade is for the map's first moments — its tiles
+// arrive a beat after its box does, and a hard cut showed that beat as a
+// grey flash. Going back is a cut: the list underneath is already
+// drawn, so there is nothing to wait for and nothing to cover. Rejected:
+// the map rising from the foot like a sheet, which says a swipe down
+// closes it when a swipe on a map moves the map. A reader who asked for
+// less motion gets the cut both ways.
+//
 // Out of `ExploreScreen` on 25 Nov 2026, as the screens of the 22 Nov code
 // review were (F1, F5): the reasoning moved with the code, unchanged.
 
-import React, { type ReactElement } from 'react';
-import { View } from 'react-native';
+import React, { useEffect, useRef, type ReactElement } from 'react';
+import { Animated, StyleSheet, View } from 'react-native';
 import { Glyph, ICON } from '../../components/ui/glyph';
-import { PressableScale } from '../../components/ui';
+import { PressableScale, useReducedMotion } from '../../components/ui';
 import { statusLabel } from '../../components/ExploreFilterSheet';
 import { Toast } from '../../components/Toast';
 import PlacesMap from '../../components/PlacesMap';
@@ -22,6 +33,11 @@ import { s } from './styles';
 import type { ExploreFiltering } from './useExploreFilters';
 
 type City = NonNullable<ReturnType<typeof useCity>['city']>;
+
+/** The map's fade in. As long as a sheet's dim takes to arrive (200):
+ *  long enough to be a fade and not a flicker, short enough that the
+ *  press still feels answered at once. */
+export const MAP_IN_MS = 200;
 
 export function ExploreMap({
   t, navigation, bar, barH, light, checkinOn, city, setCity, tabClearance, filters,
@@ -42,8 +58,16 @@ export function ExploreMap({
     appliedFilters, pickStatus, pickSaved, pickVisited, note, shown, selectedSlug, setSelectedSlug, picked,
     sortOrigin, elsewhere, selected, selectedKm,
   } = filters;
+  const still = useReducedMotion();
+  const shownAs = useRef(new Animated.Value(still ? 1 : 0)).current;
+  useEffect(() => {
+    if (still) return;
+    Animated.timing(shownAs, { toValue: 1, duration: MAP_IN_MS, useNativeDriver: true }).start();
+  // Once, as the map comes up.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   return (
-    <View style={{ flex: 1 }}>
+    <Animated.View style={[StyleSheet.absoluteFill, { backgroundColor: colors.bg, opacity: shownAs }]} testID="explore-map">
       {/* The bar's in-list copy has nothing to scroll away with
           here, so the floating copy stands in for it permanently:
           heading, switch, chips, all clear of the clock. */}
@@ -184,6 +208,6 @@ export function ExploreMap({
           ) : null}
         </MapStrip>
       </View>
-    </View>
+    </Animated.View>
   );
 }

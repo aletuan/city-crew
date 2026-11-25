@@ -13,7 +13,7 @@
 import React from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { Dimensions } from 'react-native';
+import { Animated, Dimensions } from 'react-native';
 import { act, fireEvent, propsWhere, render, screen, waitFor, within } from '../uitest/render';
 import { switchOrDoor } from '../components/ExploreFilterSheet';
 import { pinImage } from '../components/mapPins';
@@ -236,6 +236,8 @@ vi.mock('../lib/data', async (actual) => ({
   fetchPlaceIndex: vi.fn(async () => state.index),
 }));
 
+const motion = vi.hoisted(() => ({ still: false }));
+vi.mock('../components/ui', async (orig) => ({ ...(await orig<Record<string, unknown>>()), useReducedMotion: () => motion.still }));
 import ExploreScreen from './ExploreScreen';
 import { FILTER_PAD_BOTTOM } from './explore/styles';
 
@@ -1314,7 +1316,8 @@ describe('the view switch', () => {
     // the tap and put the list back.
     await act(async () => {});
     await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Map' })); });
-    expect(screen.queryByTestId('explore-list')).toBeNull();
+    // Kept under the map, not taken down — and not there to be read.
+    expect(screen.getByTestId('explore-list-keep').getAttribute('aria-hidden')).toBe('true');
     expect(await AsyncStorage.getItem('citycrew.explore.view')).toBe('map');
   });
 
@@ -1331,12 +1334,80 @@ describe('the view switch', () => {
 
 describe('the map', () => {
   beforeEach(async () => { await AsyncStorage.setItem('citycrew.explore.view', 'map'); });
+  // What the map itself shows: the list is kept underneath it (owner, 25
+  // Nov 2026), with the same words on it.
+  const onMap = () => within(screen.getByTestId('explore-map'));
 
   it('opens on the map when that is what was remembered', async () => {
     state.places.data = [place('p1', { lat: 21, lng: 105 })];
     render(<ExploreScreen navigation={nav()} />);
     await waitFor(() => expect(screen.getByTestId('places-map')).toBeTruthy());
-    expect(screen.queryByTestId('explore-list')).toBeNull();
+    // Whatever was drawn before the remembered view was read stays
+    // underneath, out of reach and unread.
+    expect(screen.getByTestId('explore-list-keep').getAttribute('aria-hidden')).toBe('true');
+    expect(propsWhere((p) => p.testID === 'explore-list-keep').pointerEvents).toBe('none');
+  });
+
+  // The remembered view read before the places came: nothing was ever
+  // drawn under the map, and nothing is built there for it.
+  it('builds no list under a map it was never seen from behind', async () => {
+    state.places = { ...state.places, loading: true, loaded: false };
+    const r = render(<ExploreScreen navigation={nav()} />);
+    await act(async () => {});
+    state.places = { ...state.places, loading: false, loaded: true, data: [place('p1', { lat: 21, lng: 105 })] };
+    r.rerender(<ExploreScreen navigation={nav()} />);
+    await waitFor(() => expect(screen.getByTestId('places-map')).toBeTruthy());
+    expect(screen.queryByTestId('explore-list-keep')).toBeNull();
+    // Asked for, it is built, and takes touches.
+    await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'List' })); });
+    expect(propsWhere((p) => p.testID === 'explore-list-keep').pointerEvents).toBe('auto');
+    expect(screen.getByTestId('explore-list-keep').getAttribute('aria-hidden')).toBeNull();
+  });
+
+  // Owner's recording, 25 Nov 2026: back from the map the list was at
+  // its top, and the bar that had pinned was gone with it.
+  it('comes back to the list where it was left, its bar still pinned', async () => {
+    await AsyncStorage.setItem('citycrew.explore.view', 'list');
+    state.places.data = [place('p1', { lat: 21, lng: 105 }), place('p2', { lat: 21.1, lng: 105.1 })];
+    render(<ExploreScreen navigation={nav()} />);
+    await act(async () => {});
+    vi.useFakeTimers();
+    try {
+      measureHeader(400);
+      scrollTo(500);
+      expect(screen.getByTestId('explore-pinned-bar')).toBeTruthy();
+      const list = screen.getByTestId('explore-list');
+      await act(async () => { fireEvent.click(within(screen.getByTestId('explore-pinned-bar')).getByRole('button', { name: 'Map' })); });
+      expect(screen.getByTestId('places-map')).toBeTruthy();
+      await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'List' })); });
+      // The same list, not one built again; still down the page.
+      expect(screen.getByTestId('explore-list')).toBe(list);
+      expect(list.scrollTop).toBe(500);
+      expect(screen.getByTestId('explore-pinned-bar')).toBeTruthy();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('fades the map in over the list, and cuts for a reader who asked for less motion', async () => {
+    const timing = vi.spyOn(Animated, 'timing');
+    state.places.data = [place('p1', { lat: 21, lng: 105 })];
+    const r = render(<ExploreScreen navigation={nav()} />);
+    await waitFor(() => expect(screen.getByTestId('explore-map')).toBeTruthy());
+    const fade = timing.mock.calls.find(([, cfg]) => (cfg as { duration?: number }).duration === 200);
+    expect(fade![1]).toMatchObject({ toValue: 1, duration: 200, useNativeDriver: true });
+    r.unmount();
+    timing.mockClear();
+    motion.still = true;
+    try {
+      render(<ExploreScreen navigation={nav()} />);
+      await waitFor(() => expect(screen.getByTestId('explore-map')).toBeTruthy());
+      expect(timing.mock.calls.some(([, cfg]) => (cfg as { duration?: number }).duration === 200)).toBe(false);
+      expect(Number(getComputedStyle(screen.getByTestId('explore-map')).opacity || 1)).toBe(1);
+    } finally {
+      motion.still = false;
+      timing.mockRestore();
+    }
   });
 
   // The map's box starts under the floating bar by the bar's own
@@ -1386,7 +1457,7 @@ describe('the map', () => {
     render(<ExploreScreen navigation={nav()} />);
     await waitFor(() => expect(screen.getByTestId('places-map')).toBeTruthy());
     expect(document.querySelectorAll('[data-stub="Marker"]')).toHaveLength(2);
-    fireEvent.click(screen.getByText('Cafés'));
+    fireEvent.click(onMap().getByText('Cafés'));
     // The pin the set lost fades for a tenth of a second (`pinFade`), as
     // `gone-b`; what is pinned is everything else.
     expect([...document.querySelectorAll('[data-stub="Marker"]')].map((m) => m.getAttribute('data-slug'))).toEqual(['a', 'gone-b']);
@@ -1410,11 +1481,11 @@ describe('the map', () => {
     const focusPin = String(pinImage({ categories: ['focus'] }, null, false));
     expect(pins()).toEqual([cafesPin, focusPin]);
 
-    fireEvent.click(screen.getByText('Focus'));
+    fireEvent.click(onMap().getByText('Focus'));
     expect(pins()).toEqual([focusPin, focusPin]);
 
     // Tapped again, the chip lets go: each pin is its own kind again.
-    fireEvent.click(screen.getByText('Focus'));
+    fireEvent.click(onMap().getByText('Focus'));
     expect(pins()).toEqual([cafesPin, focusPin]);
   });
 
@@ -1437,7 +1508,7 @@ describe('the map', () => {
     const navigation = nav();
     render(<ExploreScreen navigation={navigation} />);
     await waitFor(() => expect(screen.getByTestId('places-map')).toBeTruthy());
-    expect(screen.queryByText('Place a')).toBeNull();
+    expect(onMap().queryByText('Place a')).toBeNull();
     await act(async () => { fireEvent.click(document.querySelector('[data-slug="a"]')!); });
     fireEvent.click(screen.getByRole('button', { name: /Place a/ }));
     expect(navigation.navigate).toHaveBeenCalledWith('PlaceDetail', { slug: 'a' });
@@ -1451,8 +1522,8 @@ describe('the map', () => {
     await waitFor(() => expect(screen.getByTestId('places-map')).toBeTruthy());
     await act(async () => { fireEvent.click(document.querySelector('[data-slug="b"]')!); });
     expect(screen.getByRole('button', { name: /Place b/ })).toBeTruthy();
-    await act(async () => { fireEvent.click(screen.getByText('Cafés')); });
-    await act(async () => { fireEvent.click(screen.getByText('Cafés')); });
+    await act(async () => { fireEvent.click(onMap().getByText('Cafés')); });
+    await act(async () => { fireEvent.click(onMap().getByText('Cafés')); });
     await waitFor(() => expect(screen.queryByRole('button', { name: /Place b/ })).toBeNull());
   });
 
@@ -1494,7 +1565,7 @@ describe('the map', () => {
     const pill = () => document.querySelector('[data-slug="city-hcmc"]')!;
     await waitFor(() => expect(pill().textContent).toBe('3'));
 
-    fireEvent.click(screen.getByText('Cafés'));
+    fireEvent.click(onMap().getByText('Cafés'));
     expect(pill().textContent).toBe('2');
   });
 

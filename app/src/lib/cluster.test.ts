@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { CATEGORIES, CATEGORY_ORDER } from './categories';
-import { clusterPins, clusterSize, fitSpan, clusterSkin, metresApart, oneSpot, STACK_M, stackAt, type ClusterPoint } from './cluster';
+import { clusterPins, clusterSize, fitRegion, fitSpan, clusterSkin, metresApart, oneSpot, STACK_M, stackAt, type ClusterPoint } from './cluster';
 
 const p = (slug: string, lat: number, lng: number): ClusterPoint => ({ slug, lat, lng });
 
@@ -242,5 +242,30 @@ describe('fitSpan', () => {
     expect(fitSpan([{ lat: 21, lng: 105 }, { lat: 21, lng: 105 }], view, pad)).toBeNull();
     expect(fitSpan([{ lat: 0, lng: 0 }, { lat: 1, lng: 1 }], view, { ...pad, top: 60, bottom: 60 })).toBeNull();
     expect(fitSpan([{ lat: 0, lng: 0 }, { lat: 1, lng: 1 }], view, { ...pad, left: 100 })).toBeNull();
+  });
+});
+
+describe('fitRegion', () => {
+  const view = { width: 200, height: 400 };
+  const box = [{ lat: 0, lng: 0 }, { lat: 0, lng: 1 }];
+  it('centres the box in the screen when the padding is even', () => {
+    const r = fitRegion(box, view, { top: 0, right: 50, bottom: 0, left: 50 })!;
+    expect(r).toMatchObject({ latitude: 0, longitude: 0.5 });
+    expect(r.longitudeDelta).toBeCloseTo(2);
+    expect(r.latitudeDelta).toBeCloseTo(4);
+  });
+  // The fit centres the box in the room the padding leaves: a deeper
+  // foot lifts the box, so the screen's own middle is south of it; a
+  // wider left pushes the box right, so the middle is west of it.
+  it('moves the centre by half the difference of the paddings', () => {
+    const r = fitRegion(box, view, { top: 0, right: 0, bottom: 100, left: 100 })!;
+    // 1 degree across the 100pt left clear: 0.01 a point each way.
+    expect(r.longitudeDelta).toBeCloseTo(2);
+    expect(r.longitude).toBeCloseTo(0.5 - 0.5);
+    expect(r.latitude).toBeCloseTo(0 - 0.5);
+  });
+  it('is nothing where there is nothing to fit', () => {
+    expect(fitRegion([], view, { top: 0, right: 0, bottom: 0, left: 0 })).toBeNull();
+    expect(fitRegion([{ lat: 1, lng: 1 }, { lat: 1, lng: 1 }], view, { top: 0, right: 0, bottom: 0, left: 0 })).toBeNull();
   });
 });

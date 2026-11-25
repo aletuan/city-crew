@@ -22,6 +22,13 @@ vi.mock('./ui', async (orig) => ({ ...(await orig<typeof import('./ui')>()), use
 // verdict is all this component reads from it.
 const verdict = vi.hoisted(() => ({ canDrawMap: true }));
 vi.mock('./MiniMap', () => verdict);
+const win = vi.hoisted(() => ({ width: 400, height: 800 }));
+// The window is nothing in jsdom; a phone is stood up, since the map's
+// opening is worked out from it (`fitRegion`).
+vi.mock('react-native', async (orig) => ({
+  ...(await orig<Record<string, unknown>>()),
+  useWindowDimensions: () => ({ width: win.width, height: win.height, scale: 3, fontScale: 1 }),
+}));
 vi.mock('./mapsModule', async () => {
   const R = await import('react');
   // The ready signal is its own element, not a click on the map itself —
@@ -30,7 +37,7 @@ vi.mock('./mapsModule', async () => {
   const MapView = R.forwardRef((p: any, ref: any) => {
     R.useImperativeHandle(ref, () => ({ fitToCoordinates: spies.fitToCoordinates, getCamera: async () => ({ zoom: 12 }), animateCamera: spies.animateCamera }));
     return R.createElement('div', {
-      'data-stub': 'MapView', 'data-user': String(!!p.showsUserLocation),
+      'data-stub': 'MapView', 'data-user': String(!!p.showsUserLocation), 'data-opening': JSON.stringify(p.initialRegion),
       'data-poi-icons': String(!(p.customMapStyle ?? []).some((r: any) => r.featureType === 'poi' && r.elementType === 'labels.icon' && r.stylers?.[0]?.visibility === 'off')),
     },
     R.createElement('button', { type: 'button', 'data-stub': 'ready', onClick: p.onMapReady }),
@@ -73,6 +80,7 @@ beforeEach(() => {
   spies.animateCamera.mockClear();
   spies.still = false;
   verdict.canDrawMap = true;
+  Object.assign(win, { width: 400, height: 800 });
 });
 
 const place = (slug: string, lat: number | null, lng: number | null, categories: string[] = []): Place =>
@@ -244,6 +252,37 @@ describe('PlacesMap', () => {
     expect(markers().some((m) => m.getAttribute('data-label')?.startsWith('2 places'))).toBe(true);
   });
 
+  // Owner's recording, 25 Nov 2026: the map opened a district wide on
+  // its first pin, every pin drawn alone in a heap, and was fitted and
+  // gathered a moment — once, more than a second — later.
+  it('opens already on its pins, and gathered for that width, before the map says anything', () => {
+    // `a` and `b` are a kilometre and a half apart: two pins a district
+    // wide, one bubble at the width that shows `z` as well.
+    const far = [place('a', 21, 105), place('b', 21.01, 105.01), place('z', 21.5, 105.5)];
+    render(<PlacesMap places={far} selectedSlug={null} onSelect={() => {}} categories={[]} origin={{ lat: 10, lng: 100 }} cities={[]} onPickCity={() => {}} fallback={HANOI} />);
+    const opening = JSON.parse(mapView().getAttribute('data-opening')!);
+    // Wide enough for the half-degree box, and centred on it, not on the
+    // reader's fix or the first pin. (Above the box's middle, 21.25, by
+    // the foot's deeper padding.)
+    expect(opening.longitudeDelta).toBeGreaterThan(0.5);
+    expect(opening.longitude).toBeCloseTo(105.25, 1);
+    expect(opening.latitude).toBeLessThan(21.25);
+    expect(opening.latitude).toBeGreaterThan(21);
+    expect(markers().some((m) => m.getAttribute('data-label')?.startsWith('2 places'))).toBe(true);
+  });
+
+  it('opens a district wide where there is nothing to fit: on the one spot, the fix, or the city', () => {
+    const at = (places: Place[], origin: { lat: number; lng: number } | null) => {
+      const r = render(<PlacesMap places={places} selectedSlug={null} onSelect={() => {}} categories={[]} origin={origin} cities={[]} onPickCity={() => {}} fallback={HANOI} />);
+      const o = JSON.parse(mapView().getAttribute('data-opening')!);
+      r.unmount();
+      return o;
+    };
+    expect(at([place('a', 21, 105)], { lat: 10, lng: 100 })).toEqual({ latitude: 21, longitude: 105, latitudeDelta: 0.05, longitudeDelta: 0.05 });
+    expect(at([], { lat: 10, lng: 100 })).toMatchObject({ latitude: 10, longitude: 100, latitudeDelta: 0.05 });
+    expect(at([], null)).toMatchObject({ latitude: HANOI.lat, longitude: HANOI.lng });
+  });
+
   it('keeps the view it has when it cannot yet say where a fit will land', () => {
     const { rerender } = render(<PlacesMap places={[place('a', 21, 105)]} selectedSlug={null} onSelect={() => {}} categories={[]} origin={null} cities={[]} onPickCity={() => {}} fallback={HANOI} />);
     markMapReady();
@@ -336,6 +375,10 @@ describe('PlacesMap', () => {
   // for it to come apart.
   describe('clustering', () => {
     const CLOSE = [place('a', 21.0001, 105.0001), place('b', 21.0002, 105.0002), place('c', 21.0003, 105.0003)];
+    // A district wide, as a map opens when the window cannot be measured:
+    // fitted to these three alone they would stand apart, and these are
+    // about what a width does to pins that do not.
+    beforeEach(() => { Object.assign(win, { width: 0, height: 0 }); });
 
     it('gathers pins that stand too close into one bubble with a count', () => {
       render(<PlacesMap places={CLOSE} selectedSlug={null} onSelect={() => {}} categories={[]} origin={null} cities={[]} onPickCity={() => {}} fallback={HANOI} />);
@@ -470,6 +513,8 @@ describe('PlacesMap', () => {
     // A city is not a place: it must not be gathered into a count, and it
     // must not drag the opening view across the country.
     it('keeps them out of the clusters and out of the fit', () => {
+      // A district wide, so the two near places are one bubble to count.
+      Object.assign(win, { width: 0, height: 0 });
       render(<PlacesMap places={[place('a', 21.0001, 105.0001), place('b', 21.0002, 105.0002)]} selectedSlug={null} onSelect={() => {}} categories={[]} cities={SAIGON} onPickCity={() => {}} origin={null} fallback={HANOI} />);
       // What is under test here is that Saigon is not gathered into this
       // city's bubble, and did not drag the opening view south.

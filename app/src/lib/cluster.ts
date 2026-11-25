@@ -225,3 +225,37 @@ export function fitSpan(
   if (!(perPoint > 0)) return null;
   return { latitudeDelta: perPoint * view.height * cos, longitudeDelta: perPoint * view.width };
 }
+
+/**
+ * Where a map should open so that it is already on its pins: the region
+ * a fit to `points` lands on, centre and all (owner's recording, 25 Nov
+ * 2026).
+ *
+ * The map used to open on its first pin at a district's width and be
+ * fitted a moment later, so every opening was a street somewhere in the
+ * city, then a jump out to all of it. `fitSpan` gives the width; the
+ * centre is the box's own, moved by half the difference of the paddings
+ * — the fit centres the box in the room the padding leaves, which is not
+ * the middle of the screen when the foot is padded more than the head.
+ * The fit still runs when the map is ready and has the last word; this
+ * is so that it has nothing left to move.
+ *
+ * Null where `fitSpan` is: nothing to measure, or one spot.
+ */
+export function fitRegion(
+  points: readonly { lat: number; lng: number }[],
+  view: { width: number; height: number },
+  pad: { top: number; right: number; bottom: number; left: number },
+): { latitude: number; longitude: number; latitudeDelta: number; longitudeDelta: number } | null {
+  const span = fitSpan(points, view, pad);
+  if (!span) return null;
+  const lats = points.map((p) => p.lat);
+  const lngs = points.map((p) => p.lng);
+  const perLng = span.longitudeDelta / view.width;
+  const perLat = span.latitudeDelta / view.height;
+  return {
+    latitude: (Math.max(...lats) + Math.min(...lats)) / 2 + (perLat * (pad.top - pad.bottom)) / 2,
+    longitude: (Math.max(...lngs) + Math.min(...lngs)) / 2 - (perLng * (pad.left - pad.right)) / 2,
+    ...span,
+  };
+}

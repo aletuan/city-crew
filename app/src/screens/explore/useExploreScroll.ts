@@ -220,23 +220,19 @@ export function useExploreScroll({ navigation, mapMode, pickView, insets, shown,
     fetchPlaceIndex().then(setCityIndex).catch(() => {});
   }, [mapMode, locate, setCityIndex]);
 
-  // The list is unmounted in map mode, and everything the screen derives
-  // from its scroll — the hero's parallax, whether the bar has pinned,
-  // the clock's ink past the hero, the weather's pause, which card is
-  // first — is updated only by the list's own events. Left alone it
-  // would still say "scrolled" when the list comes back at offset 0. So
-  // entering the map puts all of it back to rest; the list returns to a
-  // screen that agrees with it. The tab bar is shown by scrolling up,
-  // which the map never does, so it is surfaced here too rather than
-  // left ducked with nothing above it to bring it back.
+  // The list stays under the map (owner, 25 Nov 2026; `ExploreScreen`
+  // says why), so everything the screen derives from its scroll — the
+  // hero's parallax, whether the bar has pinned, the clock's ink past
+  // the hero, which card is first — is left as it is: the list comes
+  // back where it was, to a screen that still agrees with it. While it
+  // was taken down for the map, all of that was put back to rest here,
+  // for a list that returned at the top. What is left is the map's own:
+  // the clock's ink, and the tab bar — shown by scrolling up, which the
+  // map never does, so it is surfaced here rather than left ducked with
+  // nothing above it to bring it back.
   useEffect(() => {
     if (!mapMode) return;
-    scrollY.setValue(0);
-    pinnedRef.current = false;
-    setPinned(false);
-    pastHeroRef.current = false;
     applyBar();
-    setFirst(0);
     show();
   // eslint-disable-next-line react-hooks/exhaustive-deps -- refs and once-built setters; only the mode matters
   }, [mapMode]);

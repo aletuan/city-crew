@@ -20,8 +20,8 @@
 // than a guess.
 
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
-import { clusterPins, clusterSize, clusterSkin, fitSpan, oneSpot, stackAt } from '../lib/cluster';
+import { StyleSheet, Text, useWindowDimensions, View } from 'react-native';
+import { clusterPins, clusterSize, clusterSkin, fitRegion, fitSpan, oneSpot, stackAt } from '../lib/cluster';
 import { mapStyle } from '../lib/mapStyle';
 import type { Place } from '../lib/data';
 import type { ExploreOrigin } from '../lib/exploreFilters';
@@ -131,8 +131,19 @@ function useSpan(
   pins: readonly Pinned[],
   key: string,
   edgePadding: { top: number; right: number; bottom: number; left: number },
+  /** Where to open with no pin to open on. */
+  elsewhere: ExploreOrigin,
 ) {
-  const [span, setSpan] = useState({ latitudeDelta: OPENING_SPAN, longitudeDelta: OPENING_SPAN });
+  // The window, standing in for the map's own box until that is laid
+  // out. The map opens already fitted to its pins (`openingRegion`), so
+  // the first cut of the grid is for that width and not for the district
+  // the map used to open on — at which a city's pins came out one by one
+  // in a heap, and were gathered a moment, or more than a second, later
+  // (owner's recording, 25 Nov 2026). The window is taller than the map
+  // by the filter row; the map's report corrects it.
+  const guess = useWindowDimensions();
+  const [span, setSpan] = useState(() => fitSpan(pins, guess, edgePadding)
+    ?? { latitudeDelta: OPENING_SPAN, longitudeDelta: OPENING_SPAN });
   const [view, setView] = useState<{ width: number; height: number } | null>(null);
   const [aimed, setAimed] = useState(key);
   if (aimed !== key) {
@@ -142,7 +153,7 @@ function useSpan(
   }
   const onLayout = (e: { nativeEvent: { layout: { width: number; height: number } } }) =>
     setView({ width: e.nativeEvent.layout.width, height: e.nativeEvent.layout.height });
-  return { span, setSpan, onLayout };
+  return { span, setSpan, onLayout, opening: openingRegion(pins, elsewhere, guess, edgePadding) };
 }
 
 /** Google's zoom for a set on one spot: fifteen shows a neighbourhood,
@@ -185,6 +196,22 @@ const pinned = (places: readonly Place[]): Pinned[] =>
 /** How wide the map opens, in degrees, before it has been fitted to
  *  anything — about five kilometres, a district. */
 const OPENING_SPAN = 0.05;
+
+/**
+ * Where the map opens: already on its pins where there are pins to be
+ * on (`fitRegion`); a district wide on the one spot they share; and with
+ * none, a district wide on the reader's fix or the city's centre.
+ */
+function openingRegion(
+  pins: readonly Pinned[],
+  elsewhere: ExploreOrigin,
+  win: { width: number; height: number },
+  edgePadding: { top: number; right: number; bottom: number; left: number },
+) {
+  const at = pins[0] ?? elsewhere;
+  return fitRegion(pins, win, edgePadding)
+    ?? { latitude: at.lat, longitude: at.lng, latitudeDelta: OPENING_SPAN, longitudeDelta: OPENING_SPAN };
+}
 
 /** `edgePadding`'s default — see the note on that prop. */
 const DEFAULT_PADDING = { top: 80, right: 40, bottom: 160, left: 40 };
@@ -245,7 +272,7 @@ export default function PlacesMap({ places, selectedSlug, onSelect, categories, 
   const still = useReducedMotion();
   const fitAll = useFit(ref, pins, key, ready, edgePadding, still);
 
-  const { span, setSpan, onLayout } = useSpan(pins, key, edgePadding);
+  const { span, setSpan, onLayout, opening } = useSpan(pins, key, edgePadding, origin ?? fallback);
   const clusters = useMemo(
     () => clusterPins(pins.map((p) => ({ slug: p.slug, lat: p.lat, lng: p.lng })), span, selectedSlug),
     // `pins` is rebuilt every render; its content is what matters.
@@ -325,7 +352,6 @@ export default function PlacesMap({ places, selectedSlug, onSelect, categories, 
   // it is a reason to show no map at all.
   if (!canDrawMap || !Marker) return <View style={s.fill} testID="places-map-missing" />;
 
-  const first = origin ?? (pins[0] ? { lat: pins[0].lat, lng: pins[0].lng } : fallback);
   return (
     <MapBoundary>
       <MapView
@@ -336,7 +362,7 @@ export default function PlacesMap({ places, selectedSlug, onSelect, categories, 
         // places are its places; and it has no dark mode to switch on, so
         // the night reading is a style too — see `lib/mapStyle`.
         customMapStyle={mapStyle(scheme, look)}
-        initialRegion={{ latitude: first.lat, longitude: first.lng, latitudeDelta: OPENING_SPAN, longitudeDelta: OPENING_SPAN }}
+        initialRegion={opening}
         showsUserLocation
         showsMyLocationButton={false}
         toolbarEnabled={false}
