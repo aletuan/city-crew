@@ -80,8 +80,9 @@ test('the preview carries the words being judged', () => {
 // ---- three kinds (C8): a comment is not a profile.
 
 test('each kind the table allows has a name and a mark of its own', () => {
-  assert.deepEqual(Object.keys(KIND).sort(), ['collection', 'comment', 'profile']);
-  assert.equal(new Set(Object.values(KIND).map((k) => k.icon)).size, 3);
+  assert.deepEqual(Object.keys(KIND).sort(), ['checkin_photo', 'collection', 'comment', 'profile']);
+  assert.equal(new Set(Object.values(KIND).map((k) => k.icon)).size, 4);
+  assert.deepEqual(kindOf(row({ kind: 'checkin_photo' })), { label: 'check-in photo', icon: 'photo' });
   assert.deepEqual(kindOf(row({ kind: 'comment' })), { label: 'comment', icon: 'balloon' });
   assert.deepEqual(kindOf(row({ kind: 'collection' })), { label: 'collection', icon: 'list' });
   assert.deepEqual(kindOf(row({ kind: 'profile' })), { label: 'profile', icon: 'users' });
@@ -99,6 +100,10 @@ test('a comment is judged by what was said; the list it is on stands beside it',
   // Removed: nothing left, and the list's name does not stand in for it.
   assert.equal(previewOf(row({ kind: 'comment', title: 'Coffee in Hoi An', body: null })), '');
   assert.equal(placeOf(row({ kind: 'comment', title: null, body: null })), '');
+  // A check-in photo: the visit's note is what is said, the place where.
+  const p = row({ kind: 'checkin_photo', title: 'Cộng Cà Phê', body: 'look at this' });
+  assert.equal(previewOf(p), 'look at this');
+  assert.equal(placeOf(p), 'Cộng Cà Phê');
   // The other kinds have no "where": their title is part of what is judged.
   assert.equal(placeOf(row({ kind: 'collection', title: 'Best cafés' })), '');
 });

@@ -17,6 +17,7 @@ const data = vi.hoisted(() => ({
   fetchPersonCheckins: vi.fn(async (_id: string): Promise<unknown[]> => []),
   likeCheckin: vi.fn(async (_id: string, _on: boolean) => {}),
   saveCheckin: vi.fn(async (_id: string, _said: unknown) => {}),
+  submitReport: vi.fn(async (_r: unknown) => {}),
   signCheckinPhotos: vi.fn(async (paths: readonly string[]): Promise<Record<string, string>> =>
     Object.fromEntries(paths.map((p) => [p, `https://signed/${p}`]))),
 }));
@@ -26,7 +27,10 @@ vi.mock('../../lib/data', async (orig) => ({
   likeCheckin: data.likeCheckin,
   saveCheckin: data.saveCheckin,
   signCheckinPhotos: data.signCheckinPhotos,
+  submitReport: data.submitReport,
 }));
+const auth = vi.hoisted(() => ({ me: 'me' as string | null }));
+vi.mock('../../lib/auth', () => ({ useSession: () => ({ session: auth.me ? { user: { id: auth.me } } : null }) }));
 const mine = vi.hoisted(() => ({ loadedAt: 1 as number | null, reload: vi.fn() }));
 vi.mock('../../lib/checkins', () => ({ useMyCheckins: () => ({ data: [], loadedAt: mine.loadedAt, reload: mine.reload }) }));
 vi.mock('../../lib/city', () => ({
@@ -75,6 +79,7 @@ beforeEach(() => {
   data.saveCheckin.mockImplementation(async () => {});
   flags.place_checkin = true;
   flags.checkin_photos = false;
+  auth.me = 'me';
   forgetSignedPhotos();
   mine.loadedAt = 1;
   i18n.lang = 'en';
@@ -459,5 +464,44 @@ describe('a visit’s own photos', () => {
     await show('me', LAN, [WITH]);
     await settle();
     expect(data.signCheckinPhotos).toHaveBeenCalledTimes(1);
+  });
+});
+
+// K5: a friend's photo carries a flag to the desk; your own does not.
+describe('reporting a photo', () => {
+  const ph = (id: string) => ({ id, path: `lan/k1/${id}.jpg`, width: 1200, height: 900 });
+  const WITH = visit('k1', { photos: [ph('p1'), ph('p2')] });
+  const open = async (me: string, person: FriendProfile) => {
+    flags.checkin_photos = true;
+    await show(me, person, [WITH]);
+    await act(async () => { for (let i = 0; i < 6; i += 1) await Promise.resolve(); });
+    fireEvent.click(screen.getByTestId('activity-photo'));
+  };
+
+  it('closes the viewer, then asks why, then files the photo shown', async () => {
+    vi.useFakeTimers({ toFake: ['setTimeout'] });
+    try {
+      await open('me', LAN);
+      act(() => { (propsWhere((p) => 'onIndex' in p).onIndex as (i: number) => void)(1); });
+      expect(screen.getByTestId('photo-viewer-report').getAttribute('aria-label')).toBe('Report photo');
+      fireEvent.click(screen.getByTestId('photo-viewer-report'));
+      expect(screen.queryByTestId('photo-viewer')).toBeNull();
+      // Not yet: the viewer is still going.
+      expect(screen.queryByTestId('sheet-action-offensive')).toBeNull();
+      act(() => { vi.advanceTimersByTime(220); });
+      expect(screen.getByTestId('sheet-action-offensive')).toBeTruthy();
+      fireEvent.click(screen.getByTestId('sheet-action-offensive'));
+      act(() => { vi.advanceTimersByTime(220); });
+    } finally {
+      vi.useRealTimers();
+    }
+    await act(async () => { await Promise.resolve(); });
+    expect(data.submitReport).toHaveBeenCalledWith({ reporter: 'me', kind: 'checkin_photo', targetId: 'p2', reason: 'offensive' });
+  });
+
+  it('carries no flag on your own photos', async () => {
+    await open('me', ME);
+    expect(screen.getByTestId('photo-viewer')).toBeTruthy();
+    expect(screen.queryByTestId('photo-viewer-report')).toBeNull();
   });
 });

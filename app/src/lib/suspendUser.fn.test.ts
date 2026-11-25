@@ -116,14 +116,14 @@ describe('what an editor may do', () => {
     h.fake.replies(session('ed', 'desk@crew.test'), editor, target, notEditor, logged, { data: {} });
     const res = await call({ token: 'jwt', body: { user_id: 'target' } });
     expect(res.status).toBe(200);
-    expect(await res.json()).toEqual({ ok: true, suspended: true });
+    expect(await res.json()).toEqual({ ok: true, suspended: true, photos: 0 });
     expect(bans()[0].payload).toEqual({ id: 'target', attrs: { ban_duration: '876000h' } });
   });
 
   it('lifts a suspension only when told to in so many words', async () => {
     h.fake.replies(session('ed', 'desk@crew.test'), editor, target, logged, { data: {} });
     const res = await call({ token: 'jwt', body: { user_id: 'target', suspend: false } });
-    expect(await res.json()).toEqual({ ok: true, suspended: false });
+    expect(await res.json()).toEqual({ ok: true, suspended: false, photos: 0 });
     expect(bans()[0].payload).toEqual({ id: 'target', attrs: { ban_duration: 'none' } });
   });
 
@@ -204,5 +204,48 @@ describe('whom the desk may ban', () => {
     expect(res.status).toBe(200);
     expect(h.fake.log.filter((a) => a.table === 'editors')).toHaveLength(1);
     expect(bans()[0].payload).toEqual({ id: 'target', attrs: { ban_duration: 'none' } });
+  });
+});
+
+// K5 of docs/checkin-photos-plan.md: a ban hides the account's check-in
+// photos, a lift puts back what the ban hid, and the order matters.
+describe('the check-in photos', () => {
+  const photoCalls = () => h.fake.log.filter((a) => a.fn === 'checkin_photos_suspended');
+
+  it('hides them after the ban, as the editor who banned, and says how many', async () => {
+    h.fake.replies(session('ed', 'desk@crew.test'), editor, target, notEditor, logged, { data: {} }, { data: 4, error: null });
+    const res = await call({ token: 'jwt', body: { user_id: 'target' } });
+    expect(await res.json()).toEqual({ ok: true, suspended: true, photos: 4 });
+    expect(photoCalls()).toEqual([{ fn: 'checkin_photos_suspended', op: 'rpc', payload: { p_user: 'target', p_hide: true, p_by: 'ed' }, filters: [] }]);
+    const order = h.fake.log.map((a) => a.fn ?? a.table);
+    expect(order.indexOf('admin.updateUserById')).toBeLessThan(order.indexOf('checkin_photos_suspended'));
+  });
+
+  it('puts them back on a lift', async () => {
+    h.fake.replies(session('ed', 'desk@crew.test'), editor, target, logged, { data: {} }, { data: 2, error: null });
+    const res = await call({ token: 'jwt', body: { user_id: 'target', suspend: false } });
+    expect(await res.json()).toEqual({ ok: true, suspended: false, photos: 2 });
+    expect(photoCalls()[0].payload).toEqual({ p_user: 'target', p_hide: false, p_by: 'ed' });
+  });
+
+  it('touches none when the ban itself failed', async () => {
+    h.fake.replies(session('ed', 'desk@crew.test'), editor, target, notEditor, logged, { error: { message: 'ban failed' } });
+    await call({ token: 'jwt', body: { user_id: 'target' } });
+    expect(photoCalls()).toEqual([]);
+  });
+
+  it('says the ban stands when the photos could not be hidden', async () => {
+    h.fake.replies(session('ed', 'desk@crew.test'), editor, target, notEditor, logged, { data: {} }, { data: null, error: { message: 'timeout' } });
+    const res = await call({ token: 'jwt', body: { user_id: 'target' } });
+    expect(res.status).toBe(500);
+    expect(await res.json()).toEqual({ error: 'suspended, but the check-in photos were not hidden: timeout' });
+    // The ban's line stays: the ban happened.
+    expect(lines().map((a) => a.op)).toEqual(['insert']);
+  });
+
+  it('says the lift stands when the photos could not be put back', async () => {
+    h.fake.replies(session('ed', 'desk@crew.test'), editor, target, logged, { data: {} }, { data: null, error: { message: 'timeout' } });
+    const res = await call({ token: 'jwt', body: { user_id: 'target', suspend: false } });
+    expect(await res.json()).toEqual({ error: 'restored, but the check-in photos were not put back: timeout' });
   });
 });

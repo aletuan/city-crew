@@ -22,6 +22,13 @@
 // So it is the second act on this page that asks first, and its
 // question says what will not come back.
 //
+// A check-in photo (K5 of docs/checkin-photos-plan.md) is the fifth
+// verb's object: hidden, not deleted, and put back with the same press
+// — its file stays, and nobody is signed a link to it while it is down.
+// The photo is drawn on the card from a link the desk asks for itself
+// (the bucket is private); suspending its owner hides every photo they
+// have, and lifting that puts back what the suspension hid.
+//
 // Dismiss is a first-class answer, not a fallback. A report that was
 // looked at and found harmless is work done, and the queue must be able
 // to say so or it will fill with rows nobody dares clear.
@@ -87,16 +94,15 @@ export default function Reports() {
       <div className="addplace">
         <h2>Reports</h2>
         <p className="addsub">
-          What readers have flagged in the three places this app publishes without review: a
-          public collection’s words, a profile, and a comment. Everything else — every place in the
-          catalog — already passes this desk before anyone sees it.
+          What readers have flagged in the four places this app publishes without review: a public collection’s words,
+          a profile, a comment, and a photo on a check-in. Everything else — every place in the catalog — already passes this desk before anyone sees it.
         </p>
         <p className="addsub">
           <strong>Within {SLA_HOURS} hours.</strong> That is the window the App Store expects
           for acting on reported content, and the only reason this page leads with a clock.
-          Hiding a list and clearing a field are both reversible; suspending an account stops
-          a sign-in and leaves the person’s own rows where they are. Removing a comment is the
-          one act here that cannot be undone.
+          Hiding a list, clearing a field and hiding a check-in photo are all reversible; suspending an
+          account stops a sign-in, hides their check-in photos, and leaves the rest of their rows where
+          they are. Removing a comment is the one act here that cannot be undone.
         </p>
         <p className="addsub">
           Words no comment may contain are kept on their own page:{' '}
@@ -150,6 +156,7 @@ export default function Reports() {
               {r.kind === 'profile' && r.wall_kind === 'upload' && r.wall_ref ? (
                 <img className="repwall" src={r.wall_ref} alt="Uploaded cover" />
               ) : null}
+              <ReportedPhoto row={r} />
               {r.kind === 'profile' && r.wall_kind && r.wall_kind !== 'upload' ? (
                 <p className="repnote">Cover: {r.wall_kind} {r.wall_ref}</p>
               ) : null}
@@ -212,6 +219,7 @@ export default function Reports() {
                       Remove the comment
                     </button>
                   )}
+                  <PhotoAct row={r} busy={busy === r.id} act={act} />
                   {r.owner_id && (
                     <button
                       type="button"
@@ -223,8 +231,7 @@ export default function Reports() {
                         // and does not do.
                         if (!window.confirm(
                           `Suspend @${r.owner_handle ?? 'this account'}?\n\n`
-                          + 'They will not be able to sign in. Their collections and trips stay '
-                          + 'where they are, and you can lift this later.',
+                          + 'They will not be able to sign in, and their check-in photos are hidden. Their collections and trips stay where they are, and you can lift this later.',
                         )) return;
                         act(r, 'Account suspended', () => api.suspendUser(r.owner_id, true));
                       }}
@@ -247,5 +254,52 @@ export default function Reports() {
         })}
       </div>
     </>
+  );
+}
+
+/**
+ * A reported check-in photo, from a link asked for as the card draws: the
+ * bucket is private, so the path in the queue is not a picture until
+ * Storage signs it. Dimmed, and said, when it is already down.
+ */
+function ReportedPhoto({ row }) {
+  return row.kind === 'checkin_photo' && row.photo_path
+    ? <SignedPhoto path={row.photo_path} hidden={row.photo_hidden} />
+    : null;
+}
+
+function SignedPhoto({ path, hidden }) {
+  const [src, setSrc] = useState(null);
+  const [failed, setFailed] = useState(false);
+  useEffect(() => {
+    let live = true;
+    api.signCheckinPhoto(path).then((url) => { if (live) setSrc(url); }, () => { if (live) setFailed(true); });
+    return () => { live = false; };
+  }, [path]);
+  return (
+    <>
+      {src ? <img className={`repphoto${hidden ? ' off' : ''}`} src={src} alt="Reported check-in photo" /> : null}
+      {failed ? <p className="repnote">The photo could not be loaded.</p> : null}
+      {hidden ? <p className="repnote">Hidden — nobody but the desk can see it.</p> : null}
+    </>
+  );
+}
+
+/** Hide a reported photo, or put back one already down — the second is
+ *  the desk finding nothing wrong with it, and is answered as that. */
+function PhotoAct({ row, busy, act }) {
+  if (row.kind !== 'checkin_photo' || !row.photo_path) return null;
+  const down = row.photo_hidden;
+  return (
+    <button
+      type="button"
+      className={`syncbtn${down ? '' : ' danger'}`}
+      disabled={busy}
+      onClick={() => (down
+        ? act(row, 'Photo put back', () => api.moderateCheckinPhoto(row.target_id, false), 'dismissed')
+        : act(row, 'Photo hidden', () => api.moderateCheckinPhoto(row.target_id, true)))}
+    >
+      {down ? 'Put the photo back' : 'Hide the photo'}
+    </button>
   );
 }

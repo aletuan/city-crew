@@ -609,6 +609,31 @@ test('moderateComment names the comment to the desk\'s own function, not the aut
   assert.deepEqual(client.calls[0].args, { target: 'k1' });
 });
 
+test('moderateCheckinPhoto names the photo and which way to the desk\'s function', async () => {
+  const { api, client } = await loadApi([{ data: null, error: null }, { data: null, error: null }]);
+  await api.moderateCheckinPhoto('ph1', true);
+  await api.moderateCheckinPhoto('ph1', false);
+  assert.equal(client.calls[0].fn, 'moderate_checkin_photo');
+  assert.deepEqual(client.calls.map((c) => c.args), [{ target: 'ph1', hide: true }, { target: 'ph1', hide: false }]);
+});
+
+test('signCheckinPhoto asks the private bucket for an hour, and throws its words', async () => {
+  const asked = [];
+  const storageFrom = (name) => ({
+    createSignedUrl: async (path, s) => {
+      asked.push([name, path, s]);
+      if (path === 'bad') return { data: null, error: { message: 'forbidden' } };
+      if (path === 'none') return { data: null, error: null };
+      return { data: { signedUrl: `https://signed/${path}` }, error: null };
+    },
+  });
+  const { api } = await loadApi([], { storageFrom });
+  assert.equal(await api.signCheckinPhoto('u/k/p.jpg'), 'https://signed/u/k/p.jpg');
+  assert.equal(await api.signCheckinPhoto('none'), null);
+  await assert.rejects(api.signCheckinPhoto('bad'), /forbidden/);
+  assert.deepEqual(asked[0], ['checkin-photos', 'u/k/p.jpg', 3600]);
+});
+
 // ---- banned words: a list read in order, added to without complaint
 // about what is already there, and pruned one word at a time.
 

@@ -46,6 +46,11 @@ describe('reportable', () => {
     expect(reportable({ kind: 'comment', id: 'k1', ownerId: null }, 'me')).toBe(false);
   });
 
+  it('a friend’s check-in photo, yes; your own is yours to take off the visit', () => {
+    expect(reportable({ kind: 'checkin_photo', id: 'p1', ownerId: 'them' }, 'me')).toBe(true);
+    expect(reportable({ kind: 'checkin_photo', id: 'p1', ownerId: 'me' }, 'me')).toBe(false);
+  });
+
   it('the desk’s own editorial lists have no owner to report', () => {
     expect(reportable({ kind: 'collection', id: 'c1', ownerId: null }, 'me')).toBe(false);
   });

@@ -244,6 +244,68 @@ describe('Reports', () => {
     expect(order).toEqual(['remove', 'mark']);
   });
 
+  // K5 of docs/checkin-photos-plan.md.
+  const PHOTOS = [
+    {
+      id: 'r-photo', kind: 'checkin_photo', reason: 'offensive', status: 'new', created_at: ago(3),
+      target_id: 'ph1', owner_id: 'u8', owner_handle: 'lan', title: 'Cộng Cà Phê', body: 'look at this',
+      photo_path: 'u8/k1/ph1.jpg', photo_hidden: false,
+    },
+    {
+      id: 'r-down', kind: 'checkin_photo', reason: 'spam', status: 'new', created_at: ago(2),
+      target_id: 'ph2', owner_id: 'u8', owner_handle: 'lan', title: 'Cộng Cà Phê', body: null,
+      photo_path: 'u8/k1/ph2.jpg', photo_hidden: true,
+    },
+  ];
+
+  it('draws a reported check-in photo from a link the desk asks for, with its note and its place', async () => {
+    api.reports.mockResolvedValue(PHOTOS.slice(0, 1));
+    renderDesk('/reports');
+    const said = (await screen.findByText('look at this')).closest('section');
+    expect(said.querySelector('.repkind').textContent).toBe('check-in photo');
+    expect(within(said).getByText('on “Cộng Cà Phê”')).toBeTruthy();
+    const img = await within(said).findByAltText('Reported check-in photo');
+    expect(img.getAttribute('src')).toBe('https://signed/u8/k1/ph1.jpg');
+    expect(img.className).toBe('repphoto');
+    expect(api.signCheckinPhoto).toHaveBeenCalledWith('u8/k1/ph1.jpg');
+    expect(within(said).getAllByRole('button').map((b) => b.textContent)).toEqual([
+      'Hide the photo', 'Suspend the account', 'Nothing wrong',
+    ]);
+  });
+
+  it('hides the photo, then marks the report — in that order', async () => {
+    api.reports.mockResolvedValue(PHOTOS.slice(0, 1));
+    const order = [];
+    api.moderateCheckinPhoto.mockImplementation(async () => { order.push('hide'); });
+    api.markReport.mockImplementation(async () => { order.push('mark'); });
+    renderDesk('/reports');
+    await screen.findByText('look at this');
+    fireEvent.click(screen.getByRole('button', { name: 'Hide the photo' }));
+    expect((await findToast()).textContent).toBe('Photo hidden');
+    expect(api.moderateCheckinPhoto).toHaveBeenCalledWith('ph1', true);
+    expect(api.markReport).toHaveBeenCalledWith('r-photo', 'actioned');
+    expect(order).toEqual(['hide', 'mark']);
+  });
+
+  it('shows one already down as down, and puts it back as an answer of nothing wrong', async () => {
+    api.reports.mockResolvedValue(PHOTOS.slice(1));
+    renderDesk('/reports');
+    const down = (await screen.findByText(/nobody but the desk/)).closest('section');
+    expect((await within(down).findByAltText('Reported check-in photo')).className).toBe('repphoto off');
+    fireEvent.click(within(down).getByRole('button', { name: 'Put the photo back' }));
+    expect((await findToast()).textContent).toBe('Photo put back');
+    expect(api.moderateCheckinPhoto).toHaveBeenCalledWith('ph2', false);
+    expect(api.markReport).toHaveBeenCalledWith('r-down', 'dismissed');
+  });
+
+  it('says so when the photo cannot be signed', async () => {
+    api.reports.mockResolvedValue(PHOTOS.slice(0, 1));
+    api.signCheckinPhoto.mockRejectedValue(new Error('forbidden'));
+    renderDesk('/reports');
+    expect(await screen.findByText('The photo could not be loaded.')).toBeTruthy();
+    expect(screen.queryByAltText('Reported check-in photo')).toBeNull();
+  });
+
   it('points at the banned words, which have a page of their own', async () => {
     renderDesk('/reports');
     await screen.findByText(/Nothing reported/);

@@ -14,6 +14,11 @@ export const REPORT_REASONS = ['spam', 'offensive', 'impersonation', 'other'] as
 
 export type ReportReason = (typeof REPORT_REASONS)[number];
 
+/** What a report can be about — the table's CHECK. A check-in photo
+ *  since K5 of docs/checkin-photos-plan.md: the one picture a person
+ *  uploads for others to see. */
+export type ReportKind = 'collection' | 'profile' | 'comment' | 'checkin_photo';
+
 /** What the column will take. Long enough for a paragraph of context,
  *  short enough that the queue stays readable. */
 export const NOTE_MAX = 500;
@@ -40,10 +45,11 @@ export function cleanNote(note: string | null | undefined): string | null {
  * delete, and reporting it to the desk would be asking somebody else to
  * do what the row above already does. A comment is a collection's case
  * exactly: yours is yours to delete, and one whose writer is unknown —
- * an account since deleted — has nobody to report.
+ * an account since deleted — has nobody to report. A check-in photo is
+ * the same again: yours is yours to take off the visit.
  */
 export function reportable(
-  target: { kind: 'collection' | 'profile' | 'comment'; ownerId?: string | null; id: string },
+  target: { kind: ReportKind; ownerId?: string | null; id: string },
   me: string | null | undefined,
 ): boolean {
   if (!me) return false;
