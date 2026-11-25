@@ -435,21 +435,33 @@ describe('a visit’s own photos', () => {
     expect(document.querySelector('img[src="https://x/k1.jpg"]')).not.toBeNull();
   });
 
-  it('asks once for the whole column, and wears the first photo with the count', async () => {
+  it('asks once for the whole column, and pages across a visit’s photos with the count', async () => {
     flags.checkin_photos = true;
     await show('me', LAN, [WITH, visit('k2', { photos: [ph('q1')] }), visit('k3')]);
     await settle();
     expect(data.signCheckinPhotos).toHaveBeenCalledTimes(1);
     expect(data.signCheckinPhotos).toHaveBeenCalledWith(['lan/k1/p1.jpg', 'lan/k1/p2.jpg', 'lan/k1/p3.jpg', 'lan/k1/q1.jpg']);
     const [first, second, third] = cards();
-    expect(within(first).getByTestId('activity-photo').getAttribute('aria-label')).toBe('3 photos');
-    expect(within(first).getByTestId('activity-photo-count').textContent).toBe('3');
+    expect(within(first).getAllByTestId('activity-photo').map((el) => el.getAttribute('aria-label')))
+      .toEqual(['Photo 1 of 3', 'Photo 2 of 3', 'Photo 3 of 3']);
+    // The place hero's count, in its corner (`PageCount`).
+    expect(within(first).getByTestId('activity-photos-count').textContent).toBe('1 / 3');
+    // The first two drawn; the third waits for a swipe onto the second.
     expect(first.querySelector('img[src="https://signed/lan/k1/p1.jpg"]')).not.toBeNull();
+    expect(first.querySelector('img[src="https://signed/lan/k1/p2.jpg"]')).not.toBeNull();
+    expect(first.querySelector('img[src="https://signed/lan/k1/p3.jpg"]')).toBeNull();
+    expect(within(first).getByTestId('activity-photo-later')).toBeTruthy();
+    act(() => { (propsWhere((p) => 'onPage' in p).onPage as (i: number) => void)(1); });
+    expect(within(first).getByTestId('activity-photos-count').textContent).toBe('2 / 3');
+    expect(first.querySelector('img[src="https://signed/lan/k1/p3.jpg"]')).not.toBeNull();
     // In the cover's place, not as well as it.
     expect(first.querySelector('img[src="https://x/k1.jpg"]')).toBeNull();
     // One photo: no count, said as one.
     expect(within(second).getByTestId('activity-photo').getAttribute('aria-label')).toBe('Photo');
-    expect(within(second).queryByTestId('activity-photo-count')).toBeNull();
+    expect(within(second).queryByTestId('activity-photos-count')).toBeNull();
+    // Nothing to page to: the picture alone, at the card's own size, not a
+    // carousel that measures itself first.
+    expect(within(second).queryByTestId('activity-photos')).toBeNull();
     // None: the place, as before.
     expect(within(third).queryByTestId('activity-photo')).toBeNull();
     expect(third.querySelector('img[src="https://x/k3.jpg"]')).not.toBeNull();
@@ -472,7 +484,7 @@ describe('a visit’s own photos', () => {
     await settle();
     const [first, second] = cards();
     expect(first.querySelector('img[src="https://signed/p2"]')).not.toBeNull();
-    expect(within(first).queryByTestId('activity-photo-count')).toBeNull();
+    expect(within(first).queryByTestId('activity-photos-count')).toBeNull();
     expect(within(second).queryByTestId('activity-photo')).toBeNull();
   });
 
@@ -481,11 +493,14 @@ describe('a visit’s own photos', () => {
     await show('me', LAN, [WITH]);
     await settle();
     expect(screen.queryByTestId('photo-viewer')).toBeNull();
-    fireEvent.click(screen.getByTestId('activity-photo'));
+    // The second picture pressed opens the viewer on the second.
+    fireEvent.click(screen.getAllByTestId('activity-photo')[1]);
+    expect(screen.getByTestId('photo-viewer-count').textContent).toBe('2/3');
+    fireEvent.click(screen.getByTestId('photo-viewer-close'));
+    fireEvent.click(screen.getAllByTestId('activity-photo')[0]);
     expect(onPlace).not.toHaveBeenCalled();
     expect(screen.getByTestId('photo-viewer-count').textContent).toBe('1/3');
     expect(screen.getByTestId('photo-viewer-page-p3')).toBeTruthy();
-    expect(document.querySelectorAll('img[src="https://signed/lan/k1/p2.jpg"]')).toHaveLength(1);
     // Cached by the photo, not by a link that changes every hour.
     const sourceOf = (uri: string) => propsWhere((p) => (p.source as { uri?: string } | undefined)?.uri === uri).source;
     expect(sourceOf('https://signed/lan/k1/p1.jpg')).toEqual({ uri: 'https://signed/lan/k1/p1.jpg', cacheKey: 'p1' });
@@ -504,7 +519,7 @@ describe('a visit’s own photos', () => {
     flags.checkin_photos = true;
     await show('me', LAN, [WITH]);
     await settle();
-    fireEvent.click(screen.getByTestId('activity-photo'));
+    fireEvent.click(screen.getAllByTestId('activity-photo')[0]);
     act(() => { (propsWhere((p) => p.visible === true && 'onRequestClose' in p).onRequestClose as () => void)(); });
     expect(screen.queryByTestId('photo-viewer')).toBeNull();
   });
@@ -528,7 +543,7 @@ describe('reporting a photo', () => {
     flags.checkin_photos = true;
     await show(me, person, [WITH]);
     await act(async () => { for (let i = 0; i < 6; i += 1) await Promise.resolve(); });
-    fireEvent.click(screen.getByTestId('activity-photo'));
+    fireEvent.click(screen.getAllByTestId('activity-photo')[0]);
   };
 
   it('closes the viewer, then asks why, then files the photo shown', async () => {
