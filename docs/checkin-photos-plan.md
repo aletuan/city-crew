@@ -147,9 +147,12 @@ dòng trong database không xoá file thật**, nên không dựa vào cascade.
 
 ## Hiển thị
 
-- Thẻ check-in: ảnh thứ nhất thay ảnh bìa quán; có ảnh thứ hai trở đi
-  thì góc ảnh hiện số đếm. Chạm vào ảnh mở trình xem ảnh đã có
-  (`PhotoViewer`) để vuốt qua cả ba. Chạm phần còn lại vẫn mở địa điểm.
+- Thẻ check-in: ảnh của lần ghé thay ảnh bìa quán. Từ hai ảnh, vuốt ngang
+  ngay trên thẻ như ảnh của trang quán, đếm "1 / 2" ở cùng góc
+  (`PhotoCarousel`, `PageCount` — chủ dự án, 25/11/2026). Chỉ vẽ tới ảnh
+  kế tiếp ảnh đang xem; ảnh thứ ba chờ tới khi vuốt sang ảnh thứ hai.
+  Chạm vào một ảnh mở trình xem ảnh (`PhotoViewer`) ngay ở ảnh đó. Chạm
+  phần còn lại vẫn mở địa điểm.
 - Danh sách check-in: ô ảnh của hàng dùng ảnh thứ nhất.
 - Link ký sống **1 giờ**. Link đổi mỗi lần xin, nên ảnh được cache theo
   `photo_id` (`expo-image` `cacheKey`), không theo URL.

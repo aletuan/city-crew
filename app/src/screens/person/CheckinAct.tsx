@@ -35,8 +35,9 @@
 //
 // ── a visit's own photos (K4 of `docs/checkin-photos-plan.md`) ──
 //
-// Behind `checkin_photos`. The first wears the card's picture in place of
-// the place's cover; a press on it opens all of them full screen
+// Behind `checkin_photos`. They wear the card's picture in place of the
+// place's cover, paging across when there are more than one
+// (`ActivityCard`); a press on one opens all of them full screen, on it
 // (`PhotoViewer`), and the words stay the press into the place. Links
 // for the whole column are asked for at once (`useSignedPhotos`); until
 // they come, and for a visit with none, the card is the place's as it
@@ -223,8 +224,8 @@ export function useVisitCards({ me, person, onPlace }: {
         // photo seen before comes off the phone by its id, not the network.
         uri={photosOn && (v.photos?.length ?? 0) > 0 ? undefined : v.place.cover ?? undefined}
         photo={pics.length > 0 ? {
-          uri: pics[0].uri, cacheKey: pics[0].ph.id, n: pics.length,
-          onPress: () => setViewing({ v, at: 0 }),
+          pages: pics.map(({ ph, uri }) => ({ uri, cacheKey: ph.id })),
+          onPress: (at) => setViewing({ v, at }),
         } : undefined}
         meta={[kind ? categoryLabel(kind, t) : null, cityShortById(cities, v.city_id, t)].filter(Boolean).join(' · ')}
         desc={own ? null : v.note}

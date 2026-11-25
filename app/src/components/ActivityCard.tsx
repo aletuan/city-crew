@@ -55,23 +55,33 @@
 // press inside a press is the inner one's on a phone and a warning on
 // the web, and the line between them is the picture's own edge.
 //
-// More than one: their number in the corner, on the scrim the photo
-// controls wear (`photoDisc`), with the stack glyph — the count is what
-// says the press opens more than this picture.
+// More than one: they page across, on the card, as a place's hero does
+// (owner, 25 Nov 2026) — the same paging (`PhotoCarousel`) and the same
+// "1 / 2" in the same corner (`PageCount`), so a swipe on a card does
+// what a swipe on a picture does everywhere else in the app. A press on
+// any of them opens the viewer on that one.
+//
+// The first two are drawn and the third waits for a swipe onto the
+// second: a column of visits is a column of cards, and a third picture
+// on each, drawn for a reader who never swipes, is the weight that
+// would be. The next one is always ready before it is reached. Each is a
+// check-in photo of about 150–200 KB (`lib/guide`'s shrink), so a card
+// costs at most two of those until it is swiped.
 
-import React from 'react';
+import React, { useState } from 'react';
 import type Ionicons from '@expo/vector-icons/Ionicons';
 import { StyleSheet, Text, View } from 'react-native';
 import { Image } from 'expo-image';
 import LikeHeart from './LikeHeart';
 import { CopyGlyph } from './CopyGlyph';
 import { Glyph, ICON } from './ui/glyph';
-import { photoDisc, PressableScale } from './ui/controls';
+import { PressableScale } from './ui/controls';
+import PhotoCarousel, { type PageSize } from './PhotoCarousel';
 import { Avatar, Card } from './ui/surfaces';
 import { useI18n } from '../lib/i18n';
 import type { Preview } from '../lib/comments';
 import { likesWorthShowing } from '../lib/likes';
-import { colors, font, onPhoto, space, type } from '../theme';
+import { colors, font, space, type } from '../theme';
 
 /** The face beside the reason: a line of the reason and a line of the
  *  time is 20 + 17, and the face is their height. */
@@ -121,10 +131,10 @@ function CopyFoot({ copy }: { copy: CardCopy }) {
   );
 }
 
-/** A visit's own photo in the cover's place: its link, the key the
- *  picture is cached under (the photo's id — the link changes hourly),
- *  how many the visit has, and the press that opens them. */
-export type CardPhoto = { uri: string; cacheKey: string; n: number; onPress: () => void };
+/** A visit's own photos in the cover's place: each one's link and the
+ *  key it is cached under (the photo's id — the link changes hourly),
+ *  and the press that opens them, on the one pressed. */
+export type CardPhoto = { pages: readonly { uri: string; cacheKey: string }[]; onPress: (i: number) => void };
 
 export default function ActivityCard({
   face, who, did, when, mark, title, uri, photo, meta, desc, under, liked, likes, onOpen, onHeart, comments, onComments, commentsOff, copy, testID,
@@ -277,37 +287,41 @@ export default function ActivityCard({
 
 function PhotoPress({ photo }: { photo: CardPhoto }) {
   const { t } = useI18n();
-  return (
+  const [page, setPage] = useState(0);
+  const n = photo.pages.length;
+  const picture = (p: CardPhoto['pages'][number], i: number, size?: PageSize) => (
     <PressableScale
-      onPress={photo.onPress}
+      key={p.cacheKey}
+      onPress={() => photo.onPress(i)}
       haptic="selection"
       scaleTo={0.985}
       accessibilityRole="button"
-      accessibilityLabel={photo.n > 1
-        ? t(`${photo.n} photos`, `${photo.n} ảnh`, `写真${photo.n}枚`, `${photo.n} 张照片`, `${photo.n} 張照片`)
+      accessibilityLabel={n > 1
+        ? t(`Photo ${i + 1} of ${n}`, `Ảnh ${i + 1}/${n}`, `写真 ${i + 1}/${n}`, `第 ${i + 1} 张照片，共 ${n} 张`, `第 ${i + 1} 張照片，共 ${n} 張`)
         : t('Photo', 'Ảnh', '写真', '照片', '照片')}
       testID="activity-photo"
     >
-      <Image source={{ uri: photo.uri, cacheKey: photo.cacheKey }} style={s.photo} contentFit="cover" transition={160} cachePolicy="memory-disk" />
-      {photo.n > 1 ? (
-        <View style={s.many} testID="activity-photo-count">
-          <Glyph name="images-outline" size={ICON.meta} color={onPhoto.text} />
-          <Text style={s.manyText}>{photo.n}</Text>
-        </View>
-      ) : null}
+      {/* Drawn up to the page after the one on screen — see the header. */}
+      {i <= page + 1
+        ? <Image source={{ uri: p.uri, cacheKey: p.cacheKey }} style={size ?? s.photo} contentFit="cover" transition={160} cachePolicy="memory-disk" />
+        : <View style={[size, s.tint]} testID="activity-photo-later" />}
     </PressableScale>
+  );
+  if (n === 1) return picture(photo.pages[0], 0);
+  return (
+    <PhotoCarousel
+      pages={photo.pages}
+      page={page}
+      onPage={setPage}
+      height={PHOTO_H}
+      attributionOf={() => null}
+      renderPage={(p, i, size) => picture(p, i, size)}
+      testID="activity-photos"
+    />
   );
 }
 
 const s = StyleSheet.create({
-  // The photo controls' scrim and hairline (`photoDisc`), as a pill: 10
-  // from the picture's corner, the bookmark's inset on a place card.
-  many: {
-    position: 'absolute', right: 10, bottom: 10, flexDirection: 'row', alignItems: 'center', gap: 4,
-    paddingHorizontal: 8, height: 24, borderRadius: 12,
-    backgroundColor: photoDisc.backgroundColor, borderWidth: photoDisc.borderWidth, borderColor: photoDisc.borderColor,
-  },
-  manyText: { color: onPhoto.text, fontSize: 13, fontWeight: font.semibold, fontVariant: ['tabular-nums'] },
   off: { opacity: 0.35 },
   head: { flexDirection: 'row', alignItems: 'center', gap: 10, padding: space.cardPadding, paddingBottom: 12 },
   headWords: { flex: 1 },
