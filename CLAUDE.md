@@ -144,9 +144,16 @@ environment it has not seen no reviewer at all. Until that variable is
 on, a migration merged is not a migration that has run; apply it
 yourself, as below. It refuses to apply onto a history that disagrees
 with the repo, or a file merged out of order
-(`data/scripts/apply-migrations.mjs`). Edge Functions deploy on the
-merge without waiting, so a function that needs a new migration merges
-after the migration is live.
+(`data/scripts/apply-migrations.mjs`).
+
+**The Edge Functions deploy and the EAS Update wait for it.** Both start
+on the same merge and hold until every migration in the commit is on
+live (`.github/actions/wait-for-migrations`): thirty minutes, then red
+with nothing deployed — approve, and re-run the job. So a function or a
+screen and the migration it needs can merge together. What waiting
+cannot fix is the other direction: a migration that drops or renames
+something live code still reads breaks it from the approval until the
+new code is out. Add in one pull request, remove in a later one.
 
 `.github/workflows/migration-drift.yml` checks it for you: after a merge
 that touches `supabase/migrations/` it waits up to 30 minutes for the
@@ -163,11 +170,11 @@ statements) values ('<file version>', '<name>', array['<the SQL>'])`.
 A migration applied the other way shows up as "applied under another
 version", with the one-line update that fixes it.
 
-**Edge Functions deploy themselves, migrations do not.**
+**Edge Functions deploy themselves.**
 `.github/workflows/deploy-functions.yml` deploys the functions whose folder
 changed on main (all of them for a change under `_shared/`), from the
-`SUPABASE_ACCESS_TOKEN` secret, and checks the project afterwards. When a
-function needs a migration, apply the migration first. `find-address` and
+`SUPABASE_ACCESS_TOKEN` secret, once the commit's migrations are live, and
+checks the project afterwards. `find-address` and
 `backfill-phones-once` are live and not in the repo; nothing removes them.
 
 ## The EAS channel, and what it decides

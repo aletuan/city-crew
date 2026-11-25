@@ -4,7 +4,7 @@
 
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { drift, parseFile } from '../scripts/migration-drift.mjs';
+import { drift, parseFile, pending } from '../scripts/migration-drift.mjs';
 
 const row = (version, name) => ({ version, name });
 const none = { missing: [], extra: [], restamped: [], renamed: [] };
@@ -45,4 +45,17 @@ test('one version under two names is renamed', () => {
 test('a missing file and an extra row with different names stay what they are', () => {
   const r = drift(['20261126000000_a.sql'], [row('20261125000000', 'b')]);
   assert.deepEqual(r, { ...none, missing: ['20261126000000_a'], extra: ['20261125000000_b'] });
+});
+
+test('a deploy waits for a file live has not run, and for nothing else', () => {
+  const files = ['20261124230000_checkin_photos.sql', '20261125120000_checkin_photo_desk.sql', '20261126000000_new_thing.sql'];
+  const live = [
+    // Applied under the minute it ran: it ran, so nothing waits on it.
+    row('20261124231507', 'checkin_photos'),
+    row('20261125120000', 'checkin_photo_desk'),
+    // In no file: the drift job's business, not a deploy's.
+    row('20261101000000', 'applied_by_hand'),
+  ];
+  assert.deepEqual(pending(files, live), ['20261126000000_new_thing']);
+  assert.deepEqual(pending(files, [...live, row('20261126000000', 'new_thing')]), []);
 });

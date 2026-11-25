@@ -22,9 +22,11 @@
 #
 # ── what this does not do ──
 #
-# - Migrations. They are still applied by hand (CLAUDE.md, "Supabase"). A
-#   function that needs a column deploys before the column exists if both
-#   merge in one PR; apply the migration first.
+# - Apply migrations: `apply-migrations.yml` does, once approved. This
+#   waits for it — nothing deploys while a migration in the commit is not
+#   on the live project (`.github/actions/wait-for-migrations`, which also
+#   says what waiting cannot fix: a migration that takes away something
+#   the live function still reads).
 # - Roll back. A bad deploy is fixed by merging the fix, or by re-running
 #   this on the last good commit from the Actions tab.
 # - Secrets for the functions (`supabase secrets set`). They live in the
@@ -116,6 +118,14 @@ jobs:
           deploy=$(echo $deploy)
           echo "deploying: ${deploy:-nothing}"
           echo "names=$deploy" >> "$GITHUB_OUTPUT"
+
+      # Before anything is deployed: a function that reads a new column
+      # must not be live before the column is.
+      - uses: ./.github/actions/wait-for-migrations
+        if: env.SUPABASE_ACCESS_TOKEN != '' && steps.which.outputs.names != ''
+        with:
+          token: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          project-ref: ${{ env.PROJECT_REF }}
 
       - uses: supabase/setup-cli@v1
         if: env.SUPABASE_ACCESS_TOKEN != '' && steps.which.outputs.names != ''
