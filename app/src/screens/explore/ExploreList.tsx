@@ -3,8 +3,8 @@
 // Out of `ExploreScreen` on 25 Nov 2026, as the screens of the 22 Nov code
 // review were (F1, F5): the reasoning moved with the code, unchanged.
 
-import React, { memo, type ReactElement, type RefObject } from 'react';
-import { Animated, type SectionList } from 'react-native';
+import React, { memo, useState, type ReactElement, type RefObject } from 'react';
+import { Animated, View, type SectionList } from 'react-native';
 import PlaceCard from '../../components/PlaceCard';
 import { Empty } from '../../components/ui';
 import { chosenKind } from '../../lib/categories';
@@ -137,5 +137,37 @@ export function ExploreList({
     onViewableItemsChanged={onViewable}
     viewabilityConfig={viewabilityConfig}
   />
+  );
+}
+
+/**
+ * The list, kept under the map once it has been drawn (owner's
+ * recording, 25 Nov 2026).
+ *
+ * It used to be taken down for the map and built again on the way back:
+ * the hero and the shelf's covers came up grey and faded in every time,
+ * and the reader was returned to the top of a list they had been halfway
+ * down. Kept, it comes back as it was left — its pictures, its place.
+ * Under the map it takes no touches and is not read aloud.
+ *
+ * Not built under a map it has never been seen from behind: a reader
+ * whose remembered view is the map, and whose places arrive after that
+ * was read, pays for one view until they ask for the other.
+ */
+export function KeptUnder({ under, children }: { under: boolean; children: React.ReactNode }) {
+  const [seen, setSeen] = useState(false);
+  if (!seen && !under) setSeen(true);
+  if (!seen) return null;
+  return (
+    <View
+      style={{ flex: 1 }}
+      pointerEvents={under ? 'none' : 'auto'}
+      aria-hidden={under || undefined}
+      accessibilityElementsHidden={under}
+      importantForAccessibility={under ? 'no-hide-descendants' : 'auto'}
+      testID="explore-list-keep"
+    >
+      {children}
+    </View>
   );
 }
