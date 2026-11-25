@@ -290,8 +290,13 @@ Ghi ra để không ai tưởng là có chủ ý:
   32 → 125 / 18) ra `screens/crew/`: `useIntros`, `useCrewSheets`, hai
   tab và các mảnh của một dòng. `ExploreScreen` (567 / 49 → 143 / 23) ra
   `screens/explore/`: `useExploreFilters`, `useExploreScroll`, `FilterBar`,
-  `ExploreList`, `ExploreMap`. Danh sách còn 27 file; hàm màn hình lớn
-  nhất trên đó giờ là `IdeasScreen` (493 / 51) và `SearchScreen` (461 / 40).
+  `ExploreList`, `ExploreMap`. Cũng ngày 25/11, `IdeasScreen` (493 / 51 →
+  141 / 14) ra `screens/ideas/`: `useSeedLists`, `useListSeed`, `where.ts`,
+  `Asks`, `WhenWhere`, `Seeds`, `PlanCta`, `DayPicker`; và `SearchScreen`
+  (461 / 40 → 132 / 19) ra `screens/search/`: năm hook trong
+  `useSearch.ts`, `Row`, `rows.tsx`, `SearchEmpty`, `AddingTo`, `google.tsx`.
+  Danh sách còn 25 file; hàm màn hình lớn nhất trên đó giờ là
+  `SignUpScreen` (365 dòng) và `PlanEditScreen` (317).
 - ~~**`lib/save.tsx`** nằm sai tầng~~ Ngày 20/10/2026 phần vẽ hai sheet
   chuyển ra `components/SaveSheets.tsx`; `lib/save.tsx` chỉ còn trạng thái,
   và ngoại lệ trong lint đã bỏ.

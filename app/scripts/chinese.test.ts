@@ -60,7 +60,7 @@ const ROWS = new Set([
   // Place names: a city's, a neighbourhood's, a place's own.
   'c.short_en', 'city.short_en', 'r.en', "hit.place.name_en ?? ''",
   // What a collection's author wrote.
-  'item.collection.title_en', 'c.title_en', 'c.desc_en', 'col.title_en', 'col.desc_en', 'own.title_en', 'own.desc_en',
+  'item.collection.title_en', 'collection.title_en', 'c.title_en', 'c.desc_en', 'col.title_en', 'col.desc_en', 'own.title_en', 'own.desc_en',
   'list.title_en',
 ]);
 

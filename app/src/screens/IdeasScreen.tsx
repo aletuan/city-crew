@@ -16,74 +16,37 @@
 // Sketching, which builds it, and nothing about the draft is decided twice.
 
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { Modal, Platform, Pressable, ScrollView, Text, View } from 'react-native';
+import { ScrollView, Text } from 'react-native';
 import { useScrollToTop } from '@react-navigation/native';
-import Ionicons from '@expo/vector-icons/Ionicons';
-import { Glyph, ICON } from '../components/ui/glyph';
-import DateTimePicker from '@react-native-community/datetimepicker';
-import { Image } from 'expo-image';
-import ActionSheet, { type SheetAction } from '../components/ActionSheet';
 import StartSheet, { Start } from '../components/StartSheet';
 import {
   AmbientWarmth,
-  Card,
-  GradientCta,
-  PressableScale,
   Screen,
-  SelectTick,
-  Tile,
   useTabBarClearance,
 } from '../components/ui';
 import { useDuckOnScroll } from '../components/tabBarDuck';
 import IdeasHeaderArt from '../components/IdeasHeaderArt';
-import { CATEGORIES, categoryLabel, presentCategories } from '../lib/categories';
-import { cityShort } from '../lib/cityName';
-import { type City, useCity, useMyPosition } from '../lib/city';
-import { useSession } from '../lib/auth';
+import { presentCategories } from '../lib/categories';
+import { useCity, useMyPosition } from '../lib/city';
 import { useCollections, usePlaces } from '../lib/catalog';
-import { useListRank } from '../lib/tasteProfile';
-import { type Collection, coverUriOf, membersOf, type Place } from '../lib/data';
-import { clockOf, dateline } from '../lib/format';
+import { dateline } from '../lib/format';
 import { addDays, clampDay, fromISO, toISO } from '../lib/day';
-import { type Lang, useI18n } from '../lib/i18n';
-import { placesOf } from '../lib/collectionShelf';
+import { useI18n } from '../lib/i18n';
 import { partGone, startMinFor, START_MIN } from '../lib/planner';
 import { useMyLists, useSaveActions } from '../lib/save';
-import { canPlan, COMPANY, EMPTY_DRAFT, startPoint, toggle, TripDraft } from '../lib/trip';
+import { canPlan, EMPTY_DRAFT, startPoint, toggle, TripDraft } from '../lib/trip';
 import { cityAround, standsIn } from '../lib/geo';
 import type { Nav } from '../nav';
-import { colors, space } from '../theme';
-import { MoreRow, Section } from './ideas/parts';
-import { SEG_SLOP, s } from './ideas/styles';
-
-/** The last instant of a calendar day, for a picker bound. `fromISO` gives
- *  local noon — right for a day, half a day short of a ceiling. */
-const endOfDay = (iso: string): Date | undefined => {
-  const d = fromISO(iso);
-  if (!d) return undefined;
-  d.setHours(23, 59, 59, 999);
-  return d;
-};
-
-/** A list, with only its members in this city — or all of them while no
- *  city is chosen. The count a row prints, and the test of whether the
- *  row appears at all. */
-function inCity(c: Collection, places: Place[], cityId: string | null | undefined): { c: Collection; members: Place[] } {
-  const all = membersOf(c, places);
-  return { c, members: cityId ? all.filter((p) => p.city_id === cityId) : all };
-}
-
-/**
- * How many of the community's lists a reader with none of their own sees
- * before the tap. Three rows are about 200pt — one card that still leaves
- * the Plan button on the first screen of an iPhone 15 — and the three
- * ranked first are the city's answer to "what is there"; the rest is a
- * longer list of the same kind, not a different offer.
- */
-const COMMUNITY_FIRST = 3;
-
-/** The date picker's locale for each app language — see its note. */
-const PICKER_LOCALE: Record<Lang, string> = { en: 'en-GB', vi: 'vi-VN', ja: 'ja-JP', zh: 'zh-Hans-CN', 'zh-Hant': 'zh-Hant-TW' };
+import { AskCity } from './ideas/parts';
+import { Asks } from './ideas/Asks';
+import { DayPicker } from './ideas/DayPicker';
+import { PlanCta } from './ideas/PlanCta';
+import { Seeds } from './ideas/Seeds';
+import { useListSeed } from './ideas/useListSeed';
+import { useSeedLists } from './ideas/useSeedLists';
+import { WhenWhere } from './ideas/WhenWhere';
+import { whereLabelOf } from './ideas/where';
+import { s } from './ideas/styles';
 
 export default function IdeasScreen({ navigation, route }: {
   navigation: Nav;
@@ -91,14 +54,11 @@ export default function IdeasScreen({ navigation, route }: {
   route?: { params?: { from?: string; at?: number } };
 }) {
   const { t, lang } = useI18n();
-  const { city, cities, setCity } = useCity();
+  const { city } = useCity();
   const { data: places } = usePlaces();
   const mine = useMyLists();
   const { askToSignIn } = useSaveActions();
   const cols = useCollections();
-  // The ranking figure, which leaves out a curator's like of their own list.
-  const rank = useListRank();
-  const uid = useSession().session?.user?.id;
   const tabClearance = useTabBarClearance();
   const duckScroll = useDuckOnScroll();
   // Its tab, pressed again here, scrolls back to the top — the last step
@@ -154,9 +114,6 @@ export default function IdeasScreen({ navigation, route }: {
    * instead of a silent correction.
    */
   const now = new Date();
-  /** Today at 00:00 — the picker's floor. Not `fromISO(todayISO())`, which
-   *  is noon; see the picker below. */
-  const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
   const dayAt = (at: Date) => clampDay(draft.date || (partGone(draft.when, toISO(at), at)
     ? addDays(toISO(at), 1)
     : toISO(at)));
@@ -167,52 +124,8 @@ export default function IdeasScreen({ navigation, route }: {
   const late = startMin > START_MIN[draft.when];
   const [sheet, setSheet] = useState(false);
 
-  /**
-   * The lists this plan can start from: yours, and the community's, each
-   * touching this city.
-   *
-   * A plan is for one city — the one chosen up top — and a list is not:
-   * it is stamped with the city it was made in and holds whatever was
-   * saved into it, Hanoi and Saigon alike (`fetchMyCollections`). This
-   * section used to offer every list you own with its whole count, so a
-   * reader planning Hanoi saw "8 places" on a list with three here,
-   * ticked it, and met "some places did not fit" two screens later with
-   * nothing pointing back at why.
-   *
-   * So the shelves' rule decides what appears — one place here is enough,
-   * which is `touchesCity` with the members already narrowed to here —
-   * and the count is the places here. The row keeps its two short lines;
-   * what changed is that both are now true of this plan. A list with
-   * nothing in this city cannot seed it and is not offered, rather than
-   * listed, ticked and silently dropped. Not "3 of 8", and no city under
-   * the count: the city is named once, in the line under the heading.
-   *
-   * The community's lists came in on 12 Oct 2026, and for the reader the
-   * old version had nothing for: a guest, who owns no list, and an
-   * account whose lists are all in another city. Both used to see no
-   * section at all. They see the city's own lists now, ranked as
-   * Explore's shelf ranks them (`useListRank`), the first three shown
-   * and the rest a tap away. A reader with lists of their own here
-   * sees those, and the community's behind the same tap: their own are
-   * what they came for, and this screen is short on purpose. Your own
-   * published list is on both shelves under one slug and is shown once,
-   * under Yours — the Collections tab's rule.
-   *
-   * With no city resolved yet nothing is narrowed, and the only question
-   * left is whether the list holds anything — the shelves' answer too.
-   */
-  const own = useMemo(
-    () => mine.data.map((c) => inCity(c, places, city?.id)).filter((x) => x.members.length > 0),
-    [mine.data, places, city?.id],
-  );
-  const community = useMemo(
-    // Narrowed to the city first and ranked after: every signal is
-    // measured among the lists handed over, and a list from another city
-    // is not one this shelf will show.
-    () => rank(cols.data.filter((c) => !(uid && c.owner_id === uid) && inCity(c, places, city?.id).members.length > 0))
-      .map((c) => inCity(c, places, city?.id)),
-    [cols.data, rank, uid, places, city?.id],
-  );
+  // The lists this plan can start from — see `useSeedLists`.
+  const { own, community } = useSeedLists(mine.data, cols.data, places, city?.id);
   /** Whether the community's lists are open — all of them, or the ones
    *  past the first three. Not remembered between visits: the screen
    *  opens short, every time. */
@@ -226,81 +139,16 @@ export default function IdeasScreen({ navigation, route }: {
   const set = <K extends keyof TripDraft>(k: K, v: TripDraft[K]) =>
     setDraft((d) => ({ ...d, [k]: v }));
 
-  /**
-   * A collection sent here to start from — the detail screen's "Plan a
-   * trip" (`IdeasHome.from`).
-   *
-   * Ticked on arrival, and the lists opened so the tick is in view. The
-   * city is the question: the seeds only count places in the app's city
-   * (`inCity`), so a list from elsewhere would arrive ticked and seed
-   * nothing. Three cases, the start sheet's rule applied to a list. A
-   * list with a place here is ticked and nothing moves. A list whose
-   * places are all in one other catalog city switches the app there —
-   * the reader just chose that list, and a plan of it is what they asked
-   * for — and the well under the heading says so. A list across several
-   * catalog cities with none here is asked about, one row per city with
-   * its count, since choosing for the reader would be guessing which
-   * half of their list they meant.
-   *
-   * Keyed on `at`, so the same list sent twice is applied twice and a
-   * re-render is not; waits for the catalog, since a list read from the
-   * launch cache may arrive before its places do.
-   */
-  const [asking, setAsking] = useState<{ slug: string; choices: { id: string; n: number }[] } | null>(null);
-  const [moved, setMoved] = useState<City | null>(null);
-  const applied = useRef<number | null>(null);
-  const cityName = (c: City) => cityShort(c, t);
-  const tick = (slug: string) => {
-    setDraft((d) => (d.from.includes(slug) ? d : { ...d, from: [...d.from, slug] }));
-    setMore(true);
-  };
-  const follow = (slug: string, to: City) => {
-    setCity(to.id);
-    setMoved(to);
-    tick(slug);
-  };
-  const from = route?.params?.from;
-  const at = route?.params?.at ?? 0;
-  useEffect(() => {
-    if (!from || applied.current === at) return;
-    const c = [...mine.data, ...cols.data].find((x) => x.slug === from);
-    if (!c || places.length === 0) return;
-    applied.current = at;
-    const all = membersOf(c, places);
-    if (!city || all.some((p) => p.city_id === city.id)) { tick(from); return; }
-    const count = new Map<string, number>();
-    all.forEach((p) => {
-      const id = p.city_id;
-      if (id && cities.some((x) => x.id === id)) count.set(id, (count.get(id) ?? 0) + 1);
-    });
-    const choices = [...count].map(([id, n]) => ({ id, n })).sort((a, b) => b.n - a.n);
-    if (choices.length === 0) return;
-    if (choices.length === 1) {
-      const to = cities.find((x) => x.id === choices[0].id);
-      if (to) follow(from, to);
-      return;
-    }
-    setAsking({ slug: from, choices });
-  // `tick`, `follow` and `cityName` close over state that is listed.
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [from, at, mine.data, cols.data, places, city?.id, cities]);
-  const askActions: SheetAction[] = asking
-    ? asking.choices.flatMap(({ id, n }) => {
-      const to = cities.find((x) => x.id === id);
-      return to ? [{
-        key: id,
-        icon: 'location-outline' as const,
-        title: cityName(to),
-        desc: t(
-          `${n} ${n === 1 ? 'place' : 'places'} from this collection will be included`,
-          `${n} địa điểm của bộ sưu tập sẽ được đưa vào`,
-          `このコレクションから${n}件が含まれます`,
-          `将包含这个合集中的 ${n} 个地点`, `將包含這個合集中的 ${n} 個地點`,
-        ),
-        onPress: () => { setAsking(null); follow(asking.slug, to); },
-      }] : [];
-    })
-    : [];
+  // A collection sent here to start from — see `useListSeed`.
+  const { asking, close, askActions, moved, cityName } = useListSeed({
+    from: route?.params?.from,
+    at: route?.params?.at ?? 0,
+    mine: mine.data,
+    cols: cols.data,
+    places,
+    setDraft,
+    setMore,
+  });
 
   /**
    * Where the reader is, for the default the label has always claimed.
@@ -325,37 +173,10 @@ export default function IdeasScreen({ navigation, route }: {
    */
   const me = useMyPosition();
 
-  // Plain "near you" until the city resolves: "Around  · near you" printed
-  // the hole where its name goes.
-  //
-  // "Near you", not "near me". The app addresses the reader everywhere
-  // else it speaks — "Ghim bạn đã thả", "Lựa chọn của bạn" — and this one
-  // row answered in their voice instead, which reads as the app quoting
-  // them rather than telling them something.
-  //
-  // Capitalised after the separator, because that is what every other
-  // pair in this app does: "Thứ Bảy, 26 T9 · Ban ngày". The lower
-  // case here was the exception, and it showed once `SketchingScreen`
-  // split the pair onto two lines and the second one opened with a small
-  // letter.
-  //
-  // The city's name alone, not "Around Melbourne". The row already shows
-  // a pin, and the plan subtitles repeat this string on three screens;
-  // "Around" was the one word in it that said nothing a reader did not
-  // know, and the owner asked for it to go. Japanese drops 周辺 with it.
-  //
-  // Only "near you" when it is: the reader standing in the city on screen.
-  // Anywhere else — browsing another city, or no position to be had — the
-  // day starts at the centre and the label says so (see `startPoint`).
+  // Plain "near you" until the city resolves, and only "near you" when the
+  // reader stands in the city on screen — the reasoning is `whereLabelOf`'s.
   const here = !!me && !!city && standsIn(city, me.lat, me.lng);
-  const whereLabel = draft.district
-    ?? (draft.at
-      ? (draft.atName ?? t('A pin you dropped', 'Ghim bạn đã thả', '置いたピン', '你放置的图钉', '你放置的圖釘'))
-      : city
-        ? here
-          ? t(`${city.short_en} · Near you`, `${city.short_vi} · Gần bạn`, `${city.short_ja ?? city.short_en} · 現在地`, `${city.short_en} · 你附近`, `${city.short_en} · 你附近`)
-          : t(`${city.short_en} · City centre`, `${city.short_vi} · Trung tâm`, `${city.short_ja ?? city.short_en} · 中心部`, `${city.short_en} · 市中心`, `${city.short_en} · 市中心`)
-        : t('Near you', 'Gần bạn', '現在地', '你附近', '你附近'));
+  const whereLabel = whereLabelOf(draft, city, here, t);
 
   /**
    * The point the day starts from — pin, else district-suppresses, else
@@ -379,55 +200,6 @@ export default function IdeasScreen({ navigation, route }: {
   const dayLabel = dateline(lang, fromISO(day) ?? new Date());
 
   const ready = canPlan(draft);
-
-  /** One list as a row: cover, name, the places here, a tick. */
-  const seedRow = ({ c, members }: { c: Collection; members: Place[] }, i: number) => {
-    const cover = coverUriOf(c, members);
-    const on = draft.from.includes(c.slug);
-    return (
-      <View key={c.slug}>
-        {i > 0 ? <View style={s.divider} /> : null}
-        <PressableScale
-          onPress={() => set('from', toggle(draft.from, c.slug))}
-          contentStyle={s.fromRow}
-          accessibilityRole="checkbox"
-          accessibilityState={{ checked: on }}
-        >
-          {cover
-            ? <Image source={{ uri: cover }} style={s.thumb} contentFit="cover" transition={200} />
-            : <View style={[s.thumb, s.thumbEmpty]}>
-                <Glyph name="bookmark-outline" size={ICON.action} color={colors.accentFaint} />
-              </View>}
-          <View style={{ flex: 1, gap: 2 }}>
-            <Text style={s.fromTitle} numberOfLines={1}>
-              {t(c.title_en, c.title_vi, c.title_ja)}
-            </Text>
-            {/* The count alone. "Your collection" stood here
-                once — but every row this section holds is
-                yours, and a label identical on every row
-                says nothing. The count stays because it is
-                the one fact that picks seeds: eight places
-                feed a plan, one barely seasons it.
-
-                The pin and the figure, not "13 địa điểm"
-                (owner, 21 Nov 2026): the word stood on every
-                row of a list where every row counts the same
-                thing, and the Explore shelf, Collections'
-                tiles and a list's own card already say it with
-                the pin (owner, 2 Nov 2026). Spoken in full, so
-                VoiceOver still hears "13 places". In the row's
-                tertiary ink rather than the photo cards' — it
-                sits on paper, not a picture. */}
-            <View style={s.fromCount} accessible accessibilityLabel={placesOf(members.length, t)} testID="ideas-seed-count">
-              <Glyph name="location-outline" size={ICON.meta} color={colors.textTertiary} />
-              <Text style={s.fromMeta} numberOfLines={1}>{members.length}</Text>
-            </View>
-          </View>
-          <SelectTick on={on} />
-        </PressableScale>
-      </View>
-    );
-  };
 
   return (
     <Screen
@@ -473,439 +245,58 @@ export default function IdeasScreen({ navigation, route }: {
             itself while the reader taps the chips below is the screen
             fidgeting under their hand (the CTA note points here). */}
 
-        {/* The three headers below open a sentence and the chips finish
-            it — "Going with… ✓ Friends". They used to be questions
-            ("Who's coming?"), which read as a form to fill in; a copy
-            edit here should keep them as openers the chip labels can
-            complete, ellipsis and all. */}
-        <Section title={t('Going with…', 'Bạn muốn đi cùng…', '一緒に行くのは…', '和谁一起…', '和誰一起…')} cols={4}>
-          {COMPANY.map((c) => (
-            <Tile
-              key={c.key}
-              label={t(c.en, c.vi, c.ja, c.zh, c.hant)}
-              icon={c.icon as keyof typeof Ionicons.glyphMap}
-              active={draft.company === c.key}
-              testID={`ideas-company-${c.key}`}
-              onPress={() => set('company', draft.company === c.key ? null : c.key)}
-            />
-          ))}
-        </Section>
+        <Asks
+          draft={draft}
+          cats={cats}
+          onCompany={(c) => set('company', c)}
+          onCategories={(c) => set('categories', c)}
+        />
 
-        {/* No cap on this group and there must not be one: `planner.ts`
-            sizes the outing from how many were named, so a limit here
-            would quietly shorten somebody's day. Nothing says so on
-            screen, because nothing needs to — an unlimited choice is the
-            one that needs no rule explained. */}
-        <Section title={t('In the mood for…', 'Hôm nay bạn thích…', '今日の気分は…', '想去哪类地方…', '想去哪類地方…')} cols={3}>
-          {cats.map((c, i) => (
-            <Tile
-              key={c}
-              testID={`ideas-cat-${i}`}
-              label={categoryLabel(c, t)}
-              icon={CATEGORIES[c]?.icon ?? 'ellipse-outline'}
-              active={draft.categories.includes(c)}
-              onPress={() => set('categories', toggle(draft.categories, c))}
-            />
-          ))}
-        </Section>
-
-        <View style={{ marginBottom: space.titleToContent }}>
-          <Text style={s.heading}>{t('Where and when…', 'Chỗ nào, lúc nào…', '場所と時間は…', '何时何地…', '何時何地…')}</Text>
-          <Card style={s.whenCard}>
-            <PressableScale onPress={() => setSheet(true)} contentStyle={s.whereRow} accessibilityRole="button">
-              <Glyph name="location-outline" size={ICON.action} color={colors.accent} />
-              <Text style={s.whereText} numberOfLines={1}>{whereLabel}</Text>
-              <Glyph name="chevron-forward" size={ICON.action} color={colors.textTertiary} />
-            </PressableScale>
-            <View style={s.divider} />
-            <View style={s.whenRow}>
-              {/* The date used to be a label here, printed from
-                  `new Date()` and not in the draft at all — while sitting
-                  in the same card, directly under a row that *is* a
-                  control, with the same icon and layout. It read as
-                  tappable and was not. */}
-              {/* The flex on `style`, the Pressable itself, and the row on
-                  `contentStyle`, the animated view inside. The row above
-                  gets away without it
-                  by being a direct child of the Card, which is a column,
-                  so it stretches. This one is inside a row, so without a
-                  flex on the *outer* element the pressable shrank to its
-                  icon and the date inside it collapsed to nothing. */}
-              <PressableScale
-                onPress={() => setPicking(true)}
-                style={s.dayBox}
-                contentStyle={s.dayHit}
-                accessibilityRole="button"
-              >
-                <Glyph name="calendar-outline" size={ICON.action} color={colors.accent} />
-                <Text style={s.whereText} numberOfLines={1}>{dayLabel}</Text>
-              </PressableScale>
-              {/* One control, not two chips side by side. Day and Evening
-                  are the two halves of one answer and swapping between
-                  them is a single decision; drawn as separate chips they
-                  read as two independent switches, and nothing said that
-                  turning one on turns the other off.
-
-                  A bordered track on the page's own ground, recessed
-                  inside the card the way a switch is recessed into a
-                  panel — so the pair reads as one object with a moving
-                  part rather than as two buttons that happen to touch. */}
-              <View style={s.segment} accessibilityRole="radiogroup">
-                {([
-                  ['day', t('Day', 'Ban ngày', '昼', '白天', '白天')],
-                  ['evening', t('Evening', 'Buổi tối', '夜', '晚上', '晚上')],
-                ] as const).map(([key, label]) => {
-                  const on = draft.when === key;
-                  return (
-                    <PressableScale
-                      key={key}
-                      onPress={() => set('when', key)}
-                      haptic="selection"
-                      scaleTo={0.96}
-                      hitSlop={SEG_SLOP}
-                      contentStyle={[s.segItem, on && s.segItemOn]}
-                      accessibilityRole="radio"
-                      aria-checked={on}
-                    >
-                      <Text style={[s.segText, on && s.segTextOn]} numberOfLines={1}>{label}</Text>
-                    </PressableScale>
-                  );
-                })}
-              </View>
-              {/* The chevron ends this row because it ends the one above
-                  it. Both rows of this card are "tap to change", and a
-                  card whose two rows disagree about where that is said
-                  makes the reader check each one. It was tucked beside
-                  the date for a while on the argument that at the edge it
-                  would seem to belong to the Day/Evening control — but
-                  that control is plainly its own bordered object, and a
-                  ragged right edge costs more than the ambiguity it
-                  avoided.
-
-                  Its own tap target, opening the same picker, so the
-                  glyph is not a picture of an affordance. Hidden from
-                  VoiceOver: the date beside it is already the button, and
-                  a second nameless one on the same row is noise. */}
-              <PressableScale
-                onPress={() => setPicking(true)}
-                hitSlop={10}
-                testID="ideas-day-chevron"
-                accessible={false}
-                importantForAccessibility="no-hide-descendants"
-              >
-                <Glyph name="chevron-forward" size={ICON.action} color={colors.textTertiary} />
-              </PressableScale>
-            </View>
-          </Card>
-          {/* Only when the clock has moved the start, which is only ever
-              on today. Said here rather than left for the reader to notice
-              on the plan: a day out that begins at 17:15 is a surprise
-              worth having before the sketching starts, not after. */}
-          {late && (
-            <Text style={s.whenNote}>
-              {t(
-                `It is already ${clockOf(startMin)} — this plan starts from there.`,
-                `Bây giờ đã ${clockOf(startMin)} — kế hoạch sẽ bắt đầu từ đó.`,
-                `もう${clockOf(startMin)}です — ここから始めるプランにします。`,
-                `现在已经 ${clockOf(startMin)} 了 — 计划将从这个时间开始。`, `現在已經 ${clockOf(startMin)} 了 — 計畫將從這個時間開始。`,
-              )}
-            </Text>
-          )}
-        </View>
+        <WhenWhere
+          whereLabel={whereLabel}
+          dayLabel={dayLabel}
+          when={draft.when}
+          onWhen={(w) => set('when', w)}
+          onWhere={() => setSheet(true)}
+          onDay={() => setPicking(true)}
+          late={late}
+          startMin={startMin}
+        />
 
         {seeds && (
-          <View style={{ marginBottom: space.titleToContent }}>
-            <Text style={s.heading}>
-              {t('Start from what you love', 'Bắt đầu từ thứ bạn thích', 'お気に入りから始める', '从你喜欢的开始', '從你喜歡的開始')}
-            </Text>
-            {/* Which lists these are, said once: the rows count places
-                here, and this is the line that says what "here" is. The
-                city's short name, as the row above the sections prints
-                it, so the two never disagree. */}
-            {city && (
-              <Text style={s.fromHint}>
-                {t(
-                  `Collections with a place in ${city.short_en}`,
-                  `Bộ sưu tập có địa điểm ở ${city.short_vi}`,
-                  `${city.short_ja ?? city.short_en}に場所があるコレクション`,
-                  `有${city.short_en}地点的合集`, `有${city.short_en}地點的合集`,
-                )}
-              </Text>
-            )}
-            {/* The start sheet's ok well, for the same fact: a city the
-                reader's own choice moved the app to. Only while the app
-                is still on it — a switch made afterwards is a new fact. */}
-            {moved && city?.id === moved.id && (
-              <View style={s.movedWell} testID="ideas-moved">
-                <Glyph name="checkmark-circle" size={ICON.action} color={colors.okInk} />
-                <Text style={s.movedText}>
-                  {t(
-                    `The plan will be made in ${cityName(moved)}.`,
-                    `Kế hoạch sẽ lập ở ${cityName(moved)}.`,
-                    `プランは${cityName(moved)}で作ります。`,
-                    `计划将在${cityName(moved)}制定。`, `計畫將在${cityName(moved)}制定。`,
-                  )}
-                </Text>
-              </View>
-            )}
-            {own.length > 0 && (
-              <>
-                {/* Labelled only once there are two cards to tell apart. */}
-                {more && community.length > 0 && (
-                  <Text style={s.groupLabel}>{t('Yours', 'Của bạn', '自分の', '我的', '我的')}</Text>
-                )}
-                <Card style={s.seedCard} testID="ideas-seed-card">{own.map(seedRow)}</Card>
-              </>
-            )}
-            {community.length > 0 && (own.length > 0
-              ? (more
-                ? (
-                  <>
-                    <Text style={s.groupLabel}>{t('Community', 'Cộng đồng', 'みんなの', '社区', '社群')}</Text>
-                    <Card style={s.seedCard} testID="ideas-seed-card">{community.map(seedRow)}</Card>
-                  </>
-                )
-                : (
-                  <MoreRow
-                    onPress={() => setMore(true)}
-                    label={t(
-                      `More · ${community.length} community ${community.length === 1 ? 'collection' : 'collections'}`,
-                      `Xem thêm · ${community.length} bộ sưu tập cộng đồng`,
-                      `もっと見る · みんなのコレクション${community.length}件`,
-                      `更多 · ${community.length} 个社区合集`, `更多 · ${community.length} 個社群合集`,
-                    )}
-                  />
-                ))
-              : (
-                <>
-                  <Card style={s.seedCard} testID="ideas-seed-card">
-                    {(more ? community : community.slice(0, COMMUNITY_FIRST)).map(seedRow)}
-                  </Card>
-                  {!more && community.length > COMMUNITY_FIRST && (
-                    <MoreRow
-                      onPress={() => setMore(true)}
-                      label={t(
-                        `${community.length - COMMUNITY_FIRST} more`,
-                        `Xem thêm ${community.length - COMMUNITY_FIRST}`,
-                        `さらに${community.length - COMMUNITY_FIRST}件`,
-                        `还有 ${community.length - COMMUNITY_FIRST} 个`, `還有 ${community.length - COMMUNITY_FIRST} 個`,
-                      )}
-                    />
-                  )}
-                </>
-              ))}
-          </View>
+          <Seeds
+            own={own}
+            community={community}
+            from={draft.from}
+            onToggle={(slug) => set('from', toggle(draft.from, slug))}
+            more={more}
+            onMore={() => setMore(true)}
+            city={city}
+            moved={moved}
+            cityName={cityName}
+          />
         )}
 
-        <View style={s.cta}>
-          {/* Dimmed rather than hidden, and the line under it says why.
-              A button that vanishes leaves the reader hunting for what
-              they missed; one that explains itself does not. */}
-          <View style={ready ? undefined : s.ctaOff} pointerEvents={ready ? 'auto' : 'none'}>
-            <GradientCta
-              wide
-              disabled={!ready}
-              testID="ideas-sketch"
-              // The paw, and the paw only. A sparkle sat here once and
-              // went: it was decoration, not a second reading of the
-              // label, and it has since become every app's "AI" glyph.
-              // The paw is different in kind — it is the planner's own
-              // mark, the orb that turns while it thinks and the start
-              // mark on the rail after — so the button says *whose*
-              // planning this is, which the deliberately generic label
-              // does not. `GradientCta`'s own rule: a glyph earns its
-              // place beside a label that is generic. Not the map (the
-              // Places tab wears one 60pt below) and not the paper plane
-              // from the hero (the invite sheet already means "send" by
-              // it).
-              icon="paw"
-              // Generic, and it stays generic — see the lede's note.
-              label={t('Plan a trip', 'Lên kế hoạch', 'プランを立てる', '规划行程', '規劃行程')}
-              // `whereLabel` rather than the raw draft: only this screen
-              // knows which of the three the reader ended up with — a
-              // district, a pin, or the position behind "near me" — and
-              // the next one has no business re-deciding that.
-              onPress={() => {
-                // `pointerEvents` above stops a finger and nothing else —
-                // VoiceOver's activate still lands here.
-                if (!ready) return;
-                // The clock of the tap, not of the last render. This is a
-                // tab root and stays mounted: opened at ten and tapped at
-                // half past eight, it sent an evening starting at 18:00.
-                const tapped = new Date();
-                const date = dayAt(tapped);
-                navigation.navigate('Sketching', {
-                  company: draft.company,
-                  categories: draft.categories,
-                  // `origin`, so the near-me case gets its words too. It
-                  // used to fall to null here, and a plan that really did
-                  // start where the reader was standing arrived with no
-                  // answer to "starting from where".
-                  where: draft.district ?? (origin ? whereLabel : null),
-                  // Which of those the words are, for the options
-                  // heading's second line (`planSub`): the same order
-                  // `whereLabel` decides them in.
-                  whereKind: draft.district ? 'district'
-                    : draft.at ? (draft.atName ? 'place' : 'pin')
-                      : here ? 'near' : 'city',
-                  district: draft.district,
-                  // The coordinate behind that label. `where` is words and
-                  // has always been words; sending it without these is how
-                  // a pin came out as a plan across town, with the header
-                  // still claiming the pin had been read.
-                  //
-                  // `origin`, not `draft.at`: the default is the reader's
-                  // own position, and it travels the same wire the pin
-                  // does. See the note on `origin` for why a district
-                  // suppresses it rather than losing to it.
-                  atLat: origin?.lat,
-                  atLng: origin?.lng,
-                  date,
-                  when: draft.when,
-                  // Resolved once, here, and carried. See `PlanAsk.startMin`:
-                  // the three screens after this one each rebuild the plan,
-                  // and each reading the clock for itself is how one card
-                  // opens as a different evening.
-                  startMin: startMinFor(draft.when, date, tapped),
-                  from: draft.from,
-                });
-              }}
-            />
-          </View>
-          {/* The line under a dimmed button, back (17 Oct 2026, UX-06)
-              and now naming only what is still missing.
-
-              It went on 15 Oct: the two empty questions are on the
-              screen, and the dimmed button already says the day is not
-              whole. The review showed what that left out. The questions
-              are on the screen above the fold, not beside the button —
-              scrolled down to the button, neither is in view — and
-              `aria-disabled` tells VoiceOver *that* the button is off,
-              never *why*. A dimmed button that cannot say what it waits
-              for is a lock without a keyhole.
-
-              The old line was one sentence for every state, so with
-              "Friends" already picked it still asked for who's going.
-              This one drops whichever half is answered. A full sentence
-              rather than "Still to pick: …" — the owner chose it over
-              the terser list and over a question in the hero's voice.
-              Polite live region, so TalkBack reads the change as a
-              chip is tapped; VoiceOver reads it as the next element
-              after the button. */}
-          {!ready && (
-            <Text style={s.ctaHint} accessibilityLiveRegion="polite" testID="ideas-sketch-missing">
-              {draft.company === null && draft.categories.length === 0
-                ? t(
-                  "Pick who's going and one thing you fancy to make a plan.",
-                  'Chọn người đi cùng và một thứ bạn thích để lên kế hoạch.',
-                  '誰と行くかと、気になるものを1つ選ぶとプランを立てられます。',
-                  '选择同行的人和一样你感兴趣的，即可制定计划。', '選擇同行的人和一樣你感興趣的，即可制定計畫。',
-                )
-                : draft.company === null
-                  ? t(
-                    "Pick who's going to make a plan.",
-                    'Chọn người đi cùng để lên kế hoạch.',
-                    '誰と行くかを選ぶとプランを立てられます。',
-                    '选择同行的人，即可制定计划。', '選擇同行的人，即可制定計畫。',
-                  )
-                  : t(
-                    'Pick one thing you fancy to make a plan.',
-                    'Chọn một thứ bạn thích để lên kế hoạch.',
-                    '気になるものを1つ選ぶとプランを立てられます。',
-                    '选择一样你感兴趣的，即可制定计划。', '選擇一樣你感興趣的，即可制定計畫。',
-                  )}
-            </Text>
-          )}
-        </View>
+        <PlanCta
+          draft={draft}
+          ready={ready}
+          origin={origin}
+          whereLabel={whereLabel}
+          here={here}
+          dayAt={dayAt}
+          navigation={navigation}
+        />
       </ScrollView>
 
-      {/* The platform's own, so the gesture is the one the reader already
-          knows. `display="inline"` is the iOS calendar rather than the
-          wheel — this is a question about a day, and a month grid answers
-          it in one glance. */}
       {picking && (
-        <Modal transparent animationType="fade" onRequestClose={() => setPicking(false)}>
-          {/* Named, so VoiceOver has a way out that is not "anywhere off
-              the card" — the same backdrop the save and sign-in sheets
-              give a label for the same reason. */}
-          <Pressable
-            style={s.pickScrim}
-            onPress={() => setPicking(false)}
-            accessibilityRole="button"
-            accessibilityLabel={t('Close', 'Đóng', '閉じる', '关闭', '關閉')}
-          />
-          <View style={s.pickCard}>
-            <DateTimePicker
-              value={fromISO(day) ?? new Date()}
-              mode="date"
-              display={Platform.OS === 'ios' ? 'inline' : 'default'}
-              // In the app's language, not the phone's. Left to the phone,
-              // a Vietnamese screen opened "October 2026 / MON TUE…" under
-              // a "Xong" button on a phone set to English (PLAN-07, 17 Oct
-              // 2026). English is the British reading, the one `dateline`
-              // already writes ("Tue, 20 Oct") and the one that starts the
-              // week on Monday, as Vietnamese and the old grid did.
-              //
-              // iOS only: Android's dialog takes no locale and follows the
-              // system. The prop only names how the grid is labelled — the
-              // day still comes back as a Date and goes through `toISO`, so
-              // which day was picked does not depend on it.
-              locale={PICKER_LOCALE[lang]}
-              // The past is refused rather than clamped after the fact:
-              // there is no plan to sketch for last Tuesday, and a picker
-              // that lets you choose one and then silently moves you is
-              // worse than one that never offered.
-              //
-              // The bounds are instants, not days, which is why they are
-              // built here rather than with `fromISO` — that returns local
-              // *noon*, deliberately, so a calendar day survives every
-              // timezone. Handed to a picker as a minimum it means
-              // something else entirely: "today, from 12:00", and every
-              // reader opening this before lunch found today greyed out on
-              // the day they were most likely to want it.
-              minimumDate={startOfToday}
-              maximumDate={endOfDay(addDays(toISO(startOfToday), 365))}
-              onChange={(e, picked) => {
-                // Android fires once with 'set' or 'dismissed' and closes
-                // itself; iOS fires on every scrub and stays open.
-                if (Platform.OS !== 'ios') setPicking(false);
-                if (e.type === 'dismissed' || !picked) return;
-                set('date', clampDay(toISO(picked)));
-              }}
-            />
-            {Platform.OS === 'ios' && (
-              <GradientCta
-                icon="checkmark"
-                label={t('Done', 'Xong', '完了', '完成', '完成')}
-                onPress={() => setPicking(false)}
-                wide
-              />
-            )}
-          </View>
-        </Modal>
+        <DayPicker day={day} onClose={() => setPicking(false)} onPick={(iso) => set('date', iso)} />
       )}
+
 
       {/* Which city, when a list sent here spans several and none is this
           one. Closing without choosing leaves the list unticked: a guess
           would be a plan of the wrong half. */}
-      <ActionSheet
-        visible={asking !== null}
-        onClose={() => setAsking(null)}
-        actions={askActions}
-        header={(
-          <View style={{ gap: 2 }}>
-            <Text style={s.askTitle}>{t('Which city?', 'Thành phố nào?', 'どの都市にしますか？', '哪个城市？', '哪個城市？')}</Text>
-            <Text style={s.askMeta}>
-              {t(
-                'This collection has places in more than one city. The plan is made in one.',
-                'Bộ sưu tập này có địa điểm ở nhiều thành phố. Kế hoạch chỉ lập ở một nơi.',
-                'このコレクションは複数の都市にスポットがあります。プランは一つの都市で作ります。',
-                '这个合集的地点分布在多个城市，计划只能在一个城市中制定。', '這個合集的地點分佈在多個城市，計畫只能在一個城市中制定。',
-              )}
-            </Text>
-          </View>
-        )}
-      />
+      <AskCity visible={asking !== null} onClose={close} actions={askActions} />
       <StartSheet
         visible={sheet}
         places={places}

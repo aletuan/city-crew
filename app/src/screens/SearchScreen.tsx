@@ -5,58 +5,38 @@
 // instant, no extra queries, and it matches without diacritics so
 // "banh mi" finds "Bánh mì Huỳnh Hoa".
 
-import React, { useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from 'react';
-import { ActivityIndicator, FlatList, Keyboard, Text, TextInput, View } from 'react-native';
-import { Image } from 'expo-image';
+import React, { useDeferredValue, useMemo, useState } from 'react';
+import { FlatList, Keyboard, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Glyph, ICON } from '../components/ui/glyph';
 import SearchField from '../components/SearchField';
-import { AddSlot } from '../components/add';
 import AddBatchBar, { batchBarShown } from '../components/AddBatchBar';
-import CandidateRow from '../components/CandidateRow';
-import ListToggle from '../components/ListToggle';
 import {
   AmbientWarmth,
-  Card,
-  Empty,
-  PressableScale,
-  Tile,
-  TileGrid,
   UnderlineChoice,
   useTabBarClearance,
 } from '../components/ui';
-import { cityOfList, coverOf, fmtCount, holds, isLive, membersOf, type Place } from '../lib/data';
-import { CATEGORIES, categoryLabel, presentCategories } from '../lib/categories';
+import { holds, type Place } from '../lib/data';
 import { useCityList, useCurrentCity } from '../lib/city';
 import { useSession } from '../lib/auth';
-import { useMyLists, useSaveActions } from '../lib/save';
+import { useSaveActions } from '../lib/save';
 import { addAll } from '../lib/pendingSaves';
-import { freshOnly, useCandidates } from '../lib/candidates';
+import { useCandidates } from '../lib/candidates';
 import { escapeRoutes } from '../lib/deadend';
 import { DEFAULT_TZ } from '../lib/clock';
-import { openFragment, openState } from '../lib/format';
-import { useCatalogIn, useLikes, useSearchTerms } from '../lib/catalog';
-import { RECENTS_KEY, rememberSearch } from '../lib/recents';
-import { browseColumns, buildSearchRows } from '../lib/searchRows';
-import { NO_RECENTS, RECENTS, useStored } from '../lib/stored';
-import { isNewList, newestPlaces } from '../lib/newest';
-import { rankPopular } from '../lib/popular';
-import { findPlaces, queryTerms } from '../lib/search';
-import {
-  cityChips, countByCity, namesCities, picked as inCities, tapCity, totalFound, type CityPick,
-} from '../lib/searchCities';
-import { useSearchIndex } from '../lib/searchIndex';
+import { useCatalogIn, useSearchTerms } from '../lib/catalog';
+import { buildSearchRows } from '../lib/searchRows';
+import { queryTerms } from '../lib/search';
+import { tapCity, totalFound } from '../lib/searchCities';
 import { useI18n } from '../lib/i18n';
-import { localized } from '../lib/localized';
-import { splitName } from '../lib/name';
-import NewBadge from '../components/NewBadge';
-import { colors } from '../theme';
 import type { Nav, RootRoute } from '../nav';
-import { SearchPlaceCard, NoMatches, Fork } from './search/parts';
 import { s } from './search/styles';
-
+import { AddingTo } from './search/AddingTo';
+import { GoogleAsk, GoogleNothing } from './search/google';
+import { type RowContext, Row } from './search/Row';
+import { SearchEmpty } from './search/SearchEmpty';
+import { useCities, useGoogleChoice, useListToAdd, useRemembered, useShelves, useSummon } from './search/useSearch';
 export default function SearchScreen({ navigation, route }: { navigation: Nav; route?: RootRoute<'Search'> }) {
-  const { t, lang } = useI18n();
+  const { t } = useI18n();
   const [query, setQuery] = useState('');
   // What the results answer, a beat behind the box (owner, 30 Oct 2026).
   // The box shows every letter as it is typed; the search over every
@@ -69,42 +49,14 @@ export default function SearchScreen({ navigation, route }: { navigation: Nav; r
   const { userId } = useSession();
   const tabClearance = useTabBarClearance();
 
-  // ── adding to a list (owner, 23 Oct 2026) ──
-  //
-  // Opened from one of the reader's own lists, Search puts that list's
-  // ⊕ on every place it shows, a tap puts the place in or takes it out,
-  // and what Google finds goes in once it is made. The list is read from
-  // `useMyLists`, the copy with the taps already laid over it, so a ✓
-  // moves when it is tapped. Not one of theirs, or not loaded: plain
-  // Search, which is what every other way in has always opened.
-  const mine = useMyLists();
   const { toggle } = useSaveActions();
-  const addTo = route?.params?.addTo;
-  const list = (addTo && mine.data.find((c) => c.slug === addTo)) || null;
-  const listTitle = list ? t(list.title_en, list.title_vi, list.title_ja) : '';
-  const listCount = list ? list.collection_places.length : 0;
-  // The newest copy, for what Google makes: a run takes a while, and the
-  // reader may tick more in the meantime.
-  const listRef = useRef(list);
-  listRef.current = list;
-
-  // ── in the list's city (owner, 23 Oct 2026) ──
-  //
-  // A list of Huế cafés, opened while the app was in Ninh Bình, was offered
-  // Ninh Bình: its three category chips, its pagoda as most popular, Google
-  // asked about Ninh Bình. So opened from a list, Search answers in the
-  // city most of the list's places are in (`cityOfList`) — the catalog,
-  // the shelves before anything is typed, the chips' home and Google —
-  // and the city the app is in stays where it was. An empty list has no
-  // city of its own, and answers in the app's.
-  const home = list ? cityOfList(list, city?.id ?? null) : city?.id ?? null;
-  const homeCity = cityList.find((c) => c.id === home) ?? city;
+  // The list being added to, and the city Search answers in — see `useListToAdd`.
+  const { list, listTitle, listCount, listRef, home, homeCity } = useListToAdd(route?.params?.addTo, city, cityList);
   const scope = useCatalogIn(home);
   const places = scope.places.data;
   const cols = scope.collections;
   const google = useCandidates(homeCity);
 
-  const [picked, setPicked] = useState<string[]>([]);
 
   // The clock the zero-state rows read "until 22:00" against, and a
   // list's "New" badge its age. Taken per render rather than memoised: a
@@ -112,148 +64,20 @@ export default function SearchScreen({ navigation, route }: { navigation: Nav; r
   // is exactly the kind that stays open across a closing time.
   const now = new Date();
 
-  // The box, reachable: the ↗ on a recent row puts the term *into* the
-  // field for editing — a different promise from the row itself, which
-  // runs the search as typed — and putting it there without focusing the
-  // field would strand the reader one tap short of the edit they asked for.
-  const inputRef = useRef<React.ComponentRef<typeof TextInput>>(null);
-  // The keyboard waits for the push to land. `autoFocus` raised it during
-  // the slide itself — two animations fighting for the same frames, which
-  // is the stutter this screen was reported for. `transitionEnd` is the
-  // moment the screen has stopped moving; the timer is the fallback for
-  // any path that never emits one, and the gate keeps a later pop back to
-  // this screen from re-summoning a keyboard nobody asked for.
-  const summoned = useRef(false);
-  useEffect(() => {
-    const summon = () => {
-      if (summoned.current) return;
-      summoned.current = true;
-      inputRef.current?.focus();
-    };
-    const un = navigation.addListener('transitionEnd', summon);
-    const t = setTimeout(summon, 600);
-    return () => { un(); clearTimeout(t); };
-  }, [navigation]);
+  const inputRef = useSummon(navigation);
 
-  // What this box remembered from earlier visits. Loaded once; the pure
-  // rules for what gets kept live in lib/recents where the gate can see
-  // them, and this screen only ferries the list to and from storage. A
-  // read that fails (fresh install, cleared storage) is an empty memory,
-  // not an error.
-  const [recents, keepRecents] = useStored(RECENTS_KEY, NO_RECENTS, RECENTS);
-  // A search is worth remembering when it *worked* — the reader opened
-  // one of its results. Called from every result row's onPress; blank
-  // queries no-op inside rememberSearch.
-  //
-  // Read through `latest`, so this and the two below hold still from one
-  // render to the next and a result's card is not redrawn by every letter
-  // (`SearchPlaceCard`) — yet never act on a render gone by: the query
-  // remembered is the one in the box at the tap, not when the card was
-  // last drawn.
-  const latest = useRef({ query, recents, keepRecents, list, toggle });
-  latest.current = { query, recents, keepRecents, list, toggle };
-  const noteSearch = useCallback(() => {
-    const { query: now, recents: kept, keepRecents: keep } = latest.current;
-    const next = rememberSearch(kept, now);
-    if (next !== kept) keep(next);
-  }, []);
-  const openPlace = useCallback((pl: Place) => {
-    // This tap is what makes the query worth remembering: it found the
-    // thing. See lib/recents.
-    noteSearch();
-    navigation.navigate('PlaceDetail', { slug: pl.slug });
-  }, [noteSearch, navigation]);
-  const togglePlace = useCallback((pl: Place) => {
-    const { list: into, toggle: flip } = latest.current;
-    if (!into) return;
-    noteSearch();
-    void flip(into, pl);
-  }, [noteSearch]);
+  const { recents, keepRecents, noteSearch, openPlace, togglePlace } = useRemembered(query, list, toggle, navigation);
   // A ⊕ found the thing as surely as opening it did, so it is remembered
   // the same way.
   const inList = (pl: Place) => (list
     ? { on: holds(list, pl.slug), title: listTitle, onPress: () => togglePlace(pl) }
     : undefined);
 
-  // Cleared whenever the words change: a Google section answering the
-  // previous query, sitting under results for this one, would be the
-  // screen quietly lying about what it went and asked.
-  //
-  // Guarded, because this runs on every keystroke and both calls set
-  // state unconditionally — `setPicked([])` hands React a fresh array
-  // every time, so an untouched screen re-rendered once per letter for no
-  // reason at all. Almost nobody ever has a Google section open while
-  // typing, so almost every keystroke now skips this entirely.
-  const hasAsked = google.results !== null || google.searching;
-  useEffect(() => {
-    if (!hasAsked && picked.length === 0) return;
-    google.clear();
-    setPicked([]);
-  }, [query]); // eslint-disable-line react-hooks/exhaustive-deps
+  const { picked, setPicked, fresh, chosen } = useGoogleChoice(google, query);
 
-  // Only what the catalog had never heard of *when the search ran*.
-  // Everything else in that list this screen has already shown, or
-  // deliberately not shown, above.
-  //
-  // Deliberately not recomputed when `known` changes, and that is the
-  // whole subtlety here: adding a place sets its state to 'mine', so a
-  // list filtered live would delete each row at the moment it succeeded —
-  // rows vanishing under the reader's finger, mid-batch, taking the
-  // per-row "Added" with them. `run` sets `known` and `results` together,
-  // so the render that first sees results already has the right map.
-  //
-  // Memoised anyway because `rows` below depends on it, and a fresh array
-  // every render would recompute the whole catalog filter on every
-  // keystroke — the one thing this screen is built not to do.
-  const fresh = useMemo(
-    () => (google.results ? freshOnly(google.results, google.known) : null),
-    [google.results], // eslint-disable-line react-hooks/exhaustive-deps
-  );
-
-  // What is still addable, which does follow `known`: a row stays on
-  // screen after it is added, but it stops counting towards the button.
-  const addable = (fresh ?? []).filter(
-    (c) => (google.known[c.place_id]?.state ?? 'none') === 'none',
-  );
-  const chosen = addable.filter((c) => picked.includes(c.place_id));
-
-  // Resolved once per catalog, not once per keystroke. `membersOf` builds
-  // an index of every place each time it is called, and this ran it for
-  // all twenty-two lists on every letter — before the filter, so it paid
-  // for the twenty that were never going to match either.
-  //
-  // None while adding to a list: a collection is not something to put in
-  // one, and its row would be one more thing between the reader and the
-  // places.
+  // None while adding to a list: a collection is not something to put in one.
   const adding = !!list;
-  const colMembers = useMemo(
-    () => (adding ? [] : cols.data.map((c) => ({ c, members: membersOf(c, places) }))),
-    [adding, cols.data, places],
-  );
-
-  // The zero-state's third section. Ranked over the live catalog only —
-  // `usePlaces` includes the reader's own still-pending submissions, and
-  // "most popular" must not recommend a place nobody else can open yet.
-  // The scoring itself lives in lib/popular; see the essay there.
-  // The ranking figure: a curator's like of their own list is not a reader
-  // recommending its places.
-  const { rankLikes } = useLikes();
-  const popular = useMemo(
-    () => rankPopular(places.filter(isLive), cols.data, rankLikes),
-    [places, cols.data, rankLikes],
-  );
-
-  // The zero-state's fourth section: the catalog's newest arrivals, for
-  // the reader who already knows this city and opens Search to ask what
-  // changed. Live rows only, for the same reason `popular` filters —
-  // this must not advertise a place nobody else can open yet. The
-  // ordering caveats live with the ranking, in lib/newest.
-  const newest = useMemo(() => newestPlaces(places.filter(isLive)), [places]);
-
-  // Only categories this city actually has — the same rule the Explore
-  // filter row states: a chip never leads to an empty list. Counted over
-  // the live catalog for the same reason `popular` is.
-  const cats = useMemo(() => presentCategories(places.filter(isLive)), [places]);
+  const { colMembers, popular, newest, cats } = useShelves(places, cols, adding);
 
   const terms = useMemo(() => queryTerms(deferred), [deferred]);
   // The desk's synonyms, folded onto the app's own. This is what lets
@@ -261,41 +85,10 @@ export default function SearchScreen({ navigation, route }: { navigation: Nav; r
   const synonyms = useSearchTerms();
 
   // Which sections appear, in what order, and which never mix — see
-  // `lib/searchRows`.
-  // ── every city (owner, 22 Oct 2026) ──
-  //
-  // A search answers from every city now, the reader's own first, under a
-  // row of chips saying what each city found — the rules are
-  // `lib/searchCities`'. The reader's city answers from its catalog, which
-  // is on screen already and whole; the others from the index, asked for
-  // as the screen opens (`useSearchIndex`). Until it lands the reader's
-  // own city answers alone, as it always did, under a row that already
-  // stands — All without a figure, since it does not know one yet — so the
-  // other cities' chips join it rather than push the list.
-  //
-  // `pick` is null until the reader taps a chip: All, then, whatever city
-  // the reader is in (owner, 24 Oct 2026). State, not storage, so every
-  // visit to Search starts on All.
-  const searching = terms.length > 0;
-  const index = useSearchIndex(userId);
-  const everywhere = useMemo(
-    () => (index && home ? [...places, ...index.filter((p) => p.city_id !== home)] : places),
-    [index, places, home],
-  );
-  const [cityChoice, setCityChoice] = useState<CityPick | null>(null);
-  const pick: CityPick = cityChoice ?? 'all';
-  // What every city found, for the chips' counts. The same match the list
-  // runs (`findPlaces`), so a chip's figure is the list it opens.
-  const counts = useMemo(
-    () => countByCity(searching ? findPlaces(everywhere, deferred, synonyms).hits : []),
-    [searching, everywhere, deferred, synonyms],
-  );
-  const chips = searching && home ? cityChips(counts, home, pick) : null;
-  const inPick = useMemo(() => everywhere.filter((p) => inCities(pick, p.city_id)), [everywhere, pick]);
-  const cityName = (id: string | null | undefined) => {
-    const c = cityList.find((x) => x.id === id);
-    return c ? t(c.short_en, c.short_vi, c.short_ja) : null;
-  };
+  // Every city a search answers from — see `useCities`.
+  const { searching, index, pick, setCityChoice, counts, chips, inPick, cityName } = useCities({
+    terms, deferred, synonyms, userId, places, home, cityList, t,
+  });
 
   const rows = useMemo(
     () => buildSearchRows({
@@ -315,6 +108,12 @@ export default function SearchScreen({ navigation, route }: { navigation: Nav; r
     for (const r of rows) if (r.kind === 'place') m.set(r.key, m.size);
     return m;
   }, [rows]);
+
+  // Everything a row reads from the screen (`Row`).
+  const at: RowContext = {
+    keepRecents, setQuery, inputRef, cats, now, tz: homeCity?.tz ?? DEFAULT_TZ, inList, navigation, google,
+    picked, setPicked, noteSearch, placeIndex, pick, cityName, list, listTitle, openPlace, togglePlace,
+  };
 
   const showBar = batchBarShown(chosen.length, google.batch);
 
@@ -353,47 +152,10 @@ export default function SearchScreen({ navigation, route }: { navigation: Nav; r
   // chỗ nào chúng tôi còn thi…".
   const typed = query.trim();
   const shown = typed.length > 14 ? `${typed.slice(0, 14)}…` : typed;
-  // The tap stays, and stops being a journey.
-  //
-  // It used to open Add a place, which then ran the same search again on
-  // another screen. The tap was never the problem — it is the one signal
-  // that Google is worth asking, and no heuristic knows that better than
-  // the person who just failed to find something. What was wrong was
-  // making them leave the page to spend it.
-  //
-  // So: same row, same tap, results underneath. And once a search has
-  // run, the row has nothing left to offer and goes.
-  const askedGoogle = google.results !== null || google.searching;
-  const addRow = google.searching
-    ? <ActivityIndicator color={colors.accent} style={{ marginTop: 28 }} />
-    : askedGoogle
-      ? null
-      : (
-        <AddSlot
-          onPress={() => google.run(typed)}
-          title={t(`Add “${shown}”`, `Thêm “${shown}”`, `「${shown}」を追加`, `添加“${shown}”`, `新增「${shown}」`)}
-          subtitle={t(
-            'We look it up on Google Maps',
-            'Chúng tôi tìm trên Google Maps',
-            'Google マップで探します',
-            '我们会在 Google 地图上查找', '我們會在 Google 地圖上查詢',
-          )}
-        />
-      );
+  // The tap that asks Google, under the results — see `GoogleAsk`.
+  const addRow = <GoogleAsk google={google} typed={typed} shown={shown} />;
 
-  // Asked, and it had nothing the catalog has not got. Said out loud,
-  // because a tap that produces no visible change reads as a broken
-  // button rather than as an answer.
-  const googleEmpty = google.results !== null && fresh?.length === 0 && (
-    <Text style={s.nothing}>
-      {t(
-        'Nothing on Google Maps that is not already here.',
-        'Google Maps không có chỗ nào mà đây chưa có.',
-        'Google マップにも、ここにないものはありませんでした。',
-        'Google 地图上没有这里尚未收录的地点。', 'Google 地圖上沒有這裡尚未收錄的地點。',
-      )}
-    </Text>
-  );
+  const googleEmpty = google.results !== null && fresh?.length === 0 && <GoogleNothing />;
 
   return (
     <SafeAreaView style={s.screen} edges={['top']}>
@@ -418,44 +180,8 @@ export default function SearchScreen({ navigation, route }: { navigation: Nav; r
           cancel={{ shown: true, label: t('Cancel', 'Huỷ', 'キャンセル', '取消', '取消'), onPress: () => navigation.goBack() }}
         />
       </View>
-      {/* Where a ⊕ puts a place, said once under the box rather than on
-          every row: the rows only say whether each one is in.
-
-          A chip, and not a line (owner, 23 Oct 2026). The line was the
-          accent's green at 13pt behind a ⊕, which read as one more
-          button and left the list's name no louder than the words before
-          it. The chip is the "Browse" chips' glass, so it reads as a
-          fact the screen is set to, with the name as its loudest part;
-          a bookmark rather than a ⊕, because nothing here is pressed.
-          The city is not named: the list's own title almost always
-          says it, and the chips below show it. */}
-      {list ? (
-        <View style={s.addingToRow}>
-          <View
-            style={s.addingTo}
-            testID="search-adding-to"
-            accessible
-            accessibilityLabel={t(
-              `Adding to ${listTitle}, ${listCount} ${listCount === 1 ? 'place' : 'places'}`,
-              `Đang thêm vào ${listTitle}, ${listCount} địa điểm`,
-              `「${listTitle}」に追加中、${listCount}件`,
-              `正在添加到“${listTitle}”，${listCount} 个地点`, `正在新增到「${listTitle}」，${listCount} 個地點`,
-            )}
-          >
-            <Glyph name="bookmark-outline" size={ICON.text} color={colors.textTertiary} />
-            <Text style={s.addingToText} numberOfLines={1}>
-              {t('Add to collection: ', 'Thêm vào bộ sưu tập: ', 'コレクションに追加：', '添加到合集：', '新增到合集：')}
-              <Text style={s.addingToTitle}>{listTitle}</Text>
-            </Text>
-            {/* How many it holds, moving as each ⊕ is tapped (owner, 23 Oct
-                2026): the list read from `useMyLists` has the taps laid
-                over it, so the figure is the one the list will show. Its
-                own text, outside the one that shrinks, so a long name
-                ends in "…" and the count stays. */}
-            <Text style={s.addingToCount} testID="search-adding-to-count">{`(${listCount})`}</Text>
-          </View>
-        </View>
-      ) : null}
+      {/* Where a ⊕ puts a place — see `AddingTo`. */}
+      {list ? <AddingTo title={listTitle} count={listCount} /> : null}
       {/* The cities, under the box rather than in the list, so they stay
           while the results scroll: All, then the reader's own city, then
           the rest most first (`lib/searchCities`). A tap puts the keyboard
@@ -482,327 +208,22 @@ export default function SearchScreen({ navigation, route }: { navigation: Nav; r
         keyExtractor={(r) => r.key}
         keyboardShouldPersistTaps="handled"
         keyboardDismissMode="on-drag"
-        renderItem={({ item }) => {
-          if (item.kind === 'eyebrow') {
-            return (
-              <View style={s.eyebrowRow}>
-                <Text style={s.eyebrow}>{item.label}</Text>
-                {/* Clear wipes the whole memory — the reference design has
-                    no per-row delete, and a memory you can prune one line
-                    at a time invites tidying a list that exists to be
-                    overwritten anyway. */}
-                {item.clear ? (
-                  <PressableScale
-                    onPress={() => keepRecents([])}
-                    scaleTo={0.92}
-                    hitSlop={{ top: 10, bottom: 10, left: 12, right: 12 }}
-                    accessibilityRole="button"
-                    accessibilityLabel={t('Clear recent searches', 'Xoá tìm kiếm gần đây', '最近の検索を消去', '清除最近搜索', '清除最近搜尋')}
-                  >
-                    <Text style={s.clear}>{t('Clear', 'Xoá', '消去', '清除', '清除')}</Text>
-                  </PressableScale>
-                ) : null}
-              </View>
-            );
-          }
-          if (item.kind === 'recent') {
-            return (
-              // Two promises on one row, the standard split: the words
-              // re-run the search as typed, the ↗ only lifts the term into
-              // the box so it can be edited before it runs.
-              //
-              // Siblings, not one inside the other. The ↗ used to sit
-              // inside the row's own button, and a button with a label is
-              // a single element to VoiceOver — the ↗ inside it could not
-              // be reached at all (and on the web it was a <button> in a
-              // <button>, which is not valid HTML).
-              <View style={s.recentRow}>
-                <PressableScale
-                  style={s.recentHit}
-                  contentStyle={s.recentMain}
-                  scaleTo={0.97}
-                  onPress={() => setQuery(item.term)}
-                  accessibilityRole="button"
-                  accessibilityLabel={item.term}
-                >
-                  <Glyph name="time-outline" size={ICON.action} color={colors.textTertiary} />
-                  <Text style={s.recentTerm} numberOfLines={1}>{item.term}</Text>
-                </PressableScale>
-                <PressableScale
-                  onPress={() => { setQuery(item.term); inputRef.current?.focus(); }}
-                  scaleTo={0.85}
-                  hitSlop={{ top: 12, bottom: 12, left: 14, right: 14 }}
-                  accessibilityRole="button"
-                  accessibilityLabel={t('Edit this search', 'Sửa tìm kiếm này', 'この検索を編集', '编辑此搜索', '編輯此搜尋')}
-                >
-                  <Glyph
-                    name="arrow-up"
-                    size={ICON.action}
-                    color={colors.textTertiary}
-                    style={{ transform: [{ rotate: '45deg' }] }}
-                  />
-                </PressableScale>
-              </View>
-            );
-          }
-          if (item.kind === 'chips') {
-            return (
-              // A grid of nine doors, two rows of five (owner, 3 Nov
-              // 2026). It was Explore's underline row, stacked (25 Oct):
-              // one line that scrolled, which on a 390pt phone showed five
-              // and a half of the nine and hid Shopping, Nightlife and Fun
-              // — and a row that launches is for seeing what there is,
-              // where a row that filters is for someone who already knows.
-              // The planner and the taste picker were already grids of
-              // the same `Tile`.
-              //
-              // Five across, not the planner's three: the keyboard is up
-              // whenever this shows, and three rows of 82pt cells pushed
-              // the popular places under it. Two rows of the compact cell
-              // are 104pt where the row was 42. With three recent searches
-              // on a 390pt phone the first popular place was whole above
-              // the keys and is now two-thirds of it, some 30pt under them
-              // (measured on a mock of this page, 3 Nov) — the price of
-              // seeing all nine, and the owner's call to pay it.
-              //
-              // The rows are even (owner, 3 Nov 2026): a city with eight
-              // kinds drew five over three, and a short second row reads
-              // as the leftovers. `browseColumns` splits them in half, five
-              // and under on one row. And 12pt between the two rows: with
-              // none, a word sat 10pt over the next row's glyph — closer
-              // than the 22 its own glyph was above it — so the second
-              // row read as hanging off the first.
-              //
-              // Nothing is ever chosen here. A tap *is* a search: it types
-              // the category's own label into the box, and the haystack —
-              // which carries every category's labels in all three
-              // languages — does the rest, so a tap can never disagree
-              // with typing the same word. The moment there is a word the
-              // zero-state yields to results and this grid with it.
-              <View style={s.browseGrid} testID="search-browse">
-                <TileGrid cols={browseColumns(cats.length)} gap={0} rowGap={12}>
-                  {cats.map((key) => (
-                    <Tile
-                      key={key}
-                      compact
-                      label={categoryLabel(key, t)}
-                      icon={CATEGORIES[key]?.icon ?? 'ellipse-outline'}
-                      onPress={() => setQuery(categoryLabel(key, t))}
-                      testID={`search-browse-${key}`}
-                    />
-                  ))}
-                </TileGrid>
-              </View>
-            );
-          }
-          if (item.kind === 'popular' || item.kind === 'latest') {
-            const pl = item.place;
-            const cover = coverOf(pl)?.photo_uri;
-            // The reference layout, followed exactly: the meta line is
-            // *where and until when* — "Bình Thạnh · until 22:00" — and
-            // the rating stands alone on the right, where the eye checks
-            // it last. The rating used to open the meta line, which made
-            // every row lead with the one figure that least separates
-            // rows on a shelf where everything is 4-and-something.
-            //
-            // The time half of the line answers whichever question the
-            // clock poses — "until 22:00" open, "opens 08:00" closed,
-            // "mở 24/24" for the places that never stop, silence when
-            // the hours cannot be read. The grammar lives in
-            // `openFragment`, shared with the Explore cards, so the two
-            // lists can never learn to disagree about what an hour says.
-            const when = openFragment(openState(pl.opening_hours, now, homeCity?.tz ?? DEFAULT_TZ), t);
-            const area = localized(pl, 'neighborhood', lang);
-            const meta = [area, when].filter(Boolean).join(' · ');
-            return (
-              <PressableScale
-                contentStyle={s.row}
-                onPress={() => navigation.navigate('PlaceDetail', { slug: pl.slug })}
-              >
-                <Card style={s.card}>
-                  {cover
-                    ? <Image source={{ uri: cover }} style={s.thumb} contentFit="cover" transition={200} />
-                    : <View style={s.thumb} />}
-                  <View style={{ flex: 1, gap: 4 }}>
-                    {/* The brand alone, as `PlaceCard` prints it: the ward
-                        after the dash is the row below. */}
-                    <Text style={s.cardTitle} numberOfLines={1}>
-                      {splitName(localized(pl, 'name', lang)).title}
-                    </Text>
-                    {/* The pin belongs to the area, the same mark at
-                        the same size PlaceCard's district row wears — so
-                        "what part of town" carries one symbol across the
-                        app. The time half stays bare text on purpose:
-                        "until", "opens" and "mở 24/24" already say what
-                        kind of fact follows, and a clock glyph would
-                        repeat them in grey. No area, no pin — an icon
-                        pointing at a closing time would be labelling the
-                        wrong half of the sentence. */}
-                    {meta
-                      ? (
-                        <View style={s.metaRow}>
-                          {area
-                            ? <Glyph name="location-outline" size={ICON.meta} color={colors.textTertiary} />
-                            : null}
-                          <Text style={s.cardMeta} numberOfLines={1}>{meta}</Text>
-                        </View>
-                      )
-                      : null}
-                  </View>
-                  {/* The rating takes the chevron's seat rather than
-                      sharing the meta line. A row that is plainly a place
-                      does not need an arrow to say it opens; it needs the
-                      score, right-aligned, the way the reference draws
-                      it. Unrated places keep the chevron so the right
-                      edge is never simply empty.
-
-                      With its count, as PlaceCard and the map's card
-                      print it (owner, 21 Oct 2026). Without one a 5.0
-                      says nothing about itself: of the 228 published
-                      places at 4.9 or more, 49 stand on fewer than 50
-                      reviews and 12 on fewer than 10, beside a 4.7 on
-                      three thousand. The ranking already weighs the
-                      count (`rank.ts` shrinks a thin score towards the
-                      mean), so a 5.0 listed under a 4.8 needs the count
-                      on screen to read as anything but a mistake. */}
-                  {pl.rating != null
-                    ? (
-                      <View style={s.rowRating}>
-                        <Text style={s.rowStar}>★</Text>
-                        <Text style={s.rowRatingValue}>{pl.rating.toFixed(1)}</Text>
-                        {pl.rating_count
-                          ? (
-                            <Text
-                              style={s.rowRatingCount}
-                              accessibilityLabel={t(`${pl.rating_count} reviews`, `${pl.rating_count} đánh giá`, `${pl.rating_count}件の評価`, `${pl.rating_count} 条评价`, `${pl.rating_count} 條評價`)}
-                            >
-                              ({fmtCount(pl.rating_count)})
-                            </Text>
-                          )
-                          : null}
-                      </View>
-                    )
-                    : <Glyph name="chevron-forward" size={ICON.action} color={colors.textTertiary} />}
-                  {list
-                    ? <ListToggle {...inList(pl)!} testID={`search-${item.kind}-${pl.slug}-in-list`} />
-                    : null}
-                </Card>
-              </PressableScale>
-            );
-          }
-          if (item.kind === 'header') return <Text style={s.section}>{item.label}</Text>;
-          if (item.kind === 'candidate') {
-            return (
-              <CandidateRow
-                c={item.candidate}
-                known={google.known[item.candidate.place_id] ?? { state: 'none' }}
-                busy={google.adding === item.candidate.place_id}
-                away={google.awayFrom(item.candidate)}
-                item={google.batch.state[item.candidate.place_id]}
-                selected={picked.includes(item.candidate.place_id)}
-                onToggle={() => setPicked((p) => (
-                  p.includes(item.candidate.place_id)
-                    ? p.filter((x) => x !== item.candidate.place_id)
-                    : [...p, item.candidate.place_id]
-                ))}
-                onOpen={(slug) => { noteSearch(); navigation.navigate('PlaceDetail', { slug }); }}
-              />
-            );
-          }
-          if (item.kind === 'place') {
-            return (
-              <SearchPlaceCard
-                place={item.place}
-                index={placeIndex.get(item.key) ?? 0}
-                city={namesCities(pick) ? cityName(item.place.city_id) : null}
-                on={list ? holds(list, item.place.slug) : null}
-                listTitle={listTitle}
-                open={openPlace}
-                toggle={togglePlace}
-              />
-            );
-          }
-          return (
-            <PressableScale
-              contentStyle={s.row}
-              onPress={() => {
-                noteSearch();
-                navigation.navigate('CollectionDetail', { slug: item.collection.slug });
-              }}
-            >
-              <Card style={s.card}>
-                <View>
-                  {item.cover
-                    ? <Image source={{ uri: item.cover }} style={s.thumb} contentFit="cover" transition={200} />
-                    : <View style={s.thumb} />}
-                  {/* 4pt in, not the 10 a larger cover takes: on a 64pt
-                      thumb, 10 would leave the word half off its edge. */}
-                  {isNewList(item.collection, now.getTime()) ? <NewBadge style={s.thumbBadge} /> : null}
-                </View>
-                <View style={{ flex: 1, gap: 4 }}>
-                  <Text style={s.cardTitle} numberOfLines={2}>
-                    {t(item.collection.title_en, item.collection.title_vi, item.collection.title_ja)}
-                  </Text>
-                  <Text style={s.cardMeta}>
-                    {item.count} {t(item.count === 1 ? 'place' : 'places', 'địa điểm', 'スポット', '个地点', '個地點')}
-                  </Text>
-                </View>
-                <Glyph name="chevron-forward" size={ICON.action} color={colors.textTertiary} />
-              </Card>
-            </PressableScale>
-          );
-        }}
-        // The end of a search that found nothing, and the end of one that
-        // found the wrong things, are the same dead end — and until now
-        // both of them ended here, with the app reporting the absence and
-        // offering no way through it. Explore has had that way out since
-        // it got a footer; this screen, which is where someone goes when
-        // they have a specific place in mind, did not.
-        //
-        // Nothing at all: the offer belongs in the empty state, because
-        // the empty state is the whole screen. Something, but not the
-        // right thing: the offer goes under the results by the same rule
-        // Explore uses — reaching the end is the moment you have seen
-        // everything there is, and it is the only honest moment to say
-        // "then let us go and find it".
-        ListEmptyComponent={
-          searching && elsewhere
-            ? (
-              <>
-                <NoMatches term={shown} where={pick === 'all' ? null : pick.map(cityName).filter(Boolean).join(', ')} />
-                {addRow}
-                {googleEmpty}
-              </>
-            )
-          : searching
-            ? (
-              <>
-                <NoMatches term={shown} />
-                {addRow}
-                {googleEmpty}
-                {/* Under the Google row, not above it: the primary door
-                    stays primary, and the fork is the "or try" it reads
-                    as. Rendered after the not-found note too, so the
-                    chips survive Google coming back empty-handed — that
-                    is the moment they matter most. */}
-                <Fork
-                  routes={routes}
-                  onSearch={setQuery}
-                  onBack={() => navigation.goBack()}
-                  toList={adding}
-                />
-              </>
-            )
-            // Reached only while the catalog is still loading, or in a
-            // city with nothing in it yet: with places come chips and a
-            // ranking, and with either the zero-state rows exist instead.
-            : <Empty text={t(
-                'Try a name, a neighbourhood, or a vibe — cafés, museums, rooftops.',
-                'Thử tên quán, tên khu, hay một kiểu vibe — cà phê, bảo tàng, rooftop.',
-                '名前・エリア・雰囲気で検索 — カフェ、博物館、ルーフトップ。',
-                '试试名称、街区或氛围 — 咖啡馆、博物馆、天台。', '試試名稱、街區或氛圍 — 咖啡館、博物館、頂樓。',
-              )} />
-        }
+        renderItem={({ item }) => <Row item={item} at={at} />}
+        ListEmptyComponent={(
+          <SearchEmpty
+            searching={searching}
+            elsewhere={elsewhere}
+            shown={shown}
+            pick={pick}
+            cityName={cityName}
+            addRow={addRow}
+            googleEmpty={googleEmpty}
+            routes={routes}
+            onSearch={setQuery}
+            onBack={() => navigation.goBack()}
+            toList={adding}
+          />
+        )}
         // Only while searching: before a word is typed the list holds the
         // zero-state, and offering to go and add a place would be
         // answering a question nobody asked.
