@@ -124,6 +124,22 @@ export const FLAG_DEFAULTS = {
    *     on conflict (key) do update set enabled = true;
    */
   checkin_photos: false,
+  /**
+   * Public as a third answer on a check-in's sheet, beside Only me and
+   * Friends (owner, 25 Nov 2026; `20261125200000_checkin_public.sql`).
+   * The database takes the answer either way; this is only whether the
+   * sheet offers it. **Off** as shipped: a visit a stranger can read is
+   * a person's own words and photos in front of people they do not
+   * know, which is Guideline 1.2 again, and the note on one has no
+   * report of its own yet. A visit already answered Public keeps its
+   * answer on the sheet with the flag off, so opening it to fix a typo
+   * does not quietly make it private. On:
+   *
+   *     insert into app_flags (key, enabled, note) values
+   *       ('checkin_public', true, 'Public check-ins.')
+   *     on conflict (key) do update set enabled = true;
+   */
+  checkin_public: false,
 } as const;
 
 export type FlagKey = keyof typeof FLAG_DEFAULTS;

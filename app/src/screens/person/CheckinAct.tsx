@@ -201,7 +201,7 @@ export function useVisitCards({ me, person, onPlace }: {
 
   const card = (v: PersonCheckin) => {
     const liked = pressed[v.id] ?? v.liked;
-    const shared = !own || v.audience === 'friends';
+    const shared = !own || (v.audience != null && v.audience !== 'private');
     const kind = v.place.categories[0];
     const pics = shown(v);
     return (
@@ -213,9 +213,14 @@ export function useVisitCards({ me, person, onPlace }: {
         who={(person as FriendProfile).full_name || atHandle((person as FriendProfile).handle)}
         did={t(' checked in', ' đã check-in', 'さんがチェックイン', ' 打卡了', ' 打卡了')}
         when={dayLabel(v.day, new Date(), lang, t)}
-        mark={shared
-          ? { icon: SEEN_GLYPH.friends, label: t('Friends', 'Bạn bè', '友達', '好友', '好友') }
-          : { icon: SEEN_GLYPH.private, label: t('Only me', 'Chỉ mình tôi', '自分のみ', '仅自己', '僅自己') }}
+        // Anybody else is told Public when it is and nothing for Friends
+        // (`person_checkins`), so a card on somebody else's page wears
+        // the friends' mark unless it says otherwise.
+        mark={v.audience === 'public'
+          ? { icon: SEEN_GLYPH.public, label: t('Public', 'Công khai', '公開', '公开', '公開') }
+          : shared
+            ? { icon: SEEN_GLYPH.friends, label: t('Friends', 'Bạn bè', '友達', '好友', '好友') }
+            : { icon: SEEN_GLYPH.private, label: t('Only me', 'Chỉ mình tôi', '自分のみ', '仅自己', '僅自己') }}
         title={nameOf(v)}
         // A visit with photos of its own draws none of the place's while
         // its links are on their way — the plain ground instead: the

@@ -133,7 +133,7 @@ export async function fetchPersonCheckins(personId: string): Promise<PersonCheck
     city_id: r.city_id ?? null,
     day: r.day,
     note: r.note ?? null,
-    audience: r.audience === 'friends' || r.audience === 'private' ? r.audience : null,
+    audience: r.audience === 'friends' || r.audience === 'private' || r.audience === 'public' ? r.audience : null,
     likes: typeof r.likes === 'number' ? r.likes : 0,
     liked: r.liked === true,
     photos: visitPhotosOf(r.photos),

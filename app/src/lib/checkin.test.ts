@@ -195,7 +195,7 @@ describe('textMatches', () => {
 });
 
 describe('a visit\'s note and who sees it', () => {
-  const v = (id: string, at: string, audience?: 'private' | 'friends' | null) => ({ id, place_slug: 'p', city_id: null, at, audience });
+  const v = (id: string, at: string, audience?: 'private' | 'friends' | 'public' | null) => ({ id, place_slug: 'p', city_id: null, at, audience });
 
   it('reads an unanswered visit as private', () => {
     expect(audienceOf({})).toBe('private');
@@ -216,6 +216,14 @@ describe('a visit\'s note and who sees it', () => {
     ];
     expect(nextAudience(rows)).toBe('private');
     expect(nextAudience([...rows].reverse())).toBe('private');
+  });
+
+  it('never opens on Public, even straight after a public visit', () => {
+    expect(nextAudience([v('shared-with-all', '2026-11-25T00:00:00Z', 'public')])).toBe('friends');
+    expect(nextAudience([
+      v('private-before', '2026-11-20T00:00:00Z', 'private'),
+      v('shared-with-all', '2026-11-25T00:00:00Z', 'public'),
+    ])).toBe('friends');
   });
 
   it('stores a note trimmed and bounded, and nothing as null', () => {

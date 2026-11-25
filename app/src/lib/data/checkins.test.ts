@@ -200,14 +200,18 @@ describe('fetchPersonCheckins', () => {
     }]);
   });
 
-  it('takes only the two answers there are, and a heart only on the word true', async () => {
+  it('takes only the three answers there are, and a heart only on the word true', async () => {
     fake().replies({ data: [
       { id: 'a', place_slug: 'p', day: '2026-11-24', audience: 'private', liked: 'yes', likes: '3' },
-      { id: 'b', place_slug: 'p', day: '2026-11-24', audience: 'public' },
+      { id: 'b', place_slug: 'p', day: '2026-11-24', audience: 'everyone' },
+      { id: 'c', place_slug: 'p', day: '2026-11-24', audience: 'public' },
+      { id: 'd', place_slug: 'p', day: '2026-11-24', audience: 'friends' },
     ] });
-    const [a, b] = await fetchPersonCheckins('u1');
+    const [a, b, c, d] = await fetchPersonCheckins('u1');
     expect([a.audience, a.liked, a.likes]).toEqual(['private', false, 0]);
     expect(b.audience).toBeNull();
+    expect(c.audience).toBe('public');
+    expect(d.audience).toBe('friends');
   });
 
   it('is nobody’s page when the server answers nothing, and throws what it said', async () => {

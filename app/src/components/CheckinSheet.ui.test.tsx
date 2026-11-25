@@ -62,6 +62,7 @@ beforeEach(() => {
   motion.still = false;
   Object.assign(pics, { args: [], changed: false });
   appFlags.set('checkin_photos', false);
+  appFlags.set('checkin_public', false);
 });
 afterEach(() => { cleanup(); });
 
@@ -246,6 +247,30 @@ describe('CheckinSheet', () => {
     type('After.');
     await press('checkin-sheet-save');
     expect(onClose).toHaveBeenLastCalledWith(true, false);
+  });
+
+  it('offers Public only behind its flag, says what it means, writes it and calls it shared', async () => {
+    show(FRESH, true);
+    expect(screen.queryByTestId('checkin-sheet-seen-public')).toBeNull();
+    cleanup();
+
+    appFlags.set('checkin_public', true);
+    show(FRESH, true);
+    fireEvent.click(screen.getByTestId('checkin-sheet-seen-public'));
+    expect(screen.getByTestId('checkin-sheet-seen-public').getAttribute('aria-checked')).toBe('true');
+    expect(screen.getByTestId('checkin-sheet-gloss').textContent)
+      .toBe('Anyone signed in sees the place, the day and your note on your page.');
+    await press('checkin-sheet-save');
+    expect(data.saveCheckin).toHaveBeenLastCalledWith('k9', { note: null, audience: 'public' });
+    expect(onClose).toHaveBeenLastCalledWith(true, true);
+  });
+
+  it('keeps Public on a visit already answered so, with the flag off', async () => {
+    show({ ...OLD, note: 'Before.', audience: 'public' }, true);
+    expect(screen.getByTestId('checkin-sheet-seen-public').getAttribute('aria-checked')).toBe('true');
+    type('After.');
+    await press('checkin-sheet-save');
+    expect(data.saveCheckin).toHaveBeenLastCalledWith('k1', { note: 'After.' });
   });
 
   it('writes a changed answer on an old visit, and no answer when only the words changed', async () => {
