@@ -46,8 +46,10 @@ const THUMB = 56;
 export function VisitRow({ v, name, meta, divided, onOpen, onMenu, onNote, own }: {
   v: Checkin;
   /** The visit's first photo, signed (`useSignedPhotos`), cached by the
-   *  photo's id; absent for a visit without one. */
-  own?: { uri: string; cacheKey: string };
+   *  photo's id; its `uri` null while the link is on its way, when the
+   *  box is left plain rather than showing the place's cover first.
+   *  Absent for a visit without one. */
+  own?: { uri: string | null; cacheKey: string };
   name: string;
   meta: string;
   /** Not the first of its month: a hairline over it. */
@@ -70,7 +72,7 @@ export function VisitRow({ v, name, meta, divided, onOpen, onMenu, onNote, own }
     >
       <View style={s.thumb} testID="visit-thumb">
         {own ? (
-          <Image source={own} style={s.thumbImage} contentFit="cover" transition={150} aria-hidden />
+          own.uri ? <Image source={{ uri: own.uri, cacheKey: own.cacheKey }} style={s.thumbImage} contentFit="cover" transition={150} aria-hidden /> : null
         ) : v.place?.cover ? (
           <Image source={{ uri: v.place.cover }} style={s.thumbImage} contentFit="cover" transition={150} aria-hidden />
         ) : (
@@ -104,14 +106,13 @@ export function VisitRow({ v, name, meta, divided, onOpen, onMenu, onNote, own }
  * Each visit's first photo, for its row (see the header): signed for
  * the whole list at once, and nothing at all with `checkin_photos` off.
  */
-export function useVisitThumbs(visits: readonly Checkin[]): (v: Checkin) => { uri: string; cacheKey: string } | undefined {
+export function useVisitThumbs(visits: readonly Checkin[]): (v: Checkin) => { uri: string | null; cacheKey: string } | undefined {
   const on = useFlag('checkin_photos');
   const firsts = useMemo(() => visits.flatMap((v) => v.photos?.slice(0, 1) ?? []), [visits]);
   const linkOf = useSignedPhotos(firsts, on);
   return (v) => {
     const first = v.photos?.[0];
-    const uri = first ? linkOf(first) : null;
-    return first && uri ? { uri, cacheKey: first.id } : undefined;
+    return on && first ? { uri: linkOf(first), cacheKey: first.id } : undefined;
   };
 }
 

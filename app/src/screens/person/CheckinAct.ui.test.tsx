@@ -36,8 +36,11 @@ vi.mock('../../lib/checkins', () => ({ useMyCheckins: () => ({ data: [], loadedA
 vi.mock('../../lib/city', () => ({
   useCityList: () => ({ cities: [{ id: 'hanoi', short_en: 'Hanoi', short_vi: 'Hà Nội', short_ja: null }] }),
 }));
-const flags = vi.hoisted(() => ({ place_checkin: true, checkin_photos: false }));
-vi.mock('../../lib/useFlag', () => ({ useFlag: (k: string) => (flags as Record<string, boolean>)[k] ?? false }));
+const flags = vi.hoisted(() => ({ place_checkin: true, checkin_photos: false, ready: true }));
+vi.mock('../../lib/useFlag', () => ({
+  useFlag: (k: string) => (flags as Record<string, boolean>)[k] ?? false,
+  useFlagsReady: () => flags.ready,
+}));
 const i18n = vi.hoisted(() => ({ lang: 'en' }));
 vi.mock('../../lib/i18n', () => ({ useI18n: () => ({ lang: i18n.lang, t: (en: string, vi?: string) => (i18n.lang === 'vi' ? vi : en) ?? en }) }));
 vi.mock('react-native-safe-area-context', () => ({ useSafeAreaInsets: () => ({ top: 0, bottom: 0, left: 0, right: 0 }) }));
@@ -79,6 +82,7 @@ beforeEach(() => {
   data.saveCheckin.mockImplementation(async () => {});
   flags.place_checkin = true;
   flags.checkin_photos = false;
+  flags.ready = true;
   auth.me = 'me';
   forgetSignedPhotos();
   mine.loadedAt = 1;
@@ -187,6 +191,45 @@ describe('the column waiting for the visits', () => {
       r.rerender(<Page me="me" person={{ ...LAN, id: 'minh', handle: 'minh' } as FriendProfile} />);
       expect(holding()).toBe(true);
     } finally { vi.useRealTimers(); }
+  });
+
+  // Owner, 25 Nov 2026: as the app opens the switches are not known yet,
+  // and check-ins may be off only because nothing has said otherwise.
+  it('waits while it does not know whether to ask, and stops once it knows', async () => {
+    flags.ready = false;
+    flags.place_checkin = false;
+    pending();
+    const r = await mount('me', LAN);
+    expect(holding()).toBe(true);
+    expect(data.fetchPersonCheckins).not.toHaveBeenCalled();
+    // Known, and off: nothing to wait for.
+    flags.ready = true;
+    r.rerender(<Page me="me" person={LAN} />);
+    expect(holding()).toBe(false);
+  });
+
+  it('waits on from not knowing to asking, within the one hold', async () => {
+    vi.useFakeTimers();
+    try {
+      flags.ready = false;
+      flags.place_checkin = false;
+      pending();
+      const r = render(<Page me="me" person={LAN} />);
+      act(() => { vi.advanceTimersByTime(HOLD_MS - 200); });
+      flags.ready = true;
+      flags.place_checkin = true;
+      r.rerender(<Page me="me" person={LAN} />);
+      expect(holding()).toBe(true);
+      act(() => { vi.advanceTimersByTime(200); });
+      expect(holding()).toBe(false);
+    } finally { vi.useRealTimers(); }
+  });
+
+  it('does not wait on unknown switches for a guest, who is asked nothing either way', async () => {
+    flags.ready = false;
+    pending();
+    await mount(null, LAN);
+    expect(holding()).toBe(false);
   });
 
   it('never waits where nothing is asked — a guest, check-ins off — nor while the page is searched', async () => {
@@ -412,7 +455,17 @@ describe('a visit’s own photos', () => {
     expect(third.querySelector('img[src="https://x/k3.jpg"]')).not.toBeNull();
   });
 
-  it('counts only the photos the bucket signed, and draws the place until one is', async () => {
+  it('draws no picture of the place while its own are on their way', async () => {
+    flags.checkin_photos = true;
+    data.signCheckinPhotos.mockReturnValueOnce(new Promise(() => {}));
+    await show('me', LAN, [WITH]);
+    const [first] = cards();
+    expect(within(first).queryByTestId('activity-photo')).toBeNull();
+    expect(first.querySelector('img[src="https://x/k1.jpg"]')).toBeNull();
+    expect(within(first).getByTestId('activity-tint')).toBeTruthy();
+  });
+
+  it('counts only the photos the bucket signed, and draws none of the place until one is', async () => {
     flags.checkin_photos = true;
     data.signCheckinPhotos.mockResolvedValueOnce({ 'lan/k1/p2.jpg': 'https://signed/p2' });
     await show('me', LAN, [WITH, visit('k2', { photos: [ph('q1')] })]);

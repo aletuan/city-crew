@@ -196,6 +196,7 @@ vi.mock('./person/Requests', () => ({
 }));
 
 import PersonScreen from './PersonScreen';
+import { appFlags } from '../lib/flags';
 import { spokenTab } from '../components/FloatingTabBar';
 
 const LAN: Who = { id: 'lan-id', handle: 'lan', full_name: 'Lan Phạm', avatar_url: 'https://faces/lan.jpg', bio: 'Coffee first, then the rest.' };
@@ -238,6 +239,9 @@ const show = async (handle = 'lan', home?: boolean, routeNames?: string[]) => {
 };
 
 beforeEach(() => {
+  // The switches as a launch that remembered them: known, as shipped.
+  // Unknown, the column waits for them (`useVisitCards`).
+  appFlags.restore({});
   state.city = null; state.focused = true;
   tourAnchors.clear();
   out.tabs = { navigate: vi.fn() };
