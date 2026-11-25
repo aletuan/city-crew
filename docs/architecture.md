@@ -5,7 +5,7 @@ file làm ra quyết định đó; ở đây chỉ nói file nào nằm ở tầ
 được gọi tầng nào, và **cái gì trong CI đỏ lên** khi luật bị phá. Một luật
 không có gì canh chỉ là lời khuyên — xem mục cuối cho những chỗ còn như vậy.
 
-Số đo ngày 27/09/2026.
+Số đo ngày 25/11/2026, đếm lại trên main; bản đầu là 27/09/2026.
 
 ## Một câu
 
@@ -17,14 +17,14 @@ Google, khoá Claude, service role) — không phải để "có backend".
 ```
  app/ (Expo)                               dashboard/ (Vite, web)
  ┌───────────────────────────────┐         ┌────────────────────────┐
- │ screens/     23 màn           │         │ components/ → api.js   │
+ │ screens/     29 màn           │         │ components/ → api.js   │
  │   ↓                           │         └───────────┬────────────┘
- │ components/  40 file          │                     │
+ │ components/  107 file         │                     │
  │   ↓                           │                     │
  │ lib/*.tsx    context + hook   │                     │
  │   ↓                           │                     │
  │ lib/data/    truy vấn         │                     │
- │ lib/*.ts     83 module thuần  │                     │
+ │ lib/*.ts     136 module thuần │                     │
  └──────────────┬────────────────┘                     │
                 │  anon key + session                  │  anon key + session editor
                 ▼                                      ▼
@@ -38,7 +38,7 @@ Google, khoá Claude, service role) — không phải để "có backend".
 
 | tầng | thư mục | là gì | được import |
 |---|---|---|---|
-| Màn hình | `src/screens/` | một màn một file; ghép component, đọc provider và hook dữ liệu | components, lib, `nav.ts`, `theme.ts` |
+| Màn hình | `src/screens/` | một màn một file; ghép component, đọc provider và hook dữ liệu. Phần con và hook riêng của một màn nằm ở `screens/<màn>/` (16 thư mục) | components, lib, `nav.ts`, `theme.ts` |
 | Component | `src/components/` | UI dùng lại; `ui/` là design system | lib, `theme.ts`, `nav.ts` — **không** screens |
 | Provider | `src/lib/*.tsx` | trạng thái dùng chung: các provider (auth, thành phố, catalog, crew, trips…), mỗi cái một hoặc vài React context, và vài hook | lib, lib/data |
 | Dữ liệu | `src/lib/data/` | mọi câu hỏi tới Postgres/Storage, mỗi aggregate một file, `index.ts` là barrel | `lib/supabase.ts`, lib thuần |
@@ -65,7 +65,10 @@ Chiều mũi tên chỉ đi xuống. Hai điểm hay bị hiểu nhầm:
 | `lib/` không import components hay screens | như trên | `npm run lint` |
 | `lib/*.ts` không import `react`, `react-native`, `./supabase` hay `@supabase/*`, trừ file có tên trong `IMPURE` | như trên; `IMPURE` ở `app/impure.js` | `npm run lint` |
 | `lib/*.ts` và `lib/data/*.ts` thuần, test được trong Node | coverage 100% từng file, `app/vitest.config.ts` | `npm run coverage` |
-| hàm không dài quá 150 dòng code, độ phức tạp không quá 25; file đã vượt thì không được vượt con số của chính nó | `max-lines-per-function`, `complexity`; trần và danh sách ở `app/oversize.js` | `npm run lint` |
+| màn hình, component, provider, helper và Edge Function có sàn coverage theo từng file (bảng số ở `CLAUDE.md`) | `app/vitest.config.ts`; sàn là ratchet, nâng tay khi file tốt lên | `npm run coverage` |
+| Edge Function nào cũng có test nạp nó, hoặc một lý do có tên | `scripts/edgeFunctionTests.test.ts` | `npm test` |
+| một chuỗi tiếng Anh chỉ có một bản dịch ở mọi nơi | `scripts/translations.test.ts` | `npm test` |
+| hàm không dài quá 150 dòng code, độ phức tạp không quá 25; file đã vượt thì không được vượt con số của chính nó | `max-lines-per-function`, `complexity`; trần và danh sách ở `app/oversize.js` (29 file) và `dashboard/oversize.js` (7 file) | `npm run lint`; job `dashboard` |
 | màn nào cũng có cầu dao lỗi riêng | `ScreenBoundary.ui.test.tsx` đọc `App.tsx` | `npm test` |
 | taxonomy khớp ở app, dashboard và check constraint | `data/test/categories-sync.test.mjs` | job `data` |
 | policy RLS hỏi "bạn là ai" một lần mỗi truy vấn — viết `(select auth.uid())`, `(select is_editor())` — và không đọc lại chính bảng của nó | `supabase/tests/rls_ask_once_test.sql`; lượt chạy thứ hai của `run.sh` chạy lại mọi test RLS trên policy đã viết lại | job `migrations` |
@@ -123,7 +126,16 @@ chỗ nào có lọc và vì sao.
 
 `App.tsx` lồng provider theo thứ tự phụ thuộc — cái bên trong đọc cái bên
 ngoài: `ThemeProvider` › `AppBoundary` › `Auth` › `I18n` › `City` ›
-`Catalog` › `Crew` › `Invitations` › `MyTrips` › `Save` › `TabBarDuck`.
+`Catalog` › `Crew` › `Invitations` › `MyTrips` › `Checkins` › `Save` ›
+`Notice` › `Rewards` › `FreshNews` › `CommentQuick` › `TabBarDuck` ›
+`SignupTour`. Mười lăm provider của app; bản 27/09 ghi mười một, trước
+khi có check-in, thông báo, phần thưởng, bình luận và tour đăng ký.
+
+Giữa chúng có năm component không vẽ gì, chỉ đồng bộ một thứ theo
+session: `GuideGrantSync`, `FlagsSync`, `ReminderSync`, `SessionNavSync`,
+`ThemeAccountSync`. Chúng đứng dưới `Checkins` và trên `Save`. Các sheet
+và thanh nổi toàn app (`SaveSheets`, `RewardBanner`, `NoticeBar`,
+`WelcomeSheet`, `ReminderAskSheet`) cũng gắn ở `App.tsx`, ngoài `Tabs`.
 
 Provider nhiều người đọc mà mỗi người chỉ đọc một phần thì **chia context
 theo đường người đọc đã vạch**, vì một context đổi là mọi người đọc nó vẽ
@@ -143,7 +155,8 @@ dao qua `screenLayout`; `AppBoundary` là lớp cuối.
 
 **Bấm lại tab đang mở** lùi từng bước, như mọi tab bar trên iOS: lần đầu
 về màn gốc của tab (native stack tự làm), lần sau cuộn lên đầu
-(`useScrollToTop` ở màn gốc của cả năm tab). Explore có thêm một bước ở
+(`useScrollToTop` ở màn gốc của cả năm tab; Collections gắn nó trong
+`collections/useShelfScroll.ts`). Explore có thêm một bước ở
 giữa — đang ở Map View thì thoát ra danh sách (listener `tabPress` trong
 `ExploreScreen`). Màn gốc mới của một tab phải gắn `useScrollToTop` vào
 list của nó; test "its tab, pressed again" ở mỗi màn canh việc đó.
@@ -156,17 +169,26 @@ trong `_shared/` (test từ `app/src/lib/*.test.ts`, ngoài cổng coverage):
 | function | ai gọi | ai được gọi |
 |---|---|---|
 | `fetch-place` | app (`findplace.ts`, `suggest.ts`, qua `lib/data/functions.ts`), dashboard | người đã đăng nhập; import vào catalog chỉ editor |
+| `checkin-photo` | app (`lib/data/checkinPhotos.ts`) | người đã đăng nhập, chỉ trên check-in của chính mình; đường ghi duy nhất vào bucket `checkin-photos` |
 | `plan-assist` | app (`assist.ts`, qua `lib/data/functions.ts`) | người đã đăng nhập |
 | `delete-account` | app (`auth.tsx`) | chính chủ tài khoản |
 | `scan-city`, `suspend-user` | dashboard | editor |
-| `refresh-places`, `shrink-photos` | `pg_cron` (`cron.sql` cạnh function) | token `ops_tokens` hoặc editor — `_shared/gate.ts` |
-| `rehost-photos`, `refresh-photos`, `prune-photos` | chạy tay khi cần (`prune-photos/run.sql`) | như trên |
+| `write-blurb` | dashboard | editor hoặc token `ops_tokens`; không ghi gì, desk bấm Save mới ghi |
+| `refresh-places`, `shrink-photos`, `label-photos`, `prune-checkin-photos` | `pg_cron` (`cron.sql` cạnh function) | token `ops_tokens` hoặc editor — `_shared/gate.ts` |
+| `rehost-photos`, `refresh-photos`, `prune-photos`, `rate-photos` | chạy tay khi cần (`prune-photos/run.sql`) | như trên |
+
+Function **tự deploy**: `.github/workflows/deploy-functions.yml` deploy
+function nào có thư mục đổi trên main (đổi `_shared/` thì deploy tất cả)
+rồi kiểm lại project. `find-address` và `backfill-phones-once` đang chạy
+trên project mà không có trong repo.
 
 **Việc định kỳ** chạy bằng `pg_cron` + `pg_net` gọi Edge Function với
 token trong `ops_tokens`. Script lịch nằm ở `supabase/functions/<job>/cron.sql`
 và **áp tay**, không phải migration — nó mint một bí mật lúc chạy, và môi
-trường test migration không có `pg_cron`. Hiện có: `shrink-photos` (mỗi
-giờ), `refresh-places` (mỗi đêm).
+trường test migration không có `pg_cron`. Hiện có bốn job, đọc từ
+`cron.job` của project ngày 25/11/2026, giờ UTC: `shrink-photos` (phút 7
+mỗi giờ), `label-photos` (phút 23 mỗi giờ), `refresh-places` (19:43 mỗi
+ngày), `prune-checkin-photos` (03:23 mỗi ngày).
 
 **Migration** được CI test nhưng **không tự apply** — xem `CLAUDE.md`,
 mục Supabase.
@@ -175,8 +197,10 @@ mục Supabase.
 
 `dashboard/` là web app Vite cho desk. Cùng mô hình với app: `api.js` nói
 thẳng với Supabase bằng session của editor, RLS quyết định ai được ghi gì,
-và gọi `fetch-place`, `scan-city`, `suspend-user` cho những thứ cần bí mật.
-Không có tầng nào giữa dashboard và database.
+và gọi `fetch-place`, `scan-city`, `suspend-user`, `write-blurb` cho những
+thứ cần bí mật. Không có tầng nào giữa dashboard và database. Từ
+24/11/2026 dashboard có cùng trần kích thước hàm với app
+(`dashboard/oversize.js`).
 
 ## Bốn cấp nút
 
@@ -198,13 +222,25 @@ là cấp 1, nút "Tạo mới" trên header cùng màn là cấp 2. Cấp 2 kh�
 chỉ 4,14:1 trên paper (dưới 4,5 cho chữ 16pt); `text` trên kính thấp nhất
 6,77:1, dấu `accent` trên kính thấp nhất 4,10:1 (đủ 3:1 cho biểu tượng).
 
+## Một khung sheet
+
+Bottom sheet lấy khung từ `components/ui/sheet.tsx` (`Sheet`): Modal, nền
+tối, panel bo 28, thanh kéo 38pt `textTertiary`, viền mảnh, safe area, kéo
+xuống để đóng. Mười lăm file dùng nó từ 24–25/11/2026; trước đó mỗi sheet
+tự chép khung và hai kiểu đã lệch nhau. Khác biệt có lý do đi qua prop
+(`scrim`, `rise`, `pull`, `foot`), không qua bản sao.
+
+Ba sheet đứng ngoài, lý do ghi ở đầu `sheet.tsx`: `CheckinSheet` và
+`CommentQuick` cưỡi lên bàn phím trong một dock; `PhotoSheet` có lớp blur
+và trình xem toàn màn hình trong cùng Modal.
+
 ## Cố ý không có
 
 - **App server.** Mọi thứ nó làm được thì RLS hoặc một Edge Function đã làm,
   và nó thêm một thứ để deploy, để trả tiền, để hỏng.
 - **Redux / Zustand / TanStack Query.** Context + `usePersistedFetch` đủ cho
   lượng trạng thái dùng chung ở đây; cache trên máy đã có version.
-- **Kế thừa class.** Cả `src/` có ba class (hai error boundary và một lỗi).
+- **Kế thừa class.** Cả `src/` có năm class (hai error boundary và ba lỗi).
   Đa hình đi qua hàm — `planner.ts` tự khai `Taste = { affinity }` và
   `tasteProfile.tsx` hiện thực nó, chứ không có cây kế thừa.
 
@@ -216,7 +252,8 @@ Ghi ra để không ai tưởng là có chủ ý:
   19/10/2026 thành `components/ui/` theo năm mối quan tâm (layout, haptics,
   motion, controls, surfaces); `ui/index.ts` xuất lại mọi tên nên không nơi
   gọi nào phải sửa.
-- **Màn hình to** — trung bình ~717 dòng một file so với ~163 ở `lib/`.
+- **Màn hình to** — trung bình ~491 dòng một file so với ~176 ở `lib/`
+  (25/11/2026; bản 27/09 là ~717 và ~163).
   Ngày 19/10/2026 `ProfileScreen` (1.338 → 87 dòng) và `ExploreScreen`
   (1.856 → ~1.040) được tách phần con ra `screens/profile/` và
   `screens/explore/`; `PlaceDetailScreen` vẫn ~1.840 dòng. Ngày
@@ -230,8 +267,10 @@ Ghi ra để không ai tưởng là có chủ ý:
   (`cells.tsx`), trạng thái trống (`OwnEmpty.tsx`), stylesheet
   (`styles.ts`) và hai hook `useReorderDraft`, `useKindFilter` — còn
   1.898 dòng, và hàm chính vẫn giữ phần JSX của thẻ giới thiệu, menu và
-  ai-xem-được. Hook của một màn mang đuôi `.tsx`: `.ts` trong
-  `screens/*/` nằm ngoài `include` của coverage.
+  ai-xem-được. Lúc đó hook của một màn mang đuôi `.tsx`, vì `.ts`
+  trong `screens/*/` nằm ngoài `include` của coverage; từ 22/11/2026
+  `include` có `src/screens/*/*.ts` với sàn của helper, nên hook mới
+  mang đuôi `.ts`.
   Cùng ngày, phần đứng ngoài hàm chính của bốn màn nữa được chuyển ra
   thư mục riêng, không sửa dòng nào: `screens/placeDetail/`,
   `screens/collections/`, `screens/sketching/`, `screens/ideas/` (component
@@ -242,6 +281,11 @@ Ghi ra để không ai tưởng là có chủ ý:
   Từ 15/11/2026 kích thước hàm có trần: `app/oversize.js` ghi 34 file
   đang vượt, mỗi file với con số của nó, và lint đỏ khi một con số bị
   vượt. Tách bớt thì hạ con số trong cùng thay đổi.
+  Ngày 22–25/11/2026, sau code review, ba hàm màn hình lớn nhất xuống
+  dưới trần và ra khỏi danh sách: `CollectionDetailScreen` (740 dòng /
+  độ phức tạp 137 → 112 / 11), `PlaceDetailScreen` (→ 139 / 13),
+  `CollectionsScreen` (→ 148 / 19). Danh sách còn 29 file. File màn hình
+  dài nhất hiện là `ExploreScreen` (1.122 dòng) và `CrewScreen` (1.009).
 - ~~**`lib/save.tsx`** nằm sai tầng~~ Ngày 20/10/2026 phần vẽ hai sheet
   chuyển ra `components/SaveSheets.tsx`; `lib/save.tsx` chỉ còn trạng thái,
   và ngoại lệ trong lint đã bỏ.
