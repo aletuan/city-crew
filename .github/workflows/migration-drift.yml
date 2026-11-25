@@ -84,8 +84,11 @@ jobs:
               echo "The project answered $code:"; head -c 500 /tmp/live.json; echo
               exit 2
             fi
-            node data/scripts/migration-drift.mjs /tmp/live.json
-            status=$?
+            # In an `if`, because GitHub runs this with `bash -e`: a bare command
+            # that exits 1 ends the step on the spot, before `$?` is read. It did —
+            # the first merge with a migration waiting (#1645, 25 Nov 2026) went
+            # red in seven seconds instead of waiting thirty minutes.
+            if node data/scripts/migration-drift.mjs /tmp/live.json; then status=0; else status=$?; fi
             # 0: all on live. 2: the answer could not be read — waiting
             # will not fix that. 1: something not applied yet.
             if [ "$status" -ne 1 ] || [ "$i" -eq "$tries" ]; then exit "$status"; fi
