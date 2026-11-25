@@ -7,7 +7,7 @@ import React from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { Alert, Keyboard } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { cleanup, fireEvent, fontSizeOf, propsWhere, render, screen, waitFor, within } from '../uitest/render';
+import { act, cleanup, fireEvent, fontSizeOf, propsWhere, render, screen, waitFor, within } from '../uitest/render';
 import type { Nav } from '../nav';
 import type { Checkin } from '../lib/checkin';
 import { VISIT_RECENTS_KEY } from '../lib/recents';
@@ -224,7 +224,14 @@ describe('VisitedScreen', () => {
     cleanup();
 
     appFlags.set('checkin_photos', true);
+    let sign!: () => void;
+    data.signCheckinPhotos.mockImplementationOnce((paths: readonly string[]) => new Promise((r) => {
+      sign = () => r(Object.fromEntries(paths.map((p) => [p, `https://signed/${p}`])));
+    }));
     const { raw } = show();
+    // While the link is on its way: the box plain, not the place's cover.
+    expect(screen.getAllByTestId('visit-row')[0].querySelector('img')).toBeNull();
+    await act(async () => { sign(); });
     await waitFor(() => expect(document.querySelector('img[src="https://signed/me/k/p1.jpg"]')).not.toBeNull());
     expect(data.signCheckinPhotos).toHaveBeenCalledTimes(1);
     expect(data.signCheckinPhotos).toHaveBeenCalledWith(['me/k/p1.jpg']);

@@ -77,7 +77,7 @@ import { atHandle } from '../../lib/handle';
 import { useI18n } from '../../lib/i18n';
 import { localized } from '../../lib/localized';
 import { SEEN_GLYPH } from '../../lib/shares';
-import { useFlag } from '../../lib/useFlag';
+import { useFlag, useFlagsReady } from '../../lib/useFlag';
 
 const NONE: PersonCheckin[] = [];
 
@@ -148,13 +148,23 @@ export function useVisitCards({ me, person, onPlace }: {
   // `HOLD_MS` at most: past that the lists are drawn without them, and
   // the visits join when they come. A reader on a train must not be shown
   // a spinner over lists the phone already has.
+  //
+  // And while the switches are not known yet (owner, 25 Nov 2026): as the
+  // app opens, `place_checkin` is as shipped — off — until the last
+  // answer is put back or the table's arrives (`lib/flagsSync`), and a
+  // column drawn then took its visits in at the top a moment later. So
+  // not knowing whether to ask is waited out too, within the same
+  // `HOLD_MS`, counted from the first of the two.
+  const ready = useFlagsReady();
+  const unsure = !ready && !!me && !!personId;
+  const waits = asks || unsure;
   const [waited, setWaited] = useState<string | null>(null);
   useEffect(() => {
-    if (!asks) return undefined;
+    if (!waits) return undefined;
     const t0 = setTimeout(() => setWaited(personId), HOLD_MS);
     return () => clearTimeout(t0);
-  }, [asks, personId]);
-  const holding = asks && !read.loaded && waited !== personId;
+  }, [waits, personId]);
+  const holding = waits && (unsure || !read.loaded) && waited !== personId;
 
   // The reader's presses since the read, by visit: true set, false
   // taken back. Laid over what the server said.
@@ -206,7 +216,12 @@ export function useVisitCards({ me, person, onPlace }: {
           ? { icon: SEEN_GLYPH.friends, label: t('Friends', 'Bạn bè', '友達', '好友', '好友') }
           : { icon: SEEN_GLYPH.private, label: t('Only me', 'Chỉ mình tôi', '自分のみ', '仅自己', '僅自己') }}
         title={nameOf(v)}
-        uri={v.place.cover ?? undefined}
+        // A visit with photos of its own draws none of the place's while
+        // its links are on their way — the plain ground instead: the
+        // place's cover, then the reader's photo, read as the card
+        // changing its mind (owner, 25 Nov 2026). Once the link is in, a
+        // photo seen before comes off the phone by its id, not the network.
+        uri={photosOn && (v.photos?.length ?? 0) > 0 ? undefined : v.place.cover ?? undefined}
         photo={pics.length > 0 ? {
           uri: pics[0].uri, cacheKey: pics[0].ph.id, n: pics.length,
           onPress: () => setViewing({ v, at: 0 }),

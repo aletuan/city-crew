@@ -143,7 +143,8 @@ export type Flags = {
   /**
    * Read every known switch from `app_flags`, and — for somebody signed
    * in — the switches turned on for them alone (`app_flag_testers`).
-   * Never throws: a switch that cannot be read stays as shipped.
+   * Never throws: a switch that cannot be read stays as shipped. Resolves
+   * true when this read's answer was applied — what is worth keeping.
    *
    * ── on for one account ──
    *
@@ -161,7 +162,28 @@ export type Flags = {
    * the launch's as nobody, then the session's — only the later one
    * asked is applied, whichever lands last.
    */
-  load: (client: FlagsClient, signedIn?: boolean) => Promise<void>;
+  load: (client: FlagsClient, signedIn?: boolean) => Promise<boolean>;
+  /**
+   * The last launch's answer, put on until this launch's arrives (owner,
+   * 25 Nov 2026). Every switch used to open as shipped — off — and turn
+   * on a few seconds into the launch, when `app_flags` answered: a page
+   * drew without its check-ins, then took them in at the top; a visit's
+   * photos showed the place's cover, then their own. Kept by
+   * `flagsSync`; read once, and never over an answer already in:
+   * a fresh answer beats a remembered one. A key the app no longer
+   * knows, or a value that is not a boolean, moves nothing.
+   *
+   * The cost: a switch turned off for everybody is still on for the
+   * first seconds of the next launch, until the table answers — the
+   * table is still what decides, a beat later than it did.
+   */
+  restore: (saved: unknown) => void;
+  /** Every switch as it stands, for keeping. */
+  snapshot: () => Record<FlagKey, boolean>;
+  /** Whether the switches are an answer — remembered or read — and not
+   *  just as shipped. A page that would draw differently with a switch
+   *  on waits for this rather than drawing twice. */
+  ready: () => boolean;
   /** Back to the shipped defaults. */
   reset: () => void;
 };
@@ -171,6 +193,10 @@ export function flagsStore(defaults: Record<FlagKey, boolean> = FLAG_DEFAULTS): 
   const subs = new Set<() => void>();
   // Which `load` was asked last — see `Flags.load`.
   let latest = 0;
+  // An answer has been applied: a read one, or a remembered one.
+  let known = false;
+  let read = false;
+  const becomeKnown = () => { if (known) return; known = true; subs.forEach((f) => f()); };
   const set = (key: FlagKey, enabled: boolean) => {
     if (state[key] === enabled) return;
     state[key] = enabled;
@@ -184,7 +210,7 @@ export function flagsStore(defaults: Record<FlagKey, boolean> = FLAG_DEFAULTS): 
       const asked = ++latest;
       try {
         const { data, error } = await client.from('app_flags').select('key, enabled');
-        if (error || !Array.isArray(data)) return;
+        if (error || !Array.isArray(data)) return false;
         const next: Record<FlagKey, boolean> = { ...defaults };
         for (const row of data as { key?: unknown; enabled?: unknown }[]) {
           // A key the app does not know is a switch for a newer app; a
@@ -205,13 +231,33 @@ export function flagsStore(defaults: Record<FlagKey, boolean> = FLAG_DEFAULTS): 
           }
         }
         // A later ask is on its way or has landed: this answer is old.
-        if (asked !== latest) return;
+        if (asked !== latest) return false;
+        read = true;
         (Object.keys(next) as FlagKey[]).forEach((k) => set(k, next[k]));
+        becomeKnown();
+        return true;
       } catch {
-        // No network. The defaults are the answer.
+        // No network. The defaults are the answer — or what was
+        // remembered, which is a better guess at the table than they are.
+        return false;
       }
     },
-    reset: () => { (Object.keys(defaults) as FlagKey[]).forEach((k) => set(k, defaults[k])); },
+    restore: (saved) => {
+      // Nothing kept — a first launch — is not an answer: the page waits
+      // for the table, as long as it waits for anything.
+      if (read || !saved || typeof saved !== 'object') return;
+      for (const [k, v] of Object.entries(saved as Record<string, unknown>)) {
+        if (k in defaults && typeof v === 'boolean') set(k as FlagKey, v);
+      }
+      becomeKnown();
+    },
+    snapshot: () => ({ ...state }),
+    ready: () => known,
+    reset: () => {
+      (Object.keys(defaults) as FlagKey[]).forEach((k) => set(k, defaults[k]));
+      known = false;
+      read = false;
+    },
   };
 }
 

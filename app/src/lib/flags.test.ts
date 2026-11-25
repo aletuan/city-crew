@@ -200,4 +200,90 @@ describe('flagsStore', () => {
     s.reset();
     expect(s.get('photo_attribution')).toBe(true);
   });
+
+  // ── the last launch's answer (owner, 25 Nov 2026) ──
+
+  it('says whether its answer was applied', async () => {
+    const s = flagsStore();
+    const ok = fakeSupabase();
+    ok.replies({ data: [] });
+    expect(await s.load(client(ok))).toBe(true);
+    const refused = fakeSupabase();
+    refused.replies({ error: { message: 'no' } });
+    expect(await s.load(client(refused))).toBe(false);
+    const broken = fakeSupabase();
+    broken.replies({ throws: new Error('offline') });
+    expect(await s.load(client(broken))).toBe(false);
+  });
+
+  it('says an answer that a later ask overtook was not applied', async () => {
+    const s = flagsStore();
+    const slow = fakeSupabase();
+    let land!: () => void;
+    slow.replies({ data: [] });
+    const gate = new Promise<void>((r) => { land = r; });
+    const later = client(slow);
+    const slowClient: FlagsClient = { from: (t) => ({ select: (c) => gate.then(() => later.from(t).select(c)) }) };
+    const first = s.load(slowClient);
+    const fast = fakeSupabase();
+    fast.replies({ data: [] });
+    expect(await s.load(client(fast))).toBe(true);
+    land();
+    expect(await first).toBe(false);
+  });
+
+  it('is not an answer until one is put back or read', async () => {
+    const s = flagsStore();
+    expect(s.ready()).toBe(false);
+    // Nothing kept — a first launch — is not one.
+    s.restore(null);
+    s.restore('nonsense');
+    expect(s.ready()).toBe(false);
+    const f = vi.fn();
+    s.subscribe(f);
+    s.restore({});
+    expect(s.ready()).toBe(true);
+    expect(f).toHaveBeenCalledTimes(1);
+    s.restore({});
+    expect(f).toHaveBeenCalledTimes(1);
+  });
+
+  it('puts back what was kept, known keys and booleans alone', () => {
+    const s = flagsStore();
+    s.restore({ checkin_photos: true, place_checkin: 'yes', something_newer: true, photo_attribution: false });
+    expect(s.get('checkin_photos')).toBe(true);
+    expect(s.get('place_checkin')).toBe(false);
+    expect(s.get('photo_attribution')).toBe(false);
+    expect(s.snapshot()).toEqual({ ...FLAG_DEFAULTS, checkin_photos: true, photo_attribution: false });
+  });
+
+  it('never puts back an old answer over one already read', async () => {
+    const s = flagsStore();
+    const fake = fakeSupabase();
+    fake.replies({ data: [{ key: 'checkin_photos', enabled: false }] });
+    await s.load(client(fake));
+    expect(s.ready()).toBe(true);
+    s.restore({ checkin_photos: true });
+    expect(s.get('checkin_photos')).toBe(false);
+  });
+
+  it('reads the table over what was put back', async () => {
+    const s = flagsStore();
+    s.restore({ checkin_photos: true });
+    const fake = fakeSupabase();
+    fake.replies({ data: [{ key: 'checkin_photos', enabled: false }] });
+    await s.load(client(fake));
+    expect(s.get('checkin_photos')).toBe(false);
+  });
+
+  it('forgets on a reset that it ever knew, or ever read', async () => {
+    const s = flagsStore();
+    const fake = fakeSupabase();
+    fake.replies({ data: [] });
+    await s.load(client(fake));
+    s.reset();
+    expect(s.ready()).toBe(false);
+    s.restore({ checkin_photos: true });
+    expect(s.get('checkin_photos')).toBe(true);
+  });
 });
