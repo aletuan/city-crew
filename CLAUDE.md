@@ -149,7 +149,8 @@ with the repo, or a file merged out of order
 **The Edge Functions deploy and the EAS Update wait for it.** Both start
 on the same merge and hold until every migration in the commit is on
 live (`.github/actions/wait-for-migrations`): thirty minutes, then red
-with nothing deployed — approve, and re-run the job. So a function or a
+with nothing deployed — approve, and re-run the job (that file's header
+lists what each red message means and what to do). So a function or a
 screen and the migration it needs can merge together. What waiting
 cannot fix is the other direction: a migration that drops or renames
 something live code still reads breaks it from the approval until the

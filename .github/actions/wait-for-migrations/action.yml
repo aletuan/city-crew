@@ -28,6 +28,29 @@
 # Without a token it says so and lets the deploy go on, as it went before
 # this existed: a fork or a fresh clone of the repo has no live project
 # to be behind.
+#
+# ── when the step is red ──
+#
+# Nothing was deployed or published in any of these; fix, then re-run
+# the job (Actions → the run → Re-run failed jobs).
+#
+# - "Still not applied after 15 asks": a migration in the commit is not
+#   on live. Either nobody has pressed Approve on the "Apply migrations"
+#   run, or the `APPLY_MIGRATIONS` repository variable is not `on` and
+#   that workflow did nothing (then apply by hand — CLAUDE.md,
+#   "Supabase"). The lines above the error name the files.
+# - "The project answered 401" (or 403): SUPABASE_ACCESS_TOKEN has
+#   expired or cannot read the project. Replace the secret
+#   (`deploy-functions.yml` has where it comes from). The drift job and
+#   the function deploy use the same token and will be red with it.
+# - "The project answered 5xx": the Management API, after three asks.
+#   Re-run; nothing here is wrong.
+# - "came back empty or unreadable": the API answered 200 with no
+#   history. Re-run; if it repeats, the project is paused or the query
+#   is being refused — look at the project before anything else.
+#
+# A step that never ends is not this one: it stops itself after
+# `tries` × 2 minutes.
 
 name: Wait for migrations
 description: Wait until every migration in this commit is on the live project.
