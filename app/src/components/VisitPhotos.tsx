@@ -14,6 +14,14 @@
 // slop, the size the cover's camera disc settled at for something small
 // over a picture (`PHOTO_DISC`'s reasoning, at the scale of a tile).
 //
+// Everything drawn over the picture — the ✕, the spinner, the retry
+// arrow — takes `onPhoto`, never `colors`: its ground is a dark scrim
+// on a photograph in both themes. It took `colors.text` until 25 Nov
+// 2026, which on the paper theme is near-black ink on the near-black
+// disc, and the ✕ all but vanished (the owner's screenshot, the light
+// sheet over Omu-Ba). The disc wears the photo discs' hairline too, so
+// it holds its edge over a dark photo as well as a light one.
+//
 // A hidden photo — taken down by the desk — is drawn as a gap with the
 // eye struck through: its owner should know it is gone and why the place
 // is still taken, and may clear it.
@@ -22,7 +30,7 @@ import React from 'react';
 import { ActivityIndicator, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import { Image } from 'expo-image';
 import { useI18n } from '../lib/i18n';
-import { colors, font, space } from '../theme';
+import { colors, font, onPhoto, space } from '../theme';
 import { PressableScale } from './ui';
 import { Glyph, ICON } from './ui/glyph';
 import type { Tile, VisitPhotos as Photos } from './useVisitPhotos';
@@ -81,10 +89,10 @@ function PhotoTile({ tile, n, photos, box }: { tile: Tile; n: number; photos: Ph
       >
         {tile.uri ? <Image source={{ uri: tile.uri }} style={box} contentFit="cover" aria-hidden /> : null}
         {tile.state === 'sending' ? (
-          <View style={s.over}><ActivityIndicator color={colors.text} /></View>
+          <View style={s.over}><ActivityIndicator color={onPhoto.text} /></View>
         ) : null}
         {failed ? (
-          <View style={s.over}><Glyph name="refresh" size={ICON.action} color={colors.text} /></View>
+          <View style={s.over}><Glyph name="refresh" size={ICON.action} color={onPhoto.text} /></View>
         ) : null}
         {tile.state === 'hidden' ? (
           <View style={s.gap}><Glyph name="eye-off-outline" size={ICON.action} color={colors.textTertiary} /></View>
@@ -101,7 +109,7 @@ function PhotoTile({ tile, n, photos, box }: { tile: Tile; n: number; photos: Ph
           accessibilityLabel={t(`Remove photo ${n}`, `Bỏ ảnh ${n}`, `写真 ${n} を削除`, `删除照片 ${n}`, `刪除照片 ${n}`)}
           testID="visit-photo-remove"
         >
-          <Glyph name="close" size={ICON.meta} color={colors.text} />
+          <Glyph name="close" size={ICON.meta} color={onPhoto.text} />
         </PressableScale>
       )}
     </View>
@@ -119,5 +127,8 @@ const s = StyleSheet.create({
   over: { ...StyleSheet.absoluteFill, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(6,5,8,0.45)' },
   gap: { ...StyleSheet.absoluteFill, alignItems: 'center', justifyContent: 'center' },
   xAt: { position: 'absolute', top: 4, right: 4 },
-  x: { width: 24, height: 24, borderRadius: 12, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(6,5,8,0.62)' },
+  x: {
+    width: 24, height: 24, borderRadius: 12, alignItems: 'center', justifyContent: 'center',
+    backgroundColor: 'rgba(6,5,8,0.62)', borderWidth: StyleSheet.hairlineWidth, borderColor: onPhoto.line,
+  },
 });
