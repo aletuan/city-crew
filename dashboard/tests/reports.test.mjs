@@ -80,8 +80,9 @@ test('the preview carries the words being judged', () => {
 // ---- three kinds (C8): a comment is not a profile.
 
 test('each kind the table allows has a name and a mark of its own', () => {
-  assert.deepEqual(Object.keys(KIND).sort(), ['checkin_photo', 'collection', 'comment', 'profile']);
-  assert.equal(new Set(Object.values(KIND).map((k) => k.icon)).size, 4);
+  assert.deepEqual(Object.keys(KIND).sort(), ['checkin', 'checkin_photo', 'collection', 'comment', 'profile']);
+  assert.equal(new Set(Object.values(KIND).map((k) => k.icon)).size, 5);
+  assert.deepEqual(kindOf(row({ kind: 'checkin' })), { label: 'check-in', icon: 'pin' });
   assert.deepEqual(kindOf(row({ kind: 'checkin_photo' })), { label: 'check-in photo', icon: 'photo' });
   assert.deepEqual(kindOf(row({ kind: 'comment' })), { label: 'comment', icon: 'balloon' });
   assert.deepEqual(kindOf(row({ kind: 'collection' })), { label: 'collection', icon: 'list' });
@@ -89,7 +90,7 @@ test('each kind the table allows has a name and a mark of its own', () => {
 });
 
 test('a kind this build has not heard of is named as itself, not taken for a profile', () => {
-  assert.deepEqual(kindOf(row({ kind: 'checkin' })), { label: 'checkin', icon: 'alert' });
+  assert.deepEqual(kindOf(row({ kind: 'moment' })), { label: 'moment', icon: 'alert' });
   assert.deepEqual(kindOf(row({ kind: null })), { label: 'unknown', icon: 'alert' });
 });
 
@@ -104,6 +105,10 @@ test('a comment is judged by what was said; the list it is on stands beside it',
   const p = row({ kind: 'checkin_photo', title: 'Cộng Cà Phê', body: 'look at this' });
   assert.equal(previewOf(p), 'look at this');
   assert.equal(placeOf(p), 'Cộng Cà Phê');
+  // A check-in reported whole: the same — the note judged, the place where.
+  const v = row({ kind: 'checkin', title: 'Omu-Ba', body: 'buy my course' });
+  assert.equal(previewOf(v), 'buy my course');
+  assert.equal(placeOf(v), 'Omu-Ba');
   // The other kinds have no "where": their title is part of what is judged.
   assert.equal(placeOf(row({ kind: 'collection', title: 'Best cafés' })), '');
 });

@@ -306,6 +306,75 @@ describe('Reports', () => {
     expect(screen.queryByAltText('Reported check-in photo')).toBeNull();
   });
 
+  // A check-in reported whole (20261126090000).
+  const VISITS = [
+    {
+      id: 'r-visit', kind: 'checkin', reason: 'spam', status: 'new', created_at: ago(3),
+      target_id: 'k1', owner_id: 'u8', owner_handle: 'lan', title: 'Omu-Ba', body: 'buy my course',
+      visit_photos: [{ id: 'ph1', path: 'u8/k1/ph1.jpg', hidden: false }, { id: 'ph2', path: 'u8/k1/ph2.jpg', hidden: true }],
+      visit_hidden: false, visit_note_hidden: false, visit_audience: 'public',
+    },
+    {
+      id: 'r-visit-down', kind: 'checkin', reason: 'offensive', status: 'new', created_at: ago(2),
+      target_id: 'k2', owner_id: 'u8', owner_handle: 'lan', title: 'Omu-Ba', body: null,
+      visit_photos: [], visit_hidden: true, visit_note_hidden: true, visit_audience: 'friends',
+    },
+  ];
+
+  it('draws a reported check-in whole: its note, its place, every photo, and what can come down', async () => {
+    api.reports.mockResolvedValue(VISITS.slice(0, 1));
+    renderDesk('/reports');
+    const card = (await screen.findByText('buy my course')).closest('section');
+    expect(card.querySelector('.repkind').textContent).toBe('check-in');
+    expect(within(card).getByText('on “Omu-Ba”')).toBeTruthy();
+    const imgs = await within(card).findAllByAltText('Reported check-in photo');
+    expect(imgs.map((i) => [i.getAttribute('src'), i.className])).toEqual([
+      ['https://signed/u8/k1/ph1.jpg', 'repphoto'], ['https://signed/u8/k1/ph2.jpg', 'repphoto off'],
+    ]);
+    expect(within(card).getAllByRole('button').map((b) => b.textContent)).toEqual([
+      'Hide the photo', 'Put the photo back', 'Hide the note', 'Hide the check-in', 'Suspend the account', 'Nothing wrong',
+    ]);
+  });
+
+  it('hides the note, one photo, or the whole, and marks the report after each', async () => {
+    api.reports.mockResolvedValue(VISITS.slice(0, 1));
+    renderDesk('/reports');
+    await screen.findByText('buy my course');
+    fireEvent.click(screen.getByRole('button', { name: 'Hide the note' }));
+    expect((await findToast()).textContent).toBe('Note hidden');
+    expect(api.moderateCheckin).toHaveBeenLastCalledWith('k1', 'note', true);
+    expect(api.markReport).toHaveBeenLastCalledWith('r-visit', 'actioned');
+    fireEvent.click(screen.getAllByRole('button', { name: 'Hide the photo' })[0]);
+    await waitFor(() => expect(api.moderateCheckinPhoto).toHaveBeenLastCalledWith('ph1', true));
+    fireEvent.click(screen.getByRole('button', { name: 'Hide the check-in' }));
+    await waitFor(() => expect(api.moderateCheckin).toHaveBeenLastCalledWith('k1', 'visit', true));
+  });
+
+  it('puts a hidden photo of the visit back, and offers no note to hide where there is none', async () => {
+    api.reports.mockResolvedValue([{ ...VISITS[0], body: null }]);
+    renderDesk('/reports');
+    const card = (await screen.findAllByAltText('Reported check-in photo'))[0].closest('section');
+    expect(within(card).queryByRole('button', { name: 'Hide the note' })).toBeNull();
+    fireEvent.click(within(card).getByRole('button', { name: 'Put the photo back' }));
+    expect((await findToast()).textContent).toBe('Photo put back');
+    expect(api.moderateCheckinPhoto).toHaveBeenCalledWith('ph2', false);
+    expect(api.markReport).toHaveBeenCalledWith('r-visit', 'dismissed');
+  });
+
+  it('says what is down already, and puts it back as an answer of nothing wrong', async () => {
+    api.reports.mockResolvedValue(VISITS.slice(1));
+    renderDesk('/reports');
+    const card = (await screen.findByText(/whole check-in is hidden/)).closest('section');
+    expect(within(card).getByText(/note is hidden/)).toBeTruthy();
+    expect(within(card).getAllByRole('button').map((b) => b.textContent)).toEqual([
+      'Put the note back', 'Put the check-in back', 'Suspend the account', 'Nothing wrong',
+    ]);
+    fireEvent.click(within(card).getByRole('button', { name: 'Put the check-in back' }));
+    expect((await findToast()).textContent).toBe('Check-in put back');
+    expect(api.moderateCheckin).toHaveBeenCalledWith('k2', 'visit', false);
+    expect(api.markReport).toHaveBeenCalledWith('r-visit-down', 'dismissed');
+  });
+
   it('points at the banned words, which have a page of their own', async () => {
     renderDesk('/reports');
     await screen.findByText(/Nothing reported/);

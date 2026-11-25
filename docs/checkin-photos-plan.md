@@ -227,6 +227,13 @@ Mỗi bước một PR, theo thứ tự. Cờ `checkin_photos` tắt suốt cả
   `position`, tối đa 3). Màn hình mở quá một giờ giữ link cũ: chỉ ảnh
   chưa có trong cache mới hỏng, tới lần kéo làm mới tiếp theo — đã cân
   nhắc và bỏ hẹn giờ ký lại cho mỗi màn hình.
+- **Sau K5 — báo cáo cả lần check-in (owner, 25/11/2026).** Khi ghi chú
+  có thể Công khai, owner chọn một báo cáo cho cả check-in (ghi chú và
+  ảnh là một bài đăng, như collection, như Threads) thay vì báo cáo từng
+  ảnh; nút cờ trong trình xem ảnh bị bỏ, chỉ còn ⋯ trên thẻ. Ban biên
+  tập ẩn ghi chú, một ảnh, hoặc cả lần check-in; chỉ chủ còn thấy, có
+  nhãn City Crew đã ẩn. Loại `checkin_photo` giữ cho báo cáo cũ
+  (`20261126090000_checkin_report.sql`).
 - **K5. Kiểm duyệt và pháp lý — xong (25/11/2026).** Báo cáo, ẩn ở Data
   Desk, khoá tài khoản, `legal.ts` (xuất dữ liệu đã làm riêng).
   Đã làm: `20261125120000_checkin_photo_desk.sql` — `reports.kind` thêm

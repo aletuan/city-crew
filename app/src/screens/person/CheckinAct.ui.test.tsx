@@ -547,41 +547,57 @@ describe('a visit’s own photos', () => {
   });
 });
 
-// K5: a friend's photo carries a flag to the desk; your own does not.
-describe('reporting a photo', () => {
+// A check-in is reported whole, from the ⋯ on somebody else's card
+// (25 Nov 2026); the viewer's flag (K5) is gone.
+describe('reporting a check-in', () => {
   const ph = (id: string) => ({ id, path: `lan/k1/${id}.jpg`, width: 1200, height: 900 });
-  const WITH = visit('k1', { photos: [ph('p1'), ph('p2')] });
-  const open = async (me: string, person: FriendProfile) => {
-    flags.checkin_photos = true;
-    await show(me, person, [WITH]);
-    await act(async () => { for (let i = 0; i < 6; i += 1) await Promise.resolve(); });
-    fireEvent.click(screen.getAllByTestId('activity-photo')[0]);
-  };
 
-  it('closes the viewer, then asks why, then files the photo shown', async () => {
+  it('asks what about it from the card’s ⋯, then why, then files the visit', async () => {
     vi.useFakeTimers({ toFake: ['setTimeout'] });
     try {
-      await open('me', LAN);
-      act(() => { (propsWhere((p) => 'onIndex' in p).onIndex as (i: number) => void)(1); });
-      expect(screen.getByTestId('photo-viewer-report').getAttribute('aria-label')).toBe('Report photo');
-      fireEvent.click(screen.getByTestId('photo-viewer-report'));
-      expect(screen.queryByTestId('photo-viewer')).toBeNull();
-      // Not yet: the viewer is still going.
-      expect(screen.queryByTestId('sheet-action-offensive')).toBeNull();
+      await show('me', LAN, [visit('k1', { audience: 'public' })]);
+      const more = screen.getByTestId('activity-more');
+      expect(more.getAttribute('aria-label')).toBe('More about this check-in');
+      fireEvent.click(more);
+      fireEvent.click(screen.getByTestId('sheet-action-report'));
       act(() => { vi.advanceTimersByTime(220); });
-      expect(screen.getByTestId('sheet-action-offensive')).toBeTruthy();
-      fireEvent.click(screen.getByTestId('sheet-action-offensive'));
+      fireEvent.click(screen.getByTestId('sheet-action-spam'));
       act(() => { vi.advanceTimersByTime(220); });
     } finally {
       vi.useRealTimers();
     }
     await act(async () => { await Promise.resolve(); });
-    expect(data.submitReport).toHaveBeenCalledWith({ reporter: 'me', kind: 'checkin_photo', targetId: 'p2', reason: 'offensive' });
+    expect(data.submitReport).toHaveBeenCalledWith({ reporter: 'me', kind: 'checkin', targetId: 'k1', reason: 'spam' });
   });
 
-  it('carries no flag on your own photos', async () => {
-    await open('me', ME);
+  it('carries no ⋯ on your own visits, and the viewer no flag on anybody’s', async () => {
+    flags.checkin_photos = true;
+    await show('me', ME, [visit('k1', { audience: 'public', photos: [ph('p1')] })]);
+    expect(screen.queryByTestId('activity-more')).toBeNull();
+    cleanup();
+    await show('me', LAN, [visit('k1', { photos: [ph('p1')] })]);
+    await act(async () => { for (let i = 0; i < 6; i += 1) await Promise.resolve(); });
+    fireEvent.click(screen.getAllByTestId('activity-photo')[0]);
     expect(screen.getByTestId('photo-viewer')).toBeTruthy();
     expect(screen.queryByTestId('photo-viewer-report')).toBeNull();
+  });
+
+  it('offers nothing to somebody signed out', async () => {
+    await show(null, LAN, [visit('k1')]);
+    expect(screen.queryByTestId('activity-more')).toBeNull();
+  });
+});
+
+describe('what the desk took down, on your own page', () => {
+  it('marks a hidden visit, and says a hidden note was hidden', async () => {
+    await show('me', ME, [
+      visit('k1', { audience: 'public', hidden: true }),
+      visit('k2', { audience: 'public', note: 'Mine.', note_hidden: true }),
+    ]);
+    const [a, b] = cards();
+    expect(within(a).getByTestId('activity-mark').getAttribute('aria-label')).toBe('Hidden by City Crew');
+    expect(within(a).queryByTestId('person-visit-note-hidden')).toBeNull();
+    expect(within(b).getByTestId('activity-mark').getAttribute('aria-label')).toBe('Public');
+    expect(within(b).getByTestId('person-visit-note-hidden').textContent).toBe('City Crew hid this note from others.');
   });
 });

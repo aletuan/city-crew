@@ -156,7 +156,7 @@ export default function Reports() {
               {r.kind === 'profile' && r.wall_kind === 'upload' && r.wall_ref ? (
                 <img className="repwall" src={r.wall_ref} alt="Uploaded cover" />
               ) : null}
-              <ReportedPhoto row={r} />
+              <ReportedPhoto row={r} busy={busy === r.id} act={act} done={gone} />
               {r.kind === 'profile' && r.wall_kind && r.wall_kind !== 'upload' ? (
                 <p className="repnote">Cover: {r.wall_kind} {r.wall_ref}</p>
               ) : null}
@@ -262,7 +262,9 @@ export default function Reports() {
  * bucket is private, so the path in the queue is not a picture until
  * Storage signs it. Dimmed, and said, when it is already down.
  */
-function ReportedPhoto({ row }) {
+function ReportedPhoto({ row, busy, act, done }) {
+  // A check-in reported whole draws all of itself — `ReportedVisit`.
+  if (row.kind === 'checkin') return <ReportedVisit row={row} busy={busy} act={act} done={done} />;
   return row.kind === 'checkin_photo' && row.photo_path
     ? <SignedPhoto path={row.photo_path} hidden={row.photo_hidden} />
     : null;
@@ -285,9 +287,71 @@ function SignedPhoto({ path, hidden }) {
   );
 }
 
+/**
+ * A check-in reported whole: its photos, each with its own hide or put
+ * back while the report is open, and what is down already said. The
+ * photos the queue sends include the hidden ones, so one can be put back.
+ */
+function ReportedVisit({ row, busy, act, done }) {
+  if (row.kind !== 'checkin') return null;
+  const photos = row.visit_photos ?? [];
+  return (
+    <>
+      {row.visit_hidden ? <p className="repnote">The whole check-in is hidden — only its owner sees it.</p> : null}
+      {row.visit_note_hidden ? <p className="repnote">The note is hidden — only its owner sees it.</p> : null}
+      {row.visit_audience ? <p className="repnote">Seen by: {row.visit_audience}</p> : null}
+      {photos.map((ph) => (
+        <div key={ph.id} className="repvisitphoto">
+          <SignedPhoto path={ph.path} hidden={ph.hidden} />
+          {done ? null : (
+            <button
+              type="button"
+              className={`syncbtn${ph.hidden ? '' : ' danger'}`}
+              disabled={busy}
+              onClick={() => (ph.hidden
+                ? act(row, 'Photo put back', () => api.moderateCheckinPhoto(ph.id, false), 'dismissed')
+                : act(row, 'Photo hidden', () => api.moderateCheckinPhoto(ph.id, true)))}
+            >
+              {ph.hidden ? 'Put the photo back' : 'Hide the photo'}
+            </button>
+          )}
+        </div>
+      ))}
+    </>
+  );
+}
+
+/** The note and the whole visit, each hidden or put back — putting back
+ *  is the desk finding nothing wrong, and is answered as that. */
+function VisitAct({ row, busy, act }) {
+  if (row.kind !== 'checkin') return null;
+  const one = (part, down, hideLabel, backLabel, hidden, back) => (
+    <button
+      type="button"
+      className={`syncbtn${down ? '' : ' danger'}`}
+      disabled={busy}
+      onClick={() => (down
+        ? act(row, back, () => api.moderateCheckin(row.target_id, part, false), 'dismissed')
+        : act(row, hidden, () => api.moderateCheckin(row.target_id, part, true)))}
+    >
+      {down ? backLabel : hideLabel}
+    </button>
+  );
+  return (
+    <>
+      {row.body || row.visit_note_hidden
+        ? one('note', row.visit_note_hidden, 'Hide the note', 'Put the note back', 'Note hidden', 'Note put back')
+        : null}
+      {one('visit', row.visit_hidden, 'Hide the check-in', 'Put the check-in back', 'Check-in hidden', 'Check-in put back')}
+    </>
+  );
+}
+
 /** Hide a reported photo, or put back one already down — the second is
  *  the desk finding nothing wrong with it, and is answered as that. */
 function PhotoAct({ row, busy, act }) {
+  // A check-in reported whole has acts of its own — `VisitAct`.
+  if (row.kind === 'checkin') return <VisitAct row={row} busy={busy} act={act} />;
   if (row.kind !== 'checkin_photo' || !row.photo_path) return null;
   const down = row.photo_hidden;
   return (

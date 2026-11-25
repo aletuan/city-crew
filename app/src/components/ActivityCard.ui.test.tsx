@@ -141,3 +141,23 @@ describe('what a card draws under its words', () => {
     expect(screen.queryByTestId('under-it')).toBeNull();
   });
 });
+
+describe('the ⋯ at the head', () => {
+  it('is not drawn unless handed, and says what it was told to', () => {
+    show();
+    expect(screen.queryByTestId('activity-more')).toBeNull();
+    cleanup();
+    const onPress = vi.fn();
+    render(
+      <ActivityCard
+        who="Lan" did=" checked in" title="Omu-Ba" meta=""
+        liked={false} likes={0} onOpen={() => {}}
+        onMore={{ onPress, label: 'More about this check-in' }}
+      />,
+    );
+    const more = screen.getByTestId('activity-more');
+    expect(more.getAttribute('aria-label')).toBe('More about this check-in');
+    fireEvent.click(more);
+    expect(onPress).toHaveBeenCalledTimes(1);
+  });
+});

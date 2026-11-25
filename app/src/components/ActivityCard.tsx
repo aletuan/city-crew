@@ -137,7 +137,7 @@ function CopyFoot({ copy }: { copy: CardCopy }) {
 export type CardPhoto = { pages: readonly { uri: string; cacheKey: string }[]; onPress: (i: number) => void };
 
 export default function ActivityCard({
-  face, who, did, when, mark, title, uri, photo, meta, desc, under, liked, likes, onOpen, onHeart, comments, onComments, commentsOff, copy, testID,
+  face, who, did, when, mark, title, uri, photo, meta, desc, under, liked, likes, onOpen, onHeart, comments, onComments, commentsOff, copy, onMore, testID,
 }: {
   /** Whose face, as `Avatar` takes it. */
   face?: string | null;
@@ -186,6 +186,10 @@ export default function ActivityCard({
    *  `components/CopyCount`. Only beside `onHeart`, as the comments are:
    *  a public collection's. */
   copy?: CardCopy;
+  /** The card's ⋯, at the head's end: what can be done about the thing
+   *  (a check-in's report, 25 Nov 2026). `label` is what VoiceOver says.
+   *  Absent, the head is the face and the words to its edge. */
+  onMore?: { onPress: () => void; label: string };
   testID?: string;
 }) {
   const { t } = useI18n();
@@ -209,6 +213,22 @@ export default function ActivityCard({
             ) : null}
           </View>
         </View>
+        {/* The comment row's ⋯ (`CommentRow`), for its reason: quiet ink,
+            because it is on every card of somebody else's and a column of
+            them at full ink would be louder than the names; 44 to the
+            thumb by its slop, the glyph's 18 and 13 a side. */}
+        {onMore ? (
+          <PressableScale
+            onPress={onMore.onPress}
+            haptic="selection"
+            hitSlop={{ top: 13, bottom: 13, left: 13, right: 13 }}
+            accessibilityRole="button"
+            accessibilityLabel={onMore.label}
+            testID="activity-more"
+          >
+            <Glyph name="ellipsis-horizontal" size={ICON.action} color={colors.textTertiary} />
+          </PressableScale>
+        ) : null}
       </View>
       {photo ? <PhotoPress photo={photo} /> : null}
       <PressableScale

@@ -343,6 +343,11 @@ export type PersonCheckin = {
   /** The visit's photos the reader may see, in order: none hidden, at
    *  most three. Absent on a row the cache kept from before they rode. */
   photos?: CheckinPhoto[];
+  /** The desk hid the visit, or its note (`20261126090000_checkin_report.sql`).
+   *  Only ever true on your own page: nobody else is sent a hidden visit,
+   *  or a hidden note. Absent on a row the cache kept from before. */
+  hidden?: boolean;
+  note_hidden?: boolean;
 };
 
 // ── photos on a visit (K3 of docs/checkin-photos-plan.md) ──

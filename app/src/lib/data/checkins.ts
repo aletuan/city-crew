@@ -137,6 +137,8 @@ export async function fetchPersonCheckins(personId: string): Promise<PersonCheck
     likes: typeof r.likes === 'number' ? r.likes : 0,
     liked: r.liked === true,
     photos: visitPhotosOf(r.photos),
+    hidden: r.hidden === true,
+    note_hidden: r.note_hidden === true,
   }));
 }
 

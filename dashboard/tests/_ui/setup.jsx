@@ -50,6 +50,7 @@ const API_DEFAULTS = {
   moderateProfile: async () => {},
   moderateComment: async () => {},
   moderateCheckinPhoto: async () => {},
+  moderateCheckin: async () => {},
   signCheckinPhoto: async (path) => `https://signed/${path}`,
   bannedWords: async () => [],
   addBannedWords: async () => {},
