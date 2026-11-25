@@ -58,6 +58,7 @@ const DIFFERENT: Record<string, string> = {
   tonight: 'a plan heading: this evening, and today (a plan that has already started)',
   Clear: 'clear a text field, and clear a filter',
   'Check-ins': 'the heading of a list of places, and a count on the profile',
+  List: 'a way of laying a collection out ("as a list"), and the list of places the map goes back to (vi only)',
   'Sign up': 'a link on the sign-in screen, and the button on the sign-up screen (ja only)',
 };
 

@@ -190,17 +190,34 @@ export const s = StyleSheet.create({
   // the thing that gets pressed, which is why the two are separate — see
   // `PressableScale` on where a width has to live.
   viewBtnSlot: { marginLeft: 'auto' },
-  // Words and a glyph, with no pill behind them (owner, 24 Oct 2026):
-  // the words already say it is a button. The padding stays, because it
-  // and the 6pt slop are what make the target 44pt tall.
+  // A pill again (owner, 25 Nov 2026). It went on 24 Oct 2026 — "the
+  // words already say it is a button" — and came back when the words in
+  // the quiet grey, beside the filter's glyph in the same grey, read as
+  // a caption to the heading rather than a way somewhere. A pale ground
+  // and a hairline, lighter than the heading it sits beside; the filled
+  // version was weighed for this state and left for the map (below),
+  // because here it was the heaviest thing in the row, which is what
+  // took the filter's disc away. A chip's height (`CHIP_H`, 32), and the
+  // 6pt slop makes the target 44.
   viewBtn: {
     flexDirection: 'row', alignItems: 'center', gap: 6,
-    paddingHorizontal: 12, paddingVertical: 7,
+    paddingHorizontal: 14, height: CHIP_H, borderRadius: radius.pill,
+    backgroundColor: colors.surfaceGlassStrong,
+    borderWidth: StyleSheet.hairlineWidth, borderColor: colors.borderGlass,
   },
-  // Neutral in both states. Coral in this app means a filter is on, and
+  // Over the map: ink, filled. The way back is the one thing on that
+  // screen a reader must be able to find, over a ground of streets and
+  // pins, and the fill is also what says the map is the mode they are
+  // in. Ink and not coral: coral in this app means a filter is on, and
   // spending it here would say the list has been narrowed when all that
-  // happened is the reader opened a map.
-  viewBtnText: { color: colors.textSecondary, fontSize: 13, fontWeight: font.semibold },
+  // happened is the reader opened a map. The primary button's pair
+  // (`ReminderAskSheet`): `text` under `bg`, so it turns over with the
+  // theme.
+  // The hairline goes clear under the fill, its width kept so the pill
+  // does not change size between the two views.
+  viewBtnOn: { backgroundColor: colors.text, borderColor: 'transparent' },
+  viewBtnText: { color: colors.text, fontSize: 13, fontWeight: font.semibold },
+  viewBtnTextOn: { color: colors.bg },
   // On the glyph's shoulder rather than the box's corner: with no disc
   // the box is invisible, and a badge at its corner floated 8pt off the
   // mark it counts. The glyph is 19pt in the 36pt box, so its top-right

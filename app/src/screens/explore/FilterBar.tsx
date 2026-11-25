@@ -95,10 +95,15 @@ export function FilterBar({
           // screen lives; the map is somewhere it goes and comes back
           // from, and the way back has to say so — a reader who could
           // find the map and not the way out is the failure this fixes.
-          // So the way in is one word, "Map", and the way out keeps its
-          // verb: "Close Map" is the half that was ever in doubt.
+          // So the way in is one word, "Map" — and since 25 Nov 2026 the
+          // way out is one too, "List" (owner): it says where the press
+          // goes, which "Close Map" left the reader to work out. What
+          // made the verb necessary was that the way out looked like
+          // nothing; it is now the one filled pill on the screen (see
+          // `viewBtnOn`), and a filled pill naming the other view is the
+          // switch every map app has taught.
           <PressableScale
-            contentStyle={s.viewBtn}
+            contentStyle={[s.viewBtn, mapMode && s.viewBtnOn]}
             style={s.viewBtnSlot}
             scaleTo={0.94}
             haptic="selection"
@@ -106,18 +111,18 @@ export function FilterBar({
             onPress={() => pickView(mapMode ? 'list' : 'map')}
             accessibilityRole="button"
             accessibilityLabel={mapMode
-              ? t('Close Map', 'Đóng bản đồ', '地図を閉じる', '关闭地图', '關閉地圖')
+              ? t('List', 'Danh sách', 'リスト', '列表', '列表')
               : t('Map', 'Bản đồ', '地図', '地图', '地圖')}
             testID={floating ? 'explore-view-pinned' : 'explore-view'}
           >
             <Glyph
-              name={mapMode ? 'close' : 'map-outline'}
+              name={mapMode ? 'list-outline' : 'map-outline'}
               size={ICON.text}
-              color={colors.textSecondary}
+              color={mapMode ? colors.bg : colors.text}
             />
-            <Text style={s.viewBtnText}>
+            <Text style={[s.viewBtnText, mapMode && s.viewBtnTextOn]}>
               {mapMode
-                ? t('Close Map', 'Đóng bản đồ', '地図を閉じる', '关闭地图', '關閉地圖')
+                ? t('List', 'Danh sách', 'リスト', '列表', '列表')
                 : t('Map', 'Bản đồ', '地図', '地图', '地圖')}
             </Text>
           </PressableScale>
