@@ -44,6 +44,7 @@ describe('flagsStore', () => {
       city_place_counts: false,
       comments: false,
       checkin_photos: false,
+      checkin_public: false,
     });
   });
 

@@ -75,10 +75,13 @@ export type Checkin = {
   photos?: CheckinPhoto[];
 };
 
-/** Who a visit is shown to. Two answers, not the collections' three: a
- *  visit says where a person was and when, and strangers see less than
- *  friends (`docs/collection-feed-plan.md`, principle 5). */
-export type Audience = 'private' | 'friends';
+/** Who a visit is shown to. Two answers until 25 Nov 2026, when the
+ *  owner added the collections' third: Public, anybody signed in
+ *  (`20261125200000_checkin_public.sql`). Strangers still see no more
+ *  than friends do (`docs/collection-feed-plan.md`, principle 5) — the
+ *  place, the day, the note, the photos — and Public is never assumed
+ *  (`nextAudience`). Offered on the sheet behind `checkin_public`. */
+export type Audience = 'private' | 'friends' | 'public';
 
 /**
  * Whether the sheet asks who sees the visit. On since the change that
@@ -106,7 +109,8 @@ export const audienceOf = (v: Pick<Checkin, 'audience'>): Audience => v.audience
 
 /**
  * The answer a new visit's sheet opens on: the last one the reader gave,
- * and Friends before they have given any.
+ * and Friends before they have given any — and Friends after a Public
+ * one.
  *
  * Friends first because a visit kept to oneself is what the app had for
  * six weeks and the count on the page was the whole of it; the point of
@@ -124,7 +128,12 @@ export function nextAudience(rows: readonly Checkin[]): Audience {
     if (!r.audience) continue;
     if (!best || r.at > best.at) best = r;
   }
-  return best?.audience ?? 'friends';
+  // Public is chosen on the visit's own sheet, each time. Remembered, a
+  // reader who shared one café with everybody would share where they
+  // are tomorrow with everybody without looking, and a visit is where a
+  // person was; Friends is the widest answer a sheet opens on.
+  const last = best?.audience ?? 'friends';
+  return last === 'public' ? 'friends' : last;
 }
 
 /** A note as it is stored: trimmed, cut to the bound, and null when

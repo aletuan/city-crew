@@ -26,10 +26,13 @@
 //
 // ── who sees it ──
 //
-// Two answers, Only me and Friends (`Audience`); never everyone. Drawn
-// when the caller asks (`withAudience`), which every caller has since
-// friends had somewhere to see a visit — `AUDIENCE_ON` in `lib/checkin`.
-// Without it nothing is written about who sees the visit.
+// Only me and Friends (`Audience`), and Public behind `checkin_public`
+// (owner, 25 Nov 2026) — or on a visit already answered Public, so that
+// a sheet opened to fix a word with the flag off does not offer two
+// answers and quietly write one of them. Drawn when the caller asks
+// (`withAudience`), which every caller has since friends had somewhere
+// to see a visit — `AUDIENCE_ON` in `lib/checkin`. Without it nothing is
+// written about who sees the visit.
 //
 // A fresh sheet opens on the reader's last answer (`nextAudience`) and
 // writes the answer as it closes, changed or not: that write is what
@@ -146,6 +149,7 @@ function Body({ visit, onClose, withAudience, backRef }: {
   const [busy, setBusy] = useState(false);
   const photosOn = useFlag('checkin_photos');
   const photos = useVisitPhotos(visit.id, photosOn, !visit.fresh);
+  const publicOn = useFlag('checkin_public') || visit.audience === 'public';
 
   // 1 → 0: the sheet up from under the foot, and the tick from small.
   const rise = useRef(new Animated.Value(1)).current;
@@ -167,7 +171,7 @@ function Body({ visit, onClose, withAudience, backRef }: {
     setBusy(true);
     try {
       await saveCheckin(visit.id, answered ? { note, audience } : { note });
-      onClose(true, answered && audience === 'friends');
+      onClose(true, answered && audience !== 'private');
     } catch (e) {
       setBusy(false);
       Alert.alert(
@@ -184,9 +188,11 @@ function Body({ visit, onClose, withAudience, backRef }: {
   };
   useEffect(() => { backRef.current = leave; });
 
-  const gloss = audience === 'friends'
-    ? t('Your friends see the place, the day and your note.', 'Bạn bè thấy địa điểm, ngày ghé và ghi chú của bạn.', '友達には場所・日付・メモが表示されます。', '好友可以看到地点、日期和你的备注。', '好友可以看到地點、日期和你的備註。')
-    : t('Nobody else sees this visit.', 'Không ai khác thấy lần ghé này.', 'この訪問は他の人には表示されません。', '其他人看不到这次打卡。', '其他人看不到這次打卡。');
+  const gloss = audience === 'public'
+    ? t('Anyone signed in sees the place, the day and your note on your page.', 'Bất kỳ ai đã đăng nhập đều thấy địa điểm, ngày ghé và ghi chú trên trang của bạn.', 'ログインしている人なら誰でも、あなたのページで場所・日付・メモを見られます。', '任何已登录的人都能在你的主页看到地点、日期和你的备注。', '任何已登入的人都能在你的主頁看到地點、日期和你的備註。')
+    : audience === 'friends'
+      ? t('Your friends see the place, the day and your note.', 'Bạn bè thấy địa điểm, ngày ghé và ghi chú của bạn.', '友達には場所・日付・メモが表示されます。', '好友可以看到地点、日期和你的备注。', '好友可以看到地點、日期和你的備註。')
+      : t('Nobody else sees this visit.', 'Không ai khác thấy lần ghé này.', 'この訪問は他の人には表示されません。', '其他人看不到这次打卡。', '其他人看不到這次打卡。');
 
   return (
     <>
@@ -255,6 +261,7 @@ function Body({ visit, onClose, withAudience, backRef }: {
                   items={[
                     { key: 'private' as const, label: t('Only me', 'Chỉ mình tôi', '自分のみ', '仅自己', '僅自己'), icon: SEEN_GLYPH.private, testID: 'checkin-sheet-seen-private' },
                     { key: 'friends' as const, label: t('Friends', 'Bạn bè', '友達', '好友', '好友'), icon: SEEN_GLYPH.friends, testID: 'checkin-sheet-seen-friends' },
+                    ...(publicOn ? [{ key: 'public' as const, label: t('Public', 'Công khai', '公開', '公开', '公開'), icon: SEEN_GLYPH.public, testID: 'checkin-sheet-seen-public' }] : []),
                   ]}
                   chosen={audience}
                   onPick={setAudience}

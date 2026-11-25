@@ -302,6 +302,12 @@ describe('a friend’s visit', () => {
     expect(within(card).getByTestId('activity-likes').textContent).toBe('3');
   });
 
+  it('wears the globe when the read says the visit is public, and can still be hearted', async () => {
+    await show('me', LAN, [visit('k1', { audience: 'public' })]);
+    expect(screen.getByTestId('activity-mark').getAttribute('aria-label')).toBe('Public');
+    expect(screen.getByTestId('activity-heart')).toBeTruthy();
+  });
+
   it('is not theirs to edit: no pencil where there is no note, and no press on one there is', async () => {
     await show('me', LAN, [visit('k1'), visit('k2', { note: 'Theirs.' })]);
     expect(screen.queryByTestId('visit-note-add')).toBeNull();
@@ -367,6 +373,12 @@ describe('your own visits', () => {
       expect(within(card).getByTestId('activity-mark').getAttribute('aria-label')).toBe('Only me');
       expect(within(card).queryByTestId('activity-heart')).toBeNull();
     }
+  });
+
+  it('marks a public one with the globe, with its heart', async () => {
+    await show('me', ME, [visit('k1', { audience: 'public' })]);
+    expect(screen.getByTestId('activity-mark').getAttribute('aria-label')).toBe('Public');
+    expect(screen.getByTestId('activity-heart')).toBeTruthy();
   });
 
   it('marks a shared one as a friend sees it, with its heart', async () => {

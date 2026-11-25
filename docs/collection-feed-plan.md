@@ -35,6 +35,12 @@ marketing hay hạ tầng.
    lượt thích bộ sưu tập sẵn có.
 5. **Người lạ thấy ít hơn bạn bè.** Check-in và chuyến đi chỉ bạn bè
    (hoặc người trong chuyến) thấy.
+   *Sửa 25/11/2026 (owner):* một check-in có thể được chọn **Công khai**
+   — người đã đăng nhập nào cũng thấy. Phần còn lại của nguyên tắc vẫn
+   giữ: người lạ không thấy nhiều hơn bạn bè (địa điểm, ngày, ghi chú,
+   ảnh; không giờ), Công khai không bao giờ là lựa chọn mặc định, và
+   người chưa đăng nhập không thấy gì
+   (`supabase/migrations/20261125200000_checkin_public.sql`).
 6. **Chính sách quyền riêng tư (`app/src/lib/legal.ts`) là ràng buộc.**
    Bước nào hiện thêm dữ liệu cá nhân ra chỗ mới thì sửa chính sách
    trong cùng PR.

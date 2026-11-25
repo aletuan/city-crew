@@ -885,3 +885,13 @@ for f in "$ROOT"/supabase/migrations/*_checkin_photo_desk.sql; do
   run "$DB" -f "$f" >/dev/null
 done
 run "$DB" -f "$HERE/checkin_photo_desk_test.sql"
+
+# A public check-in (owner, 25 Nov 2026): the third answer, and the read,
+# the heart and the photos' policy that `checkin_seen` decides for all
+# three. After the desk, whose report policy already lets anybody who
+# sees a photo report it.
+echo "→ public check-ins"
+for f in "$ROOT"/supabase/migrations/*_checkin_public.sql; do
+  run "$DB" -f "$f" >/dev/null
+done
+run "$DB" -f "$HERE/checkin_public_test.sql"

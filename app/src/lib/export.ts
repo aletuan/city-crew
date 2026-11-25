@@ -158,7 +158,7 @@ export type ExportBundle = {
    * One the desk has hidden is not listed: it is not shown anywhere.
    */
   checkins: {
-    place_slug: string | null; city_id: string | null; at: string; note: string | null; seen_by: 'private' | 'friends';
+    place_slug: string | null; city_id: string | null; at: string; note: string | null; seen_by: 'private' | 'friends' | 'public';
     photos: { file: string; width: number; height: number }[];
   }[];
   places_added: { slug: string; name: string; submitted_at: string | null }[];
