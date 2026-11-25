@@ -85,6 +85,10 @@ export type Asked = {
    *  table with no update policy refuses the second kind outright — so a
    *  test of a write into one wants to see which was asked. */
   ignoreDuplicates?: boolean;
+  /** Where an Edge Function was asked to run, when the call named a
+   *  region — the place it runs decides how far each of its own calls
+   *  to the project travels (`data/checkinPhotos`). */
+  region?: string;
   /** The row cap, when one was asked for. A suggestion list that quietly
    *  stopped capping itself is a dropdown that grows without limit. */
   limit?: number;
@@ -250,8 +254,8 @@ export function fakeSupabase() {
         return settle();
       },
       functions: {
-        invoke: (fn: string, opts?: { body?: unknown }) => {
-          log.push({ fn, op: 'invoke', payload: opts?.body, filters: [] });
+        invoke: (fn: string, opts?: { body?: unknown; region?: string }) => {
+          log.push({ fn, op: 'invoke', payload: opts?.body, filters: [], ...(opts?.region ? { region: opts.region } : {}) });
           return settle();
         },
       },

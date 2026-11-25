@@ -9,9 +9,24 @@
 
 import type { CheckinPhoto } from '../checkin';
 import { PhotoError, photoRefusalOf } from '../checkin';
+import { FunctionRegion } from '@supabase/supabase-js';
 import { supabase } from '../supabase';
 
 const BUCKET = 'checkin-photos';
+
+/**
+ * Where `checkin-photo` runs: beside the database and the bucket, in
+ * Singapore (`ap-southeast-1`, the project's region), rather than wherever
+ * the edge sends a phone. From Hanoi that was Seoul (`ap-northeast-2`,
+ * every call in the logs of 24–25 Nov 2026), and an upload is five calls
+ * from the function to the project in turn — the user, the visit, the
+ * slot, the file, the row — each one crossing between the two. Measured
+ * there: 1.9, 2.7 and 4.4 s for three uploads of about 200 KB, and 1.97 s
+ * for a removal of 49 bytes, so most of it was not the photo.
+ * What Singapore takes instead is measured after this ships, from the
+ * same log (`execution_time_ms`), and written here.
+ */
+const NEAR_THE_DATA = { region: FunctionRegion.ApSoutheast1 };
 /**
  * How long a link lives: an hour. Long enough for a sheet or a page to be
  * looked at; short enough that a link copied out of the app stops working
@@ -67,7 +82,7 @@ async function refusal(error: unknown): Promise<PhotoError> {
 
 /** Send one photo, a base64 JPEG, to a visit of the reader's. */
 export async function uploadCheckinPhoto(checkinId: string, image: string): Promise<CheckinPhoto> {
-  const { data, error } = await supabase.functions.invoke('checkin-photo', { body: { checkin: checkinId, image } });
+  const { data, error } = await supabase.functions.invoke('checkin-photo', { body: { checkin: checkinId, image }, ...NEAR_THE_DATA });
   if (error) throw await refusal(error);
   const r = data as { id: string; path: string; width: number; height: number };
   return { id: r.id, path: r.path, width: r.width, height: r.height };
@@ -75,6 +90,6 @@ export async function uploadCheckinPhoto(checkinId: string, image: string): Prom
 
 /** Take one of the reader's photos away. */
 export async function removeCheckinPhoto(photoId: string): Promise<void> {
-  const { error } = await supabase.functions.invoke('checkin-photo', { body: { remove: photoId } });
+  const { error } = await supabase.functions.invoke('checkin-photo', { body: { remove: photoId }, ...NEAR_THE_DATA });
   if (error) throw await refusal(error);
 }

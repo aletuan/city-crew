@@ -33,6 +33,7 @@ import { NoticeProvider } from './src/lib/notice';
 import { FreshNewsProvider } from './src/lib/freshNews';
 import { SaveProvider } from './src/lib/save';
 import SaveSheets from './src/components/SaveSheets';
+import VisitUploads from './src/components/VisitUploads';
 import { colors } from './src/theme';
 import { fireHaptic } from './src/components/ui';
 import FloatingTabBar from './src/components/FloatingTabBar';
@@ -422,6 +423,9 @@ function Root() {
                     {/* The launch's switches, and again on sign in and out. */}
                     <FlagsSync />
                     <ReminderSync />
+                    {/* A check-in photo that lands, or fails, after its
+                        sheet has gone — see `components/VisitUploads`. */}
+                    <VisitUploads />
                     {/* Cuts every tab's stack back to its first screen
                         the moment a signed-in account ends — signed out,
                         or replaced — so a detail screen of the last

@@ -65,9 +65,10 @@
 // for the words: each goes up as it is picked and away as its removal
 // is confirmed (`useVisitPhotos` says why), so a tap outside an old
 // visit's sheet still leaves the note as it was and keeps the photos.
-// Every way out waits for one still going, with the button busy, and
-// reports the visit changed if a photo did — the page below is asked
-// again either way.
+// No way out waits for one still going (owner, 25 Nov 2026): it goes on
+// after the sheet (`lib/visitUploads`), and the page below is asked again
+// when it lands. A way out reports the visit changed if a photo went up
+// or away while the sheet was open.
 
 import React, { useEffect, useRef, useState } from 'react';
 import { Alert, Animated, Modal, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
@@ -145,12 +146,6 @@ function Body({ visit, onClose, withAudience, backRef }: {
   const [busy, setBusy] = useState(false);
   const photosOn = useFlag('checkin_photos');
   const photos = useVisitPhotos(visit.id, photosOn, !visit.fresh);
-  // A photo still going up holds every way out, the button busy meanwhile.
-  const waitPhotos = async () => {
-    if (!photos.sending) return;
-    setBusy(true);
-    await photos.settled();
-  };
 
   // 1 → 0: the sheet up from under the foot, and the tick from small.
   const rise = useRef(new Animated.Value(1)).current;
@@ -161,7 +156,6 @@ function Body({ visit, onClose, withAudience, backRef }: {
 
   const keep = async () => {
     if (busy) return;
-    await waitPhotos();
     const note = cleanNote(text);
     // What there is to write. The words, when they changed. Who sees it,
     // when that is asked and either the answer changed or the visit is
@@ -183,13 +177,12 @@ function Body({ visit, onClose, withAudience, backRef }: {
     }
   };
   // The ways out that are not the button — see the header.
-  const leave = async () => {
-    if (visit.fresh) return keep();
+  const leave = () => {
+    if (visit.fresh) { void keep(); return; }
     if (busy) return;
-    await waitPhotos();
     onClose(photos.changed());
   };
-  useEffect(() => { backRef.current = () => { void leave(); }; });
+  useEffect(() => { backRef.current = leave; });
 
   const gloss = audience === 'friends'
     ? t('Your friends see the place, the day and your note.', 'Bạn bè thấy địa điểm, ngày ghé và ghi chú của bạn.', '友達には場所・日付・メモが表示されます。', '好友可以看到地点、日期和你的备注。', '好友可以看到地點、日期和你的備註。')
@@ -199,7 +192,7 @@ function Body({ visit, onClose, withAudience, backRef }: {
     <>
       <Pressable
         style={s.backdrop}
-        onPress={() => { void leave(); }}
+        onPress={leave}
         accessibilityLabel={t('Close', 'Đóng', '閉じる', '关闭', '關閉')}
         testID="checkin-sheet-close"
       />
