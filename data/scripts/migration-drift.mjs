@@ -77,8 +77,21 @@ export function drift(files, live) {
   return { missing: missing.map(both), extra: extra.map(both), restamped, renamed };
 }
 
-/** Run by the workflow: `node migration-drift.mjs <live.json>`. */
-function main(livePath) {
+/**
+ * The files live has not run: what a deploy that depends on the schema
+ * waits for (`.github/actions/wait-for-migrations`).
+ *
+ * Only `missing`, on purpose. A row no file describes, or one under
+ * another version, is a disagreement about the record and the drift job
+ * goes red on it; neither means a column the new code asks for is not
+ * there, so neither holds a deploy back.
+ */
+export function pending(files, live) {
+  return drift(files, live).missing;
+}
+
+/** Run by the workflows: `node migration-drift.mjs <live.json> [--pending]`. */
+function main(livePath, only) {
   const root = join(dirname(fileURLToPath(import.meta.url)), '..', '..');
   const files = readdirSync(join(root, 'supabase/migrations')).sort();
   const live = JSON.parse(readFileSync(livePath, 'utf8'));
@@ -86,6 +99,13 @@ function main(livePath) {
     // An empty answer is a failed read, not a project with no history.
     console.error('The live history came back empty or unreadable:', JSON.stringify(live).slice(0, 300));
     process.exit(2);
+  }
+  if (only === '--pending') {
+    const waiting = pending(files, live);
+    if (!waiting.length) { console.log('Every migration in this commit is on the live project.'); return; }
+    console.error(`Not on the live project yet (${waiting.length}):`);
+    for (const f of waiting) console.error(`  supabase/migrations/${f}.sql`);
+    process.exit(1);
   }
   const { missing, extra, restamped, renamed } = drift(files, live);
   console.log(`${files.length} files, ${live.length} live rows.`);
@@ -112,4 +132,4 @@ function main(livePath) {
   console.log('The live history and supabase/migrations agree, row for file.');
 }
 
-if (process.argv[1] === fileURLToPath(import.meta.url)) main(process.argv[2]);
+if (process.argv[1] === fileURLToPath(import.meta.url)) main(process.argv[2], process.argv[3]);

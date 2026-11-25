@@ -22,9 +22,9 @@
 # The access token is the one the function deploys and the drift check
 # already use; no database password.
 #
-# Edge Functions still deploy on the merge itself, without waiting for
-# this approval. A function that needs a new migration should merge after
-# the migration has been applied.
+# The Edge Functions deploy and the EAS Update start on the same merge
+# and wait for this one: neither goes out while a migration in the commit
+# is not on the live project (`.github/actions/wait-for-migrations`).
 
 name: Apply migrations
 
