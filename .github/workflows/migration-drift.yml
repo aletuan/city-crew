@@ -6,8 +6,9 @@
 # silently dropped an applied migration from the tree before. This job
 # turns either into a red run. It only reads: one `select` on the
 # project's migration history, compared with `supabase/migrations` by
-# `data/scripts/migration-drift.mjs`, where the reasoning (and the
-# exceptions found on 25 Nov 2026) is written.
+# `data/scripts/migration-drift.mjs` — version for version, both ways,
+# since the history was repaired on 25 Nov 2026. What each kind of
+# failure means, and what to do about it, is written there.
 #
 # When it runs:
 # - After a merge that touches `supabase/migrations/`. Merge comes before

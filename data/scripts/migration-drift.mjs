@@ -1,71 +1,47 @@
-// Which migrations in the repo the live project has not run.
+// Does the live project's migration history say what the repo says?
 //
 // CI tests every migration against a throwaway Postgres; nothing applies
 // one to the live project (CLAUDE.md, "Supabase"). So a migration merged
 // and never applied reads exactly like one that ran, until a screen asks
-// for a column that is not there. This turns that silence into a red job
-// within minutes of the merge (`.github/workflows/migration-drift.yml`).
-// It only reads: the workflow asks the project for its history, and this
-// compares.
+// for a column that is not there — and a merge has silently dropped an
+// applied migration from the tree before. This turns either into a red
+// job (`.github/workflows/migration-drift.yml`). It only reads: the
+// workflow asks the project for its history, and this compares.
 //
-// ── why by name, and not by version ──
+// ── by version, both ways ──
 //
-// The two histories do not share versions. A migration applied through
-// the Supabase MCP is stamped with the minute it ran
-// (`20261125014020_checkin_photo_desk`), while the file keeps the
-// version written into its name (`20261125120000_checkin_photo_desk`).
-// Measured on 25 Nov 2026: of 148 files and 142 live rows, no version
-// matched and 129 names did. Until the history is repaired (the second
-// step proposed that day), the name is the only key the two sides share.
-// A version that does match counts too, so a repaired history needs no
-// change here.
+// Every file must have a live row with its version and its name, and
+// every live row a file. Four ways to fail, each a different mistake:
+// - `missing`: a file live has not run — apply it.
+// - `extra`: a live row no file describes — a migration applied by hand
+//   and never committed, or a file a merge removed.
+// - `restamped`: one name, two versions — a file applied under the
+//   minute it ran, the way the Supabase MCP's `apply_migration` stamps
+//   one. It ran; set the row's version to the file's. Told apart from a
+//   `missing` and an `extra` that happen to share a name, because the
+//   remedy is a one-line update, not an apply.
+// - `renamed`: one version, two names — a file renamed after it ran.
 //
-// ── the files the live history does not name ──
+// ── how the two histories came to agree ──
 //
-// 19 files matched no live name on 25 Nov 2026. Each was checked against
-// the live schema that day and is listed in KNOWN with what was found. A
-// new file is never added here to make the job green: a file that is not
-// on live is a migration to apply.
+// Until 25 Nov 2026 they did not. Applied through the MCP, a migration
+// was stamped with the minute it ran; the file kept its own version.
+// Measured that day: 148 files, 142 live rows, 7 versions in common and
+// 129 names. That afternoon the live history was repaired (the owner
+// confirmed it): 128 rows took their file's version, 13 rows were added
+// for files whose objects were all found on live with no row (two of
+// them, data-only, could not be checked and say so in `created_by`), and
+// 7 rows applied before this folder existed or never committed got files
+// copied byte for byte from the live history. The table as it stood is
+// kept as `supabase_migrations.schema_migrations_before_20261125`.
+// After the repair: 155 rows, 155 files, every pair equal.
+//
+// Until then this compared by name, with 19 known exceptions; that
+// version is in this file's history.
 
 import { readdirSync, readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-
-/**
- * Files that are on live under no name of their own, by the name in the
- * file (version dropped).
- *
- * - `{ as }`: applied under another name. The live name must still be in
- *   the history, so a renamed migration that vanishes still turns red.
- * - `{ folded }`: no row in the live history, but every function, table,
- *   bucket and trigger it creates was found on live on 25 Nov 2026 — the
- *   SQL ran by hand or inside another migration. Three functions of
- *   `place_submissions` are absent, as they should be: the later
- *   `lists_stay_public_around_unlive_places` drops them.
- * - `{ data }`: changes rows, creates nothing, so nothing on live says
- *   whether it ran. Not verified; listed so the job can run at all.
- */
-export const KNOWN = {
-  japanese_content_columns: { as: 'add_japanese_content_columns' },
-  place_reviewer_attribution: { as: 'add_reviewer_attribution_to_places' },
-  city_hero_photo: { as: 'city_hero_photo_20260919' },
-  place_city_and_branch_names: { as: 'place_city_and_branch_names_20260919' },
-  place_import_audit: { as: 'place_import_audit_20260919' },
-  vungtau_places_follow_coordinates: { as: 'vungtau_places_follow_coordinates_20260920' },
-  activity_rows_carry_face: { folded: true },
-  avatars_bucket: { folded: true },
-  collection_shares: { folded: true },
-  collection_stats: { folded: true },
-  collection_use_counts: { folded: true },
-  friend_suggestions: { folded: true },
-  own_collection_members: { folded: true },
-  place_submissions: { folded: true },
-  profiles: { folded: true },
-  publish_collections: { folded: true },
-  trip_invites: { folded: true },
-  backfill_google_blurb_source: { data: true },
-  tagline_audit: { data: true },
-};
 
 /** `20261125120000_checkin_photo_desk.sql` → its version and its name. */
 export function parseFile(file) {
@@ -74,33 +50,31 @@ export function parseFile(file) {
 }
 
 /**
- * The files live has not run, and the KNOWN entries that no longer
- * describe anything.
+ * What the two histories disagree on.
  *
  * @param {string[]} files  the names in `supabase/migrations`
  * @param {{ version: string, name: string }[]} live  the live history
  */
-export function drift(files, live, known = KNOWN) {
-  const versions = new Set(live.map((r) => r.version));
-  const names = new Set(live.map((r) => r.name));
+export function drift(files, live) {
+  const repo = new Map(files.map(parseFile).filter(Boolean).map((m) => [m.version, m.name]));
+  const onLive = new Map(live.map((r) => [r.version, r.name]));
   const missing = [];
-  const seen = new Set();
-  for (const file of files) {
-    const m = parseFile(file);
-    if (!m) continue;
-    if (versions.has(m.version) || names.has(m.name)) continue;
-    const k = known[m.name];
-    if (k) {
-      seen.add(m.name);
-      // Renamed on live, and the live name gone: not on live after all.
-      if (k.as && !names.has(k.as)) missing.push(file);
-      continue;
-    }
-    missing.push(file);
+  const renamed = [];
+  for (const [version, name] of repo) {
+    if (!onLive.has(version)) missing.push({ version, name });
+    else if (onLive.get(version) !== name) renamed.push({ version, file: name, live: onLive.get(version) });
   }
-  // An entry whose file now matches live by itself, or whose file is gone.
-  const stale = Object.keys(known).filter((n) => !seen.has(n));
-  return { missing, stale };
+  const extra = [...onLive].filter(([v]) => !repo.has(v)).map(([version, name]) => ({ version, name }));
+  const restamped = [];
+  for (const m of [...missing]) {
+    const e = extra.find((x) => x.name === m.name);
+    if (!e) continue;
+    restamped.push({ name: m.name, file: m.version, live: e.version });
+    missing.splice(missing.indexOf(m), 1);
+    extra.splice(extra.indexOf(e), 1);
+  }
+  const both = (r) => `${r.version}_${r.name}`;
+  return { missing: missing.map(both), extra: extra.map(both), restamped, renamed };
 }
 
 /** Run by the workflow: `node migration-drift.mjs <live.json>`. */
@@ -113,16 +87,29 @@ function main(livePath) {
     console.error('The live history came back empty or unreadable:', JSON.stringify(live).slice(0, 300));
     process.exit(2);
   }
-  const { missing, stale } = drift(files, live);
+  const { missing, extra, restamped, renamed } = drift(files, live);
   console.log(`${files.length} files, ${live.length} live rows.`);
-  for (const n of stale) console.log(`note: KNOWN['${n}'] no longer needed — remove it.`);
   if (missing.length) {
-    console.error(`\nNot on the live project (${missing.length}):`);
-    for (const f of missing) console.error(`  supabase/migrations/${f}`);
-    console.error('\nApply each to amdvitzpogaejzzqroco (CLAUDE.md, "Supabase").');
-    process.exit(1);
+    console.error(`\nIn the repo, not on the live project (${missing.length}) — apply each:`);
+    for (const f of missing) console.error(`  supabase/migrations/${f}.sql`);
   }
-  console.log('Every migration in the repo is on the live project.');
+  if (extra.length) {
+    console.error(`\nOn the live project, in no file (${extra.length}) — commit it, or find the merge that removed it:`);
+    for (const f of extra) console.error(`  ${f}`);
+  }
+  if (restamped.length) {
+    console.error(`\nApplied under another version (${restamped.length}) — set each live row to the file's:`);
+    for (const r of restamped) {
+      console.error(`  ${r.name}: live ${r.live}, file ${r.file}`);
+      console.error(`    update supabase_migrations.schema_migrations set version = '${r.file}' where version = '${r.live}';`);
+    }
+  }
+  if (renamed.length) {
+    console.error(`\nOne version, two names (${renamed.length}):`);
+    for (const r of renamed) console.error(`  ${r.version}: file "${r.file}", live "${r.live}"`);
+  }
+  if (missing.length || extra.length || restamped.length || renamed.length) process.exit(1);
+  console.log('The live history and supabase/migrations agree, row for file.');
 }
 
 if (process.argv[1] === fileURLToPath(import.meta.url)) main(process.argv[2]);

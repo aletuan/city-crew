@@ -141,9 +141,17 @@ has silently dropped an applied migration from the tree before.
 `.github/workflows/migration-drift.yml` checks it for you: after a merge
 that touches `supabase/migrations/` it waits up to 30 minutes for the
 migration to appear on live, and goes red if it does not; it also runs
-daily. It matches by name, because live versions are the minute a
-migration was applied, not the file's (`data/scripts/migration-drift.mjs`
-has the measurements and the 19 older files that needed an exception).
+daily. Since 25 Nov 2026 the live history and the folder agree version
+for version, both ways (155 each), and the job holds them to it.
+
+**Apply a migration under its file's version.** The Supabase MCP's
+`apply_migration` stamps the minute it ran instead, which is how the two
+histories drifted apart. Run the file's SQL with `execute_sql` and record
+it in the same call:
+`insert into supabase_migrations.schema_migrations (version, name,
+statements) values ('<file version>', '<name>', array['<the SQL>'])`.
+A migration applied the other way shows up as "applied under another
+version", with the one-line update that fixes it.
 
 **Edge Functions deploy themselves, migrations do not.**
 `.github/workflows/deploy-functions.yml` deploys the functions whose folder
