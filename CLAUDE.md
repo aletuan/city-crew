@@ -138,6 +138,13 @@ migration committed and merged is not a migration that has run. Apply it
 yourself, and check that the repo still describes the schema — a merge
 has silently dropped an applied migration from the tree before.
 
+`.github/workflows/migration-drift.yml` checks it for you: after a merge
+that touches `supabase/migrations/` it waits up to 30 minutes for the
+migration to appear on live, and goes red if it does not; it also runs
+daily. It matches by name, because live versions are the minute a
+migration was applied, not the file's (`data/scripts/migration-drift.mjs`
+has the measurements and the 19 older files that needed an exception).
+
 **Edge Functions deploy themselves, migrations do not.**
 `.github/workflows/deploy-functions.yml` deploys the functions whose folder
 changed on main (all of them for a change under `_shared/`), from the

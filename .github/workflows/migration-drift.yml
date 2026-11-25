@@ -1,0 +1,87 @@
+# Is every migration in the repo on the live project?
+#
+# CI tests migrations; nothing applies them (CLAUDE.md, "Supabase"). A
+# migration merged and never applied looks exactly like one that ran,
+# until a screen asks for a column that is not there — and a merge has
+# silently dropped an applied migration from the tree before. This job
+# turns either into a red run. It only reads: one `select` on the
+# project's migration history, compared with `supabase/migrations` by
+# `data/scripts/migration-drift.mjs`, where the reasoning (and the
+# exceptions found on 25 Nov 2026) is written.
+#
+# When it runs:
+# - After a merge that touches `supabase/migrations/`. Merge comes before
+#   apply in this repo, so this run waits: it asks again every 2 minutes
+#   for 30, and goes green by itself once the migration has been
+#   applied. Red after 30 minutes means it was not.
+# - Every day, once, for drift that came from elsewhere (a migration
+#   rolled back, a file deleted by a merge).
+# - By hand: Actions → Migration drift → Run workflow.
+#
+# Needs the `SUPABASE_ACCESS_TOKEN` secret the function deploys already
+# use; skipped, green, without it.
+
+name: Migration drift
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'supabase/migrations/**'
+  schedule:
+    - cron: '17 1 * * *'
+  workflow_dispatch:
+
+concurrency:
+  group: migration-drift
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  PROJECT_REF: amdvitzpogaejzzqroco
+  SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+
+jobs:
+  drift:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - name: Skip when SUPABASE_ACCESS_TOKEN is not configured
+        if: env.SUPABASE_ACCESS_TOKEN == ''
+        run: echo "No SUPABASE_ACCESS_TOKEN secret — skipping."
+
+      - uses: actions/checkout@v5
+        if: env.SUPABASE_ACCESS_TOKEN != ''
+
+      - uses: actions/setup-node@v5
+        if: env.SUPABASE_ACCESS_TOKEN != ''
+        with:
+          node-version: 22
+
+      - name: Compare the repo with the live history
+        if: env.SUPABASE_ACCESS_TOKEN != ''
+        run: |
+          set -uo pipefail
+          # One try for the daily and manual runs; fifteen, two minutes
+          # apart, after a merge (see the header).
+          if [ "${{ github.event_name }}" = "push" ]; then tries=15; else tries=1; fi
+          for i in $(seq 1 "$tries"); do
+            code=$(curl -sS -o /tmp/live.json -w '%{http_code}' \
+              -X POST "https://api.supabase.com/v1/projects/$PROJECT_REF/database/query" \
+              -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" \
+              -H 'Content-Type: application/json' \
+              -d '{"query":"select version, name from supabase_migrations.schema_migrations order by version"}')
+            if [ "$code" != "200" ] && [ "$code" != "201" ]; then
+              echo "The project answered $code:"; head -c 500 /tmp/live.json; echo
+              exit 2
+            fi
+            node data/scripts/migration-drift.mjs /tmp/live.json
+            status=$?
+            # 0: all on live. 2: the answer could not be read — waiting
+            # will not fix that. 1: something not applied yet.
+            if [ "$status" -ne 1 ] || [ "$i" -eq "$tries" ]; then exit "$status"; fi
+            echo "Not applied yet; asking again in 2 minutes ($i of $tries)."
+            sleep 120
+          done
