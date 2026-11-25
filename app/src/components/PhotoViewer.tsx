@@ -19,6 +19,16 @@
 // pages still swipe and the pinch does nothing, and City Crew ships to
 // iOS. A tap shows or hides the bar and the score, as Photos does, so a
 // picture can be seen with nothing over it.
+//
+// ── a report, where the photo is somebody else's ──
+//
+// A visit's photos (K5 of docs/checkin-photos-plan.md) are one person's
+// pictures shown to their friends, and a report belongs beside the thing
+// reported — so the corner opposite the × carries a flag when the caller
+// hands `onReport`. A gallery's photos are the catalog's and hand none;
+// there the corner keeps the ×'s width empty, so the count stays centred.
+// The caller closes the viewer before raising the reasons: a sheet over
+// this Modal is the stacked-modal trouble `ActionSheet` waits out.
 
 import React, { useRef, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
@@ -55,12 +65,14 @@ const MAX_ZOOM = 3;
  *  so is cached by the key it is handed rather than by its URL. */
 export type ViewerPhoto = Pick<GalleryPhoto, 'id' | 'photo_uri' | 'score'> & { cacheKey?: string };
 
-export default function PhotoViewer({ photos, index, onIndex, onClose }: {
+export default function PhotoViewer({ photos, index, onIndex, onClose, onReport }: {
   photos: ViewerPhoto[];
   /** The photograph shown, by its place in `photos`. */
   index: number;
   onIndex: (i: number) => void;
   onClose: () => void;
+  /** Report the photograph shown — see the header. */
+  onReport?: (photo: ViewerPhoto) => void;
 }) {
   const { t } = useI18n();
   const insets = useSafeAreaInsets();
@@ -127,8 +139,21 @@ export default function PhotoViewer({ photos, index, onIndex, onClose }: {
               <Glyph name="close" size={PHOTO_GLYPH} color={onPhoto.text} />
             </PressableScale>
             <Text style={s.count} testID="photo-viewer-count">{count}</Text>
-            {/* The ×'s width on the other side, so the count is centred. */}
-            <View style={s.balance} />
+            {onReport ? (
+              <PressableScale
+                contentStyle={s.round}
+                hitSlop={PHOTO_SLOP}
+                onPress={() => onReport(p)}
+                accessibilityRole="button"
+                accessibilityLabel={t('Report photo', 'Báo cáo ảnh', '写真を報告', '举报照片', '舉報照片')}
+                testID="photo-viewer-report"
+              >
+                <Glyph name="flag-outline" size={PHOTO_GLYPH} color={onPhoto.text} />
+              </PressableScale>
+            ) : (
+              // The ×'s width on the other side, so the count is centred.
+              <View style={s.balance} />
+            )}
           </View>
 
           {p.score?.aesthetic != null && (

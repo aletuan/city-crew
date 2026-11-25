@@ -23,6 +23,16 @@
 //
 // Every ban and every lift is written to `moderation_log`, and no editor
 // can ban another; see the notes where each is done.
+//
+// A ban hides every check-in photo of the account, and a lift puts back
+// what the ban hid (K5 of docs/checkin-photos-plan.md): a photo is the
+// one thing of theirs other people see without the account signing in
+// again, and the store's rule is to remove the person "where warranted",
+// not to leave their pictures up. Collections stay, as above — the desk
+// hides one of those on its own when it has to. What the desk hid for
+// itself stays hidden through a lift (`checkin_photos_suspended`).
+//
+// POST … → { ok: true, suspended, photos } — how many photos moved.
 
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { http } from "../_shared/http.ts";
@@ -96,5 +106,19 @@ Deno.serve(async (req) => {
     return json({ error: error.message }, 500);
   }
 
-  return json({ ok: true, suspended: suspend });
+  // After the ban, not before: a photo hidden for a ban that then failed
+  // would be a punishment nobody recorded. A failure here leaves the ban
+  // in place and says so — pressing the button again does both again.
+  const { data: photos, error: photoError } = await admin.rpc("checkin_photos_suspended", {
+    p_user: target, p_hide: suspend, p_by: uid,
+  });
+  if (photoError) {
+    return json({
+      error: suspend
+        ? `suspended, but the check-in photos were not hidden: ${photoError.message}`
+        : `restored, but the check-in photos were not put back: ${photoError.message}`,
+    }, 500);
+  }
+
+  return json({ ok: true, suspended: suspend, photos: typeof photos === "number" ? photos : 0 });
 });

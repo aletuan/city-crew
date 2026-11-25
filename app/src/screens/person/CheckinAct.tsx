@@ -43,6 +43,12 @@
 // was. The viewer is a `Modal` of its own: the page has none to draw it
 // in, as the photo sheet does.
 //
+// On somebody else's page the viewer carries a flag (K5): the photo is
+// reported to the desk, as a comment or a profile is. The viewer goes
+// first and the reasons follow once it has (`ActionSheet`'s 220ms, for
+// its reason). Your own photos have no flag: they are yours to take off
+// the visit, from its sheet.
+//
 // ── while the page is searched ──
 //
 // No visits. The search is of a person's *collections* and the places in
@@ -55,6 +61,7 @@ import { Modal } from 'react-native';
 import ActivityCard from '../../components/ActivityCard';
 import CheckinSheet from '../../components/CheckinSheet';
 import PhotoViewer from '../../components/PhotoViewer';
+import { useReport } from '../../components/reportFlow';
 import { useSignedPhotos } from '../../components/useSignedPhotos';
 import VisitNote from '../../components/VisitNote';
 import { fireHaptic } from '../../components/ui';
@@ -168,6 +175,15 @@ export function useVisitCards({ me, person, onPlace }: {
     return uri ? [{ ph, uri }] : [];
   });
   const [viewing, setViewing] = useState<{ v: PersonCheckin; at: number } | null>(null);
+  const { report, canReport, node: reportSheet } = useReport();
+  /** The viewer's flag, for a photo the reader may report. */
+  const reportOf = (v: PersonCheckin) => (photo: { id: string }) => {
+    setViewing(null);
+    const who = person as FriendProfile;
+    setTimeout(() => report({
+      kind: 'checkin_photo', id: photo.id, ownerId: who.id, name: nameOf(v), avatarUrl: who.avatar_url || undefined,
+    }), 220);
+  };
 
   const [noteFor, setNoteFor] = useState<PersonCheckin | null>(null);
   const nameOf = (v: PersonCheckin) => localized(v.place, 'name', lang);
@@ -217,6 +233,7 @@ export function useVisitCards({ me, person, onPlace }: {
           index={Math.min(viewing.at, viewed.length - 1)}
           onIndex={(at) => setViewing({ ...viewing, at })}
           onClose={() => setViewing(null)}
+          onReport={canReport({ kind: 'checkin_photo', id: '', ownerId: personId }) ? reportOf(viewing.v) : undefined}
         />
       ) : null}
     </Modal>
@@ -238,6 +255,7 @@ export function useVisitCards({ me, person, onPlace }: {
         onClose={(saved) => { setNoteFor(null); if (saved) mine.reload(); }}
       />
       {viewer}
+      {reportSheet}
     </>
   );
 

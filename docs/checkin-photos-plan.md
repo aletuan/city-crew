@@ -213,8 +213,22 @@ Mỗi bước một PR, theo thứ tự. Cờ `checkin_photos` tắt suốt cả
   `position`, tối đa 3). Màn hình mở quá một giờ giữ link cũ: chỉ ảnh
   chưa có trong cache mới hỏng, tới lần kéo làm mới tiếp theo — đã cân
   nhắc và bỏ hẹn giờ ký lại cho mỗi màn hình.
-- **K5. Kiểm duyệt và pháp lý:** báo cáo, ẩn ở Data Desk, khoá tài
-  khoản, `legal.ts` (xuất dữ liệu đã làm riêng, 25/11/2026).
+- **K5. Kiểm duyệt và pháp lý — xong (25/11/2026).** Báo cáo, ẩn ở Data
+  Desk, khoá tài khoản, `legal.ts` (xuất dữ liệu đã làm riêng).
+  Đã làm: `20261125120000_checkin_photo_desk.sql` — `reports.kind` thêm
+  `checkin_photo` (không báo cáo được ảnh của chính mình),
+  `reports_queue` trả địa điểm, ghi chú, chủ ảnh, đường dẫn và đã ẩn
+  chưa; `moderate_checkin_photo` ẩn hoặc khôi phục, ghi
+  `moderation_log`; cột `hidden_for` (`report` hay `suspended`) để bỏ
+  khoá tài khoản chỉ hiện lại những ảnh mà lần khoá đã ẩn; editor đọc
+  được bucket để ký link. `suspend-user` ẩn mọi ảnh sau khi khoá, hiện
+  lại khi bỏ khoá. Trong app, trình xem ảnh trên trang của người khác có
+  nút báo cáo (đóng trình xem rồi mới mở bảng lý do). Data Desk vẽ ảnh
+  bị báo cáo, nút Ẩn ảnh / Hiện lại ảnh. `legal.ts`: ảnh check-in trong
+  phần dữ liệu thu thập, không gửi cho Anthropic, kiểm duyệt, xuất dữ
+  liệu, xoá tài khoản; Điều khoản thêm việc thứ năm của ban biên tập.
+  Ẩn chứ không xoá: tệp còn đó, desk khôi phục được — xoá hẳn là việc
+  của chủ ảnh.
 - **K6. Bật cờ** sau bản đã qua duyệt của Apple.
 
 ## Câu hỏi mở

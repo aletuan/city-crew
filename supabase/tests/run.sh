@@ -875,3 +875,13 @@ run "$DB" -f "$HERE/category_terms_rls_test.sql"
 # Nothing to apply: both migrations ran in the editorial blocks above.
 echo "→ closed tables, as a client"
 run "$DB" -f "$HERE/closed_tables_test.sql"
+
+# A check-in photo at the desk (K5 of docs/checkin-photos-plan.md): the
+# report, the queue, the desk's hiding and a suspension's. After the
+# photos, the comment desk and the wall's queue, whose function and
+# policies it makes again.
+echo "→ check-in photos at the desk"
+for f in "$ROOT"/supabase/migrations/*_checkin_photo_desk.sql; do
+  run "$DB" -f "$f" >/dev/null
+done
+run "$DB" -f "$HERE/checkin_photo_desk_test.sql"

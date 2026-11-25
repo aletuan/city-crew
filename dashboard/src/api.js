@@ -165,6 +165,23 @@ export const api = {
   },
 
   /**
+   * Hide a reported check-in photo, or put it back (K5 of
+   * docs/checkin-photos-plan.md). Reversible: the file stays, nobody is
+   * signed a link to it — see the checkin_photo_desk migration.
+   */
+  moderateCheckinPhoto: async (id, hide) => {
+    db(await supabase.rpc('moderate_checkin_photo', { target: id, hide }));
+  },
+
+  /** A link to a check-in photo, for the desk's eyes: the bucket is
+   *  private, and an editor may read it. An hour, as the app's are. */
+  signCheckinPhoto: async (path) => {
+    const { data, error } = await supabase.storage.from('checkin-photos').createSignedUrl(path, 3600);
+    if (error) throw new Error(error.message);
+    return data?.signedUrl ?? null;
+  },
+
+  /**
    * The words a comment may not contain, in the order they read.
    *
    * The table is the whole feature: `comment_clean` reads it on every

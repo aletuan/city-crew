@@ -20,11 +20,11 @@ import PersonSheet, { type PersonAction } from './PersonSheet';
 import { useSession } from '../lib/auth';
 import { submitReport } from '../lib/data';
 import { useI18n } from '../lib/i18n';
-import { reportable, REPORT_REASONS, type ReportReason } from '../lib/report';
+import { reportable, REPORT_REASONS, type ReportKind, type ReportReason } from '../lib/report';
 
 export type ReportTarget = {
-  kind: 'collection' | 'profile' | 'comment';
-  /** collections.id or profiles.id — what the row will point at. */
+  kind: ReportKind;
+  /** The id of the thing, in its own table — what the row will point at. */
   id: string;
   /** Whose it is, for a collection. Your own is not reportable; see
    *  `reportable`. */

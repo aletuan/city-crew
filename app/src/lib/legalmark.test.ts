@@ -136,7 +136,14 @@ describe('against the real documents', () => {
     // know before deleting (the replies under it go too); in the policy,
     // the word that opens the paragraph and that the desk's record of a
     // removal does not keep the words. No link was added.
+    //
+    // 64 became 68 when check-in photos entered the privacy policy (K5 of
+    // docs/checkin-photos-plan.md): per language, a bold sentence that
+    // they are sent nowhere — the paragraph beside it says that catalog
+    // photos are, and a reader skimming the bold would otherwise take
+    // theirs for one of them — and the moderation paragraph's lead-in, as
+    // "Comments." has. No link: both name what the app does.
     expect(links).toBe(24);
-    expect(bolds).toBe(64);
+    expect(bolds).toBe(68);
   });
 });

@@ -37,11 +37,18 @@ export const KIND = {
   collection: { label: 'collection', icon: 'list' },
   profile: { label: 'profile', icon: 'users' },
   comment: { label: 'comment', icon: 'balloon' },
+  // K5 of docs/checkin-photos-plan.md: the picture is the thing judged,
+  // drawn on the card; the visit's note and its place stand beside it.
+  checkin_photo: { label: 'check-in photo', icon: 'photo' },
 };
 
 export function kindOf(row) {
   return KIND[row.kind] ?? { label: String(row.kind ?? 'unknown'), icon: 'alert' };
 }
+
+/** The kinds whose `title` says where, not what: a comment's list, a
+ *  check-in photo's place. */
+const SAID_IN_A_PLACE = new Set(['comment', 'checkin_photo']);
 
 /** The window the store expects, in hours. Not a setting: it is the
  *  number the guideline names, and the page exists to keep it. */
@@ -116,7 +123,9 @@ export function previewOf(row, max = 180) {
   // was said: the page puts it beside the words (`placeOf`), and what is
   // judged is the body alone. A removed comment has none, and must read
   // as nothing left — not as the list's name standing in for it.
-  const said = row.kind === 'comment' ? [row.body] : [row.title, row.body];
+  // A check-in photo's `title` is the same kind of "where" — the place —
+  // and its `body` the visit's note, said beside the picture.
+  const said = SAID_IN_A_PLACE.has(row.kind) ? [row.body] : [row.title, row.body];
   const parts = said.map((x) => (x ?? '').trim()).filter(Boolean);
   const text = parts.join(' — ');
   if (!text) return '';
@@ -126,6 +135,6 @@ export function previewOf(row, max = 180) {
 /** Where a reported comment was said: the list's name, or nothing for
  *  the other kinds and for a comment that is gone. */
 export function placeOf(row) {
-  if (row.kind !== 'comment') return '';
+  if (!SAID_IN_A_PLACE.has(row.kind)) return '';
   return (row.title ?? '').trim();
 }
