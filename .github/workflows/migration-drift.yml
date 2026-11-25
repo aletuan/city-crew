@@ -69,11 +69,17 @@ jobs:
           # apart, after a merge (see the header).
           if [ "${{ github.event_name }}" = "push" ]; then tries=15; else tries=1; fi
           for i in $(seq 1 "$tries"); do
-            code=$(curl -sS -o /tmp/live.json -w '%{http_code}' \
-              -X POST "https://api.supabase.com/v1/projects/$PROJECT_REF/database/query" \
-              -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" \
-              -H 'Content-Type: application/json' \
-              -d '{"query":"select version, name from supabase_migrations.schema_migrations order by version"}')
+            # A 5xx is the API, not the history: the first merge this job
+            # saw (25 Nov 2026) went red on one 502 and was green a minute
+            # later. Three asks, 20 seconds apart, before calling it.
+            for ask in 1 2 3; do
+              code=$(curl -sS -o /tmp/live.json -w '%{http_code}' \
+                -X POST "https://api.supabase.com/v1/projects/$PROJECT_REF/database/query" \
+                -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" \
+                -H 'Content-Type: application/json' \
+                -d '{"query":"select version, name from supabase_migrations.schema_migrations order by version"}')
+              case "$code" in 5*) echo "The API answered $code; asking again in 20 seconds."; sleep 20;; *) break;; esac
+            done
             if [ "$code" != "200" ] && [ "$code" != "201" ]; then
               echo "The project answered $code:"; head -c 500 /tmp/live.json; echo
               exit 2
