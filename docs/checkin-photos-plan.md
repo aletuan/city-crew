@@ -160,7 +160,8 @@ dòng trong database không xoá file thật**, nên không dựa vào cascade.
 - `app/src/lib/legal.ts`: ảnh bạn kèm check-in, ai thấy, bỏ vị trí trong
   ảnh, ảnh không thành ảnh của địa điểm, xoá khi nào. Cùng PR mở luồng
   tải ảnh, và trước khi bật cờ.
-- Xuất dữ liệu: danh sách ảnh (địa điểm, ngày, tên tệp). Xem câu hỏi mở.
+- Xuất dữ liệu: danh sách ảnh (địa điểm, ngày, tên tệp) — xong, câu hỏi
+  mở 1.
 - Xoá tài khoản: như trên.
 
 ## Các bước
@@ -213,14 +214,18 @@ Mỗi bước một PR, theo thứ tự. Cờ `checkin_photos` tắt suốt cả
   chưa có trong cache mới hỏng, tới lần kéo làm mới tiếp theo — đã cân
   nhắc và bỏ hẹn giờ ký lại cho mỗi màn hình.
 - **K5. Kiểm duyệt và pháp lý:** báo cáo, ẩn ở Data Desk, khoá tài
-  khoản, `legal.ts`, xuất dữ liệu.
+  khoản, `legal.ts` (xuất dữ liệu đã làm riêng, 25/11/2026).
 - **K6. Bật cờ** sau bản đã qua duyệt của Apple.
 
 ## Câu hỏi mở
 
-1. **Xuất dữ liệu có kèm chính các tấm ảnh không?** File xuất hiện là
-   một JSON tạo trên máy. Kèm link ký (hết hạn sau vài ngày) thì dễ; kèm
-   ảnh thật thì phải đổi sang tệp nén. Chốt trước K5.
+1. ~~**Xuất dữ liệu có kèm chính các tấm ảnh không?**~~ Không (chủ dự
+   án, 25/11/2026): file xuất chỉ là một file text. Mỗi check-in ghi ảnh
+   của nó bằng tên tệp và kích thước, không kèm ảnh, không kèm link
+   (`export.ts`, định dạng 6). Đã cân nhắc và bỏ: link ký (ai cầm file là
+   mở được ảnh trong thời hạn link, đúng lý do file xuất không đi qua
+   link), và tệp nén kèm ảnh (không còn là một file text). Làm ngay, trước
+   K5.
 2. ~~**Thêm ảnh cho lần ghé cũ có giới hạn thời gian không?**~~ Không
    giới hạn — quyết định 3.
 3. **15 ảnh mỗi ngày và 300 ảnh mỗi tài khoản** là số chọn. Xem lại sau
