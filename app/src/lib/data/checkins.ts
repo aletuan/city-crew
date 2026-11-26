@@ -198,3 +198,46 @@ export async function fetchGuestReviews(slug: string): Promise<GuestReviews | nu
     }),
   };
 }
+
+/** One card of "Hoạt động nổi bật": a public visit this week, with its
+ *  first photo (`20261126150000_explore_highlights.sql`). */
+export type HighlightCheckin = {
+  id: string;
+  place_slug: string;
+  place: { name_en: string; name_vi: string; i18n: I18nDoc | null };
+  handle: string;
+  full_name: string;
+  avatar_url: string | null;
+  note: string | null;
+  likes: number;
+  liked: boolean;
+  photo: CheckinPhoto;
+};
+
+/** This week's public check-ins with a photo in one city, hearts then
+ *  newest, one a person — signed in only, as the server answers. */
+export async function fetchHighlightCheckins(cityId: string): Promise<HighlightCheckin[]> {
+  const { data, error } = await supabase.rpc('featured_checkins', { p_city: cityId });
+  if (error) throw new Error(error.message);
+  const rows = Array.isArray(data) ? data as Record<string, unknown>[] : [];
+  return rows.flatMap((r) => {
+    const [photo] = visitPhotosOf(r.photo ? [r.photo] : []);
+    // A card is its photo; a row that came without one is not a card.
+    if (typeof r.id !== 'string' || typeof r.place_slug !== 'string' || !photo) return [];
+    return [{
+      id: r.id,
+      place_slug: r.place_slug,
+      place: {
+        name_en: String(r.name_en ?? ''), name_vi: String(r.name_vi ?? ''),
+        i18n: (r.i18n as I18nDoc | null) ?? null,
+      },
+      handle: String(r.handle ?? ''),
+      full_name: String(r.full_name ?? ''),
+      avatar_url: typeof r.avatar_url === 'string' && r.avatar_url ? r.avatar_url : null,
+      note: typeof r.note === 'string' ? r.note : null,
+      likes: typeof r.likes === 'number' ? r.likes : 0,
+      liked: r.liked === true,
+      photo,
+    }];
+  });
+}

@@ -913,3 +913,11 @@ for f in "$ROOT"/supabase/migrations/*_place_guest_reviews.sql; do
   run "$DB" -f "$f" >/dev/null
 done
 run "$DB" -f "$HERE/place_guest_reviews_test.sql"
+
+# "Hoạt động nổi bật" on Explore (owner, 26 Nov 2026): this week's
+# public check-ins with a photo, one city at a time.
+echo "→ this week's check-ins on Explore"
+for f in "$ROOT"/supabase/migrations/*_explore_highlights.sql; do
+  run "$DB" -f "$f" >/dev/null
+done
+run "$DB" -f "$HERE/explore_highlights_test.sql"

@@ -33,6 +33,7 @@ import { startupTrace } from '../lib/trace';
 import { launchSettled } from '../lib/launch';
 import { reportStartup } from '../lib/tracereport';
 import { Hero } from './explore/Hero';
+import { CheckinShelf } from './explore/CheckinShelf';
 import { CollectionShelf } from './explore/CollectionShelf';
 import { ScrollNudge } from './explore/ScrollNudge';
 import { s } from './explore/styles';
@@ -55,6 +56,7 @@ const VIEW_CODEC: Codec<ExploreView> = { parse: parseView, format: (v) => v };
  */
 const HeroBlock = memo(Hero);
 const Shelf = memo(CollectionShelf);
+const Highlights = memo(CheckinShelf);
 
 
 export default function ExploreScreen({ navigation }: { navigation: Nav }) {
@@ -168,6 +170,9 @@ export default function ExploreScreen({ navigation }: { navigation: Nav }) {
         <LoadFailBanner kind={fail} onRetry={reload} testID="explore-load-banner" />
       ) : null}
       <Shelf navigation={navigation} />
+      {/* This week's check-ins, under the collections (owner, 26 Nov
+          2026) — `CheckinShelf`; nothing at all under three. */}
+      <Highlights navigation={navigation} />
     </View>
   );
 

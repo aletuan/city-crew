@@ -1943,7 +1943,7 @@ describe('the community shelf', () => {
     ];
     state.likes = { loved: 7 };
     render(<ExploreScreen navigation={nav()} />);
-    expect(screen.getByText('From the community')).toBeTruthy();
+    expect(screen.getByText('Community collections')).toBeTruthy();
     expect(screen.queryByText('List elsewhere')).toBeNull();
     expect(screen.queryByText('List empty')).toBeNull();
     const loved = screen.getByText('List loved');
@@ -1976,14 +1976,14 @@ describe('the community shelf', () => {
     state.places.data = [place('p1')];
     state.cols.data = [collection('empty', [])];
     render(<ExploreScreen navigation={nav()} />);
-    expect(screen.queryByText('From the community')).toBeNull();
+    expect(screen.queryByText('Community collections')).toBeNull();
   });
 
   it('holds its header over placeholders while collections load', () => {
     state.places.data = [place('p1')];
     state.cols = { loaded: false, data: [collection('later', ['p1'])] };
     render(<ExploreScreen navigation={nav()} />);
-    expect(screen.getByText('From the community')).toBeTruthy();
+    expect(screen.getByText('Community collections')).toBeTruthy();
     expect(screen.queryByText('List later')).toBeNull();
   });
 

@@ -271,6 +271,18 @@ function Body({ visit, onClose, withAudience, backRef }: {
                   testID="checkin-sheet-seen"
                 />
                 <Text style={s.gloss} testID="checkin-sheet-gloss">{gloss}</Text>
+                {/* What Public can lead to, said where Public is chosen
+                    (owner, 26 Nov 2026): a public visit with a photo can
+                    be one of Explore's "Hoạt động nổi bật". Only where
+                    photos can be added — the shelf is made of them. */}
+                {audience === 'public' && photosOn ? (
+                  <View style={s.hint} testID="checkin-sheet-hint">
+                    <Glyph name="sparkles-outline" size={ICON.meta} color={colors.sun} />
+                    <Text style={s.hintText}>
+                      {t('A public check-in with a photo can appear in Featured check-ins on Explore.', 'Check-in công khai có ảnh có thể lên “Hoạt động nổi bật” ở Khám phá.', '写真付きの公開チェックインは「探索」の注目に載ることがあります。', '带照片的公开打卡可能出现在“探索”的精选动态中。', '帶照片的公開打卡可能出現在「探索」的精選動態中。')}
+                    </Text>
+                  </View>
+                ) : null}
               </View>
             ) : null}
 
@@ -331,4 +343,6 @@ const s = StyleSheet.create({
   count: { alignSelf: 'flex-end', color: colors.textTertiary, fontSize: 12, marginTop: 4 },
   seen: { gap: 8 },
   gloss: { color: colors.textTertiary, fontSize: 13, lineHeight: 18 },
+  hint: { flexDirection: 'row', alignItems: 'flex-start', gap: 6 },
+  hintText: { flex: 1, color: colors.textSecondary, fontSize: 13, lineHeight: 18 },
 });
