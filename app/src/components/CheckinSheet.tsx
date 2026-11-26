@@ -34,7 +34,8 @@
 // to see a visit — `AUDIENCE_ON` in `lib/checkin`. Without it nothing is
 // written about who sees the visit.
 //
-// A fresh sheet opens on the reader's last answer (`nextAudience`) and
+// A fresh sheet opens on Public, or without it on the reader's last
+// answer (`nextAudience`), and
 // writes the answer as it closes, changed or not: that write is what
 // first lets a friend see the visit. An old visit opens on its own
 // answer — private, if it was never asked — and is written only if the
@@ -101,7 +102,7 @@ export type SheetVisit = {
   at: string;
   note: string | null;
   /** The answer the control opens on: the visit's own, or for a fresh
-   *  one the reader's last (`nextAudience`). */
+   *  one `nextAudience`'s. */
   audience: Audience;
   /** Raised by the check-in itself, a moment ago. */
   fresh: boolean;

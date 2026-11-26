@@ -79,8 +79,9 @@ export type Checkin = {
  *  owner added the collections' third: Public, anybody signed in
  *  (`20261125200000_checkin_public.sql`). Strangers still see no more
  *  than friends do (`docs/collection-feed-plan.md`, principle 5) — the
- *  place, the day, the note, the photos — and Public is never assumed
- *  (`nextAudience`). Offered on the sheet behind `checkin_public`. */
+ *  place, the day, the note, the photos. A new visit opens on Public
+ *  since 26 Nov 2026 (`nextAudience`). Offered on the sheet behind
+ *  `checkin_public`. */
 export type Audience = 'private' | 'friends' | 'public';
 
 /**
@@ -108,9 +109,22 @@ export const NOTE_MAX = 280;
 export const audienceOf = (v: Pick<Checkin, 'audience'>): Audience => v.audience ?? 'private';
 
 /**
- * The answer a new visit's sheet opens on: the last one the reader gave,
- * and Friends before they have given any — and Friends after a Public
- * one.
+ * The answer a new visit's sheet opens on.
+ *
+ * With Public offered (`checkin_public`), Public, every time (owner,
+ * 26 Nov 2026): a public visit is what the place's page and Explore are
+ * built from, and the owner chose to encourage it over remembering each
+ * reader's last answer. Weighed and not taken: Public on a reader's first
+ * visit and their last answer after it — a reader who chose Friends once
+ * would not be pushed back each time. What keeps the default honest is
+ * the sheet itself: the answer is in front of the reader with the words
+ * under it saying who will see the visit, before anything is written.
+ * Until 26 Nov the rule below this paragraph held for Public too, and a
+ * sheet never opened on it (`20261125200000_checkin_public.sql`).
+ *
+ * Without Public on offer, the last one the reader gave, and Friends
+ * before they have given any — and Friends after a Public one, which a
+ * sheet without Public could not draw.
  *
  * Friends first because a visit kept to oneself is what the app had for
  * six weeks and the count on the page was the whole of it; the point of
@@ -122,16 +136,13 @@ export const audienceOf = (v: Pick<Checkin, 'audience'>): Audience => v.audience
  * than kept as a setting: there is nothing to sync, and an old visit
  * (answer null) says nothing either way.
  */
-export function nextAudience(rows: readonly Checkin[]): Audience {
+export function nextAudience(rows: readonly Checkin[], publicOn = false): Audience {
+  if (publicOn) return 'public';
   let best: Checkin | null = null;
   for (const r of rows) {
     if (!r.audience) continue;
     if (!best || r.at > best.at) best = r;
   }
-  // Public is chosen on the visit's own sheet, each time. Remembered, a
-  // reader who shared one café with everybody would share where they
-  // are tomorrow with everybody without looking, and a visit is where a
-  // person was; Friends is the widest answer a sheet opens on.
   const last = best?.audience ?? 'friends';
   return last === 'public' ? 'friends' : last;
 }

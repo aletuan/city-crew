@@ -28,6 +28,7 @@ import { AUDIENCE_ON, nextAudience, whyRefused, type Checkin } from '../../lib/c
 import { addCheckin, fetchMyCheckins, type Fetch } from '../../lib/data';
 import { useI18n } from '../../lib/i18n';
 import { useNotice } from '../../lib/notice';
+import { useFlag } from '../../lib/useFlag';
 import { DAILY_CAPS, isDailyLimit } from '../../lib/quota';
 
 /** The place as the tap needs it; the screen has all four to hand. */
@@ -42,6 +43,8 @@ export function useCheckIn({ uid, visits, askToSignIn }: {
   const { say } = useNotice();
   const [checking, setChecking] = useState(false);
   const [raised, setRaised] = useState<SheetVisit | null>(null);
+  // Whether the sheet offers Public, and so opens a new visit on it.
+  const publicOn = useFlag('checkin_public');
   // The reader's count with this visit in it, kept from the tap for the
   // review ask at the sheet's close: by then the list may or may not
   // have been asked again, and the ask's rule counts visits.
@@ -83,7 +86,7 @@ export function useCheckIn({ uid, visits, askToSignIn }: {
       total.current = visits.data.length + 1;
       setRaised({
         id, name: at.name, cover: at.cover, at: new Date().toISOString(),
-        note: null, audience: nextAudience(visits.data), fresh: true,
+        note: null, audience: nextAudience(visits.data, publicOn), fresh: true,
       });
       visits.reload();
     } catch (e) {

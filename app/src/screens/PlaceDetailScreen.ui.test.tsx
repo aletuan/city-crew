@@ -37,6 +37,8 @@ const WIDTH = vi.hoisted(() => {
 });
 
 const state = vi.hoisted(() => ({
+  // Whether the check-in sheet offers Public (`checkin_public`).
+  publicOn: false,
   catalog: { loading: false, data: [] as unknown[] },
   elsewhere: { loading: false, data: null as unknown },
   // The rest of a catalog place's photographs, as `usePlacePhotos` answers.
@@ -137,7 +139,8 @@ vi.mock('../lib/tasteProfile', () => ({ useNoteEvent: () => spies.note }));
 // of them turns it on.
 vi.mock('../lib/useFlag', () => ({
   useFlag: (key: string) => (key === 'place_price' ? state.price
-    : key === 'place_checkin' ? state.checkin : state.credit),
+    : key === 'place_checkin' ? state.checkin
+      : key === 'checkin_public' ? state.publicOn : state.credit),
 }));
 vi.mock('../lib/theme', () => ({
   useScheme: () => ({ scheme: 'light', setScheme: () => {}, ready: true }),
@@ -296,6 +299,7 @@ beforeEach(() => {
   state.credit = false;
   state.price = false;
   state.checkin = false;
+  state.publicOn = false;
   state.checkins = [];
   spies.addCheckin.mockReset().mockResolvedValue('k-new');
   spies.saveCheckin.mockReset().mockResolvedValue(undefined);
@@ -667,6 +671,19 @@ describe('PlaceDetailScreen — title, rating, facts', () => {
     fireEvent.click(screen.getByTestId('checkin-sheet-save'));
     await waitFor(() => expect(spies.saveCheckin).toHaveBeenCalledWith('k-new', { note: null, audience: 'private' }));
     await waitFor(() => expect(spies.review).toHaveBeenCalledWith(2));
+  });
+
+  it('opens a new visit on Public when Public is offered, over the reader’s last answer, and writes it', async () => {
+    state.checkin = true;
+    state.publicOn = true;
+    state.uid = 'u1';
+    state.checkins = [{ ...visit('k0', 60 * 48), place_slug: 'elsewhere', audience: 'private' } as (typeof state.checkins)[number]];
+    show();
+    fireEvent.click(screen.getByTestId('detail-checkin'));
+    const sheet = await screen.findByTestId('checkin-sheet');
+    expect(within(sheet).getByTestId('checkin-sheet-seen-public').getAttribute('aria-checked')).toBe('true');
+    fireEvent.click(screen.getByTestId('checkin-sheet-save'));
+    await waitFor(() => expect(spies.saveCheckin).toHaveBeenCalledWith('k-new', { note: null, audience: 'public' }));
   });
 
   it('asks for the review all the same when the sheet goes with no word written', async () => {

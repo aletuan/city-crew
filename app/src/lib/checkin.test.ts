@@ -218,7 +218,13 @@ describe('a visit\'s note and who sees it', () => {
     expect(nextAudience([...rows].reverse())).toBe('private');
   });
 
-  it('never opens on Public, even straight after a public visit', () => {
+  it('opens on Public whenever Public is offered, whatever the reader last chose', () => {
+    expect(nextAudience([], true)).toBe('public');
+    expect(nextAudience([v('kept-close', '2026-11-25T00:00:00Z', 'private')], true)).toBe('public');
+    expect(nextAudience([v('to-friends', '2026-11-25T00:00:00Z', 'friends')], true)).toBe('public');
+  });
+
+  it('without Public on offer, never opens on it, even straight after a public visit', () => {
     expect(nextAudience([v('shared-with-all', '2026-11-25T00:00:00Z', 'public')])).toBe('friends');
     expect(nextAudience([
       v('private-before', '2026-11-20T00:00:00Z', 'private'),
