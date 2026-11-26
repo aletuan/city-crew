@@ -205,8 +205,9 @@ export type HighlightFace = { handle: string; full_name: string; avatar_url: str
 /** One card of "Hoạt động nổi bật": a place people went to this week,
  *  shown by one public visit and its first photo. `likes` is the
  *  place's over the week, `liked` this visit's; `visitors` is how many
- *  different people went, `faces` up to three of them, the one whose
- *  visit this is first (`20261126210000_highlights_by_place.sql`). */
+ *  different people went, `faces` up to three of them, whoever was
+ *  there last first (`20261126210000_highlights_by_place.sql`,
+ *  `20261126220000_highlights_card_words.sql`). */
 export type HighlightCheckin = {
   id: string;
   place_slug: string;
