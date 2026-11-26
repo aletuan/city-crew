@@ -904,3 +904,12 @@ for f in "$ROOT"/supabase/migrations/*_checkin_report.sql; do
   run "$DB" -f "$f" >/dev/null
 done
 run "$DB" -f "$HERE/checkin_report_test.sql"
+
+# "Đánh giá từ khách" on a place's page (owner, 26 Nov 2026): the count,
+# and the public visits with a note and a photo. After the desk, whose
+# hidden visit and hidden note it leaves out.
+echo "→ guests on a place's page"
+for f in "$ROOT"/supabase/migrations/*_place_guest_reviews.sql; do
+  run "$DB" -f "$f" >/dev/null
+done
+run "$DB" -f "$HERE/place_guest_reviews_test.sql"

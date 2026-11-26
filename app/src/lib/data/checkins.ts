@@ -3,7 +3,7 @@
 
 import { supabase } from '../supabase';
 import type { I18nDoc } from '../localized';
-import { visitPhotosOf, type Audience, type Checkin, type PersonCheckin } from '../checkin';
+import { visitPhotosOf, type Audience, type Checkin, type CheckinPhoto, type PersonCheckin } from '../checkin';
 import { DAILY_LIMIT, refusedByPolicy } from '../quota';
 import { fetchPlaceId } from './guide';
 
@@ -147,4 +147,54 @@ export async function fetchPersonCheckins(personId: string): Promise<PersonCheck
 export async function likeCheckin(id: string, on: boolean): Promise<void> {
   const { error } = await supabase.rpc('like_checkin', { p_id: id, p_on: on });
   if (error) throw new Error(error.message);
+}
+
+/** One guest's say about a place: a public visit with a note and photos
+ *  (`20261126120000_place_guest_reviews.sql`). */
+export type GuestReview = {
+  id: string;
+  user_id: string;
+  handle: string;
+  full_name: string;
+  avatar_url: string | null;
+  /** The visit's day where the place is, as ISO `YYYY-MM-DD`. */
+  day: string;
+  note: string;
+  photos: CheckinPhoto[];
+  likes: number;
+  liked: boolean;
+};
+
+/** "Đánh giá từ khách" for one place: every check-in counted, and the
+ *  reviews the reader may read. `null` for a place the server does not
+ *  show (unpublished, or not there). */
+export type GuestReviews = { count: number; visits: GuestReview[] };
+
+export async function fetchGuestReviews(slug: string): Promise<GuestReviews | null> {
+  const { data, error } = await supabase.rpc('place_guest_reviews', { p_slug: slug });
+  if (error) throw new Error(error.message);
+  if (!data || typeof data !== 'object') return null;
+  const d = data as { count?: unknown; visits?: unknown };
+  const rows = Array.isArray(d.visits) ? d.visits as Record<string, unknown>[] : [];
+  return {
+    count: typeof d.count === 'number' ? d.count : 0,
+    visits: rows.flatMap((r) => {
+      const photos = visitPhotosOf(r.photos);
+      // A review is a note and a photo; the server sends no other, and a
+      // row that arrives without either is not one to draw.
+      if (typeof r.id !== 'string' || typeof r.note !== 'string' || photos.length === 0) return [];
+      return [{
+        id: r.id,
+        user_id: String(r.user_id ?? ''),
+        handle: String(r.handle ?? ''),
+        full_name: String(r.full_name ?? ''),
+        avatar_url: typeof r.avatar_url === 'string' && r.avatar_url ? r.avatar_url : null,
+        day: String(r.day ?? ''),
+        note: r.note,
+        photos,
+        likes: typeof r.likes === 'number' ? r.likes : 0,
+        liked: r.liked === true,
+      }];
+    }),
+  };
 }
