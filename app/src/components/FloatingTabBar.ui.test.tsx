@@ -13,18 +13,22 @@ import React from 'react';
 import { AccessibilityInfo, Animated, Pressable, Text } from 'react-native';
 import type { BottomTabBarProps } from '@react-navigation/bottom-tabs';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { act, fireEvent, render, screen, waitFor } from '../uitest/render';
+import { act, fireEvent, render, screen, viewStyleOf, waitFor } from '../uitest/render';
 import type { FriendshipRow } from '../lib/friends';
 import { TAB_BAR_HEIGHT } from './ui';
 
-const auth = vi.hoisted(() => ({ session: { user: { id: 'me' } } as { user: { id: string } } | null }));
+const auth = vi.hoisted(() => ({
+  session: { user: { id: 'me' } } as { user: { id: string } } | null,
+  // The reader's own row, for the face on the last tab.
+  profile: null as { avatar_url: string } | null,
+}));
 const crew = vi.hoisted(() => ({
   ships: { data: [] as FriendshipRow[], reload: vi.fn(), loadedAt: null as number | null },
 }));
 const invitations = vi.hoisted(() => ({ waiting: 0 }));
 const trips = vi.hoisted(() => ({ data: [] as { id: string; title: string; day: string; trip_stops: { arrive_min: number | null; dwell_min: number | null }[] }[] }));
 vi.mock('../lib/auth', () => {
-  const m = { useAuth: () => ({ session: auth.session }) };
+  const m = { useAuth: () => ({ session: auth.session, profile: auth.profile }) };
   const all = () => (m as { useAuth: () => object }).useAuth();
   return { ...m, useSession: all, useProfile: all, useAuthActions: all, useAuthEvent: () => {} };
 });
@@ -74,7 +78,7 @@ vi.mock('./SignupTour', async (orig) => {
   };
 });
 
-import { PALETTES, PILL_FADE } from '../theme';
+import { PALETTES, PILL_FADE, pillInk } from '../theme';
 import FloatingTabBar from './FloatingTabBar';
 import { TabBarDuckProvider, useTabBarDuck } from './tabBarDuck';
 
@@ -123,6 +127,7 @@ const tx = (el: HTMLElement) => Number(/translateX\((-?[\d.]+)px\)/.exec(el.styl
 beforeEach(() => {
   win.width = 393;
   auth.session = { user: { id: 'me' } };
+  auth.profile = null;
   crew.ships = { data: [], reload: vi.fn(), loadedAt: Date.now() };
   invitations.waiting = 0;
   trips.data = [];
@@ -758,3 +763,52 @@ describe('the guide’s rings on the profile and planner tabs', () => {
     expect(navigation.navigate).toHaveBeenCalledWith(route);
   });
 });
+
+// Your face for the last tab (owner, 26 Nov 2026): the outline when there
+// is no face to draw; selected, the pill's ink in a ring around it.
+describe('the last tab wears your face', () => {
+  const FACE = 'https://x/me.jpg';
+  const PRESET = 'preset:';
+
+  it('draws your face, idle and on the pill, in place of the outline', () => {
+    auth.profile = { avatar_url: FACE };
+    mount(propsFor(0).props);
+    expect(screen.queryByTestId('tab-glyph-Profile')).toBeNull();
+    const idle = screen.getByTestId('tab-face');
+    expect(idle.querySelector(`img[src="${FACE}"]`)).not.toBeNull();
+    expect(screen.getByTestId('tab-face-on')).toBeTruthy();
+    // The other tabs keep their outlines.
+    expect(screen.getByTestId('tab-glyph-Explore')).toBeTruthy();
+  });
+
+  it('rings the face in the pill’s ink on the pill, and a hairline when idle', () => {
+    auth.profile = { avatar_url: FACE };
+    mount(propsFor(4).props);
+    const on = viewStyleOf(screen.getByTestId('tab-face-on'));
+    const idle = viewStyleOf(screen.getByTestId('tab-face'));
+    expect(on.borderWidth).toBe(1.5);
+    expect([pillInk.light, pillInk.dark]).toContain(on.borderColor);
+    expect(Number(idle.borderWidth)).toBeLessThan(1.5);
+    expect(idle.borderColor).not.toBe(on.borderColor);
+  });
+
+  it('keeps the outline signed out, or with no face to draw', () => {
+    auth.profile = { avatar_url: FACE };
+    auth.session = null;
+    const out = mount(propsFor(0).props);
+    expect(screen.getByTestId('tab-glyph-Profile')).toBeTruthy();
+    expect(screen.queryByTestId('tab-face')).toBeNull();
+    out.unmount();
+    auth.session = { user: { id: 'me' } };
+    auth.profile = { avatar_url: '' };
+    const empty = mount(propsFor(0).props);
+    expect(screen.getByTestId('tab-glyph-Profile')).toBeTruthy();
+    empty.unmount();
+    // A bundled animal this build does not carry: no picture to draw, so
+    // the outline rather than a blank disc.
+    auth.profile = { avatar_url: `${PRESET}not-an-animal` };
+    mount(propsFor(0).props);
+    expect(screen.getByTestId('tab-glyph-Profile')).toBeTruthy();
+  });
+});
+
