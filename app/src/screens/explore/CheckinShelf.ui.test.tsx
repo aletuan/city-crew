@@ -34,6 +34,7 @@ import { CheckinShelf, FEATURED_MIN, useHighlights } from './CheckinShelf';
 const card = (id: string, over: Record<string, unknown> = {}) => ({
   id, place_slug: `slug-${id}`, place: { name_en: `Place ${id}`, name_vi: '', i18n: null },
   handle: `h${id}`, full_name: `Person ${id}`, avatar_url: null, note: null, likes: 1, liked: false,
+  visitors: 1, faces: [{ handle: `h${id}`, full_name: `Person ${id}`, avatar_url: null }],
   photo: { id: `p${id}`, path: `u/${id}/p${id}.jpg`, width: 10, height: 10 }, ...over,
 });
 const navigate = vi.fn();
@@ -110,6 +111,42 @@ describe('CheckinShelf', () => {
     await show();
     const first = screen.getAllByTestId('checkin-shelf-card')[0];
     expect(within(first).getByTestId('checkin-shelf-waiting')).toBeTruthy();
+  });
+
+  // A card a place (26 Nov 2026): two people at one, and the card says
+  // so in its corner, in its faces and to a screen reader; a place one
+  // person went to says who, and wears no badge.
+  it('says how many people went where more than one did', async () => {
+    data.cards = [
+      card('a', {
+        visitors: 3, likes: 4,
+        faces: [
+          { handle: 'ha', full_name: 'Person a', avatar_url: null },
+          { handle: 'trang', full_name: 'Trang', avatar_url: null },
+          { handle: 'minh', full_name: '', avatar_url: null },
+        ],
+      }),
+      card('b'), card('c'),
+    ];
+    await show();
+    const [many, one] = screen.getAllByTestId('checkin-shelf-card');
+    expect(within(many).getByTestId('checkin-shelf-went').textContent).toBe('3 people went');
+    expect(within(many).getAllByTestId('checkin-shelf-face')).toHaveLength(3);
+    expect(within(many).getByText('Person a +2')).toBeTruthy();
+    expect(many.getAttribute('aria-label')).toBe('Place a, 3 people went');
+    // The place's hearts over the week, and the reader's own on top.
+    expect(within(many).getByTestId('checkin-shelf-likes').textContent).toBe('4');
+    expect(within(one).queryByTestId('checkin-shelf-went')).toBeNull();
+    expect(within(one).getAllByTestId('checkin-shelf-face')).toHaveLength(1);
+    expect(within(one).getByText('Person b')).toBeTruthy();
+  });
+
+  it('carries what the visitor wrote, and nothing where they wrote nothing', async () => {
+    data.cards = [card('a', { note: 'Small, warm, clean.' }), card('b'), card('c')];
+    await show();
+    const [said, silent] = screen.getAllByTestId('checkin-shelf-card');
+    expect(within(said).getByTestId('checkin-shelf-note').textContent).toBe('Small, warm, clean.');
+    expect(within(silent).queryByTestId('checkin-shelf-note')).toBeNull();
   });
 
   // The owner's day (26 Nov 2026): two cards in the morning, a third
