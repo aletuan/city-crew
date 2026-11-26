@@ -166,6 +166,9 @@ export const textHex = { light: SIDES.light.text, dark: SIDES.dark.text } as con
 export const textTertiaryHex = { light: SIDES.light.textTertiary, dark: SIDES.dark.textTertiary } as const;
 /** `colors.badgeSolid` as plain hex, for a border — see `bgHex`. */
 export const badgeSolidHex = { light: SIDES.light.badgeSolid, dark: SIDES.dark.badgeSolid } as const;
+/** The look's accent as plain hex, for the one thing that needs its hue: the
+ *  map's bubbles (`lib/cluster` › `ClusterTint`). */
+export const accentHex = { light: SIDES.light.accent, dark: SIDES.dark.accent } as const;
 
 export const colors = {
   /** The page. Charcoal or warm paper, the coffee brown, or Rose's

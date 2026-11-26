@@ -21,7 +21,7 @@
 
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { StyleSheet, Text, useWindowDimensions, View } from 'react-native';
-import { clusterPins, clusterSize, clusterSkin, fitRegion, fitSpan, oneSpot, stackAt } from '../lib/cluster';
+import { clusterPins, clusterSize, clusterSkin, fitRegion, fitSpan, oneSpot, stackAt, type ClusterTint } from '../lib/cluster';
 import { mapStyle } from '../lib/mapStyle';
 import type { Place } from '../lib/data';
 import type { ExploreOrigin } from '../lib/exploreFilters';
@@ -32,9 +32,9 @@ import { chosenKind } from '../lib/categories';
 import { canDrawMap } from './MiniMap';
 import { MapView, Marker, PROVIDER_GOOGLE } from './mapsModule';
 import MapBoundary from './MapBoundary';
-import MapControls from './MapControls';
 import { usePinFade } from './pinFade';
 import { useKeepInView } from './mapKeepInView';
+import { MapCorner, useClusterTint } from './mapBubbles';
 import { useReducedMotion } from './ui';
 
 /** How long a bubble is redrawn as it moves before it is frozen. A custom
@@ -52,9 +52,9 @@ const SETTLE_MS = 600;
  * never ours to draw either — Google's map already writes "Hanoi" where
  * Hanoi is.
  */
-function Bubble({ count }: { count: number }) {
+function Bubble({ count, tint }: { count: number; tint: ClusterTint }) {
   const size = clusterSize(count);
-  const skin = clusterSkin(count);
+  const skin = clusterSkin(count, tint);
   return (
     <View style={[s.bubble, { width: size, height: size, borderRadius: size / 2, backgroundColor: skin.fill }]}>
       <Text style={[s.bubbleText, { color: skin.ink }]}>{count}</Text>
@@ -71,7 +71,8 @@ type Pinned = Place & { lat: number; lng: number };
 
 /**
  * Show all the pins, and show them again whenever the set changes; and
- * hand back the fit, for the button that asks for it again.
+ * (The fit used to be handed back for a button that asked for it again;
+ * that button went on 27 Nov 2026, for the crosshair.)
  *
  * The first fit lands at once — the map opens on its pins — and so does
  * a refit for padding measured late. A new set glides there (owner, 23
@@ -116,7 +117,6 @@ function useFit(
   // header's `onLayout` firing late — must still trigger one refit.
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [key, ready, edgePadding.top, edgePadding.right, edgePadding.bottom, edgePadding.left]);
-  return fitAll;
 }
 
 /**
@@ -217,7 +217,7 @@ function openingRegion(
 /** `edgePadding`'s default — see the note on that prop. */
 const DEFAULT_PADDING = { top: 80, right: 40, bottom: 160, left: 40 };
 
-export default function PlacesMap({ places, selectedSlug, onSelect, categories, origin, fallback, cities, onPickCity, edgePadding = DEFAULT_PADDING }: {
+export default function PlacesMap({ places, selectedSlug, onSelect, categories, origin, fallback, cities, onPickCity, edgePadding = DEFAULT_PADDING, onLocate }: {
   places: readonly Place[];
   selectedSlug: string | null;
   /** A pin chosen, or — null — the map's empty ground tapped, which lets
@@ -259,19 +259,19 @@ export default function PlacesMap({ places, selectedSlug, onSelect, categories, 
   /** The screen that measures its header passes what it measured;
    *  `DEFAULT_PADDING` otherwise. */
   edgePadding?: { top: number; right: number; bottom: number; left: number };
+  onLocate?: () => Promise<{ lat: number; lng: number } | null>;
 }) {
   const { t } = useI18n();
   const { scheme, look } = useScheme();
-  const ref = useRef<any>(null);
-  const [ready, setReady] = useState(false);
+  const { tint, tintKey } = useClusterTint(categories);
+  const ref = useRef<any>(null), [ready, setReady] = useState(false);
   // Memoised so the lookup that hangs off it can hold: `pinned` filters a
   // new array every render, and a Map rebuilt 288 entries deep each time
   // `settled` flips is a memo in name only.
   const pins = useMemo(() => pinned(places), [places]);
-
   const key = pins.map((p) => p.slug).sort().join('|');
   const still = useReducedMotion();
-  const fitAll = useFit(ref, pins, key, ready, edgePadding, still);
+  useFit(ref, pins, key, ready, edgePadding, still);
 
   const { span, setSpan, onLayout, opening } = useSpan(pins, key, edgePadding, origin ?? fallback);
   const clusters = useMemo(
@@ -383,7 +383,7 @@ export default function PlacesMap({ places, selectedSlug, onSelect, categories, 
           if (c.slugs.length > 1) {
             return (
               <Marker
-                key={c.key}
+                key={`${c.key}:${tintKey}`}
                 identifier={c.key}
                 coordinate={{ latitude: c.lat, longitude: c.lng }}
                 // Above every pin: a bubble hidden behind the pins it
@@ -407,7 +407,7 @@ export default function PlacesMap({ places, selectedSlug, onSelect, categories, 
                   )}
                 testID={`cluster-${c.key}`}
               >
-                <Bubble count={c.slugs.length} />
+                <Bubble count={c.slugs.length} tint={tint} />
               </Marker>
             );
           }
@@ -471,7 +471,7 @@ export default function PlacesMap({ places, selectedSlug, onSelect, categories, 
         <Leaving pins={fade.leaving} opacity={fade.opacity} />
         {cities.filter((c) => c.count != null).map((c) => (
           <Marker
-            key={`city-${c.id}`}
+            key={`city-${c.id}:${tintKey}`}
             identifier={`city-${c.id}`}
             coordinate={{ latitude: c.lat, longitude: c.lng }}
             // Above the places: at the zoom where a city label shows at
@@ -487,11 +487,11 @@ export default function PlacesMap({ places, selectedSlug, onSelect, categories, 
             ].filter(Boolean).join(', ')}
             testID={`city-${c.id}`}
           >
-            <Bubble count={c.count!} />
+            <Bubble count={c.count!} tint={tint} />
           </Marker>
         ))}
       </MapView>
-      {pins.length ? <MapControls map={ref} still={still} onFit={() => fitAll(!still)} /> : null}
+      {pins.length ? <MapCorner map={ref} onLocate={onLocate} still={still} /> : null}
     </MapBoundary>
   );
 }

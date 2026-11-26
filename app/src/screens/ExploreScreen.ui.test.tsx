@@ -96,6 +96,7 @@ const state = vi.hoisted(() => ({
   scheme: 'dark' as 'dark' | 'light',
 }));
 const spies = vi.hoisted(() => ({
+  animateCamera: vi.fn(),
   // A pull's fetch is in flight the moment it is asked for, which is what
   // the provider's own `reload` does to `loading` in the same batch.
   reload: vi.fn(() => { state.places.loading = true; }),
@@ -220,7 +221,7 @@ vi.mock('../lib/tracereport', () => ({ reportStartup: spies.reportStartup }));
 vi.mock('../components/mapsModule', async () => {
   const R = await import('react');
   const MapView = R.forwardRef((p: any, ref: any) => {
-    R.useImperativeHandle(ref, () => ({ fitToCoordinates: () => {} }));
+    R.useImperativeHandle(ref, () => ({ fitToCoordinates: () => {}, getCamera: async () => ({ zoom: 12 }), animateCamera: spies.animateCamera }));
     return R.createElement('div', { 'data-stub': 'MapView', 'data-testid': p.testID }, p.children);
   });
   const Marker = (p: any) => R.createElement('button', { type: 'button', 'data-stub': 'Marker', 'data-slug': p.identifier, 'data-color': p.pinColor ?? '', 'data-icon': p.image ?? '', onClick: p.onPress }, p.children);
@@ -1539,6 +1540,31 @@ describe('the map', () => {
     await act(async () => { fireEvent.click(onMap().getByText('Cafés')); });
     await act(async () => { fireEvent.click(onMap().getByText('Cafés')); });
     await waitFor(() => expect(screen.queryByRole('button', { name: /Place b/ })).toBeNull());
+  });
+
+  // The crosshair (owner, 27 Nov 2026): the map on the reader, or a word on
+  // its caption saying why not.
+  describe('the crosshair', () => {
+    const cross = async () => {
+      await waitFor(() => expect(screen.getByTestId('places-map')).toBeTruthy());
+      await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'My location' })); });
+    };
+    it('says so on the map when the reader gave no position', async () => {
+      state.locationGranted = false;
+      state.places.data = [place('a', { lat: 21, lng: 105 })];
+      render(<ExploreScreen navigation={nav()} />);
+      await cross();
+      await waitFor(() => expect(screen.getByText(/Allow location access, or try again/)).toBeTruthy());
+    });
+    it('says nothing, and has the position, when it was given', async () => {
+      state.locationGranted = true;
+      state.places.data = [place('a', { lat: 21, lng: 105 })];
+      render(<ExploreScreen navigation={nav()} />);
+      await cross();
+      await waitFor(() => expect(spies.animateCamera).toHaveBeenCalled());
+      expect(spies.animateCamera.mock.calls[0][0].zoom).toBeGreaterThanOrEqual(15);
+      expect(screen.queryByText(/Allow location access, or try again/)).toBeNull();
+    });
   });
 
   // The strip is a row to swipe when other places stand near the open one

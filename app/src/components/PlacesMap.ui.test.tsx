@@ -316,16 +316,20 @@ describe('PlacesMap', () => {
     expect(gone.getAttribute('data-icon')).toBe(String(pinImage(b, 'heritage', false)));
   });
 
-  // The fit, again, on request — gliding — and the controls only when
-  // there are pins to fit.
-  it('fits every pin again from its control, and has none with nothing to fit', () => {
-    const { rerender } = render(<PlacesMap places={[place('a', 21, 105), place('b', 21.1, 105.1)]} selectedSlug={null} onSelect={() => {}} categories={[]} origin={null} cities={[]} onPickCity={() => {}} fallback={HANOI} />);
+  // The crosshair (owner, 27 Nov 2026) is the corner's one button: only
+  // with pins on the map and something to answer it.
+  it('has the crosshair when there are pins and a position to ask for, and puts the map on it', async () => {
+    const onLocate = vi.fn(async () => ({ lat: 21.05, lng: 105.05 }));
+    const { rerender } = render(<PlacesMap places={[place('a', 21, 105)]} selectedSlug={null} onSelect={() => {}} categories={[]} origin={null} cities={[]} onPickCity={() => {}} fallback={HANOI} onLocate={onLocate} />);
     markMapReady();
-    spies.fitToCoordinates.mockClear();
-    fireEvent.click(document.querySelector('[data-testid="map-fit"]')!);
-    expect(spies.fitToCoordinates).toHaveBeenCalledWith([{ latitude: 21, longitude: 105 }, { latitude: 21.1, longitude: 105.1 }], expect.objectContaining({ animated: true }));
-    rerender(<PlacesMap places={[]} selectedSlug={null} onSelect={() => {}} categories={[]} origin={null} cities={[]} onPickCity={() => {}} fallback={HANOI} />);
-    expect(document.querySelector('[data-testid="map-fit"]')).toBeNull();
+    spies.animateCamera.mockClear();
+    await act(async () => { fireEvent.click(document.querySelector('[data-testid="map-locate"]')!); });
+    expect(onLocate).toHaveBeenCalledOnce();
+    expect(spies.animateCamera).toHaveBeenLastCalledWith({ center: { latitude: 21.05, longitude: 105.05 }, zoom: 15 }, { duration: 400 });
+    rerender(<PlacesMap places={[]} selectedSlug={null} onSelect={() => {}} categories={[]} origin={null} cities={[]} onPickCity={() => {}} fallback={HANOI} onLocate={onLocate} />);
+    expect(document.querySelector('[data-testid="map-locate"]')).toBeNull();
+    rerender(<PlacesMap places={[place('a', 21, 105)]} selectedSlug={null} onSelect={() => {}} categories={[]} origin={null} cities={[]} onPickCity={() => {}} fallback={HANOI} />);
+    expect(document.querySelector('[data-testid="map-locate"]')).toBeNull();
   });
 
   // The strip has no ✕: the map's empty ground lets the chosen place go.

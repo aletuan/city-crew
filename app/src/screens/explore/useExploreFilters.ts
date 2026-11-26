@@ -277,7 +277,7 @@ export function useExploreFilters({ t, places, city, cities, signedIn, askToSign
   return {
     picked, pick, filterOpen, setFilterOpen, appliedFilters, sortOrigin, setCityIndex, elsewhere, cats,
     filteredFor, shown, selectedSlug, setSelectedSlug, pickPin, deckPlaces, selected, selectedKm, locate, applyFilters, filterCount,
-    note, pickStatus, pickSaved, pickVisited,
+    note, say, pickStatus, pickSaved, pickVisited,
   };
 }
 
