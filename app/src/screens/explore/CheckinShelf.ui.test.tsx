@@ -5,6 +5,7 @@
 // heart that is undone when refused, and a press that opens the place.
 
 import React from 'react';
+import { AppState } from 'react-native';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { act, cleanup, fireEvent, render, screen, waitFor, within } from '../../uitest/render';
 
@@ -28,7 +29,7 @@ vi.mock('../../lib/i18n', () => ({ useI18n: () => ({ lang: 'en', t: (en: string)
 
 import { forgetSignedPhotos } from '../../components/useSignedPhotos';
 import type { Nav } from '../../nav';
-import { CheckinShelf, FEATURED_MIN } from './CheckinShelf';
+import { CheckinShelf, FEATURED_MIN, useHighlights } from './CheckinShelf';
 
 const card = (id: string, over: Record<string, unknown> = {}) => ({
   id, place_slug: `slug-${id}`, place: { name_en: `Place ${id}`, name_vi: '', i18n: null },
@@ -36,9 +37,12 @@ const card = (id: string, over: Record<string, unknown> = {}) => ({
   photo: { id: `p${id}`, path: `u/${id}/p${id}.jpg`, width: 10, height: 10 }, ...over,
 });
 const navigate = vi.fn();
+// As Explore holds it: the read in the page, the cards handed down.
+const Page = () => <CheckinShelf navigation={{ navigate } as unknown as Nav} cards={useHighlights().data} />;
+const settle = () => act(async () => { for (let i = 0; i < 6; i += 1) await Promise.resolve(); });
 const show = async () => {
-  render(<CheckinShelf navigation={{ navigate } as unknown as Nav} />);
-  await act(async () => { for (let i = 0; i < 6; i += 1) await Promise.resolve(); });
+  render(<Page />);
+  await settle();
 };
 
 beforeEach(() => {
@@ -49,7 +53,7 @@ beforeEach(() => {
   navigate.mockClear();
   forgetSignedPhotos();
 });
-afterEach(cleanup);
+afterEach(() => { cleanup(); vi.restoreAllMocks(); });
 
 describe('CheckinShelf', () => {
   it('asks nothing and draws nothing for somebody signed out', async () => {
@@ -106,5 +110,31 @@ describe('CheckinShelf', () => {
     await show();
     const first = screen.getAllByTestId('checkin-shelf-card')[0];
     expect(within(first).getByTestId('checkin-shelf-waiting')).toBeTruthy();
+  });
+
+  // The owner's day (26 Nov 2026): two cards in the morning, a third
+  // person by the afternoon, and no shelf until the app was killed.
+  it('is asked again on a return to the app once it has gone stale', async () => {
+    let wake: ((s: string) => void) | null = null;
+    vi.spyOn(AppState, 'addEventListener').mockImplementation((_type, fn) => {
+      wake = fn as (s: string) => void;
+      return { remove: () => {} } as unknown as ReturnType<typeof AppState.addEventListener>;
+    });
+    data.cards = [card('a'), card('b')];
+    await show();
+    expect(screen.queryByTestId('checkin-shelf')).toBeNull();
+    data.cards = [card('a'), card('b'), card('c')];
+    // A minute on: still fresh, nothing asked.
+    const at = Date.now();
+    vi.spyOn(Date, 'now').mockReturnValue(at + 60_000);
+    act(() => { wake!('active'); });
+    await settle();
+    expect(data.fetchHighlightCheckins).toHaveBeenCalledTimes(1);
+    // Three minutes on: past `STALE_MS`, asked again, and drawn.
+    vi.spyOn(Date, 'now').mockReturnValue(at + 3 * 60_000);
+    act(() => { wake!('active'); });
+    await settle();
+    expect(data.fetchHighlightCheckins).toHaveBeenCalledTimes(2);
+    expect(screen.getAllByTestId('checkin-shelf-card')).toHaveLength(3);
   });
 });

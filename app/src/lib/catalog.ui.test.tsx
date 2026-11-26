@@ -208,6 +208,17 @@ describe('coming back to the foreground', () => {
     expect(world.collections.reload).toHaveBeenCalledOnce();
   });
 
+  // The shelf is ranked by the hearts, so they come back with the lists.
+  it('asks again for stale hearts, the counts and the reader’s own', async () => {
+    world.likeCounts = fetch({ ...world.likeCounts, loadedAt: OLD });
+    world.myLikes = fetch({ data: [], loadedAt: OLD });
+    mount();
+    act(() => { world.appStateCb!('active'); });
+    await flush();
+    expect(world.likeCounts.reload).toHaveBeenCalledOnce();
+    expect(world.myLikes.reload).toHaveBeenCalledOnce();
+  });
+
   it('leaves a fresh catalog alone, and one already loading', async () => {
     world.places = fetch({ loadedAt: Date.now() });
     world.collections = fetch({ loadedAt: OLD, loading: true });
@@ -216,6 +227,8 @@ describe('coming back to the foreground', () => {
     await flush();
     expect(world.places.reload).not.toHaveBeenCalled();
     expect(world.collections.reload).not.toHaveBeenCalled();
+    expect(world.likeCounts.reload).not.toHaveBeenCalled();
+    expect(world.myLikes.reload).not.toHaveBeenCalled();
   });
 
   it('does nothing on the way to the background', async () => {

@@ -25,6 +25,17 @@
 // A press opens the place, not the person: somebody on Explore is
 // choosing where to go, and the place's page carries this visit in its
 // "Đánh giá từ khách" when it has a note to go with the photo.
+//
+// ── who asks ──
+//
+// The read is `useHighlights`, called by Explore and handed down, not
+// made in here. Made in here, nothing outside could ask it again: a pull
+// on Explore reloaded the catalog and left this shelf as it was, and
+// coming back to the app never asked it at all — so a city that reached
+// three people during the day showed nothing until the app was killed
+// and opened again (owner, 26 Nov 2026, on a phone). Explore owns the
+// pull, so Explore owns the read; the return to the app is the same
+// two-minute rule every list the app holds keeps (`lib/stale`).
 
 import React, { useCallback, useState } from 'react';
 import { ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
@@ -36,11 +47,12 @@ import { Avatar } from '../../components/ui/surfaces';
 import { useSignedPhotos } from '../../components/useSignedPhotos';
 import { useSession } from '../../lib/auth';
 import { useCurrentCity } from '../../lib/city';
-import { fetchHighlightCheckins, likeCheckin, useFetch, type HighlightCheckin } from '../../lib/data';
+import { fetchHighlightCheckins, likeCheckin, useFetch, type Fetch, type HighlightCheckin } from '../../lib/data';
 import { atHandle } from '../../lib/handle';
 import { useI18n } from '../../lib/i18n';
 import { localized } from '../../lib/localized';
 import { shelfRatio } from '../../lib/shelfCard';
+import { useRefreshOnForeground } from '../../lib/useRefreshOnForeground';
 import { colors, coverScrim, font, onPhoto, space } from '../../theme';
 import { type Nav } from '../../nav';
 import { s as page } from './styles';
@@ -52,8 +64,9 @@ export const FEATURED_MIN = 3;
 
 const NONE: HighlightCheckin[] = [];
 
-export function CheckinShelf({ navigation }: { navigation: Nav }) {
-  const { t, lang } = useI18n();
+/** The shelf's read: this week's cards for the reader's city, nothing
+ *  signed out, asked again on a return to the app — see "who asks". */
+export function useHighlights(): Fetch<HighlightCheckin[]> {
   const { city } = useCurrentCity();
   const { session } = useSession();
   const uid = session?.user?.id ?? null;
@@ -63,7 +76,12 @@ export function CheckinShelf({ navigation }: { navigation: Nav }) {
     [uid, cityId],
   );
   const read = useFetch(fetcher, NONE);
-  const cards = read.data;
+  useRefreshOnForeground(read);
+  return read;
+}
+
+export function CheckinShelf({ navigation, cards }: { navigation: Nav; cards: readonly HighlightCheckin[] }) {
+  const { t, lang } = useI18n();
   const linkOf = useSignedPhotos(cards.map((c) => c.photo), cards.length >= FEATURED_MIN);
   const [pressed, setPressed] = useState<Record<string, boolean>>({});
 

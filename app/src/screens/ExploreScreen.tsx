@@ -8,7 +8,7 @@
 // where it is needed — bookmarking a place — rather than from a
 // permanent control in a corner.
 
-import { memo, useCallback, useEffect, useMemo, useState } from 'react';
+import { memo, useCallback, useEffect, useMemo } from 'react';
 import { Animated, Platform, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import ExploreFilterSheet from '../components/ExploreFilterSheet';
@@ -39,6 +39,7 @@ import { ScrollNudge } from './explore/ScrollNudge';
 import { s } from './explore/styles';
 import { useExploreFilters } from './explore/useExploreFilters';
 import { useExploreScroll } from './explore/useExploreScroll';
+import { useExploreRefresh } from './explore/useExploreRefresh';
 import { FilterBar } from './explore/FilterBar';
 import { ExploreList, KeptUnder } from './explore/ExploreList';
 import { ExploreMap } from './explore/ExploreMap';
@@ -71,12 +72,9 @@ export default function ExploreScreen({ navigation }: { navigation: Nav }) {
   // return — and a spinner over freshly drawn content reads as the app
   // second-guessing itself. The old guard (`!fromCache`) silenced only
   // the first of those; the owner caught the second one glowing on a
-  // quiet morning open. Armed by the gesture, disarmed when the fetch
-  // it started settles.
-  const [pulling, setPulling] = useState(false);
-  useEffect(() => {
-    if (pulling && !loading) setPulling(false);
-  }, [pulling, loading]);
+  // quiet morning open. What a pull asks again, and when it is done:
+  // `useExploreRefresh` (26 Nov 2026).
+  const { pulling, pull, highlights } = useExploreRefresh({ loading, reload });
   // Skeletons hold until there is something to draw — `loaded`, not
   // `loading`. The distinction was decorative until the catalog started
   // hydrating from the launch cache: hydrated data arrives with the
@@ -172,7 +170,7 @@ export default function ExploreScreen({ navigation }: { navigation: Nav }) {
       <Shelf navigation={navigation} />
       {/* This week's check-ins, under the collections (owner, 26 Nov
           2026) — `CheckinShelf`; nothing at all under three. */}
-      <Highlights navigation={navigation} />
+      <Highlights navigation={navigation} cards={highlights} />
     </View>
   );
 
@@ -225,7 +223,7 @@ export default function ExploreScreen({ navigation }: { navigation: Nav }) {
             <ExploreList
               t={t} navigation={navigation} listRef={listRef} shown={shown} header={header} bar={bar(false)}
               picked={picked} appliedFilters={appliedFilters} sortOrigin={sortOrigin} openPlace={openPlace}
-              tabClearance={tabClearance} pulling={pulling} setPulling={setPulling} reload={reload}
+              tabClearance={tabClearance} pulling={pulling} onPull={pull}
               onScroll={onScroll} onViewable={onViewable} viewabilityConfig={viewabilityConfig}
             />
           </KeptUnder>

@@ -202,8 +202,8 @@ export function CatalogProvider({ children }: { children: React.ReactNode }) {
     }
   }, [collections.loaded, curatorAvatars.loaded, curatorAvatars.loading]);
 
-  const latest = useRef({ places, collections });
-  latest.current = { places, collections };
+  const latest = useRef({ places, collections, likeCounts, myLikes });
+  latest.current = { places, collections, likeCounts, myLikes };
   useEffect(() => {
     const sub = AppState.addEventListener('change', (next) => {
       if (next !== 'active') return;
@@ -219,7 +219,11 @@ export function CatalogProvider({ children }: { children: React.ReactNode }) {
         // no delay worth the name.
         await supabase.auth.getSession().catch(() => {});
         const now = Date.now();
-        for (const f of [latest.current.places, latest.current.collections]) {
+        // The hearts with the lists they count (26 Nov 2026): the shelf is
+        // ranked by them, so lists asked again under the old tally were
+        // ordered by numbers that had moved while the phone was away.
+        const { places: p, collections: c, likeCounts: n, myLikes: m } = latest.current;
+        for (const f of [p, c, n, m]) {
           // Never on top of a request already in flight: the one that is
           // running is newer than anything this could start.
           if (!f.loading && shouldRefresh(f.loadedAt, now)) f.reload();
