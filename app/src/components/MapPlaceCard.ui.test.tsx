@@ -249,6 +249,14 @@ describe('MapPlaceCard', () => {
     expect(screen.queryByRole('button', { name: 'Directions' })).toBeNull();
   });
 
+  // The route's disc stands 36 points from the card's corner and the status
+  // row above the name is 22 tall, so the name's first line starts inside
+  // the disc's reach: it keeps clear of it, as the status row does.
+  it('keeps the name clear of the route disc', () => {
+    render(<MapPlaceCard place={place()} distanceKm={null} kind={null} now={NOON} onPress={() => {}} />);
+    expect(getComputedStyle(screen.getByText('Cộng Cà Phê')).paddingRight).toBe('40px');
+  });
+
   // A swipe has no gesture a screen reader can make, so the card offers its
   // moves as actions — and only the ones that go somewhere. The props are
   // read off the committed tree, as `StopCard.ui.test.tsx` reads its band's.

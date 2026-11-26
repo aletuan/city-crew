@@ -53,9 +53,21 @@ export function ExploreMap({
   filters: ExploreFiltering;
 }) {
   const {
-    appliedFilters, pickStatus, pickSaved, pickVisited, note, shown, selectedSlug, pickPin, picked,
+    appliedFilters, pickStatus, pickSaved, pickVisited, note, say, locate, shown, selectedSlug, pickPin, picked,
     sortOrigin, elsewhere,
   } = filters;
+  // The crosshair: the reader's fix, or a word on the map's own caption
+  // saying why there is none (permission, or no reading yet).
+  const findMe = async () => {
+    const fix = await locate();
+    if ('refused' in fix) { say(t(
+      'Allow location access, or try again in a moment, to find yourself on the map.',
+      'Hãy cho phép truy cập vị trí, hoặc thử lại sau giây lát, để thấy mình trên bản đồ.',
+      '地図で現在地を見るには、位置情報を許可するか、しばらくしてからもう一度お試しください。',
+      '请允许访问位置信息，或稍后再试，即可在地图上看到自己。', '請允許存取位置資訊，或稍後再試，即可在地圖上看到自己。',
+    )); return null; }
+    return fix.origin;
+  };
   const still = useReducedMotion();
   const shownAs = useRef(new Animated.Value(still ? 1 : 0)).current;
   useEffect(() => {
@@ -179,6 +191,7 @@ export function ExploreMap({
           // zoomed out past this city — see the prop's own note.
           cities={elsewhere}
           onPickCity={setCity}
+          onLocate={findMe}
           // The map's box already starts under the bar (`marginTop`
           // above), so the top inset is only breathing room; the
           // bottom clears the strip and the tab bar beneath it: 124,

@@ -292,7 +292,11 @@ const s = StyleSheet.create({
     flexShrink: 1, paddingHorizontal: 8, paddingVertical: 3, borderRadius: radius.pill, overflow: 'hidden',
     fontSize: 12, fontWeight: font.semibold,
   },
-  name: { color: colors.text, fontSize: 16, lineHeight: 21, fontWeight: font.semibold },
+  // Clear of the route's disc as well (27 Nov 2026, from a screenshot): the
+  // status row above is 22 tall and the disc is 36 from the card's corner,
+  // so the name's first line starts 11 points inside the disc's reach and a
+  // long one ran under it.
+  name: { color: colors.text, fontSize: 16, lineHeight: 21, fontWeight: font.semibold, paddingRight: 40 },
   facts: { color: colors.textSecondary, fontSize: 13, fontWeight: font.regular },
   rating: { color: colors.text, fontSize: 13, fontWeight: font.semibold, marginTop: 2 },
   // The photograph disc's size and reach (`PHOTO_DISC`, `PHOTO_SLOP`),

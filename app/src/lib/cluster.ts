@@ -177,10 +177,91 @@ export type ClusterSkin = { fill: string; ink: string };
  * place the reader chose. Each step clears 4.5:1 against its own ink,
  * which is why the figure turns white at the top.
  */
-export function clusterSkin(count: number): ClusterSkin {
-  if (count >= 100) return { fill: '#545045', ink: '#FFFFFF' };
-  if (count >= 10) return { fill: '#857F6F', ink: '#17150F' };
+export function clusterSkin(count: number, tint: ClusterTint = null): ClusterSkin {
+  if (tint && 'pin' in tint) return { fill: tint.pin, ink: '#FFFFFF' };
+  const step = count >= 100 ? 0 : count >= 10 ? 1 : 2;
+  if (tint) return { fill: tintedFill(tint.hue, TINT_LUMINANCE[step]), ink: step < 2 ? '#FFFFFF' : '#17150F' };
+  if (step === 0) return { fill: '#545045', ink: '#FFFFFF' };
+  if (step === 1) return { fill: '#857F6F', ink: '#17150F' };
   return { fill: '#B9B5AC', ink: '#17150F' };
+}
+
+/**
+ * What a bubble takes its colour from (owner, 27 Nov 2026), over the grey
+ * above, which stays for a theme with no hue of its own.
+ *
+ * `pin` — one category is chosen, so every pin on the map is that kind
+ * and a bubble in its colour says "this many of these". The collision the
+ * grey was made to avoid (a bubble the same colour as the Eats pin, and
+ * so read as a restaurant) cannot happen: there is no other kind to be
+ * mistaken for. Density is the bubble's size alone then, since a
+ * category's colour is not ours to darken.
+ *
+ * `hue` — All, or several kinds: the look's own accent hue, muted, in the
+ * same three darknesses. A bubble here holds a mix, so no category's
+ * colour could be true of it. Owner's call over the grey, which it was
+ * weighed against: this hue can sit near Nature's green or Views' teal,
+ * and what keeps a bubble from reading as one of them is that it is
+ * muted (28% saturation to a pin's 55 and more), round, and carries a
+ * count. Not measured on a phone.
+ */
+export type ClusterTint = { pin: string } | { hue: number } | null;
+
+/** How saturated a theme-tinted bubble is: a tint, not a colour. */
+const TINT_SATURATION = 0.28;
+/**
+ * Relative luminance of the three steps, deep to pale — set by luminance
+ * and not by lightness so that the figure's ink clears the same contrast
+ * on every hue: white on the first two (10.5:1 and 5.3:1 at least), the
+ * map's dark ink on the pale one (6.1:1). A fixed HSL lightness measured
+ * 3.05:1 on the worst hue for the middle step, and neither ink cleared
+ * 4.5 on it.
+ */
+const TINT_LUMINANCE = [0.05, 0.15, 0.3] as const;
+
+// The sRGB curve without its linear toe: a channel only falls under 0.04
+// near black, and the darkest step here keeps its weakest at 0.18 or more
+// (lightness ≥ 0.25 at 28% saturation), so the toe is never reached.
+function channel(c: number): number {
+  return ((c + 0.055) / 1.055) ** 2.4;
+}
+
+function hslToRgb(h: number, s: number, l: number): [number, number, number] {
+  const a = s * Math.min(l, 1 - l);
+  const f = (n: number) => {
+    const k = (n + h / 30) % 12;
+    return l - a * Math.max(-1, Math.min(k - 3, 9 - k, 1));
+  };
+  return [f(0), f(8), f(4)];
+}
+
+function luminance([r, g, b]: [number, number, number]): number {
+  return 0.2126 * channel(r) + 0.7152 * channel(g) + 0.0722 * channel(b);
+}
+
+/** The colour of `hue` at the lightness whose luminance is `target`. */
+function tintedFill(hue: number, target: number): string {
+  let lo = 0;
+  let hi = 1;
+  for (let i = 0; i < 24; i++) {
+    const mid = (lo + hi) / 2;
+    if (luminance(hslToRgb(hue, TINT_SATURATION, mid)) < target) lo = mid; else hi = mid;
+  }
+  const hex = hslToRgb(hue, TINT_SATURATION, (lo + hi) / 2)
+    .map((c) => Math.round(c * 255).toString(16).padStart(2, '0'))
+    .join('');
+  return `#${hex.toUpperCase()}`;
+}
+
+/** The hue of a `#RRGGBB` colour in degrees, or null for a grey — which
+ *  has none to tint with. */
+export function hueOf(hex: string): number | null {
+  const [r, g, b] = [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16) / 255);
+  const max = Math.max(r, g, b);
+  const d = max - Math.min(r, g, b);
+  if (d < 0.04) return null;
+  const h = max === r ? ((g - b) / d) % 6 : max === g ? (b - r) / d + 2 : (r - g) / d + 4;
+  return (h * 60 + 360) % 360;
 }
 
 /**

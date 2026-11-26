@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { CATEGORIES, CATEGORY_ORDER } from './categories';
-import { clusterPins, clusterSize, fitRegion, fitSpan, clusterSkin, metresApart, oneSpot, STACK_M, stackAt, type ClusterPoint } from './cluster';
+import { clusterPins, clusterSize, fitRegion, fitSpan, clusterSkin, hueOf, metresApart, oneSpot, STACK_M, stackAt, type ClusterPoint } from './cluster';
 
 const p = (slug: string, lat: number, lng: number): ClusterPoint => ({ slug, lat, lng });
 
@@ -110,6 +110,62 @@ describe('clusterSkin', () => {
   // The one coral thing on the map is the place the reader chose.
   it('never reaches for the accent', () => {
     for (const n of [1, 10, 100, 288]) expect(clusterSkin(n).fill).not.toBe('#FF6F5B');
+  });
+});
+
+describe('clusterSkin, tinted', () => {
+  const lum = (hex: string) => {
+    const c = [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16) / 255).map((v) => (v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4));
+    return 0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2];
+  };
+  const ratio = (a: number, b: number) => (Math.max(a, b) + 0.05) / (Math.min(a, b) + 0.05);
+  const WHITE = 1, INK = lum('#17150F');
+
+  it('is the category\'s own colour, white figure, at every count — size says how many', () => {
+    for (const n of [1, 10, 100]) expect(clusterSkin(n, { pin: '#DA3C28' })).toEqual({ fill: '#DA3C28', ink: '#FFFFFF' });
+  });
+
+  it('steps deep to pale at the same two counts, in the hue it is given', () => {
+    const [deep, mid, pale] = [100, 10, 1].map((n) => clusterSkin(n, { hue: 160 }));
+    expect(lum(deep.fill)).toBeLessThan(lum(mid.fill));
+    expect(lum(mid.fill)).toBeLessThan(lum(pale.fill));
+    expect(clusterSkin(9, { hue: 160 }).fill).toBe(pale.fill);
+    expect(clusterSkin(99, { hue: 160 }).fill).toBe(mid.fill);
+  });
+
+  it('clears 4.5:1 for its figure on every hue, which a fixed lightness did not', () => {
+    for (let h = 0; h < 360; h += 15) {
+      for (const n of [100, 10, 1]) {
+        const { fill, ink } = clusterSkin(n, { hue: h });
+        expect(ratio(lum(fill), ink === '#FFFFFF' ? WHITE : INK)).toBeGreaterThan(4.5);
+      }
+    }
+  });
+
+  it('is a tint and not a colour: well under a pin\'s saturation', () => {
+    const sat = (hex: string) => {
+      const c = [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16) / 255);
+      const mx = Math.max(...c), mn = Math.min(...c), l = (mx + mn) / 2;
+      return mx === mn ? 0 : (mx - mn) / (1 - Math.abs(2 * l - 1));
+    };
+    for (const n of [100, 10, 1]) expect(sat(clusterSkin(n, { hue: 160 }).fill)).toBeLessThan(0.4);
+  });
+
+  it('is the grey, unchanged, with no tint', () => {
+    expect(clusterSkin(100, null)).toEqual(clusterSkin(100));
+  });
+});
+
+describe('hueOf', () => {
+  it.each([['#FF0000', 0], ['#00FF00', 120], ['#0000FF', 240], ['#FFFF00', 60], ['#FF00FF', 300]])('reads %s as %i°', (hex, h) => {
+    expect(hueOf(hex)).toBeCloseTo(h as number, 5);
+  });
+  it('wraps a red that leans to blue round to the top of the wheel', () => {
+    expect(hueOf('#FF0010')).toBeGreaterThan(350);
+  });
+  it('has none for a grey', () => {
+    expect(hueOf('#808080')).toBeNull();
+    expect(hueOf('#8A8A8C')).toBeNull();
   });
 });
 
