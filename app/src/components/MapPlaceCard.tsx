@@ -139,7 +139,22 @@ function Directions({ place, t }: { place: Place; t: T }) {
   );
 }
 
-export default function MapPlaceCard({ place, distanceKm, kind, now, onPress }: {
+/** The deck's two moves as screen-reader actions: a swipe is a gesture a
+ *  listener cannot make. A move that has nowhere to go is not offered. */
+function swipeActions(swipe: { next?: () => void; previous?: () => void } | undefined, t: ReturnType<typeof useI18n>['t']) {
+  const next = swipe?.next;
+  const previous = swipe?.previous;
+  return {
+    accessibilityActions: [
+      ...(next ? [{ name: 'next', label: t('Next place', 'Địa điểm tiếp theo', '次の場所', '下一个地点', '下一個地點') }] : []),
+      ...(previous ? [{ name: 'previous', label: t('Previous place', 'Địa điểm trước', '前の場所', '上一个地点', '上一個地點') }] : []),
+    ],
+    onAccessibilityAction: (e: { nativeEvent: { actionName: string } }) =>
+      (e.nativeEvent.actionName === 'next' ? next : previous)?.(),
+  };
+}
+
+export default function MapPlaceCard({ place, distanceKm, kind, now, onPress, swipe, inset = true }: {
   place: Place;
   /** Null when there is no fix to measure from — the figure is then left
    *  out rather than written as zero. */
@@ -151,6 +166,13 @@ export default function MapPlaceCard({ place, distanceKm, kind, now, onPress }: 
   kind: string | null;
   now: Date;
   onPress: () => void;
+  /** The way to the next and the previous card, when the card is one of a
+   *  deck (`MapDeck`). A swipe has no gesture a screen reader can make, so
+   *  the card offers the same two moves as actions. A missing one is an
+   *  end of the deck. */
+  swipe?: { next?: () => void; previous?: () => void };
+  /** The page gutter round the card. A deck lays its own out. */
+  inset?: boolean;
 }) {
   const { t, lang } = useI18n();
   // Read here rather than passed in: the reader's own, from a provider
@@ -199,7 +221,10 @@ export default function MapPlaceCard({ place, distanceKm, kind, now, onPress }: 
   ].filter((f): f is string => !!f).join(', ');
 
   return (
-    <PressableScale onPress={onPress} accessibilityRole="button" accessibilityLabel={spoken} style={s.gutter} contentStyle={s.card}>
+    <PressableScale
+      onPress={onPress} accessibilityRole="button" accessibilityLabel={spoken}
+      {...swipeActions(swipe, t)}
+      style={inset ? s.gutter : undefined} contentStyle={s.card}>
       <View style={s.thumb}>
         {cover
           ? <Image source={{ uri: cover.photo_uri }} style={StyleSheet.absoluteFill} contentFit="cover" />

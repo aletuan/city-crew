@@ -1535,6 +1535,105 @@ describe('the map', () => {
     await waitFor(() => expect(screen.queryByRole('button', { name: /Place b/ })).toBeNull());
   });
 
+  // The strip is a row to swipe when other places stand near the open one
+  // (owner, 26 Nov 2026) and the card alone when none do — no edge peeking
+  // from behind a card with nothing behind it.
+  describe('the swipe row', () => {
+    /** Props of the first committed element that has `prop`. */
+    const propsWith = (prop: string): Record<string, any> => {
+      type Fiber = { child: Fiber | null; sibling: Fiber | null; memoizedProps: Record<string, any> | null };
+      const host = document.body.firstElementChild as unknown as Record<string, { stateNode: { current: Fiber } }>;
+      const key = Object.keys(host).find((k) => k.startsWith('__reactContainer'))!;
+      const stack: Fiber[] = [host[key].stateNode.current];
+      while (stack.length) {
+        const f = stack.pop()!;
+        if (f.memoizedProps && typeof f.memoizedProps === 'object' && prop in f.memoizedProps) return f.memoizedProps;
+        if (f.sibling) stack.push(f.sibling);
+        if (f.child) stack.push(f.child);
+      }
+      throw new Error(`nothing with ${prop}`);
+    };
+    const open = async (slug: string) => {
+      await waitFor(() => expect(screen.getByTestId('places-map')).toBeTruthy());
+      await act(async () => { fireEvent.click(document.querySelector(`[data-slug="${slug}"]`)!); });
+    };
+
+    it('is a row of the places round the tapped one', async () => {
+      state.places.data = [place('a', { lat: 21, lng: 105 }), place('b', { lat: 21.02, lng: 105 })];
+      render(<ExploreScreen navigation={nav()} />);
+      await open('a');
+      await waitFor(() => expect(screen.getByTestId('map-deck')).toBeTruthy());
+      expect(screen.getByRole('button', { name: /Place b/ })).toBeTruthy();
+    });
+
+    it('is the card alone for a place with nobody near, with no edge to promise a neighbour', async () => {
+      state.places.data = [place('a', { lat: 21, lng: 105 })];
+      render(<ExploreScreen navigation={nav()} />);
+      await open('a');
+      expect(screen.queryByTestId('map-deck')).toBeNull();
+      expect(screen.getByRole('button', { name: /Place a/ })).toBeTruthy();
+    });
+
+    // The distance on each card is from the reader's fix when there is one,
+    // and left out when there is none — not a stale or zero figure.
+    it('measures every card in the row from the reader, and leaves the figure out without a fix', async () => {
+      state.locationGranted = true;
+      state.places.data = [place('a', { lat: 21, lng: 105 }), place('b', { lat: 21.02, lng: 105 })];
+      render(<ExploreScreen navigation={nav()} />);
+      await open('a');
+      await waitFor(() => expect(screen.getByRole('button', { name: /km, Place b/ })).toBeTruthy());
+      expect(screen.getByRole('button', { name: /km, Place a/ })).toBeTruthy();
+    });
+
+    it('has no distance on the cards when the reader gave no fix', async () => {
+      state.locationGranted = false;
+      state.places.data = [place('a', { lat: 21, lng: 105 }), place('b', { lat: 21.02, lng: 105 })];
+      render(<ExploreScreen navigation={nav()} />);
+      await open('a');
+      await waitFor(() => expect(screen.getByTestId('map-deck')).toBeTruthy());
+      expect(screen.getByRole('button', { name: /Place b/ }).getAttribute('aria-label')).not.toMatch(/km|\bm,/);
+    });
+
+    it('moves the choice to the card a swipe settles on, and opens that place', async () => {
+      state.places.data = [place('a', { lat: 21, lng: 105 }), place('b', { lat: 21.02, lng: 105 })];
+      const navigation = nav();
+      render(<ExploreScreen navigation={navigation} />);
+      await open('a');
+      // The set settles after the tap (the reader's fix arrives and
+      // re-sorts it), and the deck follows it: a deck of one grows.
+      await waitFor(() => expect(screen.getByTestId('map-deck')).toBeTruthy());
+      await act(async () => { propsWith('onMomentumScrollEnd').onMomentumScrollEnd({ nativeEvent: { contentOffset: { x: 10_000 } } }); });
+      expect(screen.getByTestId('map-deck')).toBeTruthy();
+      fireEvent.click(screen.getByRole('button', { name: /Place b/ }));
+      expect(navigation.navigate).toHaveBeenCalledWith('PlaceDetail', { slug: 'b' });
+    });
+
+    it('keeps the open place and rebuilds round it when a chip takes only its neighbour off', async () => {
+      state.places.data = [
+        place('a', { lat: 21, lng: 105, categories: ['cafes'] }),
+        place('b', { lat: 21.02, lng: 105, categories: ['heritage'] }),
+      ];
+      render(<ExploreScreen navigation={nav()} />);
+      await open('a');
+      await waitFor(() => expect(screen.getByTestId('map-deck')).toBeTruthy());
+      await act(async () => { fireEvent.click(onMap().getAllByText('Cafés')[0]); });
+      await waitFor(() => expect(screen.queryByTestId('map-deck')).toBeNull());
+      expect(screen.getByRole('button', { name: /Place a/ })).toBeTruthy();
+    });
+
+    it('lets the strip sink, and does not carry the reader elsewhere, when a chip takes the open place off', async () => {
+      state.places.data = [
+        place('a', { lat: 21, lng: 105, categories: ['cafes'] }),
+        place('b', { lat: 21.02, lng: 105, categories: ['heritage'] }),
+      ];
+      render(<ExploreScreen navigation={nav()} />);
+      await open('b');
+      await act(async () => { fireEvent.click(onMap().getAllByText('Cafés')[0]); });
+      await waitFor(() => expect(screen.queryByRole('button', { name: /Place b/ })).toBeNull());
+      expect(screen.queryByRole('button', { name: /Place a/ })).toBeNull();
+    });
+  });
+
   // Explore reads one city at a time, and the map is where that stops
   // being invisible: the others stand at their own centres, and a tap on
   // one is what makes it the city being read. The wiring is the thing

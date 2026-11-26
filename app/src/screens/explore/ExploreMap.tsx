@@ -22,13 +22,11 @@ import { PressableScale, useReducedMotion } from '../../components/ui';
 import { statusLabel } from '../../components/ExploreFilterSheet';
 import { Toast } from '../../components/Toast';
 import PlacesMap from '../../components/PlacesMap';
-import MapPlaceCard from '../../components/MapPlaceCard';
-import MapStrip from '../../components/MapStrip';
-import { chosenKind } from '../../lib/categories';
 import type { useCity } from '../../lib/city';
 import type { useI18n } from '../../lib/i18n';
 import { colors } from '../../theme';
 import type { Nav } from '../../nav';
+import ExploreStrip from './ExploreStrip';
 import { s } from './styles';
 import type { ExploreFiltering } from './useExploreFilters';
 
@@ -55,8 +53,8 @@ export function ExploreMap({
   filters: ExploreFiltering;
 }) {
   const {
-    appliedFilters, pickStatus, pickSaved, pickVisited, note, shown, selectedSlug, setSelectedSlug, picked,
-    sortOrigin, elsewhere, selected, selectedKm,
+    appliedFilters, pickStatus, pickSaved, pickVisited, note, shown, selectedSlug, pickPin, picked,
+    sortOrigin, elsewhere,
   } = filters;
   const still = useReducedMotion();
   const shownAs = useRef(new Animated.Value(still ? 1 : 0)).current;
@@ -168,7 +166,7 @@ export function ExploreMap({
         <PlacesMap
           places={shown}
           selectedSlug={selectedSlug}
-          onSelect={setSelectedSlug}
+          onSelect={pickPin}
           // Under a chip the pins take the chip's colour; with none
           // chosen each speaks for itself. See the prop's own note.
           categories={picked}
@@ -194,19 +192,7 @@ export function ExploreMap({
           // fitted pin should not land under them.
           edgePadding={{ top: 24, right: 64, bottom: tabClearance + 124, left: 40 }}
         />
-        <MapStrip style={[s.mapStrip, { bottom: tabClearance + 12 }]} onGone={() => setSelectedSlug(null)}>
-          {selected ? (
-            <MapPlaceCard
-              place={selected}
-              distanceKm={selectedKm}
-              // The same rule the map draws the pin with, so the
-              // mark on the card and the pin cannot drift apart.
-              kind={chosenKind(selected, picked)}
-              now={new Date()}
-              onPress={() => navigation.navigate('PlaceDetail', { slug: selected.slug })}
-            />
-          ) : null}
-        </MapStrip>
+        <ExploreStrip filters={filters} navigation={navigation} tabClearance={tabClearance} />
       </View>
     </Animated.View>
   );
