@@ -1822,6 +1822,10 @@ export type Database = {
           place_slug: string
         }[]
       }
+      place_guest_reviews: {
+        Args: { p_slug: string }
+        Returns: Json
+      }
       checkin_hearts_takeout: {
         Args: never
         Returns: {

@@ -49,8 +49,9 @@ import { colors, space } from '../theme';
 import { AmbientWarmth, Empty, useTabBarClearance } from '../components/ui';
 import { KindPills } from '../components/KindPill';
 import LocalGuidePanel from '../components/LocalGuidePanel';
-import type { Nav, RootRoute } from '../nav';
+import { toPerson, type Nav, type RootRoute } from '../nav';
 import { BlurbCard } from './placeDetail/BlurbCard';
+import { GuestReviews } from './placeDetail/GuestReviews';
 import { InfoCard } from './placeDetail/InfoCard';
 import { usePhotoPage, usePlaceLookup } from './placeDetail/usePlacePage';
 import { PlaceBar } from './placeDetail/PlaceBar';
@@ -332,6 +333,19 @@ export default function PlaceDetailScreen({ navigation, route }: { navigation: N
             place={place}
             onOpen={() => navigation.navigate('Gallery', { slug: place.slug })}
             testID="guide-panel"
+          />
+
+          {/* What guests said, after the desk's word and before the
+              facts — `GuestReviews` has why there. */}
+          {/* A guest's name opens their page where this stack has one
+              (Explore, Collections, Profile). The plan's and the trip's
+              stacks do not register it, and a press there would bubble
+              to another tab (`nav.test`); there the name does not press. */}
+          <GuestReviews
+            slug={place.slug}
+            onPerson={navigation.getState?.()?.routeNames?.includes('Person')
+              ? (handle) => toPerson(navigation, handle)
+              : undefined}
           />
 
           {/* ── info card ── */}

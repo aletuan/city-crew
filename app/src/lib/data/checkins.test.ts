@@ -11,7 +11,7 @@ vi.mock('../supabase', async () => {
 });
 
 import { DAILY_LIMIT } from '../quota';
-import { addCheckin, fetchMyCheckins, fetchPersonCheckins, likeCheckin, removeCheckin, saveCheckin } from './checkins';
+import { addCheckin, fetchGuestReviews, fetchMyCheckins, fetchPersonCheckins, likeCheckin, removeCheckin, saveCheckin } from './checkins';
 
 const fake = () => h.fake!;
 beforeEach(() => fake().reset());
@@ -246,5 +246,49 @@ describe('likeCheckin', () => {
   it('throws what the server said', async () => {
     fake().replies({ error: { message: 'checkin:unseen' } });
     await expect(likeCheckin('k1', true)).rejects.toThrow('checkin:unseen');
+  });
+});
+
+describe('fetchGuestReviews', () => {
+  const ph = { id: 'p1', path: 'u2/k1/p1.jpg', width: 1200, height: 900 };
+
+  it('asks the function for this place, and reads the count and a review as the page holds them', async () => {
+    fake().replies({ data: {
+      count: 7,
+      visits: [{
+        id: 'k1', user_id: 'u2', handle: 'lan', full_name: 'Lan Pham', avatar_url: 'https://x/a.jpg',
+        day: '2026-11-24', note: 'Omurice, soft.', likes: 2, liked: true, photos: [ph],
+      }],
+    } });
+    expect(await fetchGuestReviews('omu')).toEqual({ count: 7, visits: [{
+      id: 'k1', user_id: 'u2', handle: 'lan', full_name: 'Lan Pham', avatar_url: 'https://x/a.jpg',
+      day: '2026-11-24', note: 'Omurice, soft.', photos: [ph], likes: 2, liked: true,
+    }] });
+    expect(fake().log).toEqual([{ op: 'rpc', fn: 'place_guest_reviews', payload: { p_slug: 'omu' }, filters: [] }]);
+  });
+
+  it('draws no row that is not a note and a photo, and reads what is missing as nothing', async () => {
+    fake().replies({ data: {
+      visits: [
+        { id: 'a', note: 'No photo.', photos: [] },
+        { id: 'b', note: null, photos: [ph] },
+        { note: 'No id.', photos: [ph] },
+        { id: 'd', note: 'Bare.', photos: [ph], avatar_url: '', likes: '3', liked: 'yes' },
+      ],
+    } });
+    expect(await fetchGuestReviews('omu')).toEqual({ count: 0, visits: [{
+      id: 'd', user_id: '', handle: '', full_name: '', avatar_url: null, day: '', note: 'Bare.', photos: [ph], likes: 0, liked: false,
+    }] });
+    fake().replies({ data: { count: 2, visits: 'none' } });
+    expect(await fetchGuestReviews('omu')).toEqual({ count: 2, visits: [] });
+  });
+
+  it('is nothing for a place the server does not show, and throws what the server said', async () => {
+    fake().replies({ data: null });
+    expect(await fetchGuestReviews('gone')).toBeNull();
+    fake().replies({ data: 'odd' });
+    expect(await fetchGuestReviews('gone')).toBeNull();
+    fake().replies({ error: { message: 'offline' } });
+    await expect(fetchGuestReviews('omu')).rejects.toThrow('offline');
   });
 });

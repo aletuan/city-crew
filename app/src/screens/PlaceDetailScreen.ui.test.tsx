@@ -37,6 +37,8 @@ const WIDTH = vi.hoisted(() => {
 });
 
 const state = vi.hoisted(() => ({
+  // What `fetchGuestReviews` answers for the place.
+  reviews: null as null | { count: number; visits: unknown[] },
   // Whether the check-in sheet offers Public (`checkin_public`).
   publicOn: false,
   catalog: { loading: false, data: [] as unknown[] },
@@ -55,6 +57,7 @@ const state = vi.hoisted(() => ({
 }));
 const spies = vi.hoisted(() => ({
   save: vi.fn(),
+  reviews: vi.fn(),
   askToSignIn: vi.fn(),
   addCheckin: vi.fn(async (_at?: unknown): Promise<string> => 'k-new'),
   saveCheckin: vi.fn(async (_id: string, _said: unknown) => {}),
@@ -108,6 +111,13 @@ vi.mock('../lib/data', async () => ({
   saveCheckin: spies.saveCheckin,
   fetchMyCheckins: (uid: string) => spies.fetchMine(uid),
   removeCheckin: spies.removeCheckin,
+  // "Đánh giá từ khách": nothing, unless a test hands it reviews —
+  // `GuestReviews.ui.test` is where the section itself is tested.
+  useFetch: (await vi.importActual<typeof import('../lib/data/fetch')>('../lib/data/fetch')).useFetch,
+  fetchGuestReviews: async (slug: string) => { spies.reviews(slug); return state.reviews; },
+  likeCheckin: async () => {},
+  SIGNED_FOR_S: 3600,
+  signCheckinPhotos: async (paths: readonly string[]) => Object.fromEntries(paths.map((p) => [p, `https://signed/${p}`])),
 }));
 // Apple's review sheet: only when it is asked, and with what count.
 vi.mock('../lib/askReview', () => ({ reviewAfterCheckin: spies.review }));
@@ -151,6 +161,8 @@ vi.mock('@react-navigation/native', () => ({
   useNavigation: () => ({ isFocused: () => true, addListener: () => () => {} }),
   useIsFocused: () => true,
   useFocusEffect: () => {},
+  // `lib/nav`'s ref, which the screen reaches through `toPerson`.
+  createNavigationContainerRef: () => ({ isReady: () => false }),
 }));
 vi.mock('expo-status-bar', () => ({ StatusBar: () => null, setStatusBarStyle: spies.setStatusBarStyle }));
 // A stub, which is also what keeps `expo-constants` — and through it the
@@ -300,6 +312,7 @@ beforeEach(() => {
   state.price = false;
   state.checkin = false;
   state.publicOn = false;
+  state.reviews = null;
   state.checkins = [];
   spies.addCheckin.mockReset().mockResolvedValue('k-new');
   spies.saveCheckin.mockReset().mockResolvedValue(undefined);
@@ -2442,5 +2455,54 @@ describe('the blurb in another language', () => {
     show(place({ desc_en: null, desc_vi: null, desc_ja: null }));
     expect(screen.queryByTestId('detail-desc')).toBeNull();
     expect(screen.queryByTestId('blurb-fallback')).toBeNull();
+  });
+});
+
+// "Đánh giá từ khách" (owner, 26 Nov 2026): asked of this place, and
+// drawn after the local guide's panel, before the facts.
+describe('PlaceDetailScreen — guest reviews', () => {
+  it('asks for this place’s, draws the count between the highlights and the facts, and nothing when there is nothing', async () => {
+    show();
+    await waitFor(() => expect(spies.reviews).toHaveBeenCalledWith('cong-caphe'));
+    expect(screen.queryByTestId('guest-reviews')).toBeNull();
+    cleanup();
+    state.reviews = { count: 4, visits: [] };
+    show();
+    const section = await screen.findByTestId('guest-reviews');
+    expect(within(section).getByTestId('guest-reviews-count').textContent).toBe('4 check-ins');
+    const order = ['detail-why-card', 'guest-reviews', 'detail-info-card'].map((id) => screen.getByTestId(id));
+    for (let i = 1; i < order.length; i += 1) {
+      expect(order[i - 1].compareDocumentPosition(order[i]) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    }
+  });
+
+  const reviewed = {
+    count: 1,
+    visits: [{
+      id: 'k1', user_id: 'u2', handle: 'lan', full_name: 'Lan', avatar_url: null, day: '2026-11-24',
+      note: 'Soft.', photos: [{ id: 'p1', path: 'u2/k1/p1.jpg', width: 10, height: 10 }], likes: 0, liked: false,
+    }],
+  };
+
+  it('opens a guest’s page from their name where the stack has one', async () => {
+    state.reviews = reviewed;
+    const n = Object.assign(nav(), { getState: () => ({ routes: [{ name: 'ExploreHome' }], routeNames: ['ExploreHome', 'PlaceDetail', 'Person'] }) });
+    show(place(), n as unknown as ReturnType<typeof nav>);
+    await screen.findByTestId('guest-review-person');
+    // Let the page settle: a press on an element the next render replaced
+    // reaches nothing.
+    await act(async () => { for (let i = 0; i < 6; i += 1) await Promise.resolve(); });
+    fireEvent.click(screen.getByTestId('guest-review-person'));
+    expect(n.navigate).toHaveBeenCalledWith('Person', { handle: 'lan' });
+  });
+
+  it('lets the name be read, not pressed, in a stack with no person page', async () => {
+    state.reviews = reviewed;
+    const n = Object.assign(nav(), { getState: () => ({ routes: [{ name: 'IdeasHome' }], routeNames: ['IdeasHome', 'PlaceDetail'] }) });
+    show(place(), n as unknown as ReturnType<typeof nav>);
+    await screen.findByTestId('guest-review-person');
+    await act(async () => { for (let i = 0; i < 6; i += 1) await Promise.resolve(); });
+    fireEvent.click(screen.getByTestId('guest-review-person'));
+    expect(n.navigate).not.toHaveBeenCalled();
   });
 });
