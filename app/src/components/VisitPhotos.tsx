@@ -42,13 +42,18 @@ const GAP = 10;
 export const tileFor = (width: number) => Math.min(TILE, Math.floor((width - 2 * space.page - 3 * GAP) / 4));
 const SLOP = { top: 10, bottom: 10, left: 10, right: 10 };
 
-export default function VisitPhotos({ photos }: { photos: Photos }) {
+export default function VisitPhotos({ photos, onView }: {
+  photos: Photos;
+  /** Open a stored photo full screen, by its place among the tiles
+   *  (owner, 26 Nov 2026): a tile was a picture nothing could open. */
+  onView?: (tile: Tile) => void;
+}) {
   const { t } = useI18n();
   const side = tileFor(useWindowDimensions().width);
   const box = { width: side, height: side };
   return (
     <View style={s.row} testID="visit-photos">
-      {photos.tiles.map((tile, i) => <PhotoTile key={tile.key} tile={tile} n={i + 1} photos={photos} box={box} />)}
+      {photos.tiles.map((tile, i) => <PhotoTile key={tile.key} tile={tile} n={i + 1} photos={photos} box={box} onView={onView} />)}
       {photos.room > 0 ? (
         <PressableScale
           onPress={() => { void photos.add(); }}
@@ -67,9 +72,14 @@ export default function VisitPhotos({ photos }: { photos: Photos }) {
   );
 }
 
-function PhotoTile({ tile, n, photos, box }: { tile: Tile; n: number; photos: Photos; box: { width: number; height: number } }) {
+function PhotoTile({ tile, n, photos, box, onView }: {
+  tile: Tile; n: number; photos: Photos; box: { width: number; height: number }; onView?: (tile: Tile) => void;
+}) {
   const { t } = useI18n();
   const failed = tile.state === 'failed';
+  // A stored photo with a picture to show opens; one going up, one that
+  // failed (whose press is the retry) and a hidden one do not.
+  const opens = !!onView && tile.state === 'done' && !!tile.uri;
   const label = {
     done: t(`Photo ${n}`, `Ảnh ${n}`, `写真 ${n}`, `照片 ${n}`, `照片 ${n}`),
     sending: t(`Photo ${n}, uploading`, `Ảnh ${n}, đang tải lên`, `写真 ${n}、アップロード中`, `照片 ${n}，正在上传`, `照片 ${n}，正在上傳`),
@@ -79,15 +89,18 @@ function PhotoTile({ tile, n, photos, box }: { tile: Tile; n: number; photos: Ph
   return (
     <View style={[s.tile, box]} testID={`visit-photo-${tile.state}`}>
       <PressableScale
-        onPress={failed ? () => photos.retry(tile) : undefined}
-        disabled={!failed}
+        onPress={failed ? () => photos.retry(tile) : opens ? () => onView?.(tile) : undefined}
+        disabled={!failed && !opens}
         style={StyleSheet.absoluteFill}
         contentStyle={box}
-        accessibilityRole={failed ? 'button' : 'image'}
+        accessibilityRole={failed ? 'button' : opens ? 'imagebutton' : 'image'}
         accessibilityLabel={label}
         testID="visit-photo"
       >
-        {tile.uri ? <Image source={{ uri: tile.uri }} style={box} contentFit="cover" aria-hidden /> : null}
+        {/* Keyed by the photo's id where it has one, as the card under
+            the sheet keys it, so a picture the card drew is drawn from
+            the cache — the link changes each time it is signed. */}
+        {tile.uri ? <Image source={{ uri: tile.uri, cacheKey: tile.photo?.id }} style={box} contentFit="cover" aria-hidden /> : null}
         {tile.state === 'sending' ? (
           <View style={s.over}><ActivityIndicator color={onPhoto.text} /></View>
         ) : null}

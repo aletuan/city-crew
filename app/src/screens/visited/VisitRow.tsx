@@ -132,7 +132,7 @@ export function VisitNoteSheet({ v, nameOf, onDone, reload }: {
     <CheckinSheet
       visit={v ? {
         id: v.id, name: nameOf(v), cover: v.place?.cover, at: v.at,
-        note: v.note ?? null, audience: audienceOf(v), fresh: false,
+        note: v.note ?? null, audience: audienceOf(v), fresh: false, photos: v.photos,
       } : null}
       withAudience={AUDIENCE_ON}
       onClose={(saved) => { onDone(); if (saved) reload(); }}

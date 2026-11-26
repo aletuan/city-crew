@@ -36,6 +36,20 @@ const MARGIN_S = 300;
 /** Forget every link — for tests, which share the module. */
 export function forgetSignedPhotos() { kept.clear(); }
 
+/** A link already signed and still good, or null — for a screen that
+ *  draws a photo the page under it has just signed (the check-in sheet
+ *  over a card, 26 Nov 2026), so its first frame has the picture. */
+export function keptLink(path: string): string | null {
+  const k = kept.get(path);
+  return k && k.until > Date.now() ? k.url : null;
+}
+
+/** Links signed elsewhere, kept for the next screen to find. */
+export function keepLinks(links: Record<string, string>) {
+  const until = Date.now() + (SIGNED_FOR_S - MARGIN_S) * 1000;
+  for (const [path, url] of Object.entries(links)) kept.set(path, { url, until });
+}
+
 /**
  * A link for each of `photos`' paths, once the bucket has signed it; null
  * before, for a path it would not sign, and for everything while `on` is
@@ -53,8 +67,7 @@ export function useSignedPhotos(photos: readonly CheckinPhoto[], on: boolean): (
     // An answer after the screen has gone is still kept, for the next
     // one; the render it asks for is nobody's, and React drops it.
     signCheckinPhotos(need).then((links) => {
-      const until = Date.now() + (SIGNED_FOR_S - MARGIN_S) * 1000;
-      for (const [path, url] of Object.entries(links)) kept.set(path, { url, until });
+      keepLinks(links);
       signed((n) => n + 1);
     }, () => {});
     return undefined;

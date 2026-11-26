@@ -18,6 +18,9 @@ const data = vi.hoisted(() => ({
   likeCheckin: vi.fn(async (_id: string, _on: boolean) => {}),
   saveCheckin: vi.fn(async (_id: string, _said: unknown) => {}),
   submitReport: vi.fn(async (_r: unknown) => {}),
+  removeCheckin: vi.fn(async (_id: string) => {}),
+  // The sheet's own read of a visit's photos — the hidden ones included.
+  fetchCheckinPhotos: vi.fn(async (_id: string): Promise<unknown[]> => []),
   signCheckinPhotos: vi.fn(async (paths: readonly string[]): Promise<Record<string, string>> =>
     Object.fromEntries(paths.map((p) => [p, `https://signed/${p}`]))),
 }));
@@ -28,6 +31,8 @@ vi.mock('../../lib/data', async (orig) => ({
   saveCheckin: data.saveCheckin,
   signCheckinPhotos: data.signCheckinPhotos,
   submitReport: data.submitReport,
+  removeCheckin: data.removeCheckin,
+  fetchCheckinPhotos: data.fetchCheckinPhotos,
 }));
 const auth = vi.hoisted(() => ({ me: 'me' as string | null }));
 vi.mock('../../lib/auth', () => ({ useSession: () => ({ session: auth.me ? { user: { id: auth.me } } : null }) }));
@@ -599,7 +604,7 @@ describe('your own card’s ⋯', () => {
       await show('me', ME, [visit('k1', { audience: 'friends', note: 'Mine.' })]);
       fireEvent.click(screen.getByTestId('activity-more'));
       expect(screen.getAllByTestId(/^sheet-action-/).map((b) => b.getAttribute('data-testid')))
-        .toEqual(['sheet-action-edit', 'sheet-action-place']);
+        .toEqual(['sheet-action-edit', 'sheet-action-place', 'sheet-action-remove']);
       fireEvent.click(screen.getByTestId('sheet-action-edit'));
       act(() => { vi.advanceTimersByTime(220); });
     } finally {
@@ -608,6 +613,40 @@ describe('your own card’s ⋯', () => {
     const sheet = await screen.findByTestId('checkin-sheet');
     expect((within(sheet).getByTestId('checkin-sheet-note') as HTMLTextAreaElement).value).toBe('Mine.');
     expect(onPlace).not.toHaveBeenCalled();
+  });
+
+  it('takes the visit back from Remove this visit, and asks the page again', async () => {
+    vi.useFakeTimers({ toFake: ['setTimeout'] });
+    try {
+      await show('me', ME, [visit('k1', { audience: 'friends' })]);
+      mine.reload.mockClear();
+      fireEvent.click(screen.getByTestId('activity-more'));
+      fireEvent.click(screen.getByTestId('sheet-action-remove'));
+      act(() => { vi.advanceTimersByTime(220); });
+    } finally {
+      vi.useRealTimers();
+    }
+    await waitFor(() => expect(data.removeCheckin).toHaveBeenCalledWith('k1'));
+    await waitFor(() => expect(mine.reload).toHaveBeenCalledTimes(1));
+  });
+
+  it('hands the sheet the card’s photos, so it opens with them', async () => {
+    flags.checkin_photos = true;
+    // The sheet's own read has not answered: what it draws is the card's.
+    data.fetchCheckinPhotos.mockImplementationOnce(() => new Promise(() => {}));
+    vi.useFakeTimers({ toFake: ['setTimeout'] });
+    try {
+      await show('me', ME, [visit('k1', { audience: 'friends', photos: [{ id: 'p1', path: 'me/k1/p1.jpg', width: 10, height: 10 }] })]);
+      await act(async () => { for (let i = 0; i < 6; i += 1) await Promise.resolve(); });
+      fireEvent.click(screen.getByTestId('activity-more'));
+      fireEvent.click(screen.getByTestId('sheet-action-edit'));
+      act(() => { vi.advanceTimersByTime(220); });
+    } finally {
+      vi.useRealTimers();
+    }
+    const sheet = await screen.findByTestId('checkin-sheet');
+    expect(within(sheet).getAllByTestId('visit-photo-done')).toHaveLength(1);
+    expect(sheet.querySelector('img[src="https://signed/me/k1/p1.jpg"]')).not.toBeNull();
   });
 
   it('opens the place from See the place', async () => {

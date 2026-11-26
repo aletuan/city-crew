@@ -19,7 +19,9 @@ const data = vi.hoisted(() => ({
   uploadCheckinPhoto: vi.fn(async (_id: string, _image: string): Promise<CheckinPhoto> => ({ id: 'p-new', path: 'u1/k1/p-new.jpg', width: 1200, height: 900 })),
   removeCheckinPhoto: vi.fn(async (_id: string) => {}),
 }));
-vi.mock('../lib/data', () => data);
+// The links' lifetime too: the sheet keeps what it signs where the
+// card's links are kept (`useSignedPhotos`).
+vi.mock('../lib/data', () => ({ ...data, SIGNED_FOR_S: 3600 }));
 // The app's queue reaches the function through its own file, not the barrel.
 vi.mock('../lib/data/checkinPhotos', () => ({ uploadCheckinPhoto: data.uploadCheckinPhoto }));
 vi.mock('../lib/i18n', () => ({ useI18n: () => ({ lang: 'en', t: (en: string) => en }) }));
@@ -34,6 +36,7 @@ vi.mock('../theme', async (orig) => {
 import VisitPhotos, { TILE, tileFor } from './VisitPhotos';
 import { onPhoto } from '../theme';
 import { useVisitPhotos, type VisitPhotos as Photos } from './useVisitPhotos';
+import { forgetSignedPhotos, keepLinks } from './useSignedPhotos';
 import { isWatched, resetVisitUploads, uploadsFor, uploadsGoing, uploadsSettled } from '../lib/visitUploads';
 
 const alert = vi.spyOn(Alert, 'alert').mockImplementation(() => {});
@@ -41,10 +44,11 @@ const picker = vi.mocked(ImagePicker.launchImageLibraryAsync);
 const shrink = vi.mocked(manipulateAsync);
 
 let hook: Photos;
-function Harness({ on = true, known = true, id = 'k1' }: { on?: boolean; known?: boolean; id?: string }) {
-  const photos = useVisitPhotos(id, on, known);
+const viewed = vi.fn();
+function Harness({ on = true, known = true, id = 'k1', seed }: { on?: boolean; known?: boolean; id?: string; seed?: CheckinPhoto[] }) {
+  const photos = useVisitPhotos(id, on, known, seed);
   useEffect(() => { hook = photos; });
-  return <VisitPhotos photos={photos} />;
+  return <VisitPhotos photos={photos} onView={viewed} />;
 }
 const show = async (props: Parameters<typeof Harness>[0] = {}) => {
   const r = render(<Harness {...props} />);
@@ -65,6 +69,7 @@ const STORED: CheckinPhoto[] = [
 
 beforeEach(() => {
   resetVisitUploads();
+  forgetSignedPhotos();
   data.fetchCheckinPhotos.mockImplementation(async () => []);
   data.signCheckinPhotos.mockImplementation(async () => ({}));
   data.uploadCheckinPhoto.mockImplementation(async () => ({ id: 'p-new', path: 'u1/k1/p-new.jpg', width: 1200, height: 900 }));
@@ -78,6 +83,40 @@ describe('tileFor', () => {
     expect(tileFor(430)).toBe(TILE);
     // The first iPhone SE: 320 less 44 of margin and 30 of gaps, in four.
     expect(tileFor(320)).toBe(61);
+  });
+});
+
+// The card's photos, handed to the sheet (owner, 26 Nov 2026, from a
+// recording): drawn on the first frame with the links the card had, and
+// not signed again.
+describe('opened over a card', () => {
+  it('draws the card’s photos before the read answers, from the links already kept', async () => {
+    keepLinks({ 'u1/k1/p1.jpg': 'https://card/p1' });
+    let answer: (rows: CheckinPhoto[]) => void = () => {};
+    data.fetchCheckinPhotos.mockImplementationOnce(() => new Promise((ok) => { answer = ok; }));
+    render(<Harness seed={[STORED[0]]} />);
+    // The first frame: the picture is there, keyed by the photo's id.
+    expect(states()).toEqual(['visit-photo-done']);
+    const img = document.querySelector('img[src="https://card/p1"]');
+    expect(img).not.toBeNull();
+    // Then the read brings the hidden one; nothing kept is signed again.
+    answer(STORED);
+    await flush();
+    expect(states()).toEqual(['visit-photo-done', 'visit-photo-hidden']);
+    expect(data.signCheckinPhotos).not.toHaveBeenCalled();
+  });
+
+  it('opens a stored photo with a picture, and not one going up, failed or hidden', async () => {
+    keepLinks({ 'u1/k1/p1.jpg': 'https://card/p1' });
+    data.fetchCheckinPhotos.mockResolvedValueOnce(STORED);
+    await show({ seed: [STORED[0]] });
+    await flush();
+    viewed.mockClear();
+    const [done, hidden] = screen.getAllByTestId('visit-photo');
+    fireEvent.click(done);
+    expect(viewed).toHaveBeenCalledWith(expect.objectContaining({ key: 'p1', uri: 'https://card/p1' }));
+    fireEvent.click(hidden);
+    expect(viewed).toHaveBeenCalledTimes(1);
   });
 });
 
