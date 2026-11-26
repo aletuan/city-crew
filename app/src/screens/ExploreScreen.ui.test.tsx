@@ -77,7 +77,9 @@ const state = vi.hoisted(() => ({
     loading: false, loaded: true, error: null as string | null,
     data: [] as unknown[], reload: (() => {}) as () => void,
   },
-  cols: { loaded: true, data: [] as unknown[] },
+  cols: { loaded: true, loading: false, data: [] as unknown[] },
+  // This week's check-ins, as the server would answer the shelf.
+  highlights: [] as unknown[],
   likes: {} as Record<string, number>,
   // What a shelf ranks by, when a test needs it to differ from the shown count.
   rankLikes: undefined as Record<string, number> | undefined,
@@ -97,6 +99,9 @@ const spies = vi.hoisted(() => ({
   // A pull's fetch is in flight the moment it is asked for, which is what
   // the provider's own `reload` does to `loading` in the same batch.
   reload: vi.fn(() => { state.places.loading = true; }),
+  reloadCols: vi.fn(),
+  reloadLikes: vi.fn(),
+  fetchHighlights: vi.fn(async (_city: string) => state.highlights),
   toggleLike: vi.fn(async () => {}),
   askToSignIn: vi.fn(),
   setCity: vi.fn(),
@@ -130,9 +135,10 @@ vi.mock('../lib/city', () => {
 });
 vi.mock('../lib/catalog', () => ({
   usePlaces: () => ({ ...state.places, reload: spies.reload }),
-  useCollections: () => state.cols,
+  useCollections: () => ({ ...state.cols, reload: spies.reloadCols }),
   useLikes: () => ({
     likes: state.likes, rankLikes: state.rankLikes ?? state.likes, myLikes: state.myLikes, toggleLike: spies.toggleLike,
+    reloadLikes: spies.reloadLikes,
   }),
 }));
 vi.mock('../lib/auth', () => {
@@ -234,6 +240,7 @@ vi.mock('../components/MiniMap', () => ({ get canDrawMap() { return mapState.can
 vi.mock('../lib/data', async (actual) => ({
   ...(await actual() as object),
   fetchPlaceIndex: vi.fn(async () => state.index),
+  fetchHighlightCheckins: spies.fetchHighlights,
 }));
 
 const motion = vi.hoisted(() => ({ still: false }));
@@ -406,7 +413,8 @@ beforeEach(async () => {
   state.cities = null;
   state.index = [];
   state.places = { loading: false, loaded: true, error: null, data: [], reload: () => {} };
-  state.cols = { loaded: true, data: [] };
+  state.cols = { loaded: true, loading: false, data: [] };
+  state.highlights = [];
   state.likes = {};
   state.rankLikes = undefined;
   state.myLikes = [];
@@ -1981,7 +1989,7 @@ describe('the community shelf', () => {
 
   it('holds its header over placeholders while collections load', () => {
     state.places.data = [place('p1')];
-    state.cols = { loaded: false, data: [collection('later', ['p1'])] };
+    state.cols = { loaded: false, loading: false, data: [collection('later', ['p1'])] };
     render(<ExploreScreen navigation={nav()} />);
     expect(screen.getByText('Community collections')).toBeTruthy();
     expect(screen.queryByText('List later')).toBeNull();
@@ -2299,7 +2307,11 @@ describe('the Places heading and its row', () => {
 });
 
 describe('pull to refresh', () => {
-  it('reloads the catalog and spins only for the pull it started', () => {
+  // The shelf's read is a promise even signed out, so a pull is not done
+  // until it has answered.
+  const answered = () => act(async () => { for (let i = 0; i < 6; i += 1) await Promise.resolve(); });
+
+  it('reloads the catalog and spins only for the pull it started', async () => {
     state.places.data = [place('a')];
     const { rerender } = render(<ExploreScreen navigation={nav()} />);
     expect(listProps().refreshing).toBe(false);
@@ -2311,6 +2323,45 @@ describe('pull to refresh', () => {
     rerender(<ExploreScreen navigation={nav()} />);
     expect(listProps().refreshing).toBe(true);
     state.places = { ...state.places, loading: false };
+    rerender(<ExploreScreen navigation={nav()} />);
+    await answered();
+    expect(listProps().refreshing).toBe(false);
+  });
+
+  // The owner's pull (26 Nov 2026): a third person's check-in landed, the
+  // catalog came back, and the shelf did not — it had not been asked.
+  it('asks again for everything the page shows, the shelves too', async () => {
+    state.uid = 'me';
+    state.places.data = [place('a')];
+    render(<ExploreScreen navigation={nav()} />);
+    await answered();
+    expect(spies.fetchHighlights).toHaveBeenCalledTimes(1);
+    expect(screen.queryByTestId('checkin-shelf')).toBeNull();
+    state.highlights = ['a', 'b', 'c'].map((id) => ({
+      id, place_slug: `s-${id}`, place: { name_en: id, name_vi: '', i18n: null }, handle: id, full_name: id,
+      avatar_url: null, note: null, likes: 0, liked: false, photo: { id: `p${id}`, path: `u/${id}.jpg`, width: 1, height: 1 },
+    }));
+    act(() => { listProps().onRefresh(); });
+    expect(spies.reload).toHaveBeenCalledOnce();
+    expect(spies.reloadCols).toHaveBeenCalledOnce();
+    expect(spies.reloadLikes).toHaveBeenCalledOnce();
+    expect(spies.fetchHighlights).toHaveBeenCalledTimes(2);
+    await answered();
+    expect(screen.getAllByTestId('checkin-shelf-card')).toHaveLength(3);
+  });
+
+  // Off once every read has settled, not the first: the places are back
+  // while the collections are still on their way.
+  it('spins until the shelves are back as well as the places', async () => {
+    state.places.data = [place('a')];
+    const { rerender } = render(<ExploreScreen navigation={nav()} />);
+    act(() => { listProps().onRefresh(); });
+    state.places = { ...state.places, loading: false };
+    state.cols = { ...state.cols, loading: true };
+    rerender(<ExploreScreen navigation={nav()} />);
+    await answered();
+    expect(listProps().refreshing).toBe(true);
+    state.cols = { ...state.cols, loading: false };
     rerender(<ExploreScreen navigation={nav()} />);
     expect(listProps().refreshing).toBe(false);
   });

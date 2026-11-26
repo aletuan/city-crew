@@ -47,7 +47,7 @@ const ExploreCard = memo(function ExploreCard({ place, index, chip, distanceKm, 
 
 export function ExploreList({
   t, navigation, listRef, shown, header, bar, picked, appliedFilters, sortOrigin, openPlace, tabClearance,
-  pulling, setPulling, reload, onScroll, onViewable, viewabilityConfig,
+  pulling, onPull, onScroll, onViewable, viewabilityConfig,
 }: {
   t: ReturnType<typeof useI18n>['t'];
   navigation: Nav;
@@ -63,8 +63,8 @@ export function ExploreList({
   openPlace: (slug: string) => void;
   tabClearance: number;
   pulling: boolean;
-  setPulling: (on: boolean) => void;
-  reload: () => void;
+  /** Everything the page shows, asked again — `useExploreRefresh`. */
+  onPull: () => void;
   onScroll: (...args: unknown[]) => void;
   onViewable: (info: { viewableItems: { index: number | null | undefined }[] }) => void;
   viewabilityConfig: { itemVisiblePercentThreshold: number };
@@ -128,7 +128,7 @@ export function ExploreList({
     )}
     contentContainerStyle={{ paddingBottom: tabClearance }}
     showsVerticalScrollIndicator={false}
-    onRefresh={() => { setPulling(true); reload(); }}
+    onRefresh={onPull}
     refreshing={pulling}
     onScroll={onScroll}
     scrollEventThrottle={16}
