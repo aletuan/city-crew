@@ -17,8 +17,8 @@
 // ── what a card is ──
 //
 // The photo on top, with only the place's name over its foot; under it,
-// on the card's own paper, what the visitor wrote — two lines at most —
-// and the foot: faces, and the heart. The final card of 26 Nov 2026,
+// on the card's own paper, who went and the heart, then what the visitor
+// wrote — two lines at most. The final card of 26 Nov 2026,
 // chosen by the owner from four (words over the photo, words under it,
 // one quoted line, words fading in), after a day of the first on a
 // phone: two lines of words, a byline and a badge stacked on a picture
@@ -41,13 +41,27 @@
 // shape any more, and that is the other thing it says: the shelf above
 // is lists, this one is people who went.
 //
-// ── the foot ──
+// ── who went, and the heart ──
+//
+// Over the words, not under them (owner, 27 Nov 2026, on a phone): the
+// faces and the heart are the row the eye reads first under a photo —
+// people went, people liked it — and the words below are read by the
+// reader who stayed. Under the words they sat at the card's very foot,
+// after a cut-off second line, where a glance never reached them.
 //
 // Up to three faces, whoever was there last first (the server's order),
 // and "+N" for the people past three — no figure at all for one to
 // three, the faces are the count. No names: the owner chose faces and a
 // figure over a name cut to fit, and the badge in the corner that said
 // "2 người đã ghé" went with it, because the faces said it already.
+//
+// The first face is on top of the rest — the facepile every app the
+// reader knows draws (Slack, GitHub, Facebook), and the newest visitor
+// is the one the row is about. React Native paints a later sibling over
+// an earlier one, so the order is turned round with `zIndex`; drawn in
+// the plain order, the second face covered a third of the first, on a
+// phone, 26 Nov 2026.
+//
 // Names are still read out (`accessibilityLabel`), and the place's page
 // names everyone under "Đánh giá từ khách".
 //
@@ -107,10 +121,16 @@ const NONE: HighlightCheckin[] = [];
 const NAME_SCRIM = ['rgba(10,11,10,0)', 'rgba(10,11,10,0.34)', 'rgba(10,11,10,0.60)'] as const;
 const NAME_SCRIM_H = 64;
 
-/** A face at a card's foot. 18: the collection card's meta line is 13pt
- *  on an 18pt line, and a face taller than its line pushes the foot row
- *  down on the cards that have one. */
-const FACE = 18;
+/** A face in the card's row. 22, from 18 (owner, 27 Nov 2026): at 18
+ *  beside the heart's filled glyph the faces were the smallest thing on
+ *  the card and could not be told apart, and they are the row's point.
+ *  22 with its ring is the heart's hit row's height, so the row is no
+ *  taller for it. */
+const FACE = 22;
+
+/** The paper's ring round each face. 2, from 1.5: at 1.5 it vanished
+ *  where a light photo-avatar met a light one. */
+const RING = 2;
 
 /** The shelf's read: this week's cards for the reader's city, nothing
  *  signed out, asked again on a return to the app — see "who asks". */
@@ -184,11 +204,14 @@ export function CheckinShelf({ navigation, cards }: { navigation: Nav; cards: re
                 <Text style={[page.shelfCardTitle, s.name]} numberOfLines={1}>{name}</Text>
               </View>
               <View style={s.paper}>
-                {c.note ? <Text style={s.note} numberOfLines={2} testID="checkin-shelf-note">{c.note}</Text> : null}
                 <View style={page.shelfCardFoot}>
                   <View style={s.faces}>
                     {c.faces.map((f, i) => (
-                      <View key={f.handle} style={[s.face, i > 0 && s.faceNext]} testID="checkin-shelf-face">
+                      <View
+                        key={f.handle}
+                        style={[s.face, { zIndex: c.faces.length - i }, i > 0 && s.faceNext]}
+                        testID="checkin-shelf-face"
+                      >
                         <Avatar url={f.avatar_url} size={FACE} />
                       </View>
                     ))}
@@ -206,6 +229,7 @@ export function CheckinShelf({ navigation, cards }: { navigation: Nav; cards: re
                     countTestID="checkin-shelf-likes"
                   />
                 </View>
+                {c.note ? <Text style={s.note} numberOfLines={2} testID="checkin-shelf-note">{c.note}</Text> : null}
               </View>
             </PressableScale>
           );
@@ -233,9 +257,9 @@ const s = StyleSheet.create({
   faces: { flexDirection: 'row', alignItems: 'center' },
   // A ring of the paper round each face, so two overlapping read as two
   // — a background and padding, not a border, so it follows the theme.
-  face: { padding: 1.5, borderRadius: FACE, backgroundColor: colors.surfaceCard },
+  face: { padding: RING, borderRadius: FACE, backgroundColor: colors.surfaceCard },
   // A third of a face under the one before: three read as a group in
   // the width of two, and each is still a face.
-  faceNext: { marginLeft: -7 },
+  faceNext: { marginLeft: -Math.round((FACE + 2 * RING) / 3) },
   more: { color: colors.textSecondary, fontSize: 13, fontWeight: font.medium, marginLeft: 5 },
 });
