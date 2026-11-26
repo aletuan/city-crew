@@ -104,7 +104,10 @@ export function CollectionShelf({ navigation }: { navigation: Nav }) {
             destination the day the tab got its real name. Your own
             public lists belong on it too: a public list is part of the
             community, yours included. */}
-        <Text style={s.section}>{t('From the community', 'Từ cộng đồng', 'みんなのコレクション', '来自社区', '來自社群')}</Text>
+        {/* "Collections from the community" since 26 Nov 2026 (owner): the
+            shelf under it holds the community's check-ins now, and "from
+            the community" alone no longer said which of the two this is. */}
+        <Text style={s.section}>{t('Community collections', 'Bộ sưu tập từ cộng đồng', 'みんなのコレクション', '社区合集', '社群合集')}</Text>
         <Pressable
           // "See all" of a *public* shelf lands on the Community tab, not
           // on your library. `CollectionsHome` is the stack's first

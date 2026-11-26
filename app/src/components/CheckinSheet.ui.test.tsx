@@ -265,6 +265,23 @@ describe('CheckinSheet', () => {
     expect(onClose).toHaveBeenLastCalledWith(true, true);
   });
 
+  it('says under Public, where photos can be added, that it can lead to Highlights', () => {
+    appFlags.set('checkin_public', true);
+    appFlags.set('checkin_photos', true);
+    show(FRESH, true);
+    expect(screen.queryByTestId('checkin-sheet-hint')).toBeNull();
+    fireEvent.click(screen.getByTestId('checkin-sheet-seen-public'));
+    expect(screen.getByTestId('checkin-sheet-hint').textContent)
+      .toBe('A public check-in with a photo can appear in Featured check-ins on Explore.');
+    fireEvent.click(screen.getByTestId('checkin-sheet-seen-friends'));
+    expect(screen.queryByTestId('checkin-sheet-hint')).toBeNull();
+    cleanup();
+    appFlags.set('checkin_photos', false);
+    show(FRESH, true);
+    fireEvent.click(screen.getByTestId('checkin-sheet-seen-public'));
+    expect(screen.queryByTestId('checkin-sheet-hint')).toBeNull();
+  });
+
   it('keeps Public on a visit already answered so, with the flag off', async () => {
     show({ ...OLD, note: 'Before.', audience: 'public' }, true);
     expect(screen.getByTestId('checkin-sheet-seen-public').getAttribute('aria-checked')).toBe('true');

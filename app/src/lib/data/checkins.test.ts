@@ -11,7 +11,7 @@ vi.mock('../supabase', async () => {
 });
 
 import { DAILY_LIMIT } from '../quota';
-import { addCheckin, fetchGuestReviews, fetchMyCheckins, fetchPersonCheckins, likeCheckin, removeCheckin, saveCheckin } from './checkins';
+import { addCheckin, fetchGuestReviews, fetchHighlightCheckins, fetchMyCheckins, fetchPersonCheckins, likeCheckin, removeCheckin, saveCheckin } from './checkins';
 
 const fake = () => h.fake!;
 beforeEach(() => fake().reset());
@@ -290,5 +290,42 @@ describe('fetchGuestReviews', () => {
     expect(await fetchGuestReviews('gone')).toBeNull();
     fake().replies({ error: { message: 'offline' } });
     await expect(fetchGuestReviews('omu')).rejects.toThrow('offline');
+  });
+});
+
+describe('fetchHighlightCheckins', () => {
+  const ph = { id: 'p1', path: 'u2/k1/p1.jpg', width: 1200, height: 900 };
+
+  it('asks the function for this city, and reads a card as the shelf holds it', async () => {
+    fake().replies({ data: [{
+      id: 'k1', place_slug: 'omu', name_en: 'Omu', name_vi: 'Ômu', i18n: { ja: { name: 'オム' } },
+      handle: 'lan', full_name: 'Lan Pham', avatar_url: 'https://x/a.jpg', note: 'Soft.', likes: 3, liked: true, photo: ph,
+    }] });
+    expect(await fetchHighlightCheckins('hanoi')).toEqual([{
+      id: 'k1', place_slug: 'omu', place: { name_en: 'Omu', name_vi: 'Ômu', i18n: { ja: { name: 'オム' } } },
+      handle: 'lan', full_name: 'Lan Pham', avatar_url: 'https://x/a.jpg', note: 'Soft.', likes: 3, liked: true, photo: ph,
+    }]);
+    expect(fake().log).toEqual([{ op: 'rpc', fn: 'featured_checkins', payload: { p_city: 'hanoi' }, filters: [] }]);
+  });
+
+  it('draws no card without its photo, its place or its id, and reads what is missing as nothing', async () => {
+    fake().replies({ data: [
+      { id: 'a', place_slug: 'omu' },
+      { id: 'b', place_slug: 'omu', photo: { id: 'x' } },
+      { place_slug: 'omu', photo: ph },
+      { id: 'd', photo: ph },
+      { id: 'e', place_slug: 'omu', photo: ph, avatar_url: '', note: 7, likes: '2', liked: 'yes' },
+    ] });
+    expect(await fetchHighlightCheckins('hanoi')).toEqual([{
+      id: 'e', place_slug: 'omu', place: { name_en: '', name_vi: '', i18n: null },
+      handle: '', full_name: '', avatar_url: null, note: null, likes: 0, liked: false, photo: ph,
+    }]);
+    fake().replies({ data: null });
+    expect(await fetchHighlightCheckins('hanoi')).toEqual([]);
+  });
+
+  it('throws what the server said', async () => {
+    fake().replies({ error: { message: 'permission denied' } });
+    await expect(fetchHighlightCheckins('hanoi')).rejects.toThrow('permission denied');
   });
 });

@@ -1826,6 +1826,10 @@ export type Database = {
         Args: { p_slug: string }
         Returns: Json
       }
+      featured_checkins: {
+        Args: { p_city: string }
+        Returns: Json
+      }
       checkin_hearts_takeout: {
         Args: never
         Returns: {
