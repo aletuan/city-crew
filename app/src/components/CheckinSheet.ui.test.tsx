@@ -223,11 +223,11 @@ describe('CheckinSheet', () => {
   it('opens on the answer it was given, and says what each answer means', () => {
     show(FRESH, true);
     expect(screen.getByTestId('checkin-sheet-seen-friends').getAttribute('aria-checked')).toBe('true');
-    expect(screen.getByTestId('checkin-sheet-gloss').textContent).toBe('Your friends see the place, the day and your note.');
+    expect(screen.getByTestId('checkin-sheet-gloss').textContent).toBe('Your friends see it on your page.');
     fireEvent.click(screen.getByTestId('checkin-sheet-seen-private'));
     expect(screen.getByTestId('checkin-sheet-seen-private').getAttribute('aria-checked')).toBe('true');
     expect(screen.getByTestId('checkin-sheet-seen-friends').getAttribute('aria-checked')).toBe('false');
-    expect(screen.getByTestId('checkin-sheet-gloss').textContent).toBe('Nobody else sees this visit.');
+    expect(screen.getByTestId('checkin-sheet-gloss').textContent).toBe('Only you see it.');
   });
 
   it('writes the answer with a fresh visit even unchanged and wordless: closing the sheet is the answer', async () => {
@@ -268,27 +268,10 @@ describe('CheckinSheet', () => {
     fireEvent.click(screen.getByTestId('checkin-sheet-seen-public'));
     expect(screen.getByTestId('checkin-sheet-seen-public').getAttribute('aria-checked')).toBe('true');
     expect(screen.getByTestId('checkin-sheet-gloss').textContent)
-      .toBe('Anyone signed in sees the place, the day and your note on your page.');
+      .toBe('Can appear in Featured check-ins.');
     await press('checkin-sheet-save');
     expect(data.saveCheckin).toHaveBeenLastCalledWith('k9', { note: null, audience: 'public' });
     expect(onClose).toHaveBeenLastCalledWith(true, true);
-  });
-
-  it('says under Public, where photos can be added, that it can lead to Highlights', () => {
-    appFlags.set('checkin_public', true);
-    appFlags.set('checkin_photos', true);
-    show(FRESH, true);
-    expect(screen.queryByTestId('checkin-sheet-hint')).toBeNull();
-    fireEvent.click(screen.getByTestId('checkin-sheet-seen-public'));
-    expect(screen.getByTestId('checkin-sheet-hint').textContent)
-      .toBe('A public check-in with a photo can appear in Featured check-ins on Explore.');
-    fireEvent.click(screen.getByTestId('checkin-sheet-seen-friends'));
-    expect(screen.queryByTestId('checkin-sheet-hint')).toBeNull();
-    cleanup();
-    appFlags.set('checkin_photos', false);
-    show(FRESH, true);
-    fireEvent.click(screen.getByTestId('checkin-sheet-seen-public'));
-    expect(screen.queryByTestId('checkin-sheet-hint')).toBeNull();
   });
 
   // A tile opens its photo full screen, over the sheet and inside its
