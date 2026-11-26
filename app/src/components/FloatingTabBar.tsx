@@ -141,9 +141,15 @@ const LIFT_SCALE = 1.06;
 // there. Yours, when you are signed in and have one (every account made
 // since 20 Oct starts with a bundled animal); the outline otherwise.
 //
-// A face has no ink to change, so selected it wears two marks: the
-// pill every tab wears, and a ring in the pill's ink around it. Idle, a
-// hairline ring, so a dark face holds its edge on the charcoal glass.
+// A face has no ink to change, so what says it is selected is the pill
+// every tab wears, and nothing else. It wore a 1.5pt ring in the pill's
+// ink as well, on the argument Instagram makes (owner, 26 Nov 2026,
+// same day): on the phone the ring was a second "selected" beside the
+// pill, heavier than every outline next to it, and on a face with dark
+// hair it ran into the photo as one black mass. Instagram rings the face
+// because its bar has no pill; Netflix, whose bar has one, does not. The
+// hairline stays in both states, so a dark face holds its edge on the
+// charcoal glass and a pale one on the paper.
 // Not dimmed when idle, as the outlines go to the idle ink: a greyed
 // face of your own reads as an account switched off. Not grown when
 // selected either: no other tab changes size.
@@ -153,7 +159,6 @@ const LIFT_SCALE = 1.06;
 // at Instagram's own ratio (their face 26 beside 24 glyphs). The dot
 // keeps its place on the 22 box, which puts it on the face's shoulder.
 const FACE = 26;
-const FACE_RING = 1.5;
 /** The idle face's hairline: plain values, as a border must be (a `dyn`
  *  pair on a border follows the phone, not the app — `bgHex`). */
 const FACE_EDGE = { light: 'rgba(0,0,0,0.14)', dark: 'rgba(255,255,255,0.24)' };
@@ -163,12 +168,10 @@ const FACE_EDGE = { light: 'rgba(0,0,0,0.14)', dark: 'rgba(255,255,255,0.24)' };
 function TabMark({ name, onPill, light, face }: { name: string; onPill: boolean; light: boolean; face: string | null }) {
   return name === 'Profile' && face ? (
     <View
-      style={[s.face, onPill
-        ? { borderWidth: FACE_RING, borderColor: inkOf(true, light) }
-        : { borderWidth: StyleSheet.hairlineWidth, borderColor: light ? FACE_EDGE.light : FACE_EDGE.dark }]}
+      style={[s.face, { borderColor: light ? FACE_EDGE.light : FACE_EDGE.dark }]}
       testID={`tab-face${onPill ? '-on' : ''}`}
     >
-      <Avatar url={face} size={FACE - FACE_RING * 2} />
+      <Avatar url={face} size={FACE} />
     </View>
   ) : (
     <Glyph
@@ -650,8 +653,11 @@ const s = StyleSheet.create({
     position: 'absolute', left: PILL_INSET, right: PILL_INSET, top: 0, bottom: 0,
     flexDirection: 'row',
   },
-  // Room for the ring: the face sits in it, centred.
-  face: { width: FACE, height: FACE, borderRadius: FACE / 2, alignItems: 'center', justifyContent: 'center' },
+  // The face and its hairline, clipped to the disc.
+  face: {
+    width: FACE, height: FACE, borderRadius: FACE / 2, overflow: 'hidden',
+    borderWidth: StyleSheet.hairlineWidth,
+  },
   // The glyph's box, so a dot sits where it sat on the glyph.
   dotBox: { width: GLYPH, height: GLYPH },
   // Geometry only — the colours are `dotInk`, picked per theme in render.

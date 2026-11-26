@@ -10,7 +10,7 @@
 // is pinned here is that a navigation brings the bar back.
 
 import React from 'react';
-import { AccessibilityInfo, Animated, Pressable, Text } from 'react-native';
+import { AccessibilityInfo, Animated, Pressable, StyleSheet, Text } from 'react-native';
 import type { BottomTabBarProps } from '@react-navigation/bottom-tabs';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { act, fireEvent, render, screen, viewStyleOf, waitFor } from '../uitest/render';
@@ -781,15 +781,17 @@ describe('the last tab wears your face', () => {
     expect(screen.getByTestId('tab-glyph-Explore')).toBeTruthy();
   });
 
-  it('rings the face in the pill’s ink on the pill, and a hairline when idle', () => {
+  // The pill alone says it is selected (owner, 26 Nov 2026): the 1.5pt
+  // ring in the pill's ink came off the same day.
+  it('wears the same hairline on the pill as off it, and no ring in the pill’s ink', () => {
     auth.profile = { avatar_url: FACE };
     mount(propsFor(4).props);
     const on = viewStyleOf(screen.getByTestId('tab-face-on'));
     const idle = viewStyleOf(screen.getByTestId('tab-face'));
-    expect(on.borderWidth).toBe(1.5);
-    expect([pillInk.light, pillInk.dark]).toContain(on.borderColor);
-    expect(Number(idle.borderWidth)).toBeLessThan(1.5);
-    expect(idle.borderColor).not.toBe(on.borderColor);
+    expect(on.borderWidth).toBe(StyleSheet.hairlineWidth);
+    expect(idle.borderWidth).toBe(StyleSheet.hairlineWidth);
+    expect(on.borderColor).toBe(idle.borderColor);
+    expect([pillInk.light, pillInk.dark]).not.toContain(on.borderColor);
   });
 
   it('keeps the outline signed out, or with no face to draw', () => {
