@@ -8,7 +8,7 @@
 import React from 'react';
 import { Alert, Animated } from 'react-native';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { act, cleanup, fireEvent, propsWhere, render, screen, viewStyleOf } from '../uitest/render';
+import { act, cleanup, fireEvent, propsWhere, render, screen, viewStyleOf, within } from '../uitest/render';
 import { NOTE_MAX } from '../lib/checkin';
 import { appFlags } from '../lib/flags';
 
@@ -30,12 +30,18 @@ vi.mock('./ui', async (orig) => ({ ...(await orig<Record<string, unknown>>()), u
 const pics = vi.hoisted(() => ({
   args: [] as unknown[],
   changed: false,
+  tiles: [] as unknown[],
+}));
+// A phone's window, for the viewer's pages (jsdom's is 0×0).
+vi.mock('react-native', async (orig) => ({
+  ...(await orig<Record<string, unknown>>()),
+  useWindowDimensions: () => ({ width: 393, height: 852, scale: 3, fontScale: 1 }),
 }));
 vi.mock('./useVisitPhotos', () => ({
   useVisitPhotos: (...args: unknown[]) => {
     pics.args = args;
     return {
-      tiles: [], room: 3,
+      tiles: pics.tiles, room: 3,
       add: async () => {}, retry: () => {}, remove: () => {},
       changed: () => pics.changed,
     };
@@ -63,6 +69,7 @@ beforeEach(() => {
   Object.assign(pics, { args: [], changed: false });
   appFlags.set('checkin_photos', false);
   appFlags.set('checkin_public', false);
+  pics.tiles = [];
 });
 afterEach(() => { cleanup(); });
 
@@ -77,17 +84,19 @@ describe('CheckinSheet', () => {
     expect(screen.getByTestId('checkin-sheet-name').textContent).toBe('Cộng Cà Phê');
     expect(screen.getByTestId('checkin-sheet-done').textContent).toBe('Checked in');
     expect(screen.queryByTestId('checkin-sheet-when')).toBeNull();
-    expect(propsWhere((p) => p.testID === 'checkin-sheet-note').autoFocus).toBe(false);
+    expect(propsWhere((p) => p.testID === 'checkin-sheet-note').autoFocus).toBeFalsy();
     expect(screen.getByTestId('checkin-sheet-save').textContent).toBe('Done');
   });
 
-  it('says the day of an old visit, not that it was just made, and opens on its field', () => {
+  // Nor on an old one (owner, 26 Nov 2026): the keyboard comes when the
+  // field is touched, whichever way the sheet was opened.
+  it('says the day of an old visit, not that it was just made, and leaves the keyboard down there too', () => {
     i18n.lang = 'vi';
     show({ ...OLD, note: 'Bánh mì giòn.', cover: null });
     expect(screen.getByTestId('checkin-sheet-when').textContent).toBe('08/10');
     expect(screen.queryByTestId('checkin-sheet-done')).toBeNull();
     expect(field().value).toBe('Bánh mì giòn.');
-    expect(propsWhere((p) => p.testID === 'checkin-sheet-note').autoFocus).toBe(true);
+    expect(propsWhere((p) => p.testID === 'checkin-sheet-note').autoFocus).toBeFalsy();
     expect(screen.getByTestId('checkin-sheet-save').textContent).toBe('Lưu');
   });
 
@@ -282,6 +291,27 @@ describe('CheckinSheet', () => {
     expect(screen.queryByTestId('checkin-sheet-hint')).toBeNull();
   });
 
+  // A tile opens its photo full screen, over the sheet and inside its
+  // Modal (owner, 26 Nov 2026).
+  it('opens a stored photo full screen from its tile, at that photo, and closes back to the sheet', () => {
+    appFlags.set('checkin_photos', true);
+    const ph = (id: string) => ({ key: id, uri: `https://s/${id}.jpg`, state: 'done', photo: { id, path: `u/k1/${id}.jpg`, width: 10, height: 10 } });
+    pics.tiles = [ph('p1'), ph('p2'), { key: 'up', uri: 'file://up.jpg', state: 'sending' }];
+    show(OLD, true);
+    expect(screen.queryByTestId('checkin-sheet-viewer')).toBeNull();
+    fireEvent.click(screen.getAllByTestId('visit-photo')[1]);
+    const viewer = screen.getByTestId('checkin-sheet-viewer');
+    expect(within(viewer).getByTestId('photo-viewer-count').textContent).toBe('2/2');
+    // Swiped back to the first, the count follows.
+    const pager = within(viewer).getByTestId('photo-viewer-pager');
+    Object.defineProperty(pager, 'scrollLeft', { value: 0, configurable: true });
+    fireEvent.scroll(pager);
+    expect(within(viewer).getByTestId('photo-viewer-count').textContent).toBe('1/2');
+    fireEvent.click(within(viewer).getByTestId('photo-viewer-close'));
+    expect(screen.queryByTestId('checkin-sheet-viewer')).toBeNull();
+    expect(screen.getByTestId('checkin-sheet')).toBeTruthy();
+  });
+
   it('keeps Public on a visit already answered so, with the flag off', async () => {
     show({ ...OLD, note: 'Before.', audience: 'public' }, true);
     expect(screen.getByTestId('checkin-sheet-seen-public').getAttribute('aria-checked')).toBe('true');
@@ -345,7 +375,7 @@ describe('CheckinSheet', () => {
       const spring = hold();
       show(OLD);
       expect(screen.queryByTestId('visit-photos')).toBeNull();
-      expect(pics.args).toEqual(['k1', false, true]);
+      expect(pics.args).toEqual(['k1', false, true, undefined]);
       expect(rise()).toBe(360);
       spring.mockRestore();
     });
@@ -355,13 +385,13 @@ describe('CheckinSheet', () => {
       const spring = hold();
       show(OLD);
       expect(screen.getByTestId('visit-photos')).toBeTruthy();
-      expect(pics.args).toEqual(['k1', true, true]);
+      expect(pics.args).toEqual(['k1', true, true, undefined]);
       // Rises from its own, taller height: the tile and a gap more.
       expect(rise()).toBe(360 + 72 + 14);
       cleanup();
       // A fresh visit has none to ask for.
       show(FRESH);
-      expect(pics.args).toEqual(['k9', true, false]);
+      expect(pics.args).toEqual(['k9', true, false, undefined]);
       spring.mockRestore();
     });
 

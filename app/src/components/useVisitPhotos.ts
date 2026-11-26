@@ -39,6 +39,7 @@ import * as ImagePicker from 'expo-image-picker';
 import { manipulateAsync, SaveFormat } from 'expo-image-manipulator';
 import { PHOTOS_PER_VISIT, type CheckinPhoto, type PhotoRefusal } from '../lib/checkin';
 import { fetchCheckinPhotos, removeCheckinPhoto, signCheckinPhotos } from '../lib/data';
+import { keepLinks, keptLink } from './useSignedPhotos';
 import { PHOTO_QUALITY, shrinkTo } from '../lib/guide';
 import { useI18n } from '../lib/i18n';
 import {
@@ -86,9 +87,18 @@ const keyOf = () => `new-${(made += 1)}`;
 const going = (visitId: string): Tile[] =>
   uploadsFor(visitId).map((u) => ({ key: u.key, uri: u.uri, state: u.state }));
 
-export function useVisitPhotos(visitId: string, on: boolean, known: boolean): VisitPhotos {
+/** The photos the card under the sheet was drawing, as tiles, with the
+ *  links it already had — so the sheet's first frame has the pictures
+ *  rather than empty tiles for half a second while it asks again (owner,
+ *  26 Nov 2026, from a recording). The read below still runs: it brings
+ *  the hidden ones, which a card is never sent. */
+const seeded = (seed: readonly CheckinPhoto[]): Tile[] => seed.map((photo) => ({
+  key: photo.id, photo, uri: keptLink(photo.path), state: 'done',
+}));
+
+export function useVisitPhotos(visitId: string, on: boolean, known: boolean, seed: readonly CheckinPhoto[] = []): VisitPhotos {
   const { t } = useI18n();
-  const [tiles, setTiles] = useState<Tile[]>(() => (on ? going(visitId) : []));
+  const [tiles, setTiles] = useState<Tile[]>(() => (on ? [...seeded(seed), ...going(visitId)] : []));
   const changed = useRef(false);
 
   // A visit made before this sheet may have photos already: the rows,
@@ -99,11 +109,13 @@ export function useVisitPhotos(visitId: string, on: boolean, known: boolean): Vi
     let live = true;
     (async () => {
       const rows = await fetchCheckinPhotos(visitId);
-      const links = await signCheckinPhotos(rows.filter((r) => !r.hidden).map((r) => r.path));
+      // Only what nothing has signed yet is asked for.
+      const need = rows.filter((r) => !r.hidden && !keptLink(r.path)).map((r) => r.path);
+      if (need.length > 0) keepLinks(await signCheckinPhotos(need));
       if (!live) return;
       const stored: Tile[] = rows.map((photo) => ({
         key: photo.id, photo,
-        uri: photo.hidden ? null : links[photo.path] ?? null,
+        uri: photo.hidden ? null : keptLink(photo.path),
         state: photo.hidden ? 'hidden' : 'done',
       }));
       setTiles((now) => [...stored, ...now.filter((x) => x.state === 'sending' || x.state === 'failed')]);

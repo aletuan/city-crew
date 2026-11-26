@@ -47,8 +47,13 @@
 // Not focused as a fresh sheet rises: most visits get no words, and a
 // keyboard thrown over the place the reader just checked in at, for a
 // line they did not ask to write, is the sheet-before-the-visit's cost
-// paid anyway. Focused when the reader came to edit — that press was
-// the request. Either way the sheet rides the keyboard on `useRide`
+// paid anyway. Not focused when the reader came to edit either (owner,
+// 26 Nov 2026): it was, on the argument that the press was the request,
+// and on the phone the keyboard took half the screen from a reader who
+// had come to change who sees the visit or to add a photo, pushing the
+// answer and Save against its edge. The ⋯'s "Edit check-in" and the
+// pencil both open the sheet still; the keyboard comes when the field is
+// touched. Either way the sheet rides the keyboard on `useRide`
 // (`CommentQuick`), the same native-driver lift the quick comment field
 // takes and for its reason: a `KeyboardAvoidingView` inside a `Modal`
 // moves a beat after the keyboard.
@@ -78,7 +83,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { Alert, Animated, Modal, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { Image } from 'expo-image';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { cleanNote, NOTE_MAX, type Audience } from '../lib/checkin';
+import { cleanNote, NOTE_MAX, type Audience, type CheckinPhoto } from '../lib/checkin';
 import { saveCheckin } from '../lib/data';
 import { numericDate } from '../lib/format';
 import { useI18n } from '../lib/i18n';
@@ -86,8 +91,9 @@ import { SEEN_GLYPH } from '../lib/shares';
 import { useFlag } from '../lib/useFlag';
 import { colors, display, font, space } from '../theme';
 import { useRide } from './CommentQuick';
+import PhotoViewer from './PhotoViewer';
 import Segmented from './Segmented';
-import { useVisitPhotos } from './useVisitPhotos';
+import { useVisitPhotos, type Tile } from './useVisitPhotos';
 import VisitPhotos, { TILE } from './VisitPhotos';
 import { GradientCta, useReducedMotion } from './ui';
 import { Glyph, ICON } from './ui/glyph';
@@ -106,6 +112,9 @@ export type SheetVisit = {
   audience: Audience;
   /** Raised by the check-in itself, a moment ago. */
   fresh: boolean;
+  /** The photos the card under the sheet was drawing, so the sheet opens
+   *  with them — `useVisitPhotos`'s seed. */
+  photos?: readonly CheckinPhoto[];
 };
 
 /** The count is drawn from here up: the last forty characters, where it
@@ -149,7 +158,8 @@ function Body({ visit, onClose, withAudience, backRef }: {
   const [audience, setAudience] = useState<Audience>(visit.audience);
   const [busy, setBusy] = useState(false);
   const photosOn = useFlag('checkin_photos');
-  const photos = useVisitPhotos(visit.id, photosOn, !visit.fresh);
+  const photos = useVisitPhotos(visit.id, photosOn, !visit.fresh, visit.photos);
+  const viewer = useSheetViewer(photos.tiles);
   const publicOn = useFlag('checkin_public') || visit.audience === 'public';
 
   // 1 → 0: the sheet up from under the foot, and the tick from small.
@@ -241,7 +251,6 @@ function Body({ visit, onClose, withAudience, backRef }: {
                 value={text}
                 onChangeText={setText}
                 multiline
-                autoFocus={!visit.fresh}
                 maxLength={NOTE_MAX}
                 placeholder={t('What did you think of this place?', 'Bạn nghĩ gì về nơi này?', 'この場所はどうでしたか？', '你觉得这里怎么样？', '你覺得這裡怎麼樣？')}
                 placeholderTextColor={colors.textTertiary}
@@ -254,7 +263,7 @@ function Body({ visit, onClose, withAudience, backRef }: {
               ) : null}
             </View>
 
-            {photosOn ? <VisitPhotos photos={photos} /> : null}
+            {photosOn ? <VisitPhotos photos={photos} onView={viewer.open} /> : null}
 
             {withAudience ? (
               <View style={s.seen}>
@@ -299,8 +308,28 @@ function Body({ visit, onClose, withAudience, backRef }: {
           <View style={s.under} pointerEvents="none" />
         </Animated.View>
       </View>
+      {viewer.node}
     </>
   );
+}
+
+/** A stored photo full screen over the sheet, from its tile (owner, 26
+ *  Nov 2026). Inside the sheet's own Modal: a second Modal over this one
+ *  is the stacked-modal trouble `ActionSheet` waits out. */
+function useSheetViewer(tiles: readonly Tile[]) {
+  const [viewing, setViewing] = useState<string | null>(null);
+  const shown = tiles.filter((x) => x.state === 'done' && x.uri);
+  const node = viewing && shown.length > 0 ? (
+    <View style={StyleSheet.absoluteFill} testID="checkin-sheet-viewer">
+      <PhotoViewer
+        photos={shown.map((x) => ({ id: x.key, photo_uri: x.uri as string, cacheKey: x.photo?.id }))}
+        index={Math.max(0, shown.findIndex((x) => x.key === viewing))}
+        onIndex={(at) => setViewing(shown[at].key)}
+        onClose={() => setViewing(null)}
+      />
+    </View>
+  ) : null;
+  return { open: (tile: Tile) => setViewing(tile.key), node };
 }
 
 /** The cover's side: 44, a face's on a sheet's head (`FriendPicker`'s

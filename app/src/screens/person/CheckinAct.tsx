@@ -55,7 +55,7 @@
 //
 // The ⋯ is on your own cards too (owner, 26 Nov 2026), in the same place
 // with your own things in it: Edit check-in — the note, the photos, who
-// sees it — and See the place. A reader had two presses on the card and
+// sees it — See the place, and Remove this visit. A reader had two presses on the card and
 // nothing to say which was which; the ⋯ names both, the pencil after the
 // note and the › after the place's name say them where they are.
 //
@@ -84,6 +84,7 @@ import { dayLabel } from '../../lib/ago';
 import { categoryLabel } from '../../lib/categories';
 import { AUDIENCE_ON, type PersonCheckin } from '../../lib/checkin';
 import { useMyCheckins } from '../../lib/checkins';
+import { useRemoveCheckin } from '../../lib/useRemoveCheckin';
 import { useCityList } from '../../lib/city';
 import { cityShortById } from '../../lib/cityName';
 import { fetchPersonCheckins, likeCheckin, usePersistedFetch, type Fetch, type FriendProfile } from '../../lib/data';
@@ -134,6 +135,9 @@ export function useVisitCards({ me, person, onPlace }: {
   const { cities } = useCityList();
   const on = useFlag('place_checkin');
   const mine = useMyCheckins();
+  // Taken back from your own card's ⋯ as from the Check-ins list's, by
+  // the same hook and its rule: no "are you sure" after a second step.
+  const removeVisit = useRemoveCheckin(mine.reload);
   const personId = person?.id ?? null;
   const own = !!me && personId === me;
 
@@ -289,7 +293,7 @@ export function useVisitCards({ me, person, onPlace }: {
           // bare `YYYY-MM-DD` is read as UTC midnight — the day before, west
           // of Greenwich.
           at: `${noteFor.day}T12:00:00`,
-          note: noteFor.note, audience: noteFor.audience ?? 'private', fresh: false,
+          note: noteFor.note, audience: noteFor.audience ?? 'private', fresh: false, photos: noteFor.photos,
         } : null}
         withAudience={AUDIENCE_ON}
         // Saved: your visits are asked again, and this page after them.
@@ -303,6 +307,7 @@ export function useVisitCards({ me, person, onPlace }: {
         own={own}
         onEdit={(v) => setNoteFor(v)}
         onPlace={(v) => onPlace(v.place_slug)}
+        onRemove={(v) => { void removeVisit(v.id); }}
         onReport={(v) => report({
           kind: 'checkin', id: v.id, ownerId: personId,
           name: nameOf(v), avatarUrl: (person as FriendProfile).avatar_url || undefined,
@@ -340,13 +345,14 @@ function markOf(v: PersonCheckin, shared: boolean, t: T): ActivityMark {
 
 /** The ⋯ on a card: who and which visit, and what can be done with it —
  *  your own edited or its place opened, somebody else's reported. */
-function VisitMenu({ visit, person, name, own, onEdit, onPlace, onReport, onClose }: {
+function VisitMenu({ visit, person, name, own, onEdit, onPlace, onRemove, onReport, onClose }: {
   visit: PersonCheckin | null;
   person: FriendProfile | null;
   name: string;
   own: boolean;
   onEdit: (v: PersonCheckin) => void;
   onPlace: (v: PersonCheckin) => void;
+  onRemove: (v: PersonCheckin) => void;
   onReport: (v: PersonCheckin) => void;
   onClose: () => void;
 }) {
@@ -361,6 +367,13 @@ function VisitMenu({ visit, person, name, own, onEdit, onPlace, onReport, onClos
     icon: 'location-outline' as const,
     title: t('See the place', 'Xem địa điểm', '場所を見る', '查看地点', '檢視地點'),
     onPress: () => onPlace(visit),
+  }, {
+    // The Check-ins list's words for the same act, and its red.
+    key: 'remove',
+    icon: 'trash-outline' as const,
+    destructive: true,
+    title: t('Remove this visit', 'Bỏ lần ghé này', 'この訪問を削除', '删除这次打卡', '刪除這次打卡'),
+    onPress: () => onRemove(visit),
   }] : [{
     key: 'report',
     icon: 'flag-outline' as const,
