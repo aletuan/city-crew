@@ -199,11 +199,18 @@ function Body({ visit, onClose, withAudience, backRef }: {
   };
   useEffect(() => { backRef.current = leave; });
 
+  // One line each, and only who (owner, 26 Nov 2026): the three said
+  // what was shown — "the place, the day and your note" — to a reader
+  // looking at exactly those on the sheet, and Public ran to two
+  // sentences and a second line about Explore. Who sees it is the
+  // control's own word; the line says the one thing the word does not.
+  // Public's is what it can lead to. The rest — signed in, never the
+  // hour — is the privacy policy's.
   const gloss = audience === 'public'
-    ? t('Anyone signed in sees the place, the day and your note on your page.', 'Bất kỳ ai đã đăng nhập đều thấy địa điểm, ngày ghé và ghi chú trên trang của bạn.', 'ログインしている人なら誰でも、あなたのページで場所・日付・メモを見られます。', '任何已登录的人都能在你的主页看到地点、日期和你的备注。', '任何已登入的人都能在你的主頁看到地點、日期和你的備註。')
+    ? t('Can appear in Featured check-ins.', 'Có thể lên Hoạt động nổi bật.', '注目のチェックインに載ることがあります。', '可能出现在精选动态中。', '可能出現在精選動態中。')
     : audience === 'friends'
-      ? t('Your friends see the place, the day and your note.', 'Bạn bè thấy địa điểm, ngày ghé và ghi chú của bạn.', '友達には場所・日付・メモが表示されます。', '好友可以看到地点、日期和你的备注。', '好友可以看到地點、日期和你的備註。')
-      : t('Nobody else sees this visit.', 'Không ai khác thấy lần ghé này.', 'この訪問は他の人には表示されません。', '其他人看不到这次打卡。', '其他人看不到這次打卡。');
+      ? t('Your friends see it on your page.', 'Bạn bè thấy trên trang của bạn.', '友達があなたのページで見られます。', '好友可以在你的主页看到。', '好友可以在你的主頁看到。')
+      : t('Only you see it.', 'Chỉ bạn thấy.', '自分だけが見られます。', '只有你能看到。', '只有你能看到。');
 
   return (
     <>
@@ -280,18 +287,6 @@ function Body({ visit, onClose, withAudience, backRef }: {
                   testID="checkin-sheet-seen"
                 />
                 <Text style={s.gloss} testID="checkin-sheet-gloss">{gloss}</Text>
-                {/* What Public can lead to, said where Public is chosen
-                    (owner, 26 Nov 2026): a public visit with a photo can
-                    be one of Explore's "Hoạt động nổi bật". Only where
-                    photos can be added — the shelf is made of them. */}
-                {audience === 'public' && photosOn ? (
-                  <View style={s.hint} testID="checkin-sheet-hint">
-                    <Glyph name="sparkles-outline" size={ICON.meta} color={colors.sun} />
-                    <Text style={s.hintText}>
-                      {t('A public check-in with a photo can appear in Featured check-ins on Explore.', 'Check-in công khai có ảnh có thể lên “Hoạt động nổi bật” ở Khám phá.', '写真付きの公開チェックインは「探索」の注目に載ることがあります。', '带照片的公开打卡可能出现在“探索”的精选动态中。', '帶照片的公開打卡可能出現在「探索」的精選動態中。')}
-                    </Text>
-                  </View>
-                ) : null}
               </View>
             ) : null}
 
@@ -372,6 +367,4 @@ const s = StyleSheet.create({
   count: { alignSelf: 'flex-end', color: colors.textTertiary, fontSize: 12, marginTop: 4 },
   seen: { gap: 8 },
   gloss: { color: colors.textTertiary, fontSize: 13, lineHeight: 18 },
-  hint: { flexDirection: 'row', alignItems: 'flex-start', gap: 6 },
-  hintText: { flex: 1, color: colors.textSecondary, fontSize: 13, lineHeight: 18 },
 });
