@@ -1401,9 +1401,15 @@ describe('the map', () => {
     const timing = vi.spyOn(Animated, 'timing');
     state.places.data = [place('p1', { lat: 21, lng: 105 })];
     const r = render(<ExploreScreen navigation={nav()} />);
-    await waitFor(() => expect(screen.getByTestId('explore-map')).toBeTruthy());
-    const fade = timing.mock.calls.find(([, cfg]) => (cfg as { duration?: number }).duration === 200);
-    expect(fade![1]).toMatchObject({ toValue: 1, duration: 200, useNativeDriver: true });
+    // The fade starts in an effect after the map's first frame, so wait
+    // for it as well: under the full suite's load the map was there and
+    // the fade not yet (CI, 27 Nov 2026, `fade` undefined).
+    const fadeOf = () => timing.mock.calls.find(([, cfg]) => (cfg as { duration?: number }).duration === 200);
+    await waitFor(() => {
+      expect(screen.getByTestId('explore-map')).toBeTruthy();
+      expect(fadeOf()).toBeDefined();
+    });
+    expect(fadeOf()![1]).toMatchObject({ toValue: 1, duration: 200, useNativeDriver: true });
     r.unmount();
     timing.mockClear();
     motion.still = true;
