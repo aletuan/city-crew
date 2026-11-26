@@ -300,9 +300,11 @@ Ghi ra để không ai tưởng là có chủ ý:
   `Facts`, `Hint`, `StopRows`, `PlanFoot`, `Gone` trong `parts.tsx`;
   `SignUpScreen` (365 / 16 → 11 / 4) ra `screens/signUp/`: `useSignUp`,
   `FormStep` và ba bước còn lại trong `steps.tsx`, cả bốn vẽ trong một
-  `AuthScreen` của màn. Danh sách còn 23 file; hàm màn hình lớn nhất
-  trên đó giờ là `GalleryScreen` (287 / 46) và `EditProfileScreen`
-  (258 / 27).
+  `AuthScreen` của màn. Ngày 27/11, `GalleryScreen` (287 / 46 → 116 / 24)
+  ra `screens/gallery/`, cạnh `useGalleryWrites` đã có: `useGalleryPlace`,
+  `usePhotoMenu`, và `GalleryTools`, `GalleryGrid`, `GalleryTips`,
+  `NotYours` trong `parts.tsx`. Danh sách còn 22 file; hàm rối nhất trên
+  đó giờ là `TripInvitationScreen` (218 / 66) và `PlaceCard` (166 / 50).
 - ~~**`lib/save.tsx`** nằm sai tầng~~ Ngày 20/10/2026 phần vẽ hai sheet
   chuyển ra `components/SaveSheets.tsx`; `lib/save.tsx` chỉ còn trạng thái,
   và ngoại lệ trong lint đã bỏ.
