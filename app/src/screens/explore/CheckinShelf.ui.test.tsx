@@ -133,6 +133,10 @@ describe('CheckinShelf', () => {
     expect(within(two).queryByTestId('checkin-shelf-more')).toBeNull();
     expect(two.getAttribute('aria-label')).toBe('Place b, Minh, Trang');
     expect(within(one).getAllByTestId('checkin-shelf-face')).toHaveLength(1);
+    // The first face — the newest visitor — is drawn over the rest.
+    const z = within(five).getAllByTestId('checkin-shelf-face')
+      .map((el) => Number((el as HTMLElement).style.zIndex));
+    expect(z).toEqual([3, 2, 1]);
     // Nobody is named on the card itself, and nothing says "went".
     for (const el of [five, two, one]) {
       expect(within(el).queryByText(/Person|Trang|Minh|@|went/)).toBeNull();
@@ -141,7 +145,7 @@ describe('CheckinShelf', () => {
   });
 
   // Under the photo, not over it: the words are outside the picture.
-  it('keeps the visitor’s words off the photo', async () => {
+  it('keeps the visitor’s words off the photo, under who went', async () => {
     data.cards = [card('a', { note: 'Small, warm, clean.' }), card('b'), card('c')];
     await show();
     const first = screen.getAllByTestId('checkin-shelf-card')[0];
@@ -149,6 +153,11 @@ describe('CheckinShelf', () => {
     expect(within(photo).queryByTestId('checkin-shelf-note')).toBeNull();
     expect(within(photo).getByText('Place a')).toBeTruthy();
     expect(within(first).getByTestId('checkin-shelf-note')).toBeTruthy();
+    // Who went and the heart first, the words under them.
+    const order = Array.from(first.querySelectorAll('[data-testid]'))
+      .map((el) => el.getAttribute('data-testid'))
+      .filter((id) => id === 'checkin-shelf-face' || id === 'checkin-shelf-heart' || id === 'checkin-shelf-note');
+    expect(order).toEqual(['checkin-shelf-face', 'checkin-shelf-heart', 'checkin-shelf-note']);
   });
 
   it('carries what the visitor wrote, and nothing where they wrote nothing', async () => {
