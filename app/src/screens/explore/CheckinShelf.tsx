@@ -1,7 +1,8 @@
-// "Hoạt động nổi bật" — this week's check-ins in the city, under the
-// community's collections (owner, 26 Nov 2026). The server chooses and
-// orders them (`20261126150000_explore_highlights.sql`): public, with a
-// photo, the last seven days, one a person, hearts then newest.
+// "Hoạt động nổi bật" — where people checked in this week in the city,
+// under the community's collections (owner, 26 Nov 2026). The server
+// chooses and orders them (`20261126210000_highlights_by_place.sql`):
+// public visits with a photo, the last seven days, a card a place,
+// today's first, then the places more people went to.
 //
 // ── when it is drawn ──
 //
@@ -14,17 +15,27 @@
 //
 // ── what a card is ──
 //
-// The visit's photo, full bleed, as the collection cards above it are —
+// One visit's photo, full bleed, as the collection cards above it are —
 // one shelf's shape over another's, so the two read as one page. The
-// place's name, then whose visit it was. The heart is on the card and
-// the count beside it. "This week" at the heading's end is the only
-// time the section gives: never the hour, never "2 minutes ago" — a
-// public visit says where a person was, and a shelf that said when to
-// the minute would say where they still are.
+// place's name; what the visitor wrote, two lines at most; then who
+// went. The words are what a check-in has that a collection's card has
+// not — a person saying something about a place — and a card without
+// them is simply shorter, not a gap.
+//
+// Two people or more and the card says so twice: their faces overlapped
+// at the foot, and "2 người đã ghé" in the corner `NewBadge` uses on the
+// shelf above, in the same cream. People, not visits: one regular going
+// daily is one, and it is the figure a place's owner reads.
+//
+// The heart is the shown visit's; the count beside it is the place's
+// week. "This week" at the heading's end is the only time the section
+// gives: never the hour, never "2 minutes ago" — a public visit says
+// where a person was, and a shelf that said when to the minute would
+// say where they still are.
 //
 // A press opens the place, not the person: somebody on Explore is
-// choosing where to go, and the place's page carries this visit in its
-// "Đánh giá từ khách" when it has a note to go with the photo.
+// choosing where to go, and the place's page carries these visits in
+// its "Đánh giá từ khách".
 //
 // ── who asks ──
 //
@@ -64,6 +75,11 @@ export const FEATURED_MIN = 3;
 
 const NONE: HighlightCheckin[] = [];
 
+/** A face at a card's foot. 18: the collection card's meta line is 13pt
+ *  on an 18pt line, and a face taller than its line pushes the foot row
+ *  down on the cards that have one. */
+const FACE = 18;
+
 /** The shelf's read: this week's cards for the reader's city, nothing
  *  signed out, asked again on a return to the app — see "who asks". */
 export function useHighlights(): Fetch<HighlightCheckin[]> {
@@ -92,6 +108,8 @@ export function CheckinShelf({ navigation, cards }: { navigation: Nav; cards: re
 
   if (cards.length < FEATURED_MIN) return null;
 
+  const went = (n: number) => t(`${n} people went`, `${n} người đã ghé`, `${n}人が訪問`, `${n} 人去过`, `${n} 人去過`);
+
   const heart = (c: HighlightCheckin) => {
     const was = pressed[c.id] ?? c.liked;
     fireHaptic('light');
@@ -117,25 +135,40 @@ export function CheckinShelf({ navigation, cards }: { navigation: Nav; cards: re
           const uri = linkOf(c.photo);
           const liked = pressed[c.id] ?? c.liked;
           const name = localized(c.place, 'name', lang);
+          const who = c.full_name || atHandle(c.handle);
           return (
             <PressableScale
               key={c.id}
               contentStyle={[page.shelfCard, { width: cardW, height: cardH }]}
               onPress={() => navigation.navigate('PlaceDetail', { slug: c.place_slug })}
               accessibilityRole="button"
-              accessibilityLabel={`${name}, ${c.full_name || atHandle(c.handle)}`}
+              accessibilityLabel={c.visitors > 1 ? `${name}, ${went(c.visitors)}` : `${name}, ${who}`}
               testID="checkin-shelf-card"
             >
               {uri
                 ? <Image source={{ uri, cacheKey: c.photo.id }} style={StyleSheet.absoluteFill} contentFit="cover" transition={200} />
                 : <View style={[StyleSheet.absoluteFill, { backgroundColor: colors.bgElevated }]} testID="checkin-shelf-waiting" />}
               <LinearGradient colors={coverScrim.colors} locations={coverScrim.locations} style={StyleSheet.absoluteFill} />
+              {c.visitors > 1 ? (
+                <View style={s.went} pointerEvents="none" testID="checkin-shelf-went">
+                  <Text style={s.wentWord}>{went(c.visitors)}</Text>
+                </View>
+              ) : null}
               <View style={page.shelfCardText}>
                 <Text style={page.shelfCardTitle} numberOfLines={1}>{name}</Text>
+                {c.note ? <Text style={s.note} numberOfLines={2} testID="checkin-shelf-note">{c.note}</Text> : null}
                 <View style={page.shelfCardFoot}>
                   <View style={s.who}>
-                    <Avatar url={c.avatar_url} size={18} />
-                    <Text style={[page.shelfCardMeta, s.whoName]} numberOfLines={1}>{c.full_name || atHandle(c.handle)}</Text>
+                    <View style={s.faces}>
+                      {c.faces.map((f, i) => (
+                        <View key={f.handle} style={i > 0 ? s.faceNext : null} testID="checkin-shelf-face">
+                          <Avatar url={f.avatar_url} size={FACE} />
+                        </View>
+                      ))}
+                    </View>
+                    <Text style={[page.shelfCardMeta, s.whoName]} numberOfLines={1}>
+                      {c.visitors > 1 ? `${who} +${c.visitors - 1}` : who}
+                    </Text>
                   </View>
                   <LikeHeart
                     tone="photo"
@@ -164,5 +197,20 @@ const s = StyleSheet.create({
   // a fact about the shelf, not a way somewhere.
   week: { color: colors.textTertiary, fontSize: 14, fontWeight: font.medium },
   who: { flexDirection: 'row', alignItems: 'center', gap: 6, flexShrink: 1 },
+  faces: { flexDirection: 'row' },
+  // A third of a face under the one before: three read as a group in
+  // the width of two, and each is still a face.
+  faceNext: { marginLeft: -6 },
+  // The visitor's words: the meta's size in the title's ink, so they
+  // read as said rather than as a caption.
+  note: { color: onPhoto.text, fontSize: 13, lineHeight: 17, fontWeight: font.regular },
+  // `NewBadge`'s corner, ground and ink, for the same reason: opaque, so
+  // it reads on any photograph in either theme.
+  went: {
+    position: 'absolute', top: 10, left: 10,
+    paddingHorizontal: 9, paddingVertical: 3, borderRadius: 999,
+    backgroundColor: colors.surfaceCard,
+  },
+  wentWord: { color: colors.text, fontSize: 12, lineHeight: 16, fontWeight: font.semibold },
   whoName: { flexShrink: 1, color: onPhoto.textSecondary },
 });

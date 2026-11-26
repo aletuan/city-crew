@@ -2339,7 +2339,9 @@ describe('pull to refresh', () => {
     expect(screen.queryByTestId('checkin-shelf')).toBeNull();
     state.highlights = ['a', 'b', 'c'].map((id) => ({
       id, place_slug: `s-${id}`, place: { name_en: id, name_vi: '', i18n: null }, handle: id, full_name: id,
-      avatar_url: null, note: null, likes: 0, liked: false, photo: { id: `p${id}`, path: `u/${id}.jpg`, width: 1, height: 1 },
+      avatar_url: null, note: null, likes: 0, liked: false, visitors: 1,
+      faces: [{ handle: id, full_name: id, avatar_url: null }],
+      photo: { id: `p${id}`, path: `u/${id}.jpg`, width: 1, height: 1 },
     }));
     act(() => { listProps().onRefresh(); });
     expect(spies.reload).toHaveBeenCalledOnce();

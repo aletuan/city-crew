@@ -21,6 +21,9 @@ vi.mock('../../lib/data', async (orig) => ({
   likeCheckin: data.likeCheckin,
   signCheckinPhotos: data.signCheckinPhotos,
 }));
+// The reader's own visits, as the provider holds them.
+const mine = vi.hoisted(() => ({ loaded: true, data: [] as unknown[] }));
+vi.mock('../../lib/checkins', () => ({ useMyCheckins: () => mine }));
 vi.mock('../../lib/i18n', () => ({ useI18n: () => ({ lang: 'en', t: (en: string) => en }) }));
 // A phone's window, for the viewer's pages: jsdom's is 0×0.
 const PHONE = vi.hoisted(() => ({ width: 393, height: 852, scale: 3, fontScale: 1 }));
@@ -39,12 +42,19 @@ const review = (over: Record<string, unknown> = {}) => ({
   day: '2026-11-24', note: 'Omurice, soft.', photos: [ph('p1'), ph('p2')], likes: 2, liked: false, ...over,
 });
 const onPerson = vi.fn();
+const settle = () => act(async () => { for (let i = 0; i < 6; i += 1) await Promise.resolve(); });
 const show = async () => {
-  render(<GuestReviews slug="omu" onPerson={onPerson} />);
-  await act(async () => { for (let i = 0; i < 6; i += 1) await Promise.resolve(); });
+  const page = render(<GuestReviews slug="omu" onPerson={onPerson} />);
+  await settle();
+  return page;
 };
+const visit = (id: string, over: Record<string, unknown> = {}) => ({
+  id, place_slug: 'omu', city_id: 'hanoi', at: '2026-11-26T05:00:00Z', note: null, audience: 'public', photos: [], ...over,
+});
 
 beforeEach(() => {
+  mine.loaded = true;
+  mine.data = [];
   data.reviews = null;
   data.fetchGuestReviews.mockClear();
   data.likeCheckin.mockReset().mockResolvedValue(undefined);
@@ -150,5 +160,64 @@ describe('GuestReviews', () => {
     expect(tile.querySelector('img')).toBeNull();
     fireEvent.click(tile);
     expect(screen.queryByTestId('photo-viewer')).toBeNull();
+  });
+
+  // The owner's check-in (26 Nov 2026): the pill turned, the card did not.
+  describe('asked again when the reader’s own visits here change', () => {
+    const again = async (page: Awaited<ReturnType<typeof show>>, next: unknown[]) => {
+      mine.data = next;
+      page.rerender(<GuestReviews slug="omu" onPerson={onPerson} />);
+      await settle();
+    };
+
+    it('a new visit, and it is drawn', async () => {
+      data.reviews = { count: 1, visits: [] };
+      const page = await show();
+      expect(data.fetchGuestReviews).toHaveBeenCalledTimes(1);
+      data.reviews = { count: 2, visits: [review()] };
+      await again(page, [visit('k9')]);
+      expect(data.fetchGuestReviews).toHaveBeenCalledTimes(2);
+      expect(screen.getByText('Omurice, soft.')).toBeTruthy();
+    });
+
+    it.each([
+      ['its note', { note: 'New words.' }],
+      ['its audience', { audience: 'friends' }],
+      ['its photos', { photos: [ph('p9', 'me')] }],
+    ])('an edit to %s', async (_what, over) => {
+      mine.data = [visit('k9')];
+      data.reviews = { count: 1, visits: [] };
+      const page = await show();
+      await again(page, [visit('k9', over)]);
+      expect(data.fetchGuestReviews).toHaveBeenCalledTimes(2);
+    });
+
+    it('one removed', async () => {
+      mine.data = [visit('k9')];
+      data.reviews = { count: 1, visits: [] };
+      const page = await show();
+      await again(page, []);
+      expect(data.fetchGuestReviews).toHaveBeenCalledTimes(2);
+    });
+
+    it('not for a visit somewhere else, nor the same visits handed over again', async () => {
+      mine.data = [visit('k9')];
+      data.reviews = { count: 1, visits: [] };
+      const page = await show();
+      await again(page, [visit('k9'), visit('k8', { place_slug: 'elsewhere' })]);
+      expect(data.fetchGuestReviews).toHaveBeenCalledTimes(1);
+    });
+
+    it('not for the visits arriving the first time', async () => {
+      mine.loaded = false;
+      data.reviews = { count: 1, visits: [] };
+      const page = await show();
+      mine.loaded = true;
+      await again(page, [visit('k9')]);
+      expect(data.fetchGuestReviews).toHaveBeenCalledTimes(1);
+      // And from then on they are the signal.
+      await again(page, []);
+      expect(data.fetchGuestReviews).toHaveBeenCalledTimes(2);
+    });
   });
 });
