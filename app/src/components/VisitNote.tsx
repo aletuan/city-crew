@@ -3,6 +3,11 @@
 // A note is the owner's own words, read back: plain, two lines, and a
 // press on it opens the sheet it was written in (`CheckinSheet`).
 //
+// The pencil follows a note too (owner, 26 Nov 2026): a note in the
+// secondary ink was taken for something to read, never for something to
+// press, and the card around it opens the place. The pencil says this
+// line is the one that edits.
+//
 // A visit with none carries the invitation the empty description of a
 // list does, and the empty bio (`collectionDetail/head`, `BioInvite`):
 // faint italic words and the small pencil in the app's gold (owner,
@@ -41,7 +46,10 @@ export default function VisitNote({ note, onEdit }: { note: string | null | unde
       testID={note ? 'visit-note' : 'visit-note-add'}
     >
       {note ? (
-        <Text style={s.said} numberOfLines={2}>{note}</Text>
+        <>
+          <Text style={s.said} numberOfLines={2}>{note}</Text>
+          <PencilGlyph color={colors.sun} />
+        </>
       ) : (
         <>
           <Text style={s.ask} numberOfLines={1}>{ask}</Text>

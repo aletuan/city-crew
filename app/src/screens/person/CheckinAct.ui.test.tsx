@@ -294,7 +294,8 @@ describe('a friend’s visit', () => {
   it('says who checked in and on what day, the place, its kind and city, and their note', async () => {
     await show('me', LAN, [visit('k1', { note: 'Crisp sourdough.', likes: 3 })]);
     const card = cards()[0];
-    expect(within(card).getByTestId('activity-line').textContent).toBe('Lan Pham checked in');
+    // The sentence, then a space and the pin (whose glyph has no text).
+    expect(within(card).getByTestId('activity-line').textContent).toBe('Lan Pham checked in ');
     expect(within(card).getByTestId('activity-when').textContent).toBe('today');
     expect(within(card).getByTestId('activity-open').getAttribute('aria-label')).toBe('Place k1, Cafés · Hanoi');
     expect(within(card).getByTestId('activity-desc').textContent).toBe('Crisp sourdough.');
@@ -321,7 +322,7 @@ describe('a friend’s visit', () => {
       city_id: null, place: { name_en: 'Place k1', name_vi: 'Quán k1', cover: null, categories: [] },
     })]);
     const card = cards()[0];
-    expect(within(card).getByTestId('activity-line').textContent).toBe('@lan đã check-in');
+    expect(within(card).getByTestId('activity-line').textContent).toBe('@lan đã check-in ');
     expect(within(card).getByTestId('activity-open').getAttribute('aria-label')).toBe('Quán k1, ');
     expect(within(card).getByTestId('activity-tint')).toBeTruthy();
   });
@@ -570,10 +571,11 @@ describe('reporting a check-in', () => {
     expect(data.submitReport).toHaveBeenCalledWith({ reporter: 'me', kind: 'checkin', targetId: 'k1', reason: 'spam' });
   });
 
-  it('carries no ⋯ on your own visits, and the viewer no flag on anybody’s', async () => {
+  it('offers no report on your own visits, and the viewer no flag on anybody’s', async () => {
     flags.checkin_photos = true;
     await show('me', ME, [visit('k1', { audience: 'public', photos: [ph('p1')] })]);
-    expect(screen.queryByTestId('activity-more')).toBeNull();
+    fireEvent.click(screen.getByTestId('activity-more'));
+    expect(screen.queryByTestId('sheet-action-report')).toBeNull();
     cleanup();
     await show('me', LAN, [visit('k1', { photos: [ph('p1')] })]);
     await act(async () => { for (let i = 0; i < 6; i += 1) await Promise.resolve(); });
@@ -585,6 +587,46 @@ describe('reporting a check-in', () => {
   it('offers nothing to somebody signed out', async () => {
     await show(null, LAN, [visit('k1')]);
     expect(screen.queryByTestId('activity-more')).toBeNull();
+  });
+});
+
+// Your own card's ⋯ (owner, 26 Nov 2026): the two presses a card had,
+// named — edit the visit, or see its place.
+describe('your own card’s ⋯', () => {
+  it('edits the visit or opens its place, and nothing else', async () => {
+    vi.useFakeTimers({ toFake: ['setTimeout'] });
+    try {
+      await show('me', ME, [visit('k1', { audience: 'friends', note: 'Mine.' })]);
+      fireEvent.click(screen.getByTestId('activity-more'));
+      expect(screen.getAllByTestId(/^sheet-action-/).map((b) => b.getAttribute('data-testid')))
+        .toEqual(['sheet-action-edit', 'sheet-action-place']);
+      fireEvent.click(screen.getByTestId('sheet-action-edit'));
+      act(() => { vi.advanceTimersByTime(220); });
+    } finally {
+      vi.useRealTimers();
+    }
+    const sheet = await screen.findByTestId('checkin-sheet');
+    expect((within(sheet).getByTestId('checkin-sheet-note') as HTMLTextAreaElement).value).toBe('Mine.');
+    expect(onPlace).not.toHaveBeenCalled();
+  });
+
+  it('opens the place from See the place', async () => {
+    vi.useFakeTimers({ toFake: ['setTimeout'] });
+    try {
+      await show('me', ME, [visit('k1', { audience: 'friends' })]);
+      fireEvent.click(screen.getByTestId('activity-more'));
+      fireEvent.click(screen.getByTestId('sheet-action-place'));
+      act(() => { vi.advanceTimersByTime(220); });
+    } finally {
+      vi.useRealTimers();
+    }
+    expect(onPlace).toHaveBeenCalledWith('slug-k1');
+  });
+
+  it('wears the pin after the sentence and the › after the place, on anybody’s card', async () => {
+    await show('me', LAN, [visit('k1')]);
+    expect(screen.getByTestId('activity-did-glyph').getAttribute('data-icon')).toBe('location-outline');
+    expect(screen.getByTestId('activity-goes')).toBeTruthy();
   });
 });
 

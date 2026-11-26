@@ -15,13 +15,15 @@ import VisitNote from './VisitNote';
 afterEach(cleanup);
 
 describe('VisitNote', () => {
-  it('reads a note back plainly, with no pencil, and opens it for editing on a press', () => {
+  it('reads a note back plainly, with the pencil after it, and opens it for editing on a press', () => {
     const onEdit = vi.fn();
     render(<VisitNote note="Crisp sourdough." onEdit={onEdit} />);
     const row = screen.getByTestId('visit-note');
     expect(row.textContent).toBe('Crisp sourdough.');
     expect(row.getAttribute('aria-label')).toBe('Your note: Crisp sourdough.. Edit');
-    expect(screen.queryByTestId('pencil-glyph')).toBeNull();
+    // The pencil says this line edits (owner, 26 Nov 2026): without it a
+    // note was read as something to read, and the card opens the place.
+    expect(screen.getByTestId('pencil-glyph')).toBeTruthy();
     expect(screen.queryByTestId('visit-note-add')).toBeNull();
     expect(textStyleOf(screen.getByText('Crisp sourdough.'))?.fontStyle).toBeUndefined();
     fireEvent.click(row);
