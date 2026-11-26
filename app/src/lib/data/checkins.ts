@@ -199,8 +199,14 @@ export async function fetchGuestReviews(slug: string): Promise<GuestReviews | nu
   };
 }
 
-/** One card of "Hoạt động nổi bật": a public visit this week, with its
- *  first photo (`20261126150000_explore_highlights.sql`). */
+/** Somebody who went, as a card's row of faces holds them. */
+export type HighlightFace = { handle: string; full_name: string; avatar_url: string | null };
+
+/** One card of "Hoạt động nổi bật": a place people went to this week,
+ *  shown by one public visit and its first photo. `likes` is the
+ *  place's over the week, `liked` this visit's; `visitors` is how many
+ *  different people went, `faces` up to three of them, the one whose
+ *  visit this is first (`20261126210000_highlights_by_place.sql`). */
 export type HighlightCheckin = {
   id: string;
   place_slug: string;
@@ -211,11 +217,19 @@ export type HighlightCheckin = {
   note: string | null;
   likes: number;
   liked: boolean;
+  visitors: number;
+  faces: HighlightFace[];
   photo: CheckinPhoto;
 };
 
-/** This week's public check-ins with a photo in one city, hearts then
- *  newest, one a person — signed in only, as the server answers. */
+const faceOf = (r: Record<string, unknown>): HighlightFace => ({
+  handle: String(r.handle ?? ''),
+  full_name: String(r.full_name ?? ''),
+  avatar_url: typeof r.avatar_url === 'string' && r.avatar_url ? r.avatar_url : null,
+});
+
+/** This week's places people checked in at in one city, a card a place,
+ *  in the server's order — signed in only, as the server answers. */
 export async function fetchHighlightCheckins(cityId: string): Promise<HighlightCheckin[]> {
   const { data, error } = await supabase.rpc('featured_checkins', { p_city: cityId });
   if (error) throw new Error(error.message);
@@ -224,6 +238,7 @@ export async function fetchHighlightCheckins(cityId: string): Promise<HighlightC
     const [photo] = visitPhotosOf(r.photo ? [r.photo] : []);
     // A card is its photo; a row that came without one is not a card.
     if (typeof r.id !== 'string' || typeof r.place_slug !== 'string' || !photo) return [];
+    const lead = faceOf(r);
     return [{
       id: r.id,
       place_slug: r.place_slug,
@@ -231,12 +246,14 @@ export async function fetchHighlightCheckins(cityId: string): Promise<HighlightC
         name_en: String(r.name_en ?? ''), name_vi: String(r.name_vi ?? ''),
         i18n: (r.i18n as I18nDoc | null) ?? null,
       },
-      handle: String(r.handle ?? ''),
-      full_name: String(r.full_name ?? ''),
-      avatar_url: typeof r.avatar_url === 'string' && r.avatar_url ? r.avatar_url : null,
+      ...lead,
       note: typeof r.note === 'string' ? r.note : null,
       likes: typeof r.likes === 'number' ? r.likes : 0,
       liked: r.liked === true,
+      // An answer from before the card was a place's: one person, theirs.
+      visitors: typeof r.visitors === 'number' && r.visitors > 0 ? r.visitors : 1,
+      faces: Array.isArray(r.faces) && r.faces.length > 0
+        ? (r.faces as Record<string, unknown>[]).map(faceOf) : [lead],
       photo,
     }];
   });

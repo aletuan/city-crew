@@ -26,8 +26,21 @@
 // Signed out, the server sends the count and no reviews (it cannot ask
 // `checkin_seen` about a reader it does not know), so a guest sees the
 // figure and the invitation is the check-in pill above.
+//
+// ── when it is asked again ──
+//
+// When the reader's own visits here change: a new one, a note or an
+// audience edited, a photo added, one removed. Until 26 Nov 2026 it was
+// read once as the page opened, so a reader who checked in watched the
+// pill above turn to "Đã qua" while this card kept the count and the
+// reviews it had — theirs appeared only on leaving the page and coming
+// back (owner, on a phone). The sheet reloads the reader's visits when
+// it saves (`useCheckIn`), so those are the signal: what of them could
+// change this card is folded into one string, and a different string is
+// a reload. Not before the visits have loaded once — their arriving is
+// not a change, and the card has just been asked for.
 
-import React, { useCallback, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Modal, StyleSheet, Text, View } from 'react-native';
 import { Image } from 'expo-image';
 import LikeHeart from '../../components/LikeHeart';
@@ -38,6 +51,8 @@ import { Glyph, ICON } from '../../components/ui/glyph';
 import { useSignedPhotos } from '../../components/useSignedPhotos';
 import { dayLabel } from '../../lib/ago';
 import { fetchGuestReviews, likeCheckin, useFetch, type GuestReview, type GuestReviews as Reviews } from '../../lib/data';
+import { visitsAt } from '../../lib/checkin';
+import { useMyCheckins } from '../../lib/checkins';
 import { atHandle } from '../../lib/handle';
 import { useI18n } from '../../lib/i18n';
 import { colors, font } from '../../theme';
@@ -58,6 +73,23 @@ export function GuestReviews({ slug, onPerson }: {
   const fetcher = useCallback(() => fetchGuestReviews(slug), [slug]);
   const read = useFetch<Reviews | null>(fetcher, null);
   const reviews = read.data;
+  const mine = useMyCheckins();
+  const stamp = useMemo(
+    () => (mine.loaded
+      ? visitsAt(mine.data, slug)
+        .map((v) => [v.id, v.note ?? '', v.audience ?? '', (v.photos ?? []).map((p) => p.id).join(',')].join(':'))
+        .join('|')
+      : null),
+    [mine.loaded, mine.data, slug],
+  );
+  const drawn = useRef(stamp);
+  const { reload } = read;
+  useEffect(() => {
+    if (stamp === drawn.current) return;
+    const first = drawn.current === null;
+    drawn.current = stamp;
+    if (!first) reload();
+  }, [stamp, reload]);
   const visits = useMemo(() => reviews?.visits ?? [], [reviews]);
   const all = useMemo(() => visits.flatMap((v) => v.photos), [visits]);
   const linkOf = useSignedPhotos(all, true);
