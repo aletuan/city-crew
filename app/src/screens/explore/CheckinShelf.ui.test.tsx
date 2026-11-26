@@ -145,7 +145,7 @@ describe('CheckinShelf', () => {
   });
 
   // Under the photo, not over it: the words are outside the picture.
-  it('keeps the visitor’s words off the photo, under who went', async () => {
+  it('keeps the visitor’s words off the photo, over who went', async () => {
     data.cards = [card('a', { note: 'Small, warm, clean.' }), card('b'), card('c')];
     await show();
     const first = screen.getAllByTestId('checkin-shelf-card')[0];
@@ -153,11 +153,11 @@ describe('CheckinShelf', () => {
     expect(within(photo).queryByTestId('checkin-shelf-note')).toBeNull();
     expect(within(photo).getByText('Place a')).toBeTruthy();
     expect(within(first).getByTestId('checkin-shelf-note')).toBeTruthy();
-    // Who went and the heart first, the words under them.
+    // The words first, who went and the heart at the foot.
     const order = Array.from(first.querySelectorAll('[data-testid]'))
       .map((el) => el.getAttribute('data-testid'))
       .filter((id) => id === 'checkin-shelf-face' || id === 'checkin-shelf-heart' || id === 'checkin-shelf-note');
-    expect(order).toEqual(['checkin-shelf-face', 'checkin-shelf-heart', 'checkin-shelf-note']);
+    expect(order).toEqual(['checkin-shelf-note', 'checkin-shelf-face', 'checkin-shelf-heart']);
   });
 
   it('carries what the visitor wrote, and nothing where they wrote nothing', async () => {

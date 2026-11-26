@@ -17,8 +17,8 @@
 // ── what a card is ──
 //
 // The photo on top, with only the place's name over its foot; under it,
-// on the card's own paper, who went and the heart, then what the visitor
-// wrote — two lines at most. The final card of 26 Nov 2026,
+// on the card's own paper, what the visitor wrote — two lines at most —
+// and the foot: who went, and the heart. The final card of 26 Nov 2026,
 // chosen by the owner from four (words over the photo, words under it,
 // one quoted line, words fading in), after a day of the first on a
 // phone: two lines of words, a byline and a badge stacked on a picture
@@ -43,11 +43,16 @@
 //
 // ── who went, and the heart ──
 //
-// Over the words, not under them (owner, 27 Nov 2026, on a phone): the
-// faces and the heart are the row the eye reads first under a photo —
-// people went, people liked it — and the words below are read by the
-// reader who stayed. Under the words they sat at the card's very foot,
-// after a cut-off second line, where a glance never reached them.
+// Under the words, at the card's foot. They sat over the words for a
+// night (owner, 27 Nov 2026, so a glance met people first) and came back
+// down the same morning, on a phone, for three things that showed:
+// the heart sat mid-card while the collection shelf above keeps it in
+// its bottom corner, two shelves stacked out of step; faces with no
+// names, read before the words, are dots that say nothing yet, where
+// after them they are who said it — the order a review reads in on
+// Airbnb or Google Maps; and a row between the place's name and the
+// words split "this place" from "what people say of it". At 22pt the
+// faces are seen at the foot as well.
 //
 // Up to three faces, whoever was there last first (the server's order),
 // and "+N" for the people past three — no figure at all for one to
@@ -204,6 +209,7 @@ export function CheckinShelf({ navigation, cards }: { navigation: Nav; cards: re
                 <Text style={[page.shelfCardTitle, s.name]} numberOfLines={1}>{name}</Text>
               </View>
               <View style={s.paper}>
+                {c.note ? <Text style={s.note} numberOfLines={2} testID="checkin-shelf-note">{c.note}</Text> : null}
                 <View style={page.shelfCardFoot}>
                   <View style={s.faces}>
                     {c.faces.map((f, i) => (
@@ -229,7 +235,6 @@ export function CheckinShelf({ navigation, cards }: { navigation: Nav; cards: re
                     countTestID="checkin-shelf-likes"
                   />
                 </View>
-                {c.note ? <Text style={s.note} numberOfLines={2} testID="checkin-shelf-note">{c.note}</Text> : null}
               </View>
             </PressableScale>
           );
