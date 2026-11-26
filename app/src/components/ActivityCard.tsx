@@ -74,7 +74,7 @@ import { StyleSheet, Text, View } from 'react-native';
 import { Image } from 'expo-image';
 import LikeHeart from './LikeHeart';
 import { CopyGlyph } from './CopyGlyph';
-import { Glyph, ICON } from './ui/glyph';
+import { Glyph, ICON, type GlyphName } from './ui/glyph';
 import { PressableScale } from './ui/controls';
 import PhotoCarousel, { type PageSize } from './PhotoCarousel';
 import { Avatar, Card } from './ui/surfaces';
@@ -137,7 +137,7 @@ function CopyFoot({ copy }: { copy: CardCopy }) {
 export type CardPhoto = { pages: readonly { uri: string; cacheKey: string }[]; onPress: (i: number) => void };
 
 export default function ActivityCard({
-  face, who, did, when, mark, title, uri, photo, meta, desc, under, liked, likes, onOpen, onHeart, comments, onComments, commentsOff, copy, onMore, testID,
+  face, who, did, didGlyph, when, mark, title, uri, photo, meta, desc, under, liked, likes, onOpen, onHeart, comments, onComments, commentsOff, copy, onMore, goes, testID,
 }: {
   /** Whose face, as `Avatar` takes it. */
   face?: string | null;
@@ -145,6 +145,12 @@ export default function ActivityCard({
    *  its own leading space where the language wants one. */
   who: string;
   did: string;
+  /** A glyph after the sentence that says what kind of thing this is, at
+   *  a glance and in any language: a check-in's pin (owner, 26 Nov 2026 —
+   *  a visit and a new collection read alike in a column of cards). After
+   *  the words, not before them: Japanese puts the verb after the name
+   *  with no space, and a pin between them would split さん from が. */
+  didGlyph?: GlyphName;
   /** How long ago, already in words; absent when nothing says. */
   when?: string;
   /** Who can see it, when that is not everybody. */
@@ -190,6 +196,10 @@ export default function ActivityCard({
    *  (a check-in's report, 25 Nov 2026). `label` is what VoiceOver says.
    *  Absent, the head is the face and the words to its edge. */
   onMore?: { onPress: () => void; label: string };
+  /** A › after the title: the press goes somewhere else — a check-in's
+   *  card opens its place, which nothing about a visit otherwise says
+   *  (owner, 26 Nov 2026). Absent, the title stands alone. */
+  goes?: boolean;
   testID?: string;
 }) {
   const { t } = useI18n();
@@ -201,6 +211,7 @@ export default function ActivityCard({
         <View style={s.headWords}>
           <Text style={s.line} numberOfLines={2} testID="activity-line">
             <Text style={s.who}>{who}</Text>{did}
+            {didGlyph ? <>{' '}<Glyph name={didGlyph} size={MARK} color={colors.textTertiary} testID="activity-did-glyph" /></> : null}
           </Text>
           <View style={s.under}>
             {when ? <Text style={s.when} numberOfLines={1} testID="activity-when">{when}</Text> : null}
@@ -247,7 +258,12 @@ export default function ActivityCard({
           ? <Image source={{ uri }} style={s.photo} contentFit="cover" transition={160} cachePolicy="memory-disk" />
           : <View style={[s.photo, s.tint]} testID="activity-tint" />}
         <View style={s.words}>
-          <Text style={s.title} numberOfLines={2}>{title}</Text>
+          {goes ? (
+            <View style={s.goes}>
+              <Text style={[s.title, s.goesTitle]} numberOfLines={2}>{title}</Text>
+              <Glyph name="chevron-forward" size={MARK} color={colors.textTertiary} testID="activity-goes" />
+            </View>
+          ) : <Text style={s.title} numberOfLines={2}>{title}</Text>}
           <Text style={s.meta} numberOfLines={1}>{meta}</Text>
           {desc ? <Text style={s.desc} numberOfLines={2} testID="activity-desc">{desc}</Text> : null}
           {under}
@@ -360,6 +376,8 @@ const s = StyleSheet.create({
   tint: { backgroundColor: colors.accentSoft },
   words: { paddingHorizontal: space.cardPadding, paddingTop: 12, gap: 4 },
   title: { color: colors.text, fontSize: 17, fontWeight: font.semibold, lineHeight: 22 },
+  goes: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  goesTitle: { flexShrink: 1 },
   meta: { color: colors.textTertiary, fontSize: 13, lineHeight: 18 },
   desc: { color: colors.textSecondary, ...type.meta, lineHeight: 20, marginTop: 2 },
   // The heart's row: 44 tall, the heart at the words' edge.

@@ -161,3 +161,21 @@ describe('the ⋯ at the head', () => {
     expect(onPress).toHaveBeenCalledTimes(1);
   });
 });
+
+describe('what kind, and where the press goes', () => {
+  it('draws neither the kind’s glyph nor the › unless asked — a collection’s card asks for neither', () => {
+    show();
+    expect(screen.queryByTestId('activity-did-glyph')).toBeNull();
+    expect(screen.queryByTestId('activity-goes')).toBeNull();
+    cleanup();
+    render(
+      <ActivityCard
+        who="Lan" did=" checked in" didGlyph="location-outline" title="Omu-Ba" meta=""
+        liked={false} likes={0} onOpen={() => {}} goes
+      />,
+    );
+    expect(screen.getByTestId('activity-did-glyph').getAttribute('data-icon')).toBe('location-outline');
+    expect(screen.getByTestId('activity-goes').getAttribute('data-icon')).toBe('chevron-forward');
+    expect(screen.getByText('Omu-Ba')).toBeTruthy();
+  });
+});

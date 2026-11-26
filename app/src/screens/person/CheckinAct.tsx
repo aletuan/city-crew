@@ -53,6 +53,12 @@
 // is gone — one way to report a visit, and it is on the card. Your own
 // visits have no ⋯: they are yours to edit or take back.
 //
+// The ⋯ is on your own cards too (owner, 26 Nov 2026), in the same place
+// with your own things in it: Edit check-in — the note, the photos, who
+// sees it — and See the place. A reader had two presses on the card and
+// nothing to say which was which; the ⋯ names both, the pencil after the
+// note and the › after the place's name say them where they are.
+//
 // What the desk took down is said on your own card: a hidden visit wears
 // "Hidden by City Crew" for its mark, a hidden note a line under it.
 // Nobody else is sent either (`person_checkins`).
@@ -214,6 +220,7 @@ export function useVisitCards({ me, person, onPlace }: {
         face={(person as FriendProfile).avatar_url}
         who={(person as FriendProfile).full_name || atHandle((person as FriendProfile).handle)}
         did={t(' checked in', ' đã check-in', 'さんがチェックイン', ' 打卡了', ' 打卡了')}
+        didGlyph="location-outline"
         when={dayLabel(v.day, new Date(), lang, t)}
         // Anybody else is told Public when it is and nothing for Friends
         // (`person_checkins`), so a card on somebody else's page wears
@@ -244,7 +251,7 @@ export function useVisitCards({ me, person, onPlace }: {
         ) : undefined}
         // Your own is refused by `canReport` (`reportable`): yours to edit or
         // take back, not to report.
-        onMore={canReport({ kind: 'checkin', id: v.id, ownerId: personId }) ? {
+        onMore={own || canReport({ kind: 'checkin', id: v.id, ownerId: personId }) ? {
           onPress: () => setMenuFor(v),
           label: t('More about this check-in', 'Thêm về lần check-in này', 'このチェックインのその他', '关于此打卡的更多操作', '關於此打卡的更多操作'),
         } : undefined}
@@ -253,6 +260,7 @@ export function useVisitCards({ me, person, onPlace }: {
         // further: one heart is the most a press can change it by.
         likes={v.likes + (liked === v.liked ? 0 : liked ? 1 : -1)}
         onOpen={() => onPlace(v.place_slug)}
+        goes
         onHeart={shared ? () => heart(v) : undefined}
       />
     );
@@ -292,6 +300,9 @@ export function useVisitCards({ me, person, onPlace }: {
         visit={menuFor}
         person={person as FriendProfile | null}
         name={menuFor ? nameOf(menuFor) : ''}
+        own={own}
+        onEdit={(v) => setNoteFor(v)}
+        onPlace={(v) => onPlace(v.place_slug)}
         onReport={(v) => report({
           kind: 'checkin', id: v.id, ownerId: personId,
           name: nameOf(v), avatarUrl: (person as FriendProfile).avatar_url || undefined,
@@ -327,15 +338,35 @@ function markOf(v: PersonCheckin, shared: boolean, t: T): ActivityMark {
     : { icon: SEEN_GLYPH.private, label: t('Only me', 'Chỉ mình tôi', '自分のみ', '仅自己', '僅自己') };
 }
 
-/** The ⋯ on somebody else's card: who and which visit, and the report. */
-function VisitMenu({ visit, person, name, onReport, onClose }: {
+/** The ⋯ on a card: who and which visit, and what can be done with it —
+ *  your own edited or its place opened, somebody else's reported. */
+function VisitMenu({ visit, person, name, own, onEdit, onPlace, onReport, onClose }: {
   visit: PersonCheckin | null;
   person: FriendProfile | null;
   name: string;
+  own: boolean;
+  onEdit: (v: PersonCheckin) => void;
+  onPlace: (v: PersonCheckin) => void;
   onReport: (v: PersonCheckin) => void;
   onClose: () => void;
 }) {
   const { t } = useI18n();
+  const actions = !visit ? [] : own ? [{
+    key: 'edit',
+    icon: 'create-outline' as const,
+    title: t('Edit check-in', 'Sửa check-in', 'チェックインを編集', '编辑打卡', '編輯打卡'),
+    onPress: () => onEdit(visit),
+  }, {
+    key: 'place',
+    icon: 'location-outline' as const,
+    title: t('See the place', 'Xem địa điểm', '場所を見る', '查看地点', '檢視地點'),
+    onPress: () => onPlace(visit),
+  }] : [{
+    key: 'report',
+    icon: 'flag-outline' as const,
+    title: t('Report check-in', 'Báo cáo check-in', 'チェックインを報告', '举报打卡', '舉報打卡'),
+    onPress: () => onReport(visit),
+  }];
   return (
     <PersonSheet
       visible={visit !== null}
@@ -343,12 +374,7 @@ function VisitMenu({ visit, person, name, onReport, onClose }: {
       // Which visit the menu is about: the place, as the card names it.
       meta={visit ? name : undefined}
       avatarUrl={person?.avatar_url || undefined}
-      actions={visit ? [{
-        key: 'report',
-        icon: 'flag-outline',
-        title: t('Report check-in', 'Báo cáo check-in', 'チェックインを報告', '举报打卡', '舉報打卡'),
-        onPress: () => onReport(visit),
-      }] : []}
+      actions={actions}
       onClose={onClose}
     />
   );
