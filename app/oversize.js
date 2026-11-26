@@ -59,7 +59,7 @@ const OVERSIZE = {
   'src/screens/CollectionActivityScreen.tsx': { lines: 162 },
   'src/screens/TripInvitationScreen.tsx': { lines: 218, complexity: 66 },
   'src/screens/ActivityScreen.tsx': { lines: 175 },
-  'src/components/FloatingTabBar.tsx': { lines: 187 },
+  'src/components/FloatingTabBar.tsx': { lines: 181 },
   'src/components/ThemeSwitcher.tsx': { lines: 169 },
   'src/components/SignupTour.tsx': { lines: 183 },
   'src/lib/city.tsx': { lines: 179 },

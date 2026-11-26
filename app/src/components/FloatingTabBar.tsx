@@ -37,7 +37,9 @@ import { useTourAnchor } from './SignupTour';
 import React, { useEffect, useRef } from 'react';
 import { Animated, Platform, StyleSheet, View } from 'react-native';
 import type { BottomTabBarProps } from '@react-navigation/bottom-tabs';
-import { useSession } from '../lib/auth';
+import { useProfile, useSession } from '../lib/auth';
+import { avatarSource } from './avatarImages';
+import { Avatar } from './ui/surfaces';
 import { CHANNEL } from '../lib/channel';
 import { useCrew } from '../lib/crew';
 import { splitFriendships } from '../lib/friends';
@@ -130,6 +132,70 @@ const STRETCH_MAX = 0.6;
  *  59, past the 4pt inset by a point and a half, as the recording's pill
  *  rides past the rim. */
 const LIFT_SCALE = 1.06;
+
+// ── your face for the last tab (owner, 26 Nov 2026) ──
+//
+// The last tab has opened your own page since 19 Nov
+// (docs/profile-home-plan.md), and a person outline said "a profile",
+// not "you" — Threads, Instagram and Netflix draw the reader's face
+// there. Yours, when you are signed in and have one (every account made
+// since 20 Oct starts with a bundled animal); the outline otherwise.
+//
+// A face has no ink to change, so selected it wears two marks: the
+// pill every tab wears, and a ring in the pill's ink around it. Idle, a
+// hairline ring, so a dark face holds its edge on the charcoal glass.
+// Not dimmed when idle, as the outlines go to the idle ink: a greyed
+// face of your own reads as an account switched off. Not grown when
+// selected either: no other tab changes size.
+//
+// 26 to the outlines' 22: a disc is all ink and reads smaller than a
+// line drawing of the same box, and 26 is where the two sat level by eye
+// at Instagram's own ratio (their face 26 beside 24 glyphs). The dot
+// keeps its place on the 22 box, which puts it on the face's shoulder.
+const FACE = 26;
+const FACE_RING = 1.5;
+/** The idle face's hairline: plain values, as a border must be (a `dyn`
+ *  pair on a border follows the phone, not the app — `bgHex`). */
+const FACE_EDGE = { light: 'rgba(0,0,0,0.14)', dark: 'rgba(255,255,255,0.24)' };
+
+/** A tab's mark, idle or on the pill. The pill's copies live only in its
+ *  window, so where the pill is, the mark wears the pill's ink. */
+function TabMark({ name, onPill, light, face }: { name: string; onPill: boolean; light: boolean; face: string | null }) {
+  return name === 'Profile' && face ? (
+    <View
+      style={[s.face, onPill
+        ? { borderWidth: FACE_RING, borderColor: inkOf(true, light) }
+        : { borderWidth: StyleSheet.hairlineWidth, borderColor: light ? FACE_EDGE.light : FACE_EDGE.dark }]}
+      testID={`tab-face${onPill ? '-on' : ''}`}
+    >
+      <Avatar url={face} size={FACE - FACE_RING * 2} />
+    </View>
+  ) : (
+    <Glyph
+      name={ICONS[name]}
+      size={GLYPH}
+      // Full strength when idle, where this used to be a mid grey. That
+      // grey was the reason the glass had to stay nearly opaque: over an
+      // unknown photograph the scrim averages towards mid-tone, and a
+      // mid-tone glyph on it cannot contrast at any opacity. See
+      // GlassMaterial for the measurements — the two changes are one.
+      //
+      // No halo: the Ionicons marks wore `glassHalo`, a text shadow, and
+      // a drawing has no text to shadow — as `PlacesGlyph` never had one.
+      // The glass's scrim carries the contrast; check it over a bright
+      // photograph before trusting this line.
+      color={inkOf(onPill, light)}
+      testID={`tab-glyph-${name}${onPill ? '-on' : ''}`}
+    />
+  );
+}
+
+/** Your face, where there is one to draw — see "your face" above. */
+function useMyFace(signedIn: boolean): string | null {
+  const { profile } = useProfile();
+  const mine = signedIn ? profile?.avatar_url : null;
+  return mine && avatarSource(mine) ? mine : null;
+}
 
 const ICONS: Record<string, GlyphName> = {
   Explore: 'location-outline',
@@ -280,6 +346,7 @@ export default function FloatingTabBar({ state, descriptors, navigation }: Botto
   // per tap — and now that the whole app hangs off one copy, that same
   // eagerness would have refetched faces and counts with it.
   const { session } = useSession();
+  const face = useMyFace(!!session);
   const me = session?.user?.id;
   const { ships } = useCrew();
   const { reload } = ships;
@@ -403,26 +470,8 @@ export default function FloatingTabBar({ state, descriptors, navigation }: Botto
     outputRange: [1, 0, 1],
     extrapolate: 'clamp',
   });
-  /** A tab's mark, idle or on the pill. The pill's copies live only in its
-   *  window, so where the pill is, the mark wears the pill's ink. */
-  const glyph = (name: string, onPill: boolean) => (
-    <Glyph
-      name={ICONS[name]}
-      size={GLYPH}
-      // Full strength when idle, where this used to be a mid grey. That
-      // grey was the reason the glass had to stay nearly opaque: over an
-      // unknown photograph the scrim averages towards mid-tone, and a
-      // mid-tone glyph on it cannot contrast at any opacity. See
-      // GlassMaterial for the measurements — the two changes are one.
-      //
-      // No halo: the Ionicons marks wore `glassHalo`, a text shadow, and
-      // a drawing has no text to shadow — as `PlacesGlyph` never had one.
-      // The glass's scrim carries the contrast; check it over a bright
-      // photograph before trusting this line.
-      color={inkOf(onPill, light)}
-      testID={`tab-glyph-${name}${onPill ? '-on' : ''}`}
-    />
-  );
+  /** A tab's mark, idle or on the pill — `TabMark`. */
+  const glyph = (name: string, onPill: boolean) => <TabMark name={name} onPill={onPill} light={light} face={face} />;
 
   const slide = duck.anim.interpolate({
     inputRange: [0, 1],
@@ -601,6 +650,8 @@ const s = StyleSheet.create({
     position: 'absolute', left: PILL_INSET, right: PILL_INSET, top: 0, bottom: 0,
     flexDirection: 'row',
   },
+  // Room for the ring: the face sits in it, centred.
+  face: { width: FACE, height: FACE, borderRadius: FACE / 2, alignItems: 'center', justifyContent: 'center' },
   // The glyph's box, so a dot sits where it sat on the glyph.
   dotBox: { width: GLYPH, height: GLYPH },
   // Geometry only — the colours are `dotInk`, picked per theme in render.
