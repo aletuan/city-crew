@@ -34,6 +34,7 @@ import { MapView, Marker, PROVIDER_GOOGLE } from './mapsModule';
 import MapBoundary from './MapBoundary';
 import MapControls from './MapControls';
 import { usePinFade } from './pinFade';
+import { useKeepInView } from './mapKeepInView';
 import { useReducedMotion } from './ui';
 
 /** How long a bubble is redrawn as it moves before it is frozen. A custom
@@ -280,6 +281,7 @@ export default function PlacesMap({ places, selectedSlug, onSelect, categories, 
     [key, span.latitudeDelta, span.longitudeDelta, selectedSlug],
   );
   const at = useMemo(() => new Map(pins.map((p) => [p.slug, p])), [pins]);
+  const keep = useKeepInView(ref, selectedSlug, at, edgePadding, still, setSpan, onLayout);
   // Each pin with the picture it wears now, so one that leaves fades in
   // the colour it had rather than its own: under a chip every pin is the
   // chip's colour, and the next chip is not theirs.
@@ -367,15 +369,14 @@ export default function PlacesMap({ places, selectedSlug, onSelect, categories, 
         showsMyLocationButton={false}
         toolbarEnabled={false}
         onMapReady={() => setReady(true)}
-        onLayout={onLayout}
+        onLayout={keep.onLayout}
         // iOS's Apple map reports a marker's tap here too, as
         // `marker-press`; Google's does not, but the guard costs nothing.
         onPress={(e: { nativeEvent?: { action?: string } }) => { if (e?.nativeEvent?.action !== 'marker-press') onSelect(null); }}
         // The zoom is the grid: every pan and pinch re-cuts the cells, so
         // the mound comes apart as the reader goes in and gathers again
         // as they come out.
-        onRegionChangeComplete={(r: { latitudeDelta: number; longitudeDelta: number }) =>
-          setSpan({ latitudeDelta: r.latitudeDelta, longitudeDelta: r.longitudeDelta })}
+        onRegionChangeComplete={keep.onRegionChangeComplete}
         testID="places-map"
       >
         {clusters.map((c) => {

@@ -21,6 +21,7 @@ import { useMyCheckins } from '../../lib/checkins';
 import { bestFirst } from '../../lib/rank';
 import { useSavedSlugs, type useSaveActions } from '../../lib/save';
 import { useBrowseTaste } from '../../lib/tasteProfile';
+import { useMapDeck } from './useMapDeck';
 
 export function useExploreFilters({ t, places, city, cities, signedIn, askToSignIn }: {
   t: ReturnType<typeof useI18n>['t'];
@@ -166,6 +167,7 @@ export function useExploreFilters({ t, places, city, cities, signedIn, askToSign
   // place does not come back with "All" once the reader has moved on.
   const [selectedSlug, setSelectedSlug] = useState<string | null>(null);
   const selected = useMemo(() => shown.find((p) => p.slug === selectedSlug) ?? null, [shown, selectedSlug]);
+  const { pickPin, deckPlaces } = useMapDeck(shown, selectedSlug, setSelectedSlug);
   const selectedKm = selected && sortOrigin && selected.lat != null && selected.lng != null
     ? distanceKm(sortOrigin.lat, sortOrigin.lng, selected.lat, selected.lng)
     : null;
@@ -274,7 +276,7 @@ export function useExploreFilters({ t, places, city, cities, signedIn, askToSign
 
   return {
     picked, pick, filterOpen, setFilterOpen, appliedFilters, sortOrigin, setCityIndex, elsewhere, cats,
-    filteredFor, shown, selectedSlug, setSelectedSlug, selected, selectedKm, locate, applyFilters, filterCount,
+    filteredFor, shown, selectedSlug, setSelectedSlug, pickPin, deckPlaces, selected, selectedKm, locate, applyFilters, filterCount,
     note, pickStatus, pickSaved, pickVisited,
   };
 }

@@ -248,4 +248,47 @@ describe('MapPlaceCard', () => {
     render(<MapPlaceCard place={place({ lat: null, lng: null })} distanceKm={null} kind={null} now={NOON} onPress={() => {}} />);
     expect(screen.queryByRole('button', { name: 'Directions' })).toBeNull();
   });
+
+  // A swipe has no gesture a screen reader can make, so the card offers its
+  // moves as actions — and only the ones that go somewhere. The props are
+  // read off the committed tree, as `StopCard.ui.test.tsx` reads its band's.
+  describe('as one of a deck', () => {
+    const card = (): Record<string, any> => {
+      type Fiber = { child: Fiber | null; sibling: Fiber | null; memoizedProps: Record<string, any> | null };
+      const host = document.body.firstElementChild as unknown as Record<string, { stateNode: { current: Fiber } }>;
+      const key = Object.keys(host).find((k) => k.startsWith('__reactContainer'))!;
+      const stack: Fiber[] = [host[key].stateNode.current];
+      while (stack.length) {
+        const f = stack.pop()!;
+        if (f.memoizedProps && 'onAccessibilityAction' in f.memoizedProps) return f.memoizedProps;
+        if (f.sibling) stack.push(f.sibling);
+        if (f.child) stack.push(f.child);
+      }
+      throw new Error('no card in the tree');
+    };
+    const draw = (swipe?: { next?: () => void; previous?: () => void }) =>
+      render(<MapPlaceCard place={place()} distanceKm={null} kind={null} now={NOON} onPress={() => {}} swipe={swipe} />);
+
+    it('offers next and previous, and runs the one chosen', () => {
+      const next = vi.fn(), previous = vi.fn();
+      draw({ next, previous });
+      expect(card().accessibilityActions.map((a: { name: string }) => a.name)).toEqual(['next', 'previous']);
+      act(() => card().onAccessibilityAction({ nativeEvent: { actionName: 'next' } }));
+      expect(next).toHaveBeenCalledOnce();
+      expect(previous).not.toHaveBeenCalled();
+      act(() => card().onAccessibilityAction({ nativeEvent: { actionName: 'previous' } }));
+      expect(previous).toHaveBeenCalledOnce();
+    });
+
+    it('offers only the move that goes somewhere: the first card has no previous, the last no next', () => {
+      draw({ next: () => {} });
+      expect(card().accessibilityActions.map((a: { name: string }) => a.name)).toEqual(['next']);
+    });
+
+    it('offers nothing outside a deck', () => {
+      draw();
+      expect(card().accessibilityActions).toEqual([]);
+      expect(() => card().onAccessibilityAction({ nativeEvent: { actionName: 'next' } })).not.toThrow();
+    });
+  });
 });
