@@ -41,7 +41,6 @@ const NOT_BUTTONS: Record<string, string> = {
   'components/ThemeSwitcher.tsx word': 'the "Popular" / "New" flag on a look card',
   'components/ui/controls.tsx tile': 'a grid tile, sized by its cell',
   'screens/PersonScreen.tsx bioBubble': 'the bio\'s speech bubble, which your own page draws empty with the invitation in it: it is the bio\'s shape and height, a line of text and its padding, so the words written into it stand where the invitation stood; its reach is 44 by hitSlop',
-  'screens/explore/CheckinShelf.tsx went': 'the "2 people went" flag in a check-in card\'s corner, `NewBadge`\'s shape on the shelf above; the card is the button and the flag takes no touches',
 };
 
 const walk = (dir: string): string[] =>

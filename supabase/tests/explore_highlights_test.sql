@@ -189,6 +189,27 @@ begin
   got := public._fc_read(r, 'hanoi');
   assert got like 'fcchi:Sweet.:0:202:2:fcchi+fcgia ; fcbao:%; fcdan:%; fcgia:-:0:108:1:fcgia ; fcann:%',
     format('two people before two hearts: %s', got);
+
+  -- ── the card's words and faces (20261126220000) ──
+  -- Eve goes to Xoi an hour ago, after Bao, and writes nothing. Bao's
+  -- visit has Gia's heart, so his still fronts it, and the faces are
+  -- whoever was there last first: Eve's before his.
+  perform public._fc_visit(5, '0e', 'a5', interval '1 hour', null);
+  got := public._fc_read(r, 'hanoi');
+  assert got = 'fcbao:-:2:201:2:fceve+fcbao ; fcchi:Sweet.:0:202:2:fcchi+fcgia ; fcdan:-:0:203:1:fcdan ; '
+            || 'fcgia:-:0:108:1:fcgia ; fcann:-:1*:101:1:fcann',
+    format('hearted over newest; faces newest first: %s', got);
+
+  -- Gia writes about Che too, and the reader hearts it: of two written
+  -- visits the hearted one fronts, though Chi's is newer. Gia fronting
+  -- Che, Pho — hers alone — leaves the shelf. Che, written, now leads
+  -- Xoi on the tie in people and hearts.
+  update public.checkins set note = 'Cool.' where id = 'f8fe0000-0000-0000-0000-0000000000d4';
+  insert into public.checkin_likes (checkin_id, user_id) values ('f8fe0000-0000-0000-0000-0000000000d4', r::uuid);
+  got := public._fc_read(r, 'hanoi');
+  assert got = 'fcgia:Cool.:1*:204:2:fcchi+fcgia ; fcbao:-:2:201:2:fceve+fcbao ; fcdan:-:0:203:1:fcdan ; '
+            || 'fcann:-:1*:101:1:fcann',
+    format('of two written, the hearted one: %s', got);
 end $$;
 
 drop function public._fc_visit(int, text, text, interval, text);

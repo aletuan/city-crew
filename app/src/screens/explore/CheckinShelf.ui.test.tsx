@@ -74,7 +74,7 @@ describe('CheckinShelf', () => {
   });
 
   it('draws three: the heading, the week, and each card’s place and person', async () => {
-    data.cards = [card('a'), card('b', { full_name: '', handle: 'minh' }), card('c')];
+    data.cards = [card('a'), card('b', { full_name: '', handle: 'minh', faces: [{ handle: 'minh', full_name: '', avatar_url: null }] }), card('c')];
     await show();
     expect(screen.getByText('Featured check-ins')).toBeTruthy();
     expect(screen.getByText('This week')).toBeTruthy();
@@ -113,32 +113,42 @@ describe('CheckinShelf', () => {
     expect(within(first).getByTestId('checkin-shelf-waiting')).toBeTruthy();
   });
 
-  // A card a place (26 Nov 2026): two people at one, and the card says
-  // so in its corner, in its faces and to a screen reader; a place one
-  // person went to says who, and wears no badge.
-  it('says how many people went where more than one did', async () => {
+  // The final card (owner, 26 Nov 2026): faces and a figure at the foot,
+  // no names and no badge; the names are read out instead.
+  it('shows who went as faces, a figure only past three, and reads their names out', async () => {
+    const face = (handle: string, full_name = '') => ({ handle, full_name, avatar_url: null });
     data.cards = [
-      card('a', {
-        visitors: 3, likes: 4,
-        faces: [
-          { handle: 'ha', full_name: 'Person a', avatar_url: null },
-          { handle: 'trang', full_name: 'Trang', avatar_url: null },
-          { handle: 'minh', full_name: '', avatar_url: null },
-        ],
-      }),
-      card('b'), card('c'),
+      card('a', { visitors: 5, likes: 4, faces: [face('trang', 'Trang'), face('minh'), face('ha', 'Person a')] }),
+      card('b', { visitors: 2, faces: [face('minh', 'Minh'), face('trang', 'Trang')] }),
+      card('c'),
     ];
     await show();
-    const [many, one] = screen.getAllByTestId('checkin-shelf-card');
-    expect(within(many).getByTestId('checkin-shelf-went').textContent).toBe('3 people went');
-    expect(within(many).getAllByTestId('checkin-shelf-face')).toHaveLength(3);
-    expect(within(many).getByText('Person a +2')).toBeTruthy();
-    expect(many.getAttribute('aria-label')).toBe('Place a, 3 people went');
-    // The place's hearts over the week, and the reader's own on top.
-    expect(within(many).getByTestId('checkin-shelf-likes').textContent).toBe('4');
-    expect(within(one).queryByTestId('checkin-shelf-went')).toBeNull();
+    const [five, two, one] = screen.getAllByTestId('checkin-shelf-card');
+    expect(within(five).getAllByTestId('checkin-shelf-face')).toHaveLength(3);
+    expect(within(five).getByTestId('checkin-shelf-more').textContent).toBe('+2');
+    expect(five.getAttribute('aria-label')).toBe('Place a, Trang, @minh, Person a +2');
+    // The place's hearts over the week.
+    expect(within(five).getByTestId('checkin-shelf-likes').textContent).toBe('4');
+    expect(within(two).getAllByTestId('checkin-shelf-face')).toHaveLength(2);
+    expect(within(two).queryByTestId('checkin-shelf-more')).toBeNull();
+    expect(two.getAttribute('aria-label')).toBe('Place b, Minh, Trang');
     expect(within(one).getAllByTestId('checkin-shelf-face')).toHaveLength(1);
-    expect(within(one).getByText('Person b')).toBeTruthy();
+    // Nobody is named on the card itself, and nothing says "went".
+    for (const el of [five, two, one]) {
+      expect(within(el).queryByText(/Person|Trang|Minh|@|went/)).toBeNull();
+    }
+    expect(within(one).queryByText('Place c')).toBeTruthy();
+  });
+
+  // Under the photo, not over it: the words are outside the picture.
+  it('keeps the visitor’s words off the photo', async () => {
+    data.cards = [card('a', { note: 'Small, warm, clean.' }), card('b'), card('c')];
+    await show();
+    const first = screen.getAllByTestId('checkin-shelf-card')[0];
+    const photo = within(first).getByTestId('checkin-shelf-photo');
+    expect(within(photo).queryByTestId('checkin-shelf-note')).toBeNull();
+    expect(within(photo).getByText('Place a')).toBeTruthy();
+    expect(within(first).getByTestId('checkin-shelf-note')).toBeTruthy();
   });
 
   it('carries what the visitor wrote, and nothing where they wrote nothing', async () => {
