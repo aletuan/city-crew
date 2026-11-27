@@ -306,7 +306,12 @@ Ghi ra để không ai tưởng là có chủ ý:
   `NotYours` trong `parts.tsx`. Cũng ngày 27/11, `TripInvitationScreen`
   (218 / 66 → 60 / 18) ra `screens/invitation/`: `useAnswer`, và `NotHere`,
   `Asker`, `Plan`, `Going`, `Keeps`, `Answers` trong `parts.tsx`. Danh sách
-  còn 21 file; hàm rối nhất trên đó giờ là `PlaceCard` (166 / 50).
+  còn 21 file. Rồi `PlaceCard` (166 / 50 → 66 / 13), phẳng trong
+  `components/` vì sàn coverage của component chỉ đọc một tầng:
+  `PlaceCardPhoto` (ảnh, bookmark, rating, dải đóng cửa), `PlaceCardMeta`
+  (dòng khu vực · khoảng cách · giờ · loại) và `placeCardStyles.ts`.
+  Danh sách còn 20 file; từ đây đợt tách theo danh sách dừng — các hàm
+  còn lại vượt trần ít, tách chủ yếu là dời code.
 - ~~**`lib/save.tsx`** nằm sai tầng~~ Ngày 20/10/2026 phần vẽ hai sheet
   chuyển ra `components/SaveSheets.tsx`; `lib/save.tsx` chỉ còn trạng thái,
   và ngoại lệ trong lint đã bỏ.
