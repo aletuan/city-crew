@@ -59,6 +59,16 @@ dưới đây thì đánh dấu bước đó ở đây, trong cùng PR.
    gọi `featured_checkins` sau một tín hiệu cấu trúc, và gom các tín hiệu
    tới trong lúc chờ thành một lần gọi.
 8. **Sau cờ `checkin_live`**, tắt được từ xa mà không cần bản build.
+9. **Trang quán không live** (chủ dự án, 27/11/2026). "Đánh giá từ khách"
+   giữ cách tải hiện tại; bản này chỉ làm dải trên Explore.
+10. **Chính sách riêng tư không đổi** (chủ dự án, 27/11/2026): live không
+    thu thêm dữ liệu nào.
+11. **Mất kết nối**: dải giữ nguyên những gì đang hiện cho tới khi kết
+    nối lại (chủ dự án, 27/11/2026); không báo lỗi, không làm mờ. Khi vào
+    lại kênh, gọi `featured_checkins` một lần để bù những gì đã lỡ.
+12. **Giảm chuyển động** (cài đặt trợ năng của máy): số tim đổi thẳng,
+    avatar hiện ngay, chạm nhãn thì dải nhảy về đầu chứ không cuộn mượt,
+    như `LikeHeart` đã làm với `useReducedMotion`.
 
 ## Chi phí
 
@@ -118,16 +128,3 @@ Hai việc để dành, làm khi tới ngưỡng chứ không làm trước:
   và check-in, máy kia nhìn dải đổi.
 - [ ] **L5. Tối ưu `featured_checkins`** (khi tới ngưỡng).
 - [ ] **L6. Gom tim** (khi tới ngưỡng).
-
-## Câu hỏi mở
-
-- **"Đánh giá từ khách" trên trang quán** có live không? Bản này chỉ làm
-  dải trên Explore. Cùng kênh dùng lại được, nhưng kênh theo thành phố sẽ
-  đánh thức cả trang quán không liên quan; có thể cần kênh theo quán.
-- **Chính sách riêng tư** (`lib/legal.ts`): live không thu thêm dữ liệu,
-  nhưng app giữ một kết nối mở tới server khi Explore đang hiện. Xem có
-  cần nói rõ không, ở bước L2.
-- **Reduce Motion**: số tim nhảy và avatar vào chồng có hiệu ứng; người
-  bật giảm chuyển động thấy đổi thẳng, không hiệu ứng.
-- **Mất kết nối**: khi vào lại kênh, gọi lại `featured_checkins` một lần
-  để bù những gì đã lỡ.
