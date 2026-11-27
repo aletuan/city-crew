@@ -185,6 +185,30 @@ export function latestCheckin(rows: readonly Checkin[], slug: string): Checkin |
 }
 
 /**
+ * Whether the reader's newest visit here was today on the phone's own
+ * calendar — the Check-in pill's "Đã qua" is that, and no longer "ever".
+ *
+ * It was ever (owner, 27 Nov 2026, on a phone): a place visited once
+ * wore "Đã qua" for good, and checking in on a later day meant opening
+ * the history sheet and finding "again" under it — the reader standing
+ * in the place did not know where to press. So the pill is worn for the
+ * day the visit was in and a plain "Check-in" the next: a visit is to a
+ * day, as the reader counts days.
+ *
+ * The phone's calendar here, unlike the rolling day the caps keep
+ * (`PER_PLACE_PER_DAY`): this is what the reader sees, and "yesterday"
+ * at 00:05 is the answer they expect. The caps still hold across that
+ * midnight — a visit at 23:55 and a tap at 00:02 is refused, by the
+ * ten minutes, with its reason.
+ */
+export function visitedToday(rows: readonly Checkin[], slug: string, now: Date): boolean {
+  const latest = latestCheckin(rows, slug);
+  if (!latest) return false;
+  const at = new Date(latest.at);
+  return at.getFullYear() === now.getFullYear() && at.getMonth() === now.getMonth() && at.getDate() === now.getDate();
+}
+
+/**
  * How many visits one place may take in a day. Breakfast, lunch and a
  * drink after work are three; a fourth is a tap that got away. A day is
  * the last twenty-four hours, not the calendar day: the server has no

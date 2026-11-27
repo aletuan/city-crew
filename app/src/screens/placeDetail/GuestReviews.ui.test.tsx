@@ -162,6 +162,40 @@ describe('GuestReviews', () => {
     expect(screen.queryByTestId('photo-viewer')).toBeNull();
   });
 
+  // Two, then the rest (owner, 27 Nov 2026).
+  it('draws the two newest, and the rest only after "Show more"', async () => {
+    data.reviews = {
+      count: 5,
+      visits: ['a', 'b', 'c', 'd'].map((id) => review({ id, handle: id, note: `Note ${id}.`, photos: [] })),
+    };
+    await show();
+    expect(screen.getAllByTestId('guest-review').map((el) => within(el).getByTestId('guest-review-note').textContent))
+      .toEqual(['Note a.', 'Note b.']);
+    fireEvent.click(screen.getByTestId('guest-reviews-more'));
+    expect(screen.getAllByTestId('guest-review')).toHaveLength(4);
+    expect(screen.queryByTestId('guest-reviews-more')).toBeNull();
+  });
+
+  it('offers no "Show more" for two reviews or fewer', async () => {
+    data.reviews = { count: 2, visits: [review({ id: 'a' }), review({ id: 'b', handle: 'b' })] };
+    await show();
+    expect(screen.getAllByTestId('guest-review')).toHaveLength(2);
+    expect(screen.queryByTestId('guest-reviews-more')).toBeNull();
+  });
+
+  // "♥ 2" side by side, as every card in the app draws it.
+  it('draws the heart and its figure on one row', async () => {
+    data.reviews = { count: 1, visits: [review()] };
+    await show();
+    const heart = screen.getByTestId('guest-review-heart');
+    const figure = within(heart).getByTestId('guest-review-likes');
+    const row = figure.parentElement!;
+    expect(getComputedStyle(row).flexDirection).toBe('row');
+    expect(row.querySelector('[data-icon="heart-outline"]')).toBeTruthy();
+    // A visit's heart, not a collection's.
+    expect(heart.getAttribute('aria-label')).toBe('Like');
+  });
+
   // The owner's check-in (26 Nov 2026): the pill turned, the card did not.
   describe('asked again when the reader’s own visits here change', () => {
     const again = async (page: Awaited<ReturnType<typeof show>>, next: unknown[]) => {

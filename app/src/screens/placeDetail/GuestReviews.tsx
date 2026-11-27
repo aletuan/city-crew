@@ -27,6 +27,23 @@
 // `checkin_seen` about a reader it does not know), so a guest sees the
 // figure and the invitation is the check-in pill above.
 //
+// ── two, then the rest ──
+//
+// The two newest reviews, and "Xem thêm" for the rest when there are
+// more (owner, 27 Nov 2026). Each review is a note in full and up to
+// three photographs, so ten of them made the place's page a feed, and
+// the facts under it — the address, the hours — were a long scroll
+// away. Tabs were weighed, "Thông tin" and "Đánh giá", and lost: most
+// places have none or one review, so the second tab would most often be
+// an empty room the reader had to open to find empty; a tab hides the
+// people who went from a reader on the first, the very thing the shelf
+// on Explore is there to put forward; and a tab named for reviews
+// beside "109 đánh giá" on the score line had two counts called the same
+// thing. A separate "all reviews" screen was weighed too: the server
+// sends ten at most, so the rest fits on this page, and the app's other
+// pages show more in place — the person page's feed and its "Xem thêm"
+// (`person/Shared`), whose words and shape this button takes.
+//
 // ── when it is asked again ──
 //
 // When the reader's own visits here change: a new one, a note or an
@@ -94,6 +111,8 @@ export function GuestReviews({ slug, onPerson }: {
   const all = useMemo(() => visits.flatMap((v) => v.photos), [visits]);
   const linkOf = useSignedPhotos(all, true);
   const [pressed, setPressed] = useState<Record<string, boolean>>({});
+  const [open, setOpen] = useState(false);
+  const shown = open ? visits : visits.slice(0, PREVIEW);
   const [viewing, setViewing] = useState<{ v: GuestReview; at: number } | null>(null);
 
   if (!reviews || (reviews.count === 0 && visits.length === 0)) return null;
@@ -128,7 +147,7 @@ export function GuestReviews({ slug, onPerson }: {
           </View>
         ) : null}
       </View>
-      {visits.map((v) => {
+      {shown.map((v) => {
         const liked = pressed[v.id] ?? v.liked;
         return (
           <View key={v.id} style={s.review} testID="guest-review">
@@ -150,6 +169,8 @@ export function GuestReviews({ slug, onPerson }: {
                 count={v.likes + (liked === v.liked ? 0 : liked ? 1 : -1)}
                 onPress={() => heart(v)}
                 countStyle={s.likes}
+                brief
+                contentStyle={s.heart}
                 hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
                 testID="guest-review-heart"
                 countTestID="guest-review-likes"
@@ -178,6 +199,17 @@ export function GuestReviews({ slug, onPerson }: {
           </View>
         );
       })}
+      {visits.length > shown.length ? (
+        <PressableScale
+          onPress={() => setOpen(true)}
+          haptic="selection"
+          contentStyle={s.more}
+          accessibilityRole="button"
+          testID="guest-reviews-more"
+        >
+          <Text style={s.moreText}>{t('Show more', 'Xem thêm', 'もっと見る', '查看更多', '檢視更多')}</Text>
+        </PressableScale>
+      ) : null}
       <Modal visible={viewed.length > 0} transparent animationType="fade" onRequestClose={close} statusBarTranslucent>
         {viewing && viewed.length > 0 ? (
           <PhotoViewer
@@ -192,6 +224,11 @@ export function GuestReviews({ slug, onPerson }: {
   );
 }
 
+/** Reviews drawn before "Xem thêm": two fill about one screen under the
+ *  highlights card on a 6.1" phone with a photo each (owner's screenshot,
+ *  27 Nov 2026, one review took about half). */
+const PREVIEW = 2;
+
 const s = StyleSheet.create({
   // The highlights card's measure: 14 above, the card's padding, 10
   // between its rows.
@@ -205,6 +242,14 @@ const s = StyleSheet.create({
   name: { color: colors.text, fontSize: 15, fontWeight: font.semibold, flexShrink: 1 },
   day: { flex: 1, color: colors.textTertiary, fontSize: 13 },
   likes: { color: colors.textSecondary, fontSize: 13 },
+  // The heart and its figure side by side, "♥ 3", as on every card in
+  // the app (`explore/styles` shelfLikes): without it the figure fell
+  // under the heart (owner, on a phone, 27 Nov 2026).
+  heart: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  // The person page's "Xem thêm" (`person/Shared`): the accent's words,
+  // a 44pt row.
+  more: { alignItems: 'center', justifyContent: 'center', minHeight: 44 },
+  moreText: { color: colors.accent, fontSize: 14, fontWeight: font.semibold },
   note: { color: colors.text, fontSize: 15, lineHeight: 21 },
   photos: { flexDirection: 'row', gap: 8 },
   tile: { width: TILE, height: TILE, borderRadius: 10 },

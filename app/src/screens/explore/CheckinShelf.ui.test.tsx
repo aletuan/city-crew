@@ -129,6 +129,8 @@ describe('CheckinShelf', () => {
     expect(five.getAttribute('aria-label')).toBe('Place a, Trang, @minh, Person a +2');
     // The place's hearts over the week.
     expect(within(five).getByTestId('checkin-shelf-likes').textContent).toBe('4');
+    // A visit's heart says "Like", not "Like this collection".
+    expect(within(five).getByTestId('checkin-shelf-heart').getAttribute('aria-label')).toBe('Like');
     expect(within(two).getAllByTestId('checkin-shelf-face')).toHaveLength(2);
     expect(within(two).queryByTestId('checkin-shelf-more')).toBeNull();
     expect(two.getAttribute('aria-label')).toBe('Place b, Minh, Trang');

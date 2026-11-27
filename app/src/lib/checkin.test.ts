@@ -5,7 +5,7 @@ import { describe, expect, it } from 'vitest';
 import {
   PhotoError, photoRefusalOf, PHOTOS_PER_VISIT, visitPhotosOf,
   audienceOf, cleanNote, nextAudience, NOTE_MAX,
-  canRepeat, type Checkin, filterVisits, PER_DAY, whyRefused, latestCheckin, monthTitle, PER_PLACE_PER_DAY, REPEAT_AFTER_MIN,
+  canRepeat, visitedToday, type Checkin, filterVisits, PER_DAY, whyRefused, latestCheckin, monthTitle, PER_PLACE_PER_DAY, REPEAT_AFTER_MIN,
   textMatches, visitCategories, visitCities, visitSections, visitsInDay, visitSummary, visitsAt,
 } from './checkin';
 
@@ -312,5 +312,29 @@ describe('visitPhotosOf', () => {
   });
   it('never draws more than a visit may carry', () => {
     expect(visitPhotosOf([ph('a'), ph('b'), ph('c'), ph('d')])).toHaveLength(PHOTOS_PER_VISIT);
+  });
+});
+
+// The pill's state (27 Nov 2026): worn for the day of the visit, on the
+// phone's calendar, and plain the next.
+describe('visitedToday', () => {
+  const at = (iso: string, slug = 'cong'): Checkin => ({ id: iso + slug, place_slug: slug, city_id: 'hanoi', at: iso } as Checkin);
+  const local = (y: number, m: number, d: number, h: number, min = 0) => new Date(y, m - 1, d, h, min).toISOString();
+  it('is false with no visit here', () => {
+    expect(visitedToday([at(local(2026, 11, 27, 9), 'other')], 'cong', new Date(2026, 10, 27, 10))).toBe(false);
+  });
+  it('is true for a visit earlier the same day', () => {
+    expect(visitedToday([at(local(2026, 11, 27, 0, 5))], 'cong', new Date(2026, 10, 27, 23, 50))).toBe(true);
+  });
+  it('is false after the phone’s midnight, though under 24 hours', () => {
+    expect(visitedToday([at(local(2026, 11, 26, 23, 55))], 'cong', new Date(2026, 10, 27, 0, 5))).toBe(false);
+  });
+  it('reads the newest visit, not the first', () => {
+    const rows = [at(local(2026, 10, 1, 9)), at(local(2026, 11, 27, 8))];
+    expect(visitedToday(rows, 'cong', new Date(2026, 10, 27, 9))).toBe(true);
+  });
+  it('is false on the same day of another month and of another year', () => {
+    expect(visitedToday([at(local(2026, 10, 27, 9))], 'cong', new Date(2026, 10, 27, 10))).toBe(false);
+    expect(visitedToday([at(local(2025, 11, 27, 9))], 'cong', new Date(2026, 10, 27, 10))).toBe(false);
   });
 });
