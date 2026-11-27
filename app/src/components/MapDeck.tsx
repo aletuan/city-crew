@@ -87,9 +87,22 @@ export default function MapDeck({ places, selectedSlug, onSwipe, renderCard }: {
     list.current?.scrollToOffset({ offset: i * step, animated: true });
     onSwipe(places[i].slug);
   };
-  const settle = (e: NativeSyntheticEvent<NativeScrollEvent>) => {
-    const at = Math.min(Math.max(Math.round(e.nativeEvent.contentOffset.x / step), 0), places.length - 1);
+  // Which card the row comes to rest on, chosen the moment the finger
+  // lifts (28 Nov 2026). It was chosen when the row stopped moving, and on
+  // the owner's recording the pin turned 0.9 s after the swipe began and
+  // the map followed later still. iOS knows where the row will stop when
+  // the finger lifts — snapped to a card (`targetContentOffset`) — so the
+  // pin and the map now go with the card rather than after it. The stop
+  // itself still settles it, for a row moved without a finger (a screen
+  // reader's action, the nudge) or an end-drag that says nothing.
+  const pick = (x: number) => {
+    const at = Math.min(Math.max(Math.round(x / step), 0), places.length - 1);
     if (places[at].slug !== selectedSlug) onSwipe(places[at].slug);
+  };
+  const settle = (e: NativeSyntheticEvent<NativeScrollEvent>) => pick(e.nativeEvent.contentOffset.x);
+  const lift = (e: NativeSyntheticEvent<NativeScrollEvent & { targetContentOffset?: { x: number } }>) => {
+    const to = e.nativeEvent.targetContentOffset;
+    if (to) pick(to.x);
   };
 
   return (
@@ -109,6 +122,7 @@ export default function MapDeck({ places, selectedSlug, onSwipe, renderCard }: {
       maxToRenderPerBatch={2}
       getItemLayout={(_, i) => ({ length: step, offset: i * step, index: i })}
       contentContainerStyle={{ paddingLeft: LEFT, paddingRight: width - LEFT - card }}
+      onScrollEndDrag={lift}
       onMomentumScrollEnd={settle}
       renderItem={({ item, index: i }) => (
         <View style={{ width: card, marginRight: GAP }}>

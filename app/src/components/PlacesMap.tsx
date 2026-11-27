@@ -414,7 +414,17 @@ export default function PlacesMap({ places, selectedSlug, onSelect, categories, 
           const p = at.get(c.slugs[0])!;
           return (
           <Marker
-            key={p.slug}
+            // Chosen or not is part of who the marker is (28 Nov 2026). A
+            // new `image` on a marker already on the map was never drawn:
+            // on the owner's recording four places were chosen by swiping
+            // the strip and only one turned coral — the one that had just
+            // come out of a bubble, a new marker — and it stayed coral for
+            // 0.7 s after it was let go, until it went back into its bubble.
+            // A tap hid it, since the place under the finger is often the
+            // one a bubble lets go. A marker made again draws its picture,
+            // and the picture is a bundled file, so making it costs nothing
+            // a reader can see. Not verified on a phone.
+            key={`${p.slug}:${p.slug === selectedSlug ? 'chosen' : 'plain'}`}
             identifier={p.slug}
             coordinate={{ latitude: p.lat, longitude: p.lng }}
             // A picture, not a tint. `pinColor` never drew a pin: on iOS

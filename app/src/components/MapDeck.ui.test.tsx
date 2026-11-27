@@ -104,6 +104,23 @@ describe('MapDeck', () => {
     expect(onSwipe).toHaveBeenLastCalledWith('p2');
   });
 
+  // Chosen when the finger lifts, where iOS says the row will stop — not
+  // when it stops (28 Nov 2026).
+  it('chooses the card the row will stop on as the finger lifts, and only once', () => {
+    const onSwipe = vi.fn();
+    render(row(deck(5), 'p0', onSwipe));
+    act(() => seen.props!.onScrollEndDrag({ nativeEvent: { contentOffset: { x: 40 }, targetContentOffset: { x: STEP() * 2 } } }));
+    expect(onSwipe).toHaveBeenCalledOnce();
+    expect(onSwipe).toHaveBeenLastCalledWith('p2');
+  });
+
+  it('leaves it to the stop when the lift says nothing of where it will end', () => {
+    const onSwipe = vi.fn();
+    render(row(deck(5), 'p0', onSwipe));
+    act(() => seen.props!.onScrollEndDrag({ nativeEvent: { contentOffset: { x: STEP() } } }));
+    expect(onSwipe).not.toHaveBeenCalled();
+  });
+
   it('holds at both ends: a rubber band past either end picks the end card', () => {
     const onSwipe = vi.fn();
     render(row(deck(3), 'p1', onSwipe));
