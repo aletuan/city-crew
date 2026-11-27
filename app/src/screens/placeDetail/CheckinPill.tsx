@@ -21,12 +21,15 @@ import { clockOf, dateline } from '../../lib/format';
 import { useI18n } from '../../lib/i18n';
 import { useRemoveCheckin } from '../../lib/useRemoveCheckin';
 import { colors } from '../../theme';
-import { HISTORY_ROWS, s } from './styles';
+import { HISTORY_ROWS, PILL_HEIGHT, s } from './styles';
 import { useCheckIn } from './useCheckIn';
 
 /** `name` and `cover` are what the note sheet shows of the place; `cityId`
  *  is the city a visit is filed under; `askToSignIn` is the screen's, so a
  *  guest's tap opens the same sheet the bookmark's does. */
+/** The 8 between the drawn pill and a 44pt target, half above, half below. */
+const PILL_SLOP = { top: (44 - PILL_HEIGHT) / 2, bottom: (44 - PILL_HEIGHT) / 2, left: 0, right: 0 };
+
 export function CheckinPill({ place, name, cover, cityId, askToSignIn }: {
   place: Place;
   name: string;
@@ -142,8 +145,11 @@ export function CheckinPill({ place, name, cover, cityId, askToSignIn }: {
           it would take a third of every name's line. The score's
           line is short on every place, so the pill costs it nothing.
 
-          44 drawn (`FACT_HEIGHT`), the height it had as one of the
-          chips and the target this app gives every control.
+          36 drawn (`PILL_HEIGHT`) and 44 to a thumb: the slop's 4
+          above and below make the target this app gives every
+          control. It was 44 drawn, the height it had among the
+          chips; on its own beside a 24pt score it set the line's
+          height and loosened the whole head (27 Nov 2026).
 
           Behind `place_checkin`, off as shipped, so the day it
           misleads it comes down on every phone without a build. */}
@@ -159,6 +165,7 @@ export function CheckinPill({ place, name, cover, cityId, askToSignIn }: {
             ? t('Visited — options', 'Đã qua — tuỳ chọn', '訪問済み — オプション', '已打卡 — 选项', '已打卡 — 選項')
             : t('Check in', 'Check-in', 'チェックイン', '打卡', '打卡')}
           style={s.checkinSlot}
+          hitSlop={PILL_SLOP}
           // ── worn ──
           // Filled once a visit is written, bare outline until then.
           // It was `accentSoft` first, and on the phone a 10% tint

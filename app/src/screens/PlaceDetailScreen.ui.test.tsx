@@ -592,9 +592,11 @@ describe('PlaceDetailScreen — title, rating, facts', () => {
     // shorthand; the fill reads as the base class's transparent black.
     expect(inner.borderTopColor).toBe('rgba(255, 111, 91, 0.28)');
     expect(inner.backgroundColor).toBe('rgba(0, 0, 0, 0)');
-    // 44 drawn, so the pill needs no slop to be a 44pt target.
-    expect(inner.minHeight).toBe('44px');
-    expect(propsWhere((p) => p.testID === 'detail-checkin').hitSlop).toBeUndefined();
+    // 36 drawn, and 4 of slop above and below make it a 44pt target
+    // (27 Nov 2026: 44 drawn set the score line's height alone).
+    expect(inner.minHeight).toBe('36px');
+    const slop = propsWhere((p) => p.testID === 'detail-checkin').hitSlop as unknown as { top: number; bottom: number };
+    expect(36 + slop.top + slop.bottom).toBe(44);
     // On the score's line, at its right end, not beside the name: the
     // name keeps the column's whole width.
     const row = screen.getByTestId('detail-meta');
@@ -2318,6 +2320,16 @@ describe('PlaceDetailScreen — what is this place, said without interruption', 
   // nobody — `import-place.ts` does not even ask for `reviews`. A name here
   // could only have been invented, so the line names the platform and the
   // tap goes to the place's own Maps page.
+  // One step between the cards of the page (27 Nov 2026): `cardGap`
+  // above the highlights, the guide's panel, the reviews and the facts.
+  it('stands every card on the page the same gap from the one above', async () => {
+    show(place({ ...blurb }));
+    for (const id of ['detail-why-card', 'detail-info-card']) {
+      expect(getComputedStyle(screen.getByTestId(id)).marginTop).toBe(`${space.cardGap}px`);
+    }
+    expect(getComputedStyle(screen.getByTestId('detail-kinds')).marginTop).toBe('12px');
+  });
+
   it('credits Google by platform alone and opens the Maps page', () => {
     show(place({
       ...blurb,
