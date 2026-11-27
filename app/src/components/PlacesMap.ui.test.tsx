@@ -131,6 +131,24 @@ describe('PlacesMap', () => {
     expect(b.getAttribute('data-icon')).toBe(String(pinImage({}, null, false)));
   });
 
+  // A new picture on a marker already on the map was never drawn on iOS:
+  // the chosen pin is a new marker each time it is chosen or let go, so
+  // what the stub sees mounted is what the phone draws (28 Nov 2026).
+  it('makes the pin again when it is chosen and when it is let go, and leaves the others be', () => {
+    const two = [place('a', 21, 105, ['cafes']), place('b', 21.1, 105.1, ['cafes'])];
+    const draw = (sel: string | null) => <PlacesMap places={two} selectedSlug={sel} onSelect={() => {}} categories={[]} origin={null} cities={[]} onPickCity={() => {}} fallback={HANOI} />;
+    const { rerender } = render(draw(null));
+    const node = (slug: string) => document.querySelector(`[data-stub="Marker"][data-slug="${slug}"]`);
+    const a0 = node('a'), b0 = node('b');
+    rerender(draw('a'));
+    const a1 = node('a');
+    expect(a1).not.toBe(a0);
+    expect(node('b')).toBe(b0);
+    rerender(draw('b'));
+    expect(node('a')).not.toBe(a1);
+    expect(node('b')).not.toBe(b0);
+  });
+
   it('draws a place nothing classifies in the neutral pin, and no pin as chosen when the slug matches none', () => {
     render(<PlacesMap places={[place('a', 21, 105), place('b', 21.1, 105.1)]} selectedSlug="zzz" onSelect={() => {}} categories={[]} origin={null} cities={[]} onPickCity={() => {}} fallback={HANOI} />);
     const neutralImage = String(pinImage({}, null, false));
