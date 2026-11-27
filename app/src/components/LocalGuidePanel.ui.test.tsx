@@ -16,7 +16,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, fireEvent, render, screen } from '../uitest/render';
 import type { Lang } from '../lib/i18n';
 import type { Place } from '../lib/types';
-import { colors } from '../theme';
+import { colors, space } from '../theme';
 
 const state = vi.hoisted(() => ({
   lang: 'en' as Exclude<Lang, 'zh' | 'zh-Hant'>,
@@ -95,6 +95,8 @@ describe('who the panel appears for', () => {
   it('appears for a granted guide on a place they imported', () => {
     draw();
     expect(screen.getByTestId('panel')).toBeTruthy();
+    // One more card in the place's column: the page's gap between cards.
+    expect(getComputedStyle(screen.getByTestId('panel')).marginTop).toBe(`${space.cardGap}px`);
   });
 
   // The mark at its head is the app's own, not a camera glyph: a camera

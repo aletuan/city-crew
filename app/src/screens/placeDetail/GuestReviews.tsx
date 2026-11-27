@@ -75,7 +75,7 @@ import { visitsAt } from '../../lib/checkin';
 import { useMyCheckins } from '../../lib/checkins';
 import { atHandle } from '../../lib/handle';
 import { useI18n } from '../../lib/i18n';
-import { colors, font } from '../../theme';
+import { colors, font, space } from '../../theme';
 import { s as page } from './styles';
 
 /** A photo's tile: three across the card's text column on the narrowest
@@ -242,7 +242,7 @@ const s = StyleSheet.create({
   // darker line: the hairline is `borderGlassSoft`, every list's
   // divider in the app, and a heavier one would turn the card into a
   // table.
-  card: { marginTop: 14, padding: 16, gap: 20 },
+  card: { marginTop: space.cardGap, padding: 16, gap: 20 },
   head: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   count: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   countText: { color: colors.textTertiary, fontSize: 13 },
