@@ -90,7 +90,7 @@ import { useI18n } from '../lib/i18n';
 import { SEEN_GLYPH } from '../lib/shares';
 import { useFlag } from '../lib/useFlag';
 import { colors, display, font, space } from '../theme';
-import { useRide } from './CommentQuick';
+import { useRide } from './keyboard';
 import PhotoViewer from './PhotoViewer';
 import Segmented from './Segmented';
 import { useVisitPhotos, type Tile } from './useVisitPhotos';
@@ -152,7 +152,7 @@ function Body({ visit, onClose, withAudience, backRef }: {
 }) {
   const { t, lang } = useI18n();
   const insets = useSafeAreaInsets();
-  const ride = useRide(insets.bottom);
+  const { ride } = useRide(insets.bottom);
   const still = useReducedMotion();
   const [text, setText] = useState(visit.note ?? '');
   const [audience, setAudience] = useState<Audience>(visit.audience);
