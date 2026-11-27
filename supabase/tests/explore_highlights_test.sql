@@ -114,8 +114,8 @@ begin
   -- too old, Chi's has no photo, Dan's is for friends, Fay blocked the
   -- reader — none is counted among Omu's people.
   got := public._fc_read(r, 'hanoi');
-  assert got = 'fcann:Newer.:0:102:2:fcann+fcgia ; fcgia:Bun.:0:109:1:fcgia',
-    format('a card a place, a person fronting one: %s', got);
+  assert got = 'fcann:Newer.:0:102:2:fcann+fcgia ; fcgia:Bun.:0:109:1:fcgia ; fcann:Hearted.:1*:101:1:fcann',
+    format('a card a place, a person fronting more than one: %s', got);
 
   got := public._fc_read(r, 'danang');
   assert got = 'fceve:Elsewhere.:0:106:1:fceve', format('a city asks for its own: %s', got);
@@ -145,7 +145,7 @@ begin
   -- with the heart the reader gave it.
   update public.checkins set hidden_at = now() where id = 'f8fe0000-0000-0000-0000-0000000000c2';
   got := public._fc_read(r, 'hanoi');
-  assert got = 'fcgia:-:0:108:1:fcgia ; fcann:Hearted.:1*:101:1:fcann',
+  assert got = 'fcgia:-:0:108:1:fcgia ; fcgia:Bun.:0:109:1:fcgia ; fcann:Hearted.:1*:101:1:fcann',
     format('hidden, the place is whoever is left; a day is before a heart: %s', got);
 
   -- A hidden note is not sent; the visit stays, it is the photo's shelf.
@@ -187,7 +187,7 @@ begin
   -- nothing yet, keeps Pho.
   perform public._fc_visit(4, '11', 'a6', interval '6 hours', null);
   got := public._fc_read(r, 'hanoi');
-  assert got like 'fcchi:Sweet.:0:202:2:fcchi+fcgia ; fcbao:%; fcdan:%; fcgia:-:0:108:1:fcgia ; fcann:%',
+  assert got like 'fcchi:Sweet.:0:202:2:fcchi+fcgia ; fcbao:%; fcdan:%; fcgia:-:0:108:1:fcgia ; fcgia:Bun.:0:109:1:fcgia ; fcann:%',
     format('two people before two hearts: %s', got);
 
   -- ── the card's words and faces (20261126220000) ──
@@ -197,19 +197,41 @@ begin
   perform public._fc_visit(5, '0e', 'a5', interval '1 hour', null);
   got := public._fc_read(r, 'hanoi');
   assert got = 'fcbao:-:2:201:2:fceve+fcbao ; fcchi:Sweet.:0:202:2:fcchi+fcgia ; fcdan:-:0:203:1:fcdan ; '
-            || 'fcgia:-:0:108:1:fcgia ; fcann:-:1*:101:1:fcann',
+            || 'fcgia:-:0:108:1:fcgia ; fcgia:Bun.:0:109:1:fcgia ; fcann:-:1*:101:1:fcann',
     format('hearted over newest; faces newest first: %s', got);
 
   -- Gia writes about Che too, and the reader hearts it: of two written
-  -- visits the hearted one fronts, though Chi's is newer. Gia fronting
-  -- Che, Pho — hers alone — leaves the shelf. Che, written, now leads
+  -- visits the hearted one fronts, though Chi's is newer. Gia fronts
+  -- Che, Pho and Bun — three, under the seven. Che, written, now leads
   -- Xoi on the tie in people and hearts.
   update public.checkins set note = 'Cool.' where id = 'f8fe0000-0000-0000-0000-0000000000d4';
   insert into public.checkin_likes (checkin_id, user_id) values ('f8fe0000-0000-0000-0000-0000000000d4', r::uuid);
   got := public._fc_read(r, 'hanoi');
   assert got = 'fcgia:Cool.:1*:204:2:fcchi+fcgia ; fcbao:-:2:201:2:fceve+fcbao ; fcdan:-:0:203:1:fcdan ; '
-            || 'fcann:-:1*:101:1:fcann',
+            || 'fcgia:-:0:108:1:fcgia ; fcgia:Bun.:0:109:1:fcgia ; fcann:-:1*:101:1:fcann',
     format('of two written, the hearted one: %s', got);
+
+  -- ── seven a person (20261127090000) ──
+  -- Bao's week in Da Nang: eight places, one an hour, each his alone. He
+  -- fronts the seven newest; the eighth — the oldest — is left out. Eve's,
+  -- which is hers, leads them all: as old a day, as many people, but
+  -- written.
+  for i in 1..8 loop
+    insert into public.places (id, slug, city_id, is_published, review_status, name_en, categories) values
+      (('f8fe0000-0000-0000-0000-0000000003' || lpad(i::text, 2, '0'))::uuid, 'fc-dn-' || i, 'danang', true, 'approved', 'Dn' || i, '{eats}');
+    insert into public.checkins (id, user_id, place_id, city_id, at, note, audience) values
+      (('f8fe0000-0000-0000-0000-0000000004' || lpad(i::text, 2, '0'))::uuid, 'f8fe0000-0000-0000-0000-00000000000b',
+       ('f8fe0000-0000-0000-0000-0000000003' || lpad(i::text, 2, '0'))::uuid, 'danang', now() - make_interval(mins => 10 * i), null, 'public');
+    insert into public.checkin_photos (id, checkin_id, user_id, position, path, width, height, bytes) values
+      (('f8fe0000-0000-0000-0000-0000000005' || lpad(i::text, 2, '0'))::uuid, ('f8fe0000-0000-0000-0000-0000000004' || lpad(i::text, 2, '0'))::uuid,
+       'f8fe0000-0000-0000-0000-00000000000b', 1,
+       'f8fe0000-0000-0000-0000-00000000000b/f8fe0000-0000-0000-0000-0000000004' || lpad(i::text, 2, '0')
+         || '/f8fe0000-0000-0000-0000-0000000005' || lpad(i::text, 2, '0') || '.jpg', 10, 10, 1);
+  end loop;
+  got := public._fc_read(r, 'danang');
+  assert got = 'fceve:Elsewhere.:0:106:1:fceve ; fcbao:-:0:501:1:fcbao ; fcbao:-:0:502:1:fcbao ; fcbao:-:0:503:1:fcbao ; '
+            || 'fcbao:-:0:504:1:fcbao ; fcbao:-:0:505:1:fcbao ; fcbao:-:0:506:1:fcbao ; fcbao:-:0:507:1:fcbao',
+    format('seven a person, the eighth left out: %s', got);
 end $$;
 
 drop function public._fc_visit(int, text, text, interval, text);
