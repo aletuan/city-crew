@@ -61,7 +61,6 @@ const OVERSIZE = {
   'src/components/ThemeSwitcher.tsx': { lines: 169 },
   'src/components/SignupTour.tsx': { lines: 183 },
   'src/lib/city.tsx': { lines: 179 },
-  'src/components/PlaceCard.tsx': { lines: 166, complexity: 50 },
   'src/components/AvatarPicker.tsx': { lines: 156 },
   'src/components/PhotoSheet.tsx': { lines: 158 },
   'src/screens/ForgotPasswordScreen.tsx': { lines: 157 },
