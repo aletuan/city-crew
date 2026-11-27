@@ -42,6 +42,18 @@ const propsWhere = (pick: (p: Record<string, unknown>) => boolean): Record<strin
 };
 const band = () => propsWhere((p) => p.accessibilityLabel === 'Open Cộng Café – Tràng Tiền' && 'onLongPress' in p);
 
+// The score by the name: one decimal, and the count as every card has it.
+describe('the score', () => {
+  it('prints a whole score with its decimal and its count', () => {
+    draw({ place: place({ rating: 5, rating_count: 18162 } as Partial<Place>) });
+    expect(screen.getByText(/^5\.0/).textContent).toBe('5.0 (18.2k)');
+  });
+  it('has no count where Google gave none', () => {
+    draw({ place: place({ rating: 4.6, rating_count: null } as Partial<Place>) });
+    expect(screen.getByText(/^4\.6/).textContent).toBe('4.6');
+  });
+});
+
 const draw = (over: Partial<React.ComponentProps<typeof StopCard>> = {}) => {
   const fns = { onOpen: vi.fn(), onNudge: vi.fn(), onRemove: vi.fn(), onMove: vi.fn(), onRelease: vi.fn() };
   render(

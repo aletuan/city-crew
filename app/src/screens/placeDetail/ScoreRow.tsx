@@ -10,7 +10,7 @@
 import { Text, View } from 'react-native';
 import PricePill from '../../components/PricePill';
 import { Glyph, ICON } from '../../components/ui/glyph';
-import { fmtCount, isFree, type Place } from '../../lib/data';
+import { fmtCount, fmtScore, isFree, type Place } from '../../lib/data';
 import { useI18n } from '../../lib/i18n';
 import { useFlag } from '../../lib/useFlag';
 import { colors } from '../../theme';
@@ -25,10 +25,10 @@ export function ScoreRow({ place, name, cover, cityId, askToSignIn }: {
   cityId: string | null;
   askToSignIn: (why: 'checkin') => void;
 }) {
-  const { t } = useI18n();
+  const { t, lang } = useI18n();
   const showPrice = useFlag('place_price');
   const showCheckin = useFlag('place_checkin');
-  const reviews = fmtCount(place.rating_count);
+  const reviews = fmtCount(place.rating_count, lang);
   // "109 on Google", not "109 reviews" (owner, 27 Nov 2026): the page now
   // carries its own "Đánh giá từ khách" further down, and two counts of
   // "đánh giá" on one page, Google's 109 and the app's 2, read as one
@@ -57,10 +57,10 @@ export function ScoreRow({ place, name, cover, cityId, askToSignIn }: {
           style={s.ratingRow}
           testID="detail-rating"
           accessibilityRole="text"
-          accessibilityLabel={reviews ? `${place.rating} — ${onGoogle}` : String(place.rating)}
+          accessibilityLabel={reviews ? `${fmtScore(place.rating, lang)} — ${onGoogle}` : fmtScore(place.rating, lang)}
         >
           <Glyph name="star" size={ICON.action} color={colors.accent} />
-          <Text style={s.ratingValue}>{place.rating}</Text>
+          <Text style={s.ratingValue}>{fmtScore(place.rating, lang)}</Text>
           {reviews ? (
             <>
               <Text style={s.ratingDot}>·</Text>

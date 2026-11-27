@@ -490,6 +490,20 @@ describe('PlaceDetailScreen — title, rating, facts', () => {
     expect(rating.textContent).toBe('4.6\u00b71.2k on Google');
   });
 
+  // One decimal always, and the reader's decimal mark (28 Nov 2026).
+  it('prints a whole score as one, and writes it with the Vietnamese comma', () => {
+    state.lang = 'vi';
+    show(place({ rating: 5, rating_count: 18162 }));
+    const rating = screen.getByTestId('detail-rating');
+    expect(rating.textContent).toBe('5,0\u00b718,2k trên Google');
+    expect(rating.getAttribute('aria-label')).toBe('5,0 \u2014 18,2k trên Google');
+  });
+
+  it('speaks a score with no count as the score alone, in the same form', () => {
+    show(place({ rating: 4, rating_count: null }));
+    expect(screen.getByTestId('detail-rating').getAttribute('aria-label')).toBe('4.0');
+  });
+
   // Four stops for one fact is what this avoids: the star glyph, the
   // number, a lone middle dot, then the count.
   it('speaks the rating as a single phrase', () => {

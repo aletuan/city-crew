@@ -42,6 +42,7 @@ import { clockOf, fmtMinutes, openLabel } from '../lib/format';
 import { useI18n } from '../lib/i18n';
 import { NUDGE_MIN } from '../lib/itinerary';
 import { splitName } from '../lib/name';
+import { fmtCount, fmtScore } from '../lib/place';
 import { summaryLine } from '../lib/sketch';
 import type { Place } from '../lib/types';
 import { colors, font, space, type } from '../theme';
@@ -133,7 +134,13 @@ export default function StopCard({
               {place.rating != null && (
                 <View style={s.rating}>
                   <Glyph name="star" size={ICON.meta} color={colors.sun} />
-                  <Text style={s.ratingText}>{place.rating}</Text>
+                  <Text style={s.ratingText}>
+                    {fmtScore(place.rating, lang)}
+                    {/* The count, as every other card has it: a score
+                        alone does not say whether two people gave it or
+                        two thousand. */}
+                    {place.rating_count ? <Text style={s.ratingCount}>{` (${fmtCount(place.rating_count, lang)})`}</Text> : null}
+                  </Text>
                 </View>
               )}
             </View>
@@ -254,6 +261,7 @@ const s = StyleSheet.create({
     ...CAPTION, color: colors.textSecondary,
     fontWeight: font.semibold, fontVariant: ['tabular-nums'],
   },
+  ratingCount: { fontWeight: font.regular, color: colors.textTertiary },
   area: { ...CAPTION, color: colors.textTertiary },
   railDivider: {
     height: StyleSheet.hairlineWidth, backgroundColor: colors.borderGlassSoft, marginTop: 12,
