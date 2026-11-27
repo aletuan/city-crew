@@ -303,8 +303,10 @@ Ghi ra để không ai tưởng là có chủ ý:
   `AuthScreen` của màn. Ngày 27/11, `GalleryScreen` (287 / 46 → 116 / 24)
   ra `screens/gallery/`, cạnh `useGalleryWrites` đã có: `useGalleryPlace`,
   `usePhotoMenu`, và `GalleryTools`, `GalleryGrid`, `GalleryTips`,
-  `NotYours` trong `parts.tsx`. Danh sách còn 22 file; hàm rối nhất trên
-  đó giờ là `TripInvitationScreen` (218 / 66) và `PlaceCard` (166 / 50).
+  `NotYours` trong `parts.tsx`. Cũng ngày 27/11, `TripInvitationScreen`
+  (218 / 66 → 60 / 18) ra `screens/invitation/`: `useAnswer`, và `NotHere`,
+  `Asker`, `Plan`, `Going`, `Keeps`, `Answers` trong `parts.tsx`. Danh sách
+  còn 21 file; hàm rối nhất trên đó giờ là `PlaceCard` (166 / 50).
 - ~~**`lib/save.tsx`** nằm sai tầng~~ Ngày 20/10/2026 phần vẽ hai sheet
   chuyển ra `components/SaveSheets.tsx`; `lib/save.tsx` chỉ còn trạng thái,
   và ngoại lệ trong lint đã bỏ.

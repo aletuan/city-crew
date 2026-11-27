@@ -21,29 +21,23 @@
 // delete — see the trip_invites migration for why, unlike a declined
 // friend request, it is recorded).
 
-import React, { useMemo, useRef, useState } from 'react';
-import { Alert, ScrollView, StyleSheet, Text, View } from 'react-native';
-import { Glyph, ICON } from '../components/ui/glyph';
-import {
-  AmbientWarmth, Avatar, Card, CONTROL_H, Empty, PressableScale, Screen, useTabBarClearance,
-} from '../components/ui';
+import React, { useMemo } from 'react';
+import { ScrollView } from 'react-native';
+import { AmbientWarmth, Screen, useTabBarClearance } from '../components/ui';
 import { useSession } from '../lib/auth';
 import { useCrew } from '../lib/crew';
 import { fromISO } from '../lib/day';
-import { answerInvite } from '../lib/data';
-import { startMinOf } from '../lib/remind';
-import { scheduleTripReminder } from '../lib/reminders';
 import { useMyTrips } from '../lib/mytrips';
-import { clockOf, dateline, fmtMinutes, fmtVnd } from '../lib/format';
-import { fmtDistance } from '../lib/geo';
+import { clockOf } from '../lib/format';
 import { useI18n } from '../lib/i18n';
-import { localized } from '../lib/localized';
 import { useInvitations } from '../lib/invitations';
 import { useFlag } from '../lib/useFlag';
 import { spendVnd } from '../lib/trips';
 import { legsOf } from '../lib/travel';
-import { colors, font, radius, space, type } from '../theme';
+import { space } from '../theme';
 import type { Nav, RootRoute } from '../nav';
+import { Answers, Asker, Going, Keeps, NotHere, Plan } from './invitation/parts';
+import { useAnswer } from './invitation/useAnswer';
 
 /** The cost per person when prices are shown, and 0 — which prints
  *  nothing — when they are not. Outside the screen so the switch costs
@@ -56,7 +50,7 @@ export default function TripInvitationScreen({ navigation, route }: {
   navigation: Nav;
   route: RootRoute<'TripInvitation'>;
 }) {
-  const { t, lang } = useI18n();
+  const { t } = useI18n();
   const { session } = useSession();
   const { people } = useCrew();
   const { invites, crewCounts } = useInvitations();
@@ -69,11 +63,6 @@ export default function TripInvitationScreen({ navigation, route }: {
   // app, shown to the one reader who cannot open the places to check it.
   const showPrice = useFlag('place_price');
 
-  const [busy, setBusy] = useState(false);
-  // The guard, as opposed to the dimming: `busy` is only seen by the
-  // render after the one that set it, so two taps landing in the same
-  // frame both read false and sent the answer twice.
-  const inFlight = useRef(false);
 
   const tripId = route.params.id;
   // Batched by the invitations provider alongside the rail this screen
@@ -85,60 +74,13 @@ export default function TripInvitationScreen({ navigation, route }: {
     [invites.data, tripId, session?.user?.id],
   );
 
-  const answer = async (said: 'accepted' | 'declined') => {
-    if (inFlight.current) return;
-    inFlight.current = true;
-    setBusy(true);
-    try {
-      await answerInvite(tripId, said);
-      // The promise this screen makes above the buttons: accepting brings
-      // the reminders, the evening before and on the day. Planted here, on
-      // the tap, because this is the moment a permission sheet makes sense
-      // to the reader; the background sync that also covers it never asks.
-      // Declining needs nothing — an invitee was never reminded before
-      // saying yes.
-      if (said === 'accepted' && trip) {
-        void scheduleTripReminder(
-          { id: trip.id, day: trip.day, title: trip.title, startMin: startMinOf(trip.trip_stops ?? []) },
-          t,
-        );
-      }
-      invites.reload();
-      trips.reload();
-      // Both answers leave this screen: accepting puts the trip in Trips
-      // where it now belongs, and declining ends the reader's access to it
-      // on the same statement. Staying would be a screen with nothing left
-      // to do on it either way.
-      navigation.goBack();
-    } catch (e) {
-      Alert.alert(
-        t('Could not answer', 'Không trả lời được', '回答できません', '无法回复', '無法回覆'),
-        e instanceof Error ? e.message : String(e),
-      );
-    } finally {
-      inFlight.current = false;
-      setBusy(false);
-    }
-  };
+  // Sent once, and the screen left either way — see `useAnswer`.
+  const { busy, answer } = useAnswer({ tripId, trip, invites, trips, navigation });
 
   if (!trip) {
-    return (
-      <Screen compactTitle title={t('Invitation', 'Lời mời', '招待', '邀请', '邀請')} onBack={() => navigation.goBack()} backBare>
-        {/* `loaded` stays true after a failed fetch, so a failure has to
-            be asked about first — or a dropped connection tells the
-            invitee they were uninvited. */}
-        <Empty text={trips.error
-          ? t('Could not load this invitation. Go back and try again.',
-            'Không tải được lời mời. Quay lại và thử lại.',
-            '招待を読み込めませんでした。戻ってもう一度お試しください。',
-            '无法加载这个邀请。请返回后重试。', '無法載入這個邀請。請返回後重試。')
-          : trips.loaded
-            ? t('That invitation is no longer here.', 'Lời mời đó không còn nữa.', 'その招待はもうありません。', '这个邀请已不存在。', '這個邀請已不存在。')
-            : t('Loading…', 'Đang tải…', '読み込み中…', '加载中…', '載入中…')}
-        />
-      </Screen>
-    );
+    return <NotHere failed={!!trips.error} loaded={trips.loaded} onBack={() => navigation.goBack()} />;
   }
+
 
   const stops = trip.trip_stops ?? [];
   const day = fromISO(trip.day);
@@ -169,212 +111,21 @@ export default function TripInvitationScreen({ navigation, route }: {
         contentContainerStyle={{ paddingHorizontal: space.page, paddingBottom: clearance }}
         showsVerticalScrollIndicator={false}
       >
-        <Card style={s.asker}>
-          <Avatar url={from?.avatar_url} size={44} />
-          <View style={{ flex: 1, minWidth: 0 }}>
-            <Text style={s.askerName} numberOfLines={1}>
-              {from?.full_name || (from?.handle ? `@${from.handle}` : t('Someone', 'Ai đó', '誰か', '某人', '某人'))}
-              {' '}
-              <Text style={s.askerVerb}>{t('wants you along', 'muốn rủ bạn đi', 'があなたを誘っています', '邀请你同行', '邀請你同行')}</Text>
-            </Text>
-            <Text style={s.askerMeta} numberOfLines={2}>
-              {[from?.handle ? `@${from.handle}` : null, day ? dateline(lang, day) : trip.day, window]
-                .filter(Boolean).join(' · ')}
-            </Text>
-          </View>
-        </Card>
+        <Asker from={from} trip={trip} day={day} window={window} />
 
-        <Text style={s.section}>{t('THEIR PLAN', 'KẾ HOẠCH CỦA HỌ', 'その予定', '对方的计划', '對方的計畫')}</Text>
-        <Card style={s.plan}>
-          {stops.map((st, i) => {
-            const p = st.places;
-            const leg = legs[i];
-            return (
-              <View key={p?.slug ?? i}>
-                <View style={s.stop}>
-                  <Text style={s.at}>{st.arrive_min != null ? clockOf(st.arrive_min) : '—'}</Text>
-                  <View style={s.dot} />
-                  <View style={{ flex: 1, minWidth: 0 }}>
-                    <Text style={s.name} numberOfLines={1}>
-                      {p ? localized(p, 'name', lang)
-                        : t('A place that has since gone', 'Một nơi giờ không còn', 'いまはない場所', '一个已不存在的地点', '一個已不存在的地點')}
-                    </Text>
-                    <Text style={s.where} numberOfLines={1}>
-                      {[p ? localized(p, 'neighborhood', lang) : null,
-                        st.dwell_min ? fmtMinutes(st.dwell_min, lang) : null]
-                        .filter(Boolean).join(' · ')}
-                    </Text>
-                  </View>
-                </View>
-                {/* The walk between, which is the half of a plan a list of
-                    times cannot show — two stops at 18:00 and 18:45 read
-                    very differently at 300m and at 4km. */}
-                {leg && i < stops.length - 1 ? (
-                  <View style={s.leg}>
-                    <Glyph name="walk-outline" size={ICON.meta} color={colors.textTertiary} />
-                    <Text style={s.legText}>
-                      {`${fmtDistance(leg.km)} · ≈ ${fmtMinutes(leg.minutes, lang)}`}
-                    </Text>
-                  </View>
-                ) : null}
-              </View>
-            );
-          })}
-          <View style={s.sum}>
-            <Text style={s.sumText}>
-              {[
-                t(`${stops.length} stop${stops.length === 1 ? '' : 's'}`,
-                  `${stops.length} điểm dừng`, `${stops.length}か所`, `${stops.length} 个地点`, `${stops.length} 個地點`),
-                window,
-                spend > 0 ? t(`~${fmtVnd(spend)} / person`, `~${fmtVnd(spend)} / người`, `~${fmtVnd(spend)} / 人`, `~${fmtVnd(spend)} / 人`, `~${fmtVnd(spend)} / 人`) : null,
-              ].filter(Boolean).join(' · ')}
-            </Text>
-          </View>
-        </Card>
+        <Plan stops={stops} legs={legs} window={window} spend={spend} />
 
-        {going != null ? (
-          <Card style={s.who}>
-            <Glyph name="people-outline" size={ICON.action} color={colors.textSecondary} />
-            <Text style={s.whoText}>
-              {going === 1
-                ? t(
-                  `${from?.full_name || 'They'} — you’d be 2 in all.`,
-                  `${from?.full_name || 'Họ'} — tính cả bạn là 2 người.`,
-                  `${from?.full_name || 'この人'} — あなたを入れて2人。`,
-                  `${from?.full_name || '对方'} — 加上你一共 2 人。`, `${from?.full_name || '對方'} — 加上你一共 2 人。`,
-                )
-                : t(
-                  `${from?.full_name || 'They'} and ${going - 1} other${going - 1 === 1 ? '' : 's'} — you’d be ${going + 1} in all.`,
-                  `${from?.full_name || 'Họ'} và ${going - 1} người nữa — tính cả bạn là ${going + 1}.`,
-                  `${from?.full_name || 'この人'} と他${going - 1}人 — あなたを入れて${going + 1}人。`,
-                  `${from?.full_name || '对方'}和另外 ${going - 1} 人 — 加上你一共 ${going + 1} 人。`, `${from?.full_name || '對方'}和另外 ${going - 1} 人 — 加上你一共 ${going + 1} 人。`,
-                )}
-            </Text>
-          </Card>
-        ) : null}
+        {going != null ? <Going going={going} from={from} /> : null}
 
-        <Card style={s.who}>
-          <Glyph name="lock-closed-outline" size={ICON.action} color={colors.textTertiary} />
-          <Text style={s.noteText}>
-            {t(
-              `${from?.full_name ? `${from.full_name} keeps` : 'They keep'} the plan. Accepting puts it in your Trips and you get a reminder the evening before and on the day.`,
-              `${from?.full_name || 'Họ'} giữ kế hoạch. Đồng ý thì chuyến vào mục Chuyến đi của bạn, và bạn được nhắc vào tối hôm trước và trong ngày đi.`,
-              `予定は${from?.full_name || 'この人'}のものです。承諾すると旅程に入り、前の晩と当日にリマインダーが届きます。`,
-              `计划由${from?.full_name || '对方'}管理。接受后，它会出现在你的行程中，你会在前一晚和当天收到提醒。`, `計畫由${from?.full_name || '對方'}管理。接受後，它會出現在你的行程中，你會在前一晚和當天收到提醒。`,
-            )}
-          </Text>
-        </Card>
+        <Keeps from={from} />
 
-        {answered ? (
-          <Text style={s.already}>
-            {invite?.status === 'accepted'
-              ? t('You said you’re in.', 'Bạn đã nhận lời.', '参加すると回答済みです。', '你已回复参加。', '你已回覆參加。')
-              : t('You said you can’t make it.', 'Bạn đã từ chối.', '不参加と回答済みです。', '你已回复无法参加。', '你已回覆無法參加。')}
-          </Text>
-        ) : (
-          <>
-            <View style={s.answers}>
-              <PressableScale
-                onPress={() => answer('accepted')}
-                accessibilityRole="button"
-                style={{ flex: 1 }}
-                contentStyle={[s.yes, busy && s.busy]}
-              >
-                <Glyph name="checkmark" size={ICON.action} color={colors.accentInk} />
-                <Text style={s.yesText}>{t('I’m in', 'Tôi tham gia', '参加する', '我参加', '我參加')}</Text>
-              </PressableScale>
-              <PressableScale
-                onPress={() => answer('declined')}
-                accessibilityRole="button"
-                style={{ flex: 1 }}
-                contentStyle={[s.no, busy && s.busy]}
-              >
-                <Text style={s.noText}>{t('Can’t make it', 'Không đi được', '行けません', '无法参加', '無法參加')}</Text>
-              </PressableScale>
-            </View>
-            <Text style={s.foot}>
-              {t(
-                'Either answer tells them. Declining does not delete their plan.',
-                'Dù trả lời thế nào họ cũng biết. Từ chối không xoá kế hoạch của họ.',
-                'どちらの回答も相手に伝わります。断っても相手の予定は消えません。',
-                '无论哪种回复，对方都会知道。拒绝不会删除对方的计划。', '無論哪種回覆，對方都會知道。拒絕不會刪除對方的計畫。',
-              )}
-            </Text>
-          </>
-        )}
+        <Answers
+          answered={!!answered}
+          accepted={invite?.status === 'accepted'}
+          busy={busy}
+          onAnswer={answer}
+        />
       </ScrollView>
     </Screen>
   );
 }
-
-const s = StyleSheet.create({
-  // `Card` draws a surface and nothing else — padding is the caller's job,
-  // and this screen shipped without doing it: every card had its content
-  // against the border, and the summary line's first digit was clipped by
-  // the rounded corner's overflow. The values are the family's own —
-  // `space.cardPadding` across, InviteCard's 12–14 down.
-  asker: {
-    flexDirection: 'row', alignItems: 'center', gap: 12,
-    paddingHorizontal: space.cardPadding, paddingVertical: 12,
-  },
-  askerName: { color: colors.text, fontSize: 16, fontWeight: font.bold },
-  askerVerb: { color: colors.textSecondary, fontWeight: font.regular },
-  askerMeta: { color: colors.textTertiary, fontSize: 13, marginTop: 2 },
-
-  section: {
-    color: colors.textTertiary, fontSize: 11, fontWeight: font.bold,
-    letterSpacing: 1.1, marginTop: space.cardGap, marginBottom: 8,
-  },
-
-  // Rows carry 8 of their own, so the card's vertical half meets them at
-  // a 16 total — the same rhythm `cardPadding` gives the sides.
-  plan: { paddingHorizontal: space.cardPadding, paddingVertical: 8 },
-  stop: { flexDirection: 'row', alignItems: 'flex-start', gap: 10, paddingVertical: 8 },
-  at: {
-    color: colors.textSecondary, fontSize: 14, fontWeight: font.medium,
-    width: 44, paddingTop: 1,
-  },
-  dot: {
-    width: 8, height: 8, borderRadius: 4, marginTop: 6,
-    backgroundColor: colors.accentFill,
-  },
-  name: { ...type.cardTitle, fontSize: 16, color: colors.text },
-  where: { color: colors.textTertiary, fontSize: 13, marginTop: 1 },
-  leg: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingLeft: 62, paddingBottom: 4 },
-  legText: { color: colors.textTertiary, fontSize: 12 },
-
-  sum: {
-    marginTop: 8, paddingTop: 10,
-    borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.borderGlassSoft,
-  },
-  sumText: { color: colors.textSecondary, fontSize: 13 },
-
-  who: {
-    flexDirection: 'row', alignItems: 'flex-start', gap: 11, marginTop: space.cardGap,
-    paddingHorizontal: space.cardPadding, paddingVertical: 14,
-  },
-  whoText: { flex: 1, color: colors.textSecondary, fontSize: 14, lineHeight: 20 },
-  noteText: { flex: 1, color: colors.textTertiary, fontSize: 14, lineHeight: 20 },
-
-  answers: { flexDirection: 'row', gap: 10, marginTop: space.cardGap },
-  busy: { opacity: 0.6 },
-  yes: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 7,
-    minHeight: CONTROL_H, paddingVertical: 10, borderRadius: radius.pill, backgroundColor: colors.accentFill,
-  },
-  yesText: { color: colors.accentInk, fontSize: 16, fontWeight: font.bold },
-  no: {
-    alignItems: 'center', justifyContent: 'center',
-    minHeight: CONTROL_H, paddingVertical: 10, borderRadius: radius.pill,
-    borderWidth: StyleSheet.hairlineWidth, borderColor: colors.borderGlass,
-  },
-  noText: { color: colors.textSecondary, fontSize: 16, fontWeight: font.medium },
-  foot: {
-    color: colors.textTertiary, fontSize: 13, lineHeight: 18,
-    textAlign: 'center', marginTop: 12,
-  },
-  already: {
-    color: colors.textSecondary, fontSize: 15,
-    textAlign: 'center', marginTop: space.cardGap,
-  },
-});
