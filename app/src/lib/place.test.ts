@@ -3,7 +3,7 @@
 
 import { describe, expect, it } from 'vitest';
 import {
-  chosenCoverOf, cityCoverUri, cityOfList, coverOf, coverUriOf, heroPlace, fmtCount, holds, isFree, membersOf, nextSortOrder, photosOf, priceLabel, slugify, touchesCity, withPhotos,
+  chosenCoverOf, cityCoverUri, cityOfList, coverOf, coverUriOf, heroPlace, fmtCount, fmtScore, holds, isFree, membersOf, nextSortOrder, photosOf, priceLabel, slugify, touchesCity, withPhotos,
 } from './place';
 import type { Collection, Place, PlacePhoto } from './types';
 
@@ -232,6 +232,19 @@ describe('priceLabel', () => {
   });
 });
 
+describe('fmtScore', () => {
+  it('always prints one decimal, so a whole score reads as a score', () => {
+    expect(fmtScore(5)).toBe('5.0');
+    expect(fmtScore(4)).toBe('4.0');
+    expect(fmtScore(4.6)).toBe('4.6');
+  });
+  it('writes the Vietnamese decimal comma, and the point everywhere else', () => {
+    expect(fmtScore(4.6, 'vi')).toBe('4,6');
+    expect(fmtScore(5, 'vi')).toBe('5,0');
+    for (const lang of ['en', 'ja', 'zh', 'zh-Hant'] as const) expect(fmtScore(4.6, lang)).toBe('4.6');
+  });
+});
+
 describe('fmtCount', () => {
   it('leaves counts under a thousand alone', () => {
     expect(fmtCount(1)).toBe('1');
@@ -242,6 +255,13 @@ describe('fmtCount', () => {
     expect(fmtCount(1000)).toBe('1k');
     expect(fmtCount(1800)).toBe('1.8k');
     expect(fmtCount(10100)).toBe('10.1k');
+  });
+
+  it('writes the Vietnamese decimal comma in a thousand, and leaves a small count alone', () => {
+    expect(fmtCount(18162, 'vi')).toBe('18,2k');
+    expect(fmtCount(1000, 'vi')).toBe('1k');
+    expect(fmtCount(972, 'vi')).toBe('972');
+    expect(fmtCount(18162, 'ja')).toBe('18.2k');
   });
 
   it('renders nothing at all for absent or zero counts', () => {

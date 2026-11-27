@@ -66,6 +66,22 @@ beforeEach(() => {
   appFlags.reset();
 });
 
+// The score on the photograph: one decimal always, so a whole 5 does not
+// read as a count beside its count, and Vietnamese writes its comma.
+describe('the score', () => {
+  it('prints a whole score with its decimal, and the count beside it', () => {
+    render(<PlaceCard place={place({ rating: 5, rating_count: 18162 } as Partial<Place>)} onPress={() => {}} />);
+    expect(screen.getByText('5.0')).toBeTruthy();
+    expect(screen.getByText('(18.2k)')).toBeTruthy();
+  });
+  it('writes the Vietnamese comma in both', () => {
+    state.lang = 'vi';
+    render(<PlaceCard place={place({ rating: 4.6, rating_count: 18162 } as Partial<Place>)} onPress={() => {}} />);
+    expect(screen.getByText('4,6')).toBeTruthy();
+    expect(screen.getByText('(18,2k)')).toBeTruthy();
+  });
+});
+
 describe('the name', () => {
   it('is shown in the reader’s language', () => {
     state.lang = 'vi';

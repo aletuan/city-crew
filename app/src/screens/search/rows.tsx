@@ -9,7 +9,7 @@ import { Glyph, ICON } from '../../components/ui/glyph';
 import ListToggle from '../../components/ListToggle';
 import NewBadge from '../../components/NewBadge';
 import { Card, PressableScale, Tile, TileGrid } from '../../components/ui';
-import { type Collection, coverOf, fmtCount, type Place } from '../../lib/data';
+import { type Collection, coverOf, fmtCount, fmtScore, type Place } from '../../lib/data';
 import { CATEGORIES, categoryLabel } from '../../lib/categories';
 import { openFragment, openState } from '../../lib/format';
 import { useI18n } from '../../lib/i18n';
@@ -224,14 +224,14 @@ export function ShelfRow({ place: pl, kind, now, tz, toggle, onOpen }: {
           ? (
             <View style={s.rowRating}>
               <Text style={s.rowStar}>★</Text>
-              <Text style={s.rowRatingValue}>{pl.rating.toFixed(1)}</Text>
+              <Text style={s.rowRatingValue}>{fmtScore(pl.rating, lang)}</Text>
               {pl.rating_count
                 ? (
                   <Text
                     style={s.rowRatingCount}
                     accessibilityLabel={t(`${pl.rating_count} reviews`, `${pl.rating_count} đánh giá`, `${pl.rating_count}件の評価`, `${pl.rating_count} 条评价`, `${pl.rating_count} 條評價`)}
                   >
-                    ({fmtCount(pl.rating_count)})
+                    ({fmtCount(pl.rating_count, lang)})
                   </Text>
                 )
                 : null}

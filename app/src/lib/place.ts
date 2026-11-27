@@ -7,6 +7,7 @@
 // one runtime import of `./supabase` and the whole of React Native comes
 // with it.
 
+import type { Lang } from './lang';
 import { stripMarks } from './text';
 import type { Collection, Place, PlacePhoto } from './types';
 
@@ -137,9 +138,29 @@ export function priceLabel(p: Place): string | null {
   return null;
 }
 
-export function fmtCount(n: number | null | undefined): string {
+export function fmtCount(n: number | null | undefined, lang: Lang = 'en'): string {
   if (!n) return '';
-  return n >= 1000 ? `${Math.round(n / 100) / 10}k` : String(n);
+  return n >= 1000 ? `${decimal(String(Math.round(n / 100) / 10), lang)}k` : String(n);
+}
+
+// ── a Google score, printed the same everywhere (28 Nov 2026) ──
+//
+// Five places drew the score three ways: the list card, the detail and the
+// planner printed the number as it came, so a 5 was "5" — 90 of 1,584
+// places score a whole 5 and 118 a whole number — and beside a count,
+// "5 (18.2k)" read as a tally rather than a score; the map card and the
+// search row wrote "5.0". All now print one decimal, always, and Vietnamese
+// gets its comma ("4,6", "18,2k"), as Google Maps in Vietnamese does. The
+// "k" stays in Vietnamese: it is what Vietnamese shop apps write, where
+// "N" (nghìn) is read as a word.
+
+/** A Google score in one decimal, the reader's decimal mark: "4,6", "5.0". */
+export function fmtScore(rating: number, lang: Lang = 'en'): string {
+  return decimal(rating.toFixed(1), lang);
+}
+
+function decimal(n: string, lang: Lang): string {
+  return lang === 'vi' ? n.replace('.', ',') : n;
 }
 
 /**

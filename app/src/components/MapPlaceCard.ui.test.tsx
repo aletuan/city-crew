@@ -86,6 +86,11 @@ describe('MapPlaceCard', () => {
     expect(screen.queryByRole('button', { name: /check in$/i })).toBeNull();
   });
 
+  it('prints a whole score with its decimal, on the card and in what is spoken', () => {
+    render(<MapPlaceCard place={place({ rating: 5, rating_count: 18162 })} distanceKm={0.8} kind={null} now={NOON} onPress={() => {}} />);
+    expect(screen.getByRole('button', { name: /rated 5\.0 \(18\.2k\)/ })).toBeTruthy();
+  });
+
   it('counts nothing while check-in is switched off', () => {
     visits.on = false;
     visits.data = been(3);

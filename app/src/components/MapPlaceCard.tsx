@@ -51,7 +51,7 @@ import { Glyph, ICON } from './ui/glyph';
 import { useMyCheckins } from '../lib/checkins';
 import { visitsAt } from '../lib/checkin';
 import { useFlag } from '../lib/useFlag';
-import { coverOf, fmtCount, type Place } from '../lib/data';
+import { coverOf, fmtCount, fmtScore, type Place } from '../lib/data';
 import { useCityList } from '../lib/city';
 import { cityTz } from '../lib/clock';
 import { CLOSING_SOON_MIN, clockOf, openState, type OpenState } from '../lib/format';
@@ -198,7 +198,7 @@ export default function MapPlaceCard({ place, distanceKm, kind, now, onPress, sw
   // The brand alone, as `PlaceCard` prints it: the suffix after the dash
   // is the branch's ward, which the address line says with the street.
   const name = splitName(localized(place, 'name', lang)).title;
-  const ratingFact = place.rating ? `${place.rating.toFixed(1)}${place.rating_count ? ` (${fmtCount(place.rating_count)})` : ''}` : null;
+  const ratingFact = place.rating ? `${fmtScore(place.rating, lang)}${place.rating_count ? ` (${fmtCount(place.rating_count, lang)})` : ''}` : null;
   // The list's own formatter: metres to the nearest fifty while it is a
   // walk, one decimal while it is a ride.
   const distanceFact = distanceKm != null ? fmtDistance(distanceKm) : null;
@@ -250,8 +250,8 @@ export default function MapPlaceCard({ place, distanceKm, kind, now, onPress, sw
         {ratingFact ? (
           <Text style={s.rating} numberOfLines={1}>
             <Text testID="place-star" style={{ color: colors.accent }}>★ </Text>
-            {place.rating!.toFixed(1)}
-            {place.rating_count ? <Text style={s.facts}>{` (${fmtCount(place.rating_count)})`}</Text> : null}
+            {fmtScore(place.rating!, lang)}
+            {place.rating_count ? <Text style={s.facts}>{` (${fmtCount(place.rating_count, lang)})`}</Text> : null}
           </Text>
         ) : null}
       </View>

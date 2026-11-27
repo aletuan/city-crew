@@ -7,7 +7,7 @@ import React from 'react';
 import { Text, View } from 'react-native';
 import { Image } from 'expo-image';
 import { Glyph, ICON } from './ui/glyph';
-import { type coverOf, fmtCount, type Place } from '../lib/data';
+import { type coverOf, fmtCount, fmtScore, type Place } from '../lib/data';
 import { useI18n } from '../lib/i18n';
 import { useIsSaved, useSaveActions } from '../lib/save';
 import { labelScaleCap, onPhoto } from '../theme';
@@ -26,10 +26,10 @@ export function PlaceCardPhoto({ place, cover, testID, inList, sash, shut }: {
   sash: string | null;
   shut: string | null;
 }) {
-  const { t } = useI18n();
+  const { t, lang } = useI18n();
   const { save } = useSaveActions();
   const saved = useIsSaved(place.slug);
-  const reviews = fmtCount(place.rating_count);
+  const reviews = fmtCount(place.rating_count, lang);
   return (
     <View testID={testID && `${testID}-frame`}>
       {cover ? (
@@ -105,7 +105,7 @@ export function PlaceCardPhoto({ place, cover, testID, inList, sash, shut }: {
       {place.rating ? (
         <View style={s.ratingSlot} pointerEvents="none">
           <Text style={s.star}>★</Text>
-          <Text style={s.ratingValue}>{place.rating}</Text>
+          <Text style={s.ratingValue}>{fmtScore(place.rating, lang)}</Text>
           {reviews ? <Text style={s.ratingCount}>({reviews})</Text> : null}
         </View>
       ) : null}
