@@ -7,7 +7,7 @@ import React from 'react';
 import { Animated, Keyboard, Platform, Text, View } from 'react-native';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { act, cleanup, propsWhere, render, renderHook, screen } from '../uitest/render';
-import { KEYBOARD_MS, KEYBOARD_RUN, keyboardCurve, useKeyboardDock, useRide } from './keyboard';
+import { KEYBOARD_MS, KEYBOARD_RUN, keyboardCurve, keyboardRunFrom, useKeyboardDock, useRide } from './keyboard';
 
 const heard: Record<string, ((e: unknown) => void)[]> = {};
 let removed = 0;
@@ -46,7 +46,37 @@ describe('keyboardCurve', () => {
   });
 });
 
+describe('keyboardRunFrom', () => {
+  it('is the whole run with no head start', () => {
+    expect(keyboardRunFrom(0)).toEqual({ easing: keyboardCurve, duration: 350 });
+  });
+  it('starts where the keyboard already is, and takes only what is left', () => {
+    const two = keyboardRunFrom(2);
+    expect(two.duration).toBe(317);
+    expect(two.easing(0)).toBeCloseTo(0.3, 6);
+    expect(two.easing(1 / 19)).toBeCloseTo(0.438, 6);
+    expect(two.easing(1)).toBe(1);
+  });
+  it('never asks for more than the run has, or less than none', () => {
+    expect(keyboardRunFrom(-3).duration).toBe(350);
+    const late = keyboardRunFrom(99);
+    expect(late.duration).toBe(17);
+    expect(late.easing(0)).toBeCloseTo(0.998, 6);
+  });
+});
+
 describe('useRide', () => {
+  it('gives each way the head start it was asked for', () => {
+    const run = timing();
+    renderHook(() => useRide(34, { rise: 1, fall: 2 }));
+    rise(336);
+    expect(run.mock.calls[0][1].duration).toBe(333);
+    expect(run.mock.calls[0][1].easing!(0)).toBeCloseTo(0.167, 6);
+    fall();
+    expect(run.mock.calls[1][1].duration).toBe(317);
+    expect(run.mock.calls[1][1].easing!(0)).toBeCloseTo(0.3, 6);
+  });
+
   it('rises by the keyboard less the margin, on the measured run and not the event\'s, and comes back', () => {
     const run = timing();
     const { result } = renderHook(() => useRide(34));

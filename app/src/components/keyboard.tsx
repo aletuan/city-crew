@@ -20,8 +20,23 @@
 // not the event's — what the event reported was never read off a device,
 // and the run it produced was the late one.
 //
-// Not verified on a phone: that the field now holds to the keyboard
-// within a frame. The next recording says.
+// ── the head start, measured on the second recording ──
+//
+// With the table alone the field was never off the screen again, but it
+// set off late: the event reaches JavaScript a frame or two after the
+// keyboard has begun, and at the keyboard's fastest that is 20 to 60 pt.
+// Frame by frame, same day, same phone (field against the Q key):
+//
+//   thread, rising    0–3 pt for the first frames, 16–25 for a few after
+//   thread, falling   two frames late, then 40–60 pt behind all the way
+//   quick, rising     one frame late, its row 20–26 pt under the keys
+//   quick, falling    on time (it sends the keyboard down itself)
+//
+// So a run can start `lead` frames into the table — where the keyboard
+// already is — and each use asks for the frames it was measured to lose
+// (`Lead`). The first frame is then a step of that size, which is the
+// distance the field was behind. Not verified on a phone: the next
+// recording says. An unmeasured use (the check-in sheet) asks for none.
 //
 // iOS alone. Android sends no `Will` event and its window gives way to
 // the keyboard itself, so nothing here moves there.
@@ -49,6 +64,19 @@ export function keyboardCurve(t: number): number {
   return KEYBOARD_RUN[i] + (KEYBOARD_RUN[i + 1] - KEYBOARD_RUN[i]) * (at - i);
 }
 
+/** The same run from `lead` frames in: its easing, and how long is left. */
+export function keyboardRunFrom(lead: number): { easing: (t: number) => number; duration: number } {
+  const last = KEYBOARD_RUN.length - 1;
+  const from = Math.min(Math.max(lead, 0), last - 1);
+  return {
+    easing: from === 0 ? keyboardCurve : (t: number) => keyboardCurve((from + t * (last - from)) / last),
+    duration: Math.round(((last - from) * 1000) / 60),
+  };
+}
+
+/** Frames of head start a field asks for, each way — see the header. */
+export type Lead = { rise?: number; fall?: number };
+
 /**
  * How far a field at the screen's foot stands above it: `ride`, to move it
  * by on the native driver, and `lift`, the same distance as a plain number
@@ -58,19 +86,19 @@ export function keyboardCurve(t: number): number {
  * indicator's inset the field keeps under its row, which the keyboard then
  * covers; never below the foot, for a keyboard shorter than that.
  */
-export function useRide(margin: number): { ride: Animated.Value; lift: number } {
+export function useRide(margin: number, { rise = 0, fall = 0 }: Lead = {}): { ride: Animated.Value; lift: number } {
   const ride = useRef(new Animated.Value(0)).current;
   const [lift, setLift] = useState(0);
   useEffect(() => {
     if (Platform.OS !== 'ios') return undefined;
-    const to = (up: number) => {
+    const to = (up: number, lead: number) => {
       setLift(up);
-      Animated.timing(ride, { toValue: 0 - up, duration: KEYBOARD_MS, easing: keyboardCurve, useNativeDriver: true }).start();
+      Animated.timing(ride, { toValue: 0 - up, ...keyboardRunFrom(lead), useNativeDriver: true }).start();
     };
-    const rise = Keyboard.addListener('keyboardWillShow', (e) => to(Math.max(0, e.endCoordinates.height - margin)));
-    const fall = Keyboard.addListener('keyboardWillHide', () => to(0));
-    return () => { rise.remove(); fall.remove(); };
-  }, [ride, margin]);
+    const up = Keyboard.addListener('keyboardWillShow', (e) => to(Math.max(0, e.endCoordinates.height - margin), rise));
+    const down = Keyboard.addListener('keyboardWillHide', () => to(0, fall));
+    return () => { up.remove(); down.remove(); };
+  }, [ride, margin, rise, fall]);
   return { ride, lift };
 }
 
@@ -84,8 +112,8 @@ export function useRide(margin: number): { ride: Animated.Value; lift: number } 
  * it — late, as the header tells. The field keeps `margin` under its row
  * the whole time; the keyboard covers it.
  */
-export function useKeyboardDock(margin: number): { dock: (field: React.ReactNode) => React.ReactElement; room: number } {
-  const { ride, lift } = useRide(margin);
+export function useKeyboardDock(margin: number, lead?: Lead): { dock: (field: React.ReactNode) => React.ReactElement; room: number } {
+  const { ride, lift } = useRide(margin, lead);
   const [height, setHeight] = useState(0);
   const dock = (field: React.ReactNode) => (
     <Animated.View
