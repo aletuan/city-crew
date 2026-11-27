@@ -51,6 +51,12 @@ vi.mock('../components/tabBarDuck', () => ({ useTabBarAway: away }));
 // The catalog's lists: where a reader who is not the owner learns whose list it is.
 const lists = vi.hoisted(() => ({ data: [] as { id: string; owner_id?: string | null }[] }));
 vi.mock('../lib/catalog', () => ({ useCollections: () => lists }));
+// What the thread is about has its own tests (`comments/ThreadAbout.ui.test.tsx`);
+// here it is a mark, so that where the page puts it can be told.
+vi.mock('./comments/ThreadAbout', async () => {
+  const R = await import('react');
+  return { default: (p: { subject: { id: string } }) => R.createElement('div', { 'data-testid': 'thread-about', 'data-about': p.subject.id }) };
+});
 const state = vi.hoisted(() => ({ lang: 'en' as 'en' | 'vi', me: 'me' as string | null }));
 const askToSignIn = vi.hoisted(() => vi.fn());
 vi.mock('../lib/auth', () => {
@@ -360,6 +366,17 @@ describe('writing', () => {
     act(() => heard.keyboardWillHide.forEach((f) => f({ endCoordinates: { height: 0 } })));
     expect(runs).toEqual([350, 317]);
     (Platform as { OS: string }).OS = os;
+  });
+
+  // What is being discussed, under the title and above the thread — not in
+  // the scroll, so it stays while the thread moves (27 Nov 2026).
+  it('says what the thread is about at its head, outside what scrolls', async () => {
+    await show([row('a', null)]);
+    const about = screen.getByTestId('thread-about');
+    expect(about.getAttribute('data-about')).toBe(SUBJECT.id);
+    const scroll = screen.getByTestId('comments-scroll');
+    expect(scroll.contains(about)).toBe(false);
+    expect(about.compareDocumentPosition(scroll) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   });
 
   // The field is docked over the foot and the thread is given the room

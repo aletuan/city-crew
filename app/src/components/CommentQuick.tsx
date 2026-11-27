@@ -33,6 +33,7 @@
 import React, { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
 import { Animated, Keyboard, Modal, Pressable, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { AboutCard, useAbout } from './CommentAbout';
 import CommentComposer from './CommentComposer';
 import { useRide } from './keyboard';
 import { useProfile, useSession } from '../lib/auth';
@@ -97,6 +98,10 @@ export default function CommentQuick({ target, onClose }: { target: Target | nul
     return () => run.stop();
   }, [showing, shown]);
 
+  // The list the words are for, lit over the dim — `CommentAbout`. Where
+  // it is not known, the field names it in a line, as it always did.
+  const about = useAbout(held ? held.subject : null);
+
   // Whom and what "@" offers: asked when a target is set, not before.
   const taggable = useTaggableQuery(target ? target.subject : null, session?.user?.id);
 
@@ -123,11 +128,13 @@ export default function CommentQuick({ target, onClose }: { target: Target | nul
           fall through to the dim. */}
       <View style={s.dock} pointerEvents="box-none">
         {held ? (
-          <Animated.View style={{ opacity: shown.interpolate(SOLID), transform: [{ translateY: ride }] }} testID="comment-quick">
+          <Animated.View style={{ opacity: shown.interpolate(SOLID), transform: [{ translateY: ride }] }} testID="comment-quick" pointerEvents="box-none">
+            {/* A press on the card is a press on the dim under it. */}
+            {about ? <View pointerEvents="none"><AboutCard about={about} /></View> : null}
             <CommentComposer
               avatarUrl={profile?.avatar_url}
               replyTo={null}
-              about={held.about}
+              about={about ? undefined : held.about}
               onSend={send}
               autoFocus
               taggable={taggable.data}
