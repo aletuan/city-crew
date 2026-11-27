@@ -2472,7 +2472,7 @@ describe('pull to refresh', () => {
       id, place_slug: `s-${id}`, place: { name_en: id, name_vi: '', i18n: null }, handle: id, full_name: id,
       avatar_url: null, note: null, likes: 0, liked: false, visitors: 1,
       faces: [{ handle: id, full_name: id, avatar_url: null }],
-      photo: { id: `p${id}`, path: `u/${id}.jpg`, width: 1, height: 1 },
+      photo: { id: `p${id}`, path: `u/${id}.jpg`, width: 1, height: 1 }, cover: null,
     }));
     act(() => { listProps().onRefresh(); });
     expect(spies.reload).toHaveBeenCalledOnce();

@@ -162,6 +162,18 @@ describe('GuestReviews', () => {
     expect(screen.queryByTestId('photo-viewer')).toBeNull();
   });
 
+  // Words or a photograph (owner, 27 Nov 2026): what a review lacks is not drawn.
+  it('draws words alone without a photo row, and a photo alone without words', async () => {
+    data.reviews = { count: 2, visits: [review({ id: 'a', photos: [] }), review({ id: 'b', handle: 'b', note: null })] };
+    await show();
+    const [words, photo] = screen.getAllByTestId('guest-review');
+    expect(within(words).getByTestId('guest-review-note').textContent).toBe('Omurice, soft.');
+    // No empty row either: it would hold the review's gap open under the words.
+    expect(within(words).queryByTestId('guest-review-photos')).toBeNull();
+    expect(within(photo).queryByTestId('guest-review-note')).toBeNull();
+    expect(within(photo).getAllByTestId('guest-review-photo')).toHaveLength(2);
+  });
+
   // Two, then the rest (owner, 27 Nov 2026).
   it('draws the two newest, and the rest only after "Show more"', async () => {
     data.reviews = {

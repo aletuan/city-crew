@@ -921,3 +921,11 @@ for f in "$ROOT"/supabase/migrations/*_explore_highlights.sql "$ROOT"/supabase/m
   run "$DB" -f "$f" >/dev/null
 done
 run "$DB" -f "$HERE/explore_highlights_test.sql"
+
+# Words or a photograph, not both (owner, 27 Nov 2026), for the place's
+# reviews and the Explore shelf; a card with no photo takes the cover.
+echo "→ words or a photograph"
+for f in "$ROOT"/supabase/migrations/*_checkin_note_or_photo.sql; do
+  run "$DB" -f "$f" >/dev/null
+done
+run "$DB" -f "$HERE/checkin_note_or_photo_test.sql"

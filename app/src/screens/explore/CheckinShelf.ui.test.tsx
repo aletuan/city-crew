@@ -35,7 +35,7 @@ const card = (id: string, over: Record<string, unknown> = {}) => ({
   id, place_slug: `slug-${id}`, place: { name_en: `Place ${id}`, name_vi: '', i18n: null },
   handle: `h${id}`, full_name: `Person ${id}`, avatar_url: null, note: null, likes: 1, liked: false,
   visitors: 1, faces: [{ handle: `h${id}`, full_name: `Person ${id}`, avatar_url: null }],
-  photo: { id: `p${id}`, path: `u/${id}/p${id}.jpg`, width: 10, height: 10 }, ...over,
+  photo: { id: `p${id}`, path: `u/${id}/p${id}.jpg`, width: 10, height: 10 }, cover: null, ...over,
 });
 const navigate = vi.fn();
 // As Explore holds it: the read in the page, the cards handed down.
@@ -168,6 +168,22 @@ describe('CheckinShelf', () => {
     const [said, silent] = screen.getAllByTestId('checkin-shelf-card');
     expect(within(said).getByTestId('checkin-shelf-note').textContent).toBe('Small, warm, clean.');
     expect(within(silent).queryByTestId('checkin-shelf-note')).toBeNull();
+  });
+
+  // Words and no photograph (27 Nov 2026): the place's cover, public, so
+  // nothing is signed for it; neither, and the card waits on its ground.
+  it('draws a visit with no photo over the place’s cover, and signs only what is the visit’s', async () => {
+    data.cards = [
+      card('a', { photo: null, note: 'Just words.', cover: { id: 'c1', uri: 'https://x/cover.jpg' } }),
+      card('b', { photo: null, cover: null }),
+      card('c'),
+    ];
+    await show();
+    const [words, bare] = screen.getAllByTestId('checkin-shelf-card');
+    expect(words.querySelector('img[src="https://x/cover.jpg"]')).not.toBeNull();
+    expect(within(words).getByTestId('checkin-shelf-note').textContent).toBe('Just words.');
+    expect(within(bare).getByTestId('checkin-shelf-waiting')).toBeTruthy();
+    expect(data.signCheckinPhotos.mock.calls.flatMap(([paths]) => paths)).toEqual(['u/c/pc.jpg']);
   });
 
   // The owner's day (26 Nov 2026): two cards in the morning, a third
