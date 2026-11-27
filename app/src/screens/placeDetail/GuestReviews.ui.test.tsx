@@ -184,6 +184,7 @@ describe('GuestReviews', () => {
     expect(getComputedStyle(within(first).getByTestId('guest-review-photos')).gap).toBe(`${TILE_GAP}px`);
     expect(getComputedStyle(second).paddingTop).toBe('20px');
     expect(getComputedStyle(screen.getByTestId('guest-reviews')).gap).toBe('20px');
+    expect(getComputedStyle(screen.getByTestId('guest-reviews')).marginTop).toBe('14px');
   });
 
   // Two, then the rest (owner, 27 Nov 2026).

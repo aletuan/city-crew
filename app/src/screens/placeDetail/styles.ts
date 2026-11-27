@@ -91,9 +91,13 @@ const GLYPH_LIFT = (LABEL_LINE - GLYPH_BOX) / 2;
  *  this app supports; the rest is a tap away. */
 export const ADDRESS_LINES = 2;
 
-/** The facts row's height — the category chips and Check in beside them.
- *  44, the height the same chips have on Search and Places. */
-const FACT_HEIGHT = 44;
+/** Check-in's drawn height: 36, its target still 44 (`CheckinPill`'s
+ *  slop). It was 44 drawn, from the days it sat in the chips' row at the
+ *  chips' height; the chips here are 22 now and the score beside it 24,
+ *  so the pill alone set the line's height and the line stood 26pt off
+ *  the photograph and 26pt off the kinds, against 14 between every card
+ *  below (owner's screenshot, 27 Nov 2026). */
+export const PILL_HEIGHT = 36;
 
 /** How far in from the photograph card's edge the page count and the
  *  credit sit. The page margin it used was for a picture running to the
@@ -184,7 +188,9 @@ export const s = StyleSheet.create({
   // pill: the line is one 24pt row of text beside a 44pt control, and a
   // top-aligned score sat 10pt high of the pill's word.
   metaRow: { flexDirection: 'row', alignItems: 'center', marginTop: 8, minHeight: 24 },
-  kindRow: { marginTop: 14 },
+  // 12, the head's own step — photograph, score, kinds — as the score is
+  // 12 under the photograph; the cards below keep `cardGap` between them.
+  kindRow: { marginTop: 12 },
   metaFacts: { flex: 1, flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', columnGap: 12, rowGap: 4 },
   priceLine: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   // The score keeps the size and weight it wore inside the badge. It was
@@ -205,7 +211,7 @@ export const s = StyleSheet.create({
   checkin: {
     flexDirection: 'row', alignItems: 'center', gap: 7,
     borderWidth: 1, borderColor: colors.accentLine, borderRadius: radius.pill,
-    paddingHorizontal: 12, paddingVertical: 6, minHeight: FACT_HEIGHT,
+    paddingHorizontal: 12, paddingVertical: 4, minHeight: PILL_HEIGHT,
   },
   // Worn: the one fill this row is allowed, because it is a state. The
   // hairline stays, transparent, so the pill keeps its exact size. It
@@ -262,7 +268,7 @@ export const s = StyleSheet.create({
   // so the paragraph's left edge is the address's. 10 between the
   // paragraph block and the chips, the gap the chips used to carry as a
   // margin, now the card's so it holds whichever of the two is first.
-  whyCard: { marginTop: 14, padding: space.cardPadding, gap: 10 },
+  whyCard: { marginTop: space.cardGap, padding: space.cardPadding, gap: 10 },
   why: { gap: 6 },
   // Baseline-aligned, not centred: the mark is a glyph beside a word and
   // sits on the word's line, its ink at cap height the way an opening
@@ -302,7 +308,9 @@ export const s = StyleSheet.create({
 
   // The Card supplies ground, border and radius; the horizontal inset
   // lives here so each row's hairline can run to the card's edge.
-  infoGroup: { marginTop: 18, paddingHorizontal: space.cardPadding },
+  // `cardGap` above, as every card on this page: it was 18 here and 16
+  // above the guide's panel, the only two that stood apart.
+  infoGroup: { marginTop: space.cardGap, paddingHorizontal: space.cardPadding },
   // The map is the third thing in the address's column, under the label
   // and the street:
   //

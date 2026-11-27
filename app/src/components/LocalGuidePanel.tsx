@@ -171,7 +171,9 @@ const s = StyleSheet.create({
   // The accent at tint strength, the one place on this screen that takes a
   // fill: it is an offer rather than a fact, and everything around it —
   // the facts row, the info card — is glass or paper.
-  slot: { marginTop: space.headingToContent },
+  // The page's gap between cards (`cardGap`), not a heading's: the panel
+  // is one more card in the place's column.
+  slot: { marginTop: space.cardGap },
   panel: {
     backgroundColor: colors.accentSoft,
     borderRadius: radius.card, padding: space.cardPadding,
