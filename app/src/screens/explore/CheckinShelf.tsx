@@ -85,6 +85,23 @@
 // choosing where to go, and the place's page carries these visits in
 // its "Đánh giá từ khách".
 //
+// ── the first frame ──
+//
+// The last launch's answer, then this one's (`usePersistedFetch`, keyed
+// by city and reader, as the catalog is). Read fresh every launch, the
+// shelf was the one thing on Explore with nothing to show on the first
+// frame: the places and the collections above and below it come from
+// the last launch's cache, and the shelf — hidden under `FEATURED_MIN` —
+// waited for the session to be restored, then for its function (95 ms on
+// the server, measured on live, 27 Nov 2026, before the trip there and
+// back), and then appeared 330pt tall above the places, pushing the list
+// a reader had started on down the screen (owner, on a phone).
+//
+// The photographs still come a beat later: a signed link lives an hour
+// (`SIGNED_FOR_S`), so a card from the cache is drawn on its ground and
+// its picture is signed again before it shows. The layout no longer
+// moves; only the pictures arrive.
+//
 // ── who asks ──
 //
 // The read is `useHighlights`, called by Explore and handed down, not
@@ -107,7 +124,8 @@ import { useScheme } from '../../lib/theme';
 import { useSignedPhotos } from '../../components/useSignedPhotos';
 import { useSession } from '../../lib/auth';
 import { useCurrentCity } from '../../lib/city';
-import { fetchHighlightCheckins, likeCheckin, useFetch, type Fetch, type HighlightCheckin } from '../../lib/data';
+import { fetchHighlightCheckins, likeCheckin, usePersistedFetch, type Fetch, type HighlightCheckin } from '../../lib/data';
+import { CACHE_CATALOG, cacheKey } from '../../lib/data/cache';
 import { atHandle } from '../../lib/handle';
 import { useI18n } from '../../lib/i18n';
 import { localized } from '../../lib/localized';
@@ -144,7 +162,8 @@ const FACE = 22;
 const RING = 2;
 
 /** The shelf's read: this week's cards for the reader's city, nothing
- *  signed out, asked again on a return to the app — see "who asks". */
+ *  signed out, asked again on a return to the app — see "who asks" — and
+ *  kept between launches, per city and reader — see "the first frame". */
 export function useHighlights(): Fetch<HighlightCheckin[]> {
   const { city } = useCurrentCity();
   const { session } = useSession();
@@ -154,7 +173,9 @@ export function useHighlights(): Fetch<HighlightCheckin[]> {
     () => (uid && cityId ? fetchHighlightCheckins(cityId) : Promise.resolve(NONE)),
     [uid, cityId],
   );
-  const read = useFetch(fetcher, NONE);
+  const read = usePersistedFetch(
+    CACHE_CATALOG && uid && cityId ? cacheKey('highlights', cityId, uid) : null, fetcher, NONE,
+  );
   useRefreshOnForeground(read);
   return read;
 }
