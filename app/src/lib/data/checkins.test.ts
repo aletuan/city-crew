@@ -267,18 +267,25 @@ describe('fetchGuestReviews', () => {
     expect(fake().log).toEqual([{ op: 'rpc', fn: 'place_guest_reviews', payload: { p_slug: 'omu' }, filters: [] }]);
   });
 
-  it('draws no row that is not a note and a photo, and reads what is missing as nothing', async () => {
+  // Words or a photograph (27 Nov 2026): either makes a review; neither,
+  // or blank words alone, does not.
+  it('draws words alone and a photo alone, no row with neither, and reads what is missing as nothing', async () => {
     fake().replies({ data: {
       visits: [
         { id: 'a', note: 'No photo.', photos: [] },
         { id: 'b', note: null, photos: [ph] },
         { note: 'No id.', photos: [ph] },
         { id: 'd', note: 'Bare.', photos: [ph], avatar_url: '', likes: '3', liked: 'yes' },
+        { id: 'e', note: '  ', photos: [] },
+        { id: 'f', photos: null },
       ],
     } });
-    expect(await fetchGuestReviews('omu')).toEqual({ count: 0, visits: [{
-      id: 'd', user_id: '', handle: '', full_name: '', avatar_url: null, day: '', note: 'Bare.', photos: [ph], likes: 0, liked: false,
-    }] });
+    const bare = { user_id: '', handle: '', full_name: '', avatar_url: null, day: '', likes: 0, liked: false };
+    expect(await fetchGuestReviews('omu')).toEqual({ count: 0, visits: [
+      { id: 'a', ...bare, note: 'No photo.', photos: [] },
+      { id: 'b', ...bare, note: null, photos: [ph] },
+      { id: 'd', ...bare, note: 'Bare.', photos: [ph] },
+    ] });
     fake().replies({ data: { count: 2, visits: 'none' } });
     expect(await fetchGuestReviews('omu')).toEqual({ count: 2, visits: [] });
   });
@@ -305,30 +312,38 @@ describe('fetchHighlightCheckins', () => {
     expect(await fetchHighlightCheckins('hanoi')).toEqual([{
       id: 'k1', place_slug: 'omu', place: { name_en: 'Omu', name_vi: 'Ômu', i18n: { ja: { name: 'オム' } } },
       handle: 'lan', full_name: 'Lan Pham', avatar_url: 'https://x/a.jpg', note: 'Soft.', likes: 3, liked: true, photo: ph,
+      cover: null,
       visitors: 2,
       faces: [{ handle: 'lan', full_name: 'Lan Pham', avatar_url: 'https://x/a.jpg' }, { handle: 'minh', full_name: '', avatar_url: null }],
     }]);
     expect(fake().log).toEqual([{ op: 'rpc', fn: 'featured_checkins', payload: { p_city: 'hanoi' }, filters: [] }]);
   });
 
-  it('draws no card without its photo, its place or its id, and reads what is missing as nothing', async () => {
+  // A card without its own photograph is drawn over the place's cover
+  // (27 Nov 2026); one without its place or id is no card.
+  it('draws no card without its place or its id, takes the cover for a visit with no photo, and reads what is missing as nothing', async () => {
     fake().replies({ data: [
-      { id: 'a', place_slug: 'omu' },
-      { id: 'b', place_slug: 'omu', photo: { id: 'x' } },
+      { id: 'a', place_slug: 'omu', cover: { id: 'c1', uri: 'https://x/cover.jpg' } },
+      { id: 'b', place_slug: 'omu', photo: { id: 'x' }, cover: { id: 'c1', uri: '' } },
       { place_slug: 'omu', photo: ph },
       { id: 'd', photo: ph },
       { id: 'e', place_slug: 'omu', photo: ph, avatar_url: '', note: 7, likes: '2', liked: 'yes', visitors: 0, faces: [] },
       // An answer from before the card was a place's.
       { id: 'f', place_slug: 'omu', photo: ph, handle: 'lan', visitors: '2', faces: 'lan' },
     ] });
+    const bare = { place: { name_en: '', name_vi: '', i18n: null }, full_name: '', avatar_url: null, note: null, likes: 0, liked: false, visitors: 1 };
     expect(await fetchHighlightCheckins('hanoi')).toEqual([{
-      id: 'e', place_slug: 'omu', place: { name_en: '', name_vi: '', i18n: null },
-      handle: '', full_name: '', avatar_url: null, note: null, likes: 0, liked: false, photo: ph,
-      visitors: 1, faces: [{ handle: '', full_name: '', avatar_url: null }],
+      id: 'a', place_slug: 'omu', ...bare, handle: '', photo: null, cover: { id: 'c1', uri: 'https://x/cover.jpg' },
+      faces: [{ handle: '', full_name: '', avatar_url: null }],
     }, {
-      id: 'f', place_slug: 'omu', place: { name_en: '', name_vi: '', i18n: null },
-      handle: 'lan', full_name: '', avatar_url: null, note: null, likes: 0, liked: false, photo: ph,
-      visitors: 1, faces: [{ handle: 'lan', full_name: '', avatar_url: null }],
+      id: 'b', place_slug: 'omu', ...bare, handle: '', photo: null, cover: null,
+      faces: [{ handle: '', full_name: '', avatar_url: null }],
+    }, {
+      id: 'e', place_slug: 'omu', ...bare, handle: '', photo: ph, cover: null,
+      faces: [{ handle: '', full_name: '', avatar_url: null }],
+    }, {
+      id: 'f', place_slug: 'omu', ...bare, handle: 'lan', photo: ph, cover: null,
+      faces: [{ handle: 'lan', full_name: '', avatar_url: null }],
     }]);
     fake().replies({ data: null });
     expect(await fetchHighlightCheckins('hanoi')).toEqual([]);

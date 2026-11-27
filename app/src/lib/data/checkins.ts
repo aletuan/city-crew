@@ -159,7 +159,9 @@ export type GuestReview = {
   avatar_url: string | null;
   /** The visit's day where the place is, as ISO `YYYY-MM-DD`. */
   day: string;
-  note: string;
+  /** Words, photos or both: a review is one or the other since 27 Nov
+   *  2026 (`20261127100000_checkin_note_or_photo.sql`). */
+  note: string | null;
   photos: CheckinPhoto[];
   likes: number;
   liked: boolean;
@@ -180,9 +182,10 @@ export async function fetchGuestReviews(slug: string): Promise<GuestReviews | nu
     count: typeof d.count === 'number' ? d.count : 0,
     visits: rows.flatMap((r) => {
       const photos = visitPhotosOf(r.photos);
-      // A review is a note and a photo; the server sends no other, and a
-      // row that arrives without either is not one to draw.
-      if (typeof r.id !== 'string' || typeof r.note !== 'string' || photos.length === 0) return [];
+      const note = typeof r.note === 'string' && r.note.trim() ? r.note : null;
+      // A review is words or a photograph; the server sends no other, and
+      // a row that arrives with neither is not one to draw.
+      if (typeof r.id !== 'string' || (!note && photos.length === 0)) return [];
       return [{
         id: r.id,
         user_id: String(r.user_id ?? ''),
@@ -190,7 +193,7 @@ export async function fetchGuestReviews(slug: string): Promise<GuestReviews | nu
         full_name: String(r.full_name ?? ''),
         avatar_url: typeof r.avatar_url === 'string' && r.avatar_url ? r.avatar_url : null,
         day: String(r.day ?? ''),
-        note: r.note,
+        note,
         photos,
         likes: typeof r.likes === 'number' ? r.likes : 0,
         liked: r.liked === true,
@@ -220,7 +223,11 @@ export type HighlightCheckin = {
   liked: boolean;
   visitors: number;
   faces: HighlightFace[];
-  photo: CheckinPhoto;
+  /** The visit's own first photo, private and signed to be seen. */
+  photo: CheckinPhoto | null;
+  /** The place's cover, public — drawn when the visit brought words and no
+   *  photo (`20261127100000_checkin_note_or_photo.sql`). */
+  cover: { id: string; uri: string } | null;
 };
 
 const faceOf = (r: Record<string, unknown>): HighlightFace => ({
@@ -237,8 +244,9 @@ export async function fetchHighlightCheckins(cityId: string): Promise<HighlightC
   const rows = Array.isArray(data) ? data as Record<string, unknown>[] : [];
   return rows.flatMap((r) => {
     const [photo] = visitPhotosOf(r.photo ? [r.photo] : []);
-    // A card is its photo; a row that came without one is not a card.
-    if (typeof r.id !== 'string' || typeof r.place_slug !== 'string' || !photo) return [];
+    const c = r.cover as { id?: unknown; uri?: unknown } | null | undefined;
+    const cover = c && typeof c.id === 'string' && typeof c.uri === 'string' && c.uri ? { id: c.id, uri: c.uri } : null;
+    if (typeof r.id !== 'string' || typeof r.place_slug !== 'string') return [];
     const lead = faceOf(r);
     return [{
       id: r.id,
@@ -255,7 +263,8 @@ export async function fetchHighlightCheckins(cityId: string): Promise<HighlightC
       visitors: typeof r.visitors === 'number' && r.visitors > 0 ? r.visitors : 1,
       faces: Array.isArray(r.faces) && r.faces.length > 0
         ? (r.faces as Record<string, unknown>[]).map(faceOf) : [lead],
-      photo,
+      photo: photo ?? null,
+      cover,
     }];
   });
 }

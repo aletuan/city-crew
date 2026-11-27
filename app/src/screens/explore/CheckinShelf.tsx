@@ -25,6 +25,11 @@
 // left the top third of it to look at, and the cut line read as a
 // sentence dropped halfway.
 //
+// A visit with words and no photograph (allowed since 27 Nov 2026, the
+// owner: words or a photograph is enough) is drawn over the place's own
+// cover, which the server sends beside it; a flat card on a shelf of
+// photographs read as a hole. Neither, and the card waits on its ground.
+//
 // Under, not over: the words are what a check-in has that a collection's
 // card has not, and on paper they read at the body's contrast with no
 // dark laid on the photograph to carry them. One quoted line was
@@ -155,7 +160,7 @@ export function useHighlights(): Fetch<HighlightCheckin[]> {
 
 export function CheckinShelf({ navigation, cards }: { navigation: Nav; cards: readonly HighlightCheckin[] }) {
   const { t, lang } = useI18n();
-  const linkOf = useSignedPhotos(cards.map((c) => c.photo), cards.length >= FEATURED_MIN);
+  const linkOf = useSignedPhotos(cards.flatMap((c) => (c.photo ? [c.photo] : [])), cards.length >= FEATURED_MIN);
   const [pressed, setPressed] = useState<Record<string, boolean>>({});
 
   // The collection shelf's card, so the two shelves are one page.
@@ -187,7 +192,9 @@ export function CheckinShelf({ navigation, cards }: { navigation: Nav; cards: re
         contentContainerStyle={{ paddingHorizontal: space.page, gap: space.cardGap }}
       >
         {cards.map((c) => {
-          const uri = linkOf(c.photo);
+          // The visit's photograph; for one that brought only words, the
+          // place's cover (see "what a card is").
+          const uri = c.photo ? linkOf(c.photo) : c.cover?.uri ?? null;
           const liked = pressed[c.id] ?? c.liked;
           const name = localized(c.place, 'name', lang);
           const more = c.visitors - c.faces.length;
@@ -203,7 +210,7 @@ export function CheckinShelf({ navigation, cards }: { navigation: Nav; cards: re
             >
               <View style={s.photo} testID="checkin-shelf-photo">
                 {uri
-                  ? <Image source={{ uri, cacheKey: c.photo.id }} style={StyleSheet.absoluteFill} contentFit="cover" transition={200} />
+                  ? <Image source={{ uri, cacheKey: c.photo?.id ?? c.cover?.id }} style={StyleSheet.absoluteFill} contentFit="cover" transition={200} />
                   : <View style={[StyleSheet.absoluteFill, { backgroundColor: colors.bgElevated }]} testID="checkin-shelf-waiting" />}
                 <LinearGradient colors={NAME_SCRIM} style={s.nameScrim} pointerEvents="none" />
                 <Text style={[page.shelfCardTitle, s.name]} numberOfLines={1}>{name}</Text>

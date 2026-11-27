@@ -1,6 +1,6 @@
 // "Đánh giá từ khách" — what guests said about the place (owner, 26 Nov
-// 2026; `20261126120000_place_guest_reviews.sql` has which visits, and
-// why only those).
+// 2026; `20261126120000_place_guest_reviews.sql` and
+// `20261127100000_checkin_note_or_photo.sql` have which visits, and why).
 //
 // ── where it sits ──
 //
@@ -16,6 +16,8 @@
 // The count, always, when there is one — every check-in, a sum that
 // names nobody. Then each review: who, which day (never the hour), the
 // note in full, the photos at the size a thumb can press, and the heart.
+// A review is words or photographs since 27 Nov 2026 (the owner; it was
+// both): whichever is missing is simply not drawn.
 // A guest's name opens their page; a photo opens the viewer. Nothing at
 // all for a place nobody has checked in at: an empty section on a
 // catalog page reads as a verdict.
@@ -176,8 +178,9 @@ export function GuestReviews({ slug, onPerson }: {
                 countTestID="guest-review-likes"
               />
             </View>
-            <Text style={s.note} testID="guest-review-note">{v.note}</Text>
-            <View style={s.photos}>
+            {v.note ? <Text style={s.note} testID="guest-review-note">{v.note}</Text> : null}
+            {v.photos.length > 0 ? (
+            <View style={s.photos} testID="guest-review-photos">
               {v.photos.map((ph, at) => {
                 const uri = linkOf(ph);
                 return (
@@ -196,6 +199,7 @@ export function GuestReviews({ slug, onPerson }: {
                 );
               })}
             </View>
+            ) : null}
           </View>
         );
       })}
