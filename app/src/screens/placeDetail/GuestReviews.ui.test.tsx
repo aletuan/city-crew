@@ -34,6 +34,7 @@ vi.mock('react-native', async (orig) => ({
 vi.mock('react-native-safe-area-context', () => ({ useSafeAreaInsets: () => ({ top: 0, bottom: 0, left: 0, right: 0 }) }));
 
 import { forgetSignedPhotos } from '../../components/useSignedPhotos';
+import { TILE_GAP } from '../../components/VisitPhotos';
 import { GuestReviews } from './GuestReviews';
 
 const ph = (id: string, owner = 'lan') => ({ id, path: `${owner}/k1/${id}.jpg`, width: 1200, height: 900 });
@@ -172,6 +173,17 @@ describe('GuestReviews', () => {
     expect(within(words).queryByTestId('guest-review-photos')).toBeNull();
     expect(within(photo).queryByTestId('guest-review-note')).toBeNull();
     expect(within(photo).getAllByTestId('guest-review-photo')).toHaveLength(2);
+  });
+
+  // One set of photos, one spacing: the check-in sheet's (27 Nov 2026).
+  // And 20 on each side of the hairline between two reviews.
+  it('spaces a review’s photos as the check-in sheet does, and reviews 20 apart', async () => {
+    data.reviews = { count: 2, visits: [review({ id: 'a' }), review({ id: 'b', handle: 'b' })] };
+    await show();
+    const [first, second] = screen.getAllByTestId('guest-review');
+    expect(getComputedStyle(within(first).getByTestId('guest-review-photos')).gap).toBe(`${TILE_GAP}px`);
+    expect(getComputedStyle(second).paddingTop).toBe('20px');
+    expect(getComputedStyle(screen.getByTestId('guest-reviews')).gap).toBe('20px');
   });
 
   // Two, then the rest (owner, 27 Nov 2026).

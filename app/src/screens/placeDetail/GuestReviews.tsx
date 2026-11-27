@@ -64,6 +64,7 @@ import { Modal, StyleSheet, Text, View } from 'react-native';
 import { Image } from 'expo-image';
 import LikeHeart from '../../components/LikeHeart';
 import PhotoViewer from '../../components/PhotoViewer';
+import { TILE_GAP } from '../../components/VisitPhotos';
 import { PressableScale, fireHaptic } from '../../components/ui';
 import { Avatar, Card } from '../../components/ui/surfaces';
 import { Glyph, ICON } from '../../components/ui/glyph';
@@ -79,7 +80,7 @@ import { s as page } from './styles';
 
 /** A photo's tile: three across the card's text column on the narrowest
  *  phone (320pt less the screen's and the card's padding is ~256, and
- *  three of 76 with two 8pt gaps is 244), and a thumb's 44 with room. */
+ *  three of 76 with two 10pt gaps is 248), and a thumb's 44 with room. */
 const TILE = 76;
 
 export function GuestReviews({ slug, onPerson }: {
@@ -234,13 +235,18 @@ export function GuestReviews({ slug, onPerson }: {
 const PREVIEW = 2;
 
 const s = StyleSheet.create({
-  // The highlights card's measure: 14 above, the card's padding, 10
-  // between its rows.
-  card: { marginTop: 14, padding: 16, gap: 14 },
+  // 14 above, as the highlights card; 20 between its rows, so the same
+  // 20 stands on each side of a review's hairline. It was 14, and on a
+  // phone the reviews read as run together (owner, 27 Nov 2026; about
+  // 13pt a side measured off the screenshot). Space rather than a
+  // darker line: the hairline is `borderGlassSoft`, every list's
+  // divider in the app, and a heavier one would turn the card into a
+  // table.
+  card: { marginTop: 14, padding: 16, gap: 20 },
   head: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   count: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   countText: { color: colors.textTertiary, fontSize: 13 },
-  review: { gap: 8, paddingTop: 14, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.borderGlassSoft },
+  review: { gap: 8, paddingTop: 20, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.borderGlassSoft },
   who: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   whoPress: { flexDirection: 'row', alignItems: 'center', gap: 8, flexShrink: 1 },
   name: { color: colors.text, fontSize: 15, fontWeight: font.semibold, flexShrink: 1 },
@@ -255,7 +261,9 @@ const s = StyleSheet.create({
   more: { alignItems: 'center', justifyContent: 'center', minHeight: 44 },
   moreText: { color: colors.accent, fontSize: 14, fontWeight: font.semibold },
   note: { color: colors.text, fontSize: 15, lineHeight: 21 },
-  photos: { flexDirection: 'row', gap: 8 },
+  // The check-in sheet's gap between the same photos (`TILE_GAP`, 10;
+  // it was 8 here): one set of pictures, one spacing, wherever shown.
+  photos: { flexDirection: 'row', gap: TILE_GAP },
   tile: { width: TILE, height: TILE, borderRadius: 10 },
   // The accent's tint, as a card with no photograph wears (`ActivityCard`).
   tint: { backgroundColor: colors.accentSoft },
