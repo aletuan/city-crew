@@ -27,7 +27,14 @@ import { colors } from '../theme';
 import { PencilGlyph } from './PencilGlyph';
 import { PressableScale } from './ui';
 
-export default function VisitNote({ note, onEdit }: { note: string | null | undefined; onEdit: () => void }) {
+export default function VisitNote({ note, onEdit, lead = false }: {
+  note: string | null | undefined;
+  onEdit: () => void;
+  /** At the head of a card (`ActivityCard` › `lead`): the words at the
+   *  card's reading size and ink, four lines. The whole note is a press
+   *  away in the sheet that edits it, so there is no read-more here. */
+  lead?: boolean;
+}) {
   const { t } = useI18n();
   const ask = t('Write a few lines about this visit', 'Viết vài dòng về lần ghé này', 'この訪問についてひとこと書く', '为这次打卡写几句', '為這次打卡寫幾句');
   return (
@@ -47,7 +54,7 @@ export default function VisitNote({ note, onEdit }: { note: string | null | unde
     >
       {note ? (
         <>
-          <Text style={s.said} numberOfLines={2}>{note}</Text>
+          <Text style={lead ? s.lead : s.said} numberOfLines={lead ? 4 : 2}>{note}</Text>
           <PencilGlyph color={colors.sun} />
         </>
       ) : (
@@ -63,5 +70,6 @@ export default function VisitNote({ note, onEdit }: { note: string | null | unde
 const s = StyleSheet.create({
   row: { flexDirection: 'row', alignItems: 'center', gap: 6, alignSelf: 'flex-start', marginTop: 2 },
   said: { flexShrink: 1, color: colors.textSecondary, fontSize: 14, lineHeight: 20 },
+  lead: { flexShrink: 1, color: colors.text, fontSize: 16, lineHeight: 22 },
   ask: { flexShrink: 1, color: colors.textTertiary, fontSize: 14, lineHeight: 20, fontStyle: 'italic' },
 });

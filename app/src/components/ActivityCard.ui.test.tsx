@@ -9,7 +9,7 @@
 import React from 'react';
 import { Text } from 'react-native';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { cleanup, fireEvent, render, screen } from '../uitest/render';
+import { cleanup, fireEvent, render, screen, within } from '../uitest/render';
 import type { Preview, PreviewComment } from '../lib/comments';
 
 const state = vi.hoisted(() => ({ lang: 'en' as 'en' | 'vi' }));
@@ -33,6 +33,7 @@ const show = (comments?: Preview, withThread = true) => render(
   />,
 );
 const bubble = () => screen.queryByTestId('activity-comments');
+const base = { who: 'Lan', did: ' checked in', title: 'Old Quarter eats', meta: 'Cafés · Hanoi', liked: false, likes: 0, onOpen: () => {} };
 
 beforeEach(() => { vi.clearAllMocks(); state.lang = 'en'; });
 afterEach(cleanup);
@@ -139,6 +140,36 @@ describe('what a card draws under its words', () => {
     expect(screen.queryByTestId('activity-desc')).toBeNull();
     rerender(<ActivityCard who="Lan" did=" checked in" title="Cộng" meta="Cafés" liked={false} likes={0} onOpen={() => {}} />);
     expect(screen.queryByTestId('under-it')).toBeNull();
+  });
+});
+
+// Somebody's own words first (owner, 28 Nov 2026): under the head, before
+// the picture, outside the press into the place; the place a row after.
+describe('a card that leads with words', () => {
+  it('draws them after the head and before the picture, outside the press', () => {
+    render(<ActivityCard {...base} uri="https://img/c.jpg" lead={<Text>Crisp sourdough.</Text>} placeRow goes />);
+    const lead = screen.getByTestId('activity-lead');
+    const open = screen.getByTestId('activity-open');
+    expect(lead.textContent).toBe('Crisp sourdough.');
+    expect(open.contains(lead)).toBe(false);
+    expect(screen.getByTestId('activity-line').compareDocumentPosition(lead) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(lead.compareDocumentPosition(open.querySelector('img')!) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+
+  it('puts the place in a row with its pin and its ›, and keeps what is drawn under it', () => {
+    render(<ActivityCard {...base} lead={<Text>w</Text>} placeRow desc="never drawn here" under={<Text testID="u">under</Text>} />);
+    const row = screen.getByTestId('activity-place-row');
+    expect(row.textContent).toContain(base.title);
+    expect(row.textContent).toContain(base.meta);
+    expect(within(row).getByTestId('activity-goes')).toBeTruthy();
+    expect(screen.getByTestId('u')).toBeTruthy();
+    expect(screen.queryByTestId('activity-desc')).toBeNull();
+  });
+
+  it('is the card it was without them', () => {
+    render(<ActivityCard {...base} />);
+    expect(screen.queryByTestId('activity-lead')).toBeNull();
+    expect(screen.queryByTestId('activity-place-row')).toBeNull();
   });
 });
 

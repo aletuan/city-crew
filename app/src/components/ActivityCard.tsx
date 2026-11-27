@@ -46,6 +46,18 @@
 // in the quiet grey, the number, and nothing to press, as its own page
 // draws them. With none kept it ends in the card's own padding.
 //
+// ── somebody's own words first (owner, 28 Nov 2026) ──
+//
+// A visit's note was the card's last line: 14pt in the secondary ink,
+// under the photograph, the place's 17pt name and its kind, held to two
+// lines with an ellipsis and nothing to open the rest. It is the one thing
+// on the card that is found nowhere else — the picture and the name are
+// the place's own page — and it read as a caption to them. A card handed
+// `lead` draws it under the head, before the picture, and the place goes
+// to a row under the picture (`placeRow`): a pin, the name at 15, the kind
+// and city, and the › that says the row opens the place. A card with no
+// words to lead with keeps the picture and the name first, as before.
+//
 // ── a visit's own photos (K4 of `docs/checkin-photos-plan.md`) ──
 //
 // A visit with photos wears its first in the cover's place (`photo`),
@@ -137,7 +149,7 @@ function CopyFoot({ copy }: { copy: CardCopy }) {
 export type CardPhoto = { pages: readonly { uri: string; cacheKey: string }[]; onPress: (i: number) => void };
 
 export default function ActivityCard({
-  face, who, did, didGlyph, when, mark, title, uri, photo, meta, desc, under, liked, likes, onOpen, onHeart, comments, onComments, commentsOff, copy, onMore, goes, testID,
+  face, who, did, didGlyph, when, mark, lead, title, uri, photo, meta, desc, under, placeRow, liked, likes, onOpen, onHeart, comments, onComments, commentsOff, copy, onMore, goes, testID,
 }: {
   /** Whose face, as `Avatar` takes it. */
   face?: string | null;
@@ -155,6 +167,10 @@ export default function ActivityCard({
   when?: string;
   /** Who can see it, when that is not everybody. */
   mark?: ActivityMark | null;
+  /** Somebody's own words, drawn under the head and before the picture —
+   *  see the header. Outside the card's press: a control of its own (a
+   *  read-more, the owner's pencil) is never inside another. */
+  lead?: React.ReactNode;
   title: string;
   uri?: string;
   /** Drawn instead of `uri`, as its own press — see the header. */
@@ -166,6 +182,9 @@ export default function ActivityCard({
    *  page, which a press edits (`VisitNote`). Inside the card's press,
    *  and React Native gives the press to the inner one. */
   under?: React.ReactNode;
+  /** The place as a row under the picture, for a card that leads with
+   *  words — see the header. */
+  placeRow?: boolean;
   liked: boolean;
   likes: number;
   onOpen: () => void;
@@ -241,6 +260,7 @@ export default function ActivityCard({
           </PressableScale>
         ) : null}
       </View>
+      {lead ? <View style={s.lead} testID="activity-lead">{lead}</View> : null}
       {photo ? <PhotoPress photo={photo} /> : null}
       <PressableScale
         onPress={onOpen}
@@ -257,17 +277,9 @@ export default function ActivityCard({
           // same reason).
           ? <Image source={{ uri }} style={s.photo} contentFit="cover" transition={160} cachePolicy="memory-disk" />
           : <View style={[s.photo, s.tint]} testID="activity-tint" />}
-        <View style={s.words}>
-          {goes ? (
-            <View style={s.goes}>
-              <Text style={[s.title, s.goesTitle]} numberOfLines={2}>{title}</Text>
-              <Glyph name="chevron-forward" size={MARK} color={colors.textTertiary} testID="activity-goes" />
-            </View>
-          ) : <Text style={s.title} numberOfLines={2}>{title}</Text>}
-          <Text style={s.meta} numberOfLines={1}>{meta}</Text>
-          {desc ? <Text style={s.desc} numberOfLines={2} testID="activity-desc">{desc}</Text> : null}
-          {under}
-        </View>
+        {placeRow
+          ? <PlaceRow title={title} meta={meta} under={under} />
+          : <Words title={title} meta={meta} desc={desc} under={under} goes={goes} />}
       </PressableScale>
       {onHeart ? (
         <View style={s.foot}>
@@ -357,8 +369,56 @@ function PhotoPress({ photo }: { photo: CardPhoto }) {
   );
 }
 
+/** The words under the picture: the title, a › when the press goes
+ *  elsewhere, the meta line, the description and whatever is drawn under. */
+function Words({ title, meta, desc, under, goes }: {
+  title: string; meta: string; desc?: string | null; under?: React.ReactNode; goes?: boolean;
+}) {
+  return (
+    <View style={s.words}>
+      {goes ? (
+        <View style={s.goes}>
+          <Text style={[s.title, s.goesTitle]} numberOfLines={2}>{title}</Text>
+          <Glyph name="chevron-forward" size={MARK} color={colors.textTertiary} testID="activity-goes" />
+        </View>
+      ) : <Text style={s.title} numberOfLines={2}>{title}</Text>}
+      <Text style={s.meta} numberOfLines={1}>{meta}</Text>
+      {desc ? <Text style={s.desc} numberOfLines={2} testID="activity-desc">{desc}</Text> : null}
+      {under}
+    </View>
+  );
+}
+
+/** The place as a row, under a picture that words came before. */
+function PlaceRow({ title, meta, under }: { title: string; meta: string; under?: React.ReactNode }) {
+  return (
+    <View style={s.placeRowWrap}>
+      <View style={s.placeRow} testID="activity-place-row">
+        <Glyph name="location-outline" size={ICON.action} color={colors.textSecondary} />
+        <View style={s.placeWords}>
+          <Text style={s.placeName} numberOfLines={1}>{title}</Text>
+          <Text style={s.meta} numberOfLines={1}>{meta}</Text>
+        </View>
+        <Glyph name="chevron-forward" size={MARK} color={colors.textTertiary} testID="activity-goes" />
+      </View>
+      {under}
+    </View>
+  );
+}
+
 const s = StyleSheet.create({
   off: { opacity: 0.35 },
+  // Under the head's 12, the words at the card's edge, 12 to the picture.
+  lead: { paddingHorizontal: space.cardPadding, paddingBottom: 12 },
+  placeRowWrap: { paddingHorizontal: space.cardPadding, paddingTop: 12, gap: 6 },
+  // A hairline box, as a place's row is in a list: something to press,
+  // where the plain words above were something to read.
+  placeRow: {
+    flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 8, paddingHorizontal: 10,
+    borderRadius: 12, borderWidth: StyleSheet.hairlineWidth, borderColor: colors.borderGlass,
+  },
+  placeWords: { flex: 1, minWidth: 0 },
+  placeName: { color: colors.text, fontSize: 15, lineHeight: 20, fontWeight: font.semibold },
   head: { flexDirection: 'row', alignItems: 'center', gap: 10, padding: space.cardPadding, paddingBottom: 12 },
   headWords: { flex: 1 },
   line: { color: colors.textSecondary, fontSize: 15, lineHeight: 20 },
