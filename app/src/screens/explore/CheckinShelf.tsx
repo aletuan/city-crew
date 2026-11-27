@@ -102,7 +102,8 @@ import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import LikeHeart from '../../components/LikeHeart';
 import { fireHaptic, PressableScale } from '../../components/ui';
-import { Avatar } from '../../components/ui/surfaces';
+import { Avatar, FACE_EDGE } from '../../components/ui/surfaces';
+import { useScheme } from '../../lib/theme';
 import { useSignedPhotos } from '../../components/useSignedPhotos';
 import { useSession } from '../../lib/auth';
 import { useCurrentCity } from '../../lib/city';
@@ -160,6 +161,7 @@ export function useHighlights(): Fetch<HighlightCheckin[]> {
 
 export function CheckinShelf({ navigation, cards }: { navigation: Nav; cards: readonly HighlightCheckin[] }) {
   const { t, lang } = useI18n();
+  const light = useScheme().scheme === 'light';
   const linkOf = useSignedPhotos(cards.flatMap((c) => (c.photo ? [c.photo] : [])), cards.length >= FEATURED_MIN);
   const [pressed, setPressed] = useState<Record<string, boolean>>({});
 
@@ -225,7 +227,9 @@ export function CheckinShelf({ navigation, cards }: { navigation: Nav; cards: re
                         style={[s.face, { zIndex: c.faces.length - i }, i > 0 && s.faceNext]}
                         testID="checkin-shelf-face"
                       >
-                        <Avatar url={f.avatar_url} size={FACE} />
+                        <View style={[s.faceEdge, { borderColor: light ? FACE_EDGE.light : FACE_EDGE.dark }]}>
+                          <Avatar url={f.avatar_url} size={FACE} />
+                        </View>
                       </View>
                     ))}
                     {more > 0 ? <Text style={s.more} testID="checkin-shelf-more">+{more}</Text> : null}
@@ -271,6 +275,10 @@ const s = StyleSheet.create({
   // A ring of the paper round each face, so two overlapping read as two
   // — a background and padding, not a border, so it follows the theme.
   face: { padding: RING, borderRadius: FACE, backgroundColor: colors.surfaceCard },
+  // The tab bar's hairline at the face's own edge (`FACE_EDGE`), inside
+  // the paper ring: the ring parts two faces, the line keeps a pale face
+  // from melting into the paper.
+  faceEdge: { width: FACE, height: FACE, borderRadius: FACE / 2, overflow: 'hidden', borderWidth: StyleSheet.hairlineWidth },
   // A third of a face under the one before: three read as a group in
   // the width of two, and each is still a face.
   faceNext: { marginLeft: -Math.round((FACE + 2 * RING) / 3) },

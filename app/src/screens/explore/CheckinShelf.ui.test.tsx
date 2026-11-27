@@ -30,6 +30,7 @@ vi.mock('../../lib/i18n', () => ({ useI18n: () => ({ lang: 'en', t: (en: string)
 import { forgetSignedPhotos } from '../../components/useSignedPhotos';
 import type { Nav } from '../../nav';
 import { CheckinShelf, FEATURED_MIN, useHighlights } from './CheckinShelf';
+import { FACE_EDGE } from '../../components/ui/surfaces';
 
 const card = (id: string, over: Record<string, unknown> = {}) => ({
   id, place_slug: `slug-${id}`, place: { name_en: `Place ${id}`, name_vi: '', i18n: null },
@@ -135,6 +136,14 @@ describe('CheckinShelf', () => {
     expect(within(two).queryByTestId('checkin-shelf-more')).toBeNull();
     expect(two.getAttribute('aria-label')).toBe('Place b, Minh, Trang');
     expect(within(one).getAllByTestId('checkin-shelf-face')).toHaveLength(1);
+    // Each face wears the tab bar's hairline, so a pale one keeps its edge
+    // on the paper (27 Nov 2026).
+    for (const f of within(five).getAllByTestId('checkin-shelf-face')) {
+      const edge = f.firstElementChild as HTMLElement;
+      expect([FACE_EDGE.light, FACE_EDGE.dark].map((c) => c.replace(/\s/g, '')))
+        .toContain(getComputedStyle(edge).borderTopColor.replace(/\s/g, ''));
+      expect(parseFloat(getComputedStyle(edge).borderTopWidth)).toBeGreaterThan(0);
+    }
     // The first face — the newest visitor — is drawn over the rest.
     const z = within(five).getAllByTestId('checkin-shelf-face')
       .map((el) => Number((el as HTMLElement).style.zIndex));
