@@ -75,6 +75,7 @@ import CommentRow, { INDENT } from '../components/CommentRow';
 import { useKeyboardDock } from '../components/keyboard';
 import { useCommentHearts } from './comments/useCommentHearts';
 import { useCommentMenu } from './comments/useCommentMenu';
+import ThreadAbout from './comments/ThreadAbout';
 import { useThreadFocus } from './comments/useThreadFocus';
 import { useThreadOwner } from './comments/useThreadOwner';
 import { useThreadWriting } from './comments/useThreadWriting';
@@ -238,6 +239,7 @@ export default function CommentsScreen({ navigation, route }: {
       compactTitle
       right={owner.right}
     >
+      <ThreadAbout subject={subject} navigation={navigation} />
       <View style={s.fill}>
         <ScrollView
           ref={focus.scroll}

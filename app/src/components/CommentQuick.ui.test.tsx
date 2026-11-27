@@ -36,6 +36,12 @@ vi.mock('react-native-safe-area-context', () => ({
   useSafeAreaInsets: () => ({ top: 0, bottom: 34, left: 0, right: 0 }),
 }));
 vi.mock('../lib/i18n', () => ({ useI18n: () => ({ lang: 'en', t: (en: string) => en }) }));
+// The catalog: empty unless a test says the list is known.
+const cat = vi.hoisted(() => ({ lists: [] as unknown[], places: [] as unknown[] }));
+vi.mock('../lib/catalog', () => ({
+  useCollections: () => ({ data: cat.lists }),
+  usePlaces: () => ({ data: cat.places }),
+}));
 
 import CommentQuick, { CommentQuickProvider, quickOrThread, useQuickComment } from './CommentQuick';
 
@@ -50,6 +56,8 @@ beforeEach(() => {
   data.postComment.mockImplementation(async () => 'k-new');
   who.profile = { avatar_url: 'https://faces/me.jpg' };
   who.me = 'me';
+  cat.lists = [];
+  cat.places = [];
   data.fetchTaggable.mockImplementation(async () => ({ people: [], places: [] }));
 });
 afterEach(() => { cleanup(); vi.restoreAllMocks(); });
@@ -97,6 +105,51 @@ describe('the field over the page', () => {
     render(<CommentQuick target={{ subject: SUBJECT }} onClose={onClose} />);
     expect(screen.getByTestId('comment-quick').querySelector('img')).toBeNull();
     expect(screen.getByTestId('composer-field')).toBeTruthy();
+  });
+
+  // The list the words are for, lit over the dim (27 Nov 2026).
+  describe('the card standing on the field', () => {
+    const known = () => {
+      cat.lists = [{
+        id: 'c1', slug: 'street-food', title_en: 'Street food in Hanoi', title_vi: 'x', title_ja: null, curator_handle: 'trang',
+        cover: { photo_uri: 'https://img/cover.jpg' }, collection_places: [{ sort_order: 0, places: { slug: 'a' } }],
+      }];
+    };
+
+    it('shows the list with its cover and facts, and drops the line that named it', () => {
+      known();
+      render(<CommentQuick target={{ subject: SUBJECT, about: 'Street food in Hanoi' }} onClose={onClose} />);
+      const card = screen.getByTestId('comment-about-card');
+      expect(card.textContent).toContain('Street food in Hanoi');
+      expect(card.textContent).toContain('1 place · trang');
+      expect(card.querySelector('img')?.getAttribute('src')).toBe('https://img/cover.jpg');
+      expect(screen.queryByTestId('composer-about')).toBeNull();
+      // On the field, in the part that rides the keyboard.
+      const riding = screen.getByTestId('comment-quick');
+      expect(riding.contains(card)).toBe(true);
+      expect(card.compareDocumentPosition(screen.getByTestId('composer')) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    });
+
+    it('lets a press on it through to the dim, which puts the field away', () => {
+      known();
+      render(<CommentQuick target={{ subject: SUBJECT }} onClose={onClose} />);
+      expect(getComputedStyle(screen.getByTestId('comment-about-card').parentElement!).pointerEvents).toBe('none');
+    });
+
+    it('keeps the line in the field for a list the catalog does not hold', () => {
+      render(<CommentQuick target={{ subject: SUBJECT, about: 'Street food in Hanoi' }} onClose={onClose} />);
+      expect(screen.queryByTestId('comment-about-card')).toBeNull();
+      expect(screen.getByTestId('composer-about').textContent).toBe('Street food in Hanoi');
+    });
+
+    it('stays, with the list it showed, while the field is on its way out', () => {
+      known();
+      vi.spyOn(Keyboard, 'dismiss').mockImplementation(() => {});
+      vi.spyOn(Animated, 'timing').mockImplementation((() => ({ start: () => {}, stop: () => {} })) as never);
+      const { rerender } = render(<CommentQuick target={{ subject: SUBJECT }} onClose={onClose} />);
+      rerender(<CommentQuick target={null} onClose={onClose} />);
+      expect(screen.getByTestId('comment-about-card').textContent).toContain('Street food in Hanoi');
+    });
   });
 
   // How far it rides, and on what run, is `keyboard.ui.test.tsx`.

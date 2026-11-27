@@ -414,6 +414,18 @@ sinh lại):*
   tên bộ, không chuyển trang (`CommentQuick`, dùng lại đúng
   `CommentComposer`). Gửi xong thì ô đóng và số trên bong bóng thành 1.
 - Bộ đã có bình luận thì vẫn sang màn Bình luận.
+- **Ngữ cảnh (27/11/2026, chủ dự án yêu cầu)**: ô bật tại chỗ nay có một
+  thẻ của bộ (ảnh bìa, tên, số địa điểm, tác giả) đứng ngay trên ô, sáng
+  trên nền tối, thay cho dòng chữ nhỏ ghi tên bộ; màn Bình luận có một
+  hàng cùng nội dung dưới tiêu đề, bấm vào thì mở bộ (hoặc quay lại nếu
+  trang bên dưới chính là bộ đó). Hai chỗ lấy nội dung từ cùng một nơi
+  (`components/CommentAbout`). Bộ mà catalog không có thì giữ cách cũ.
+  Thẻ là **bản vẽ riêng** đi theo ô, chưa phải chính thẻ trên trang được
+  cuộn lên và khoét khỏi nền tối; lý do ghi ở đầu `CommentAbout.tsx`.
+  Chưa kiểm trên máy thật.
+- **Chuyển động (27/11/2026)**: ô đi theo bàn phím bằng đường chạy đo từ
+  video 60 fps của chủ dự án (`components/keyboard.tsx`), không còn
+  `KeyboardAvoidingView` ở màn Bình luận.
 - **Lỗi đã sửa (18/11/2026)**: trên máy thật, nút gửi của ô bật tại chỗ
   phải bấm hai lần; lần đầu chỉ làm bàn phím hạ xuống. Nguyên nhân: ô (một
   `Modal`) được vẽ ngay cạnh nút bong bóng, tức là nằm trong `ScrollView`
