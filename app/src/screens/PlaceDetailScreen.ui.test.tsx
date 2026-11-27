@@ -448,7 +448,7 @@ describe('PlaceDetailScreen — title, rating, facts', () => {
   it('prints the rating and the review count, compacted', () => {
     show();
     expect(screen.getByText('4.6')).toBeTruthy();
-    expect(screen.getByText('1.2k reviews')).toBeTruthy();
+    expect(screen.getByText('1.2k on Google')).toBeTruthy();
   });
 
   it('shows the rating without a count when nobody is counted', () => {
@@ -487,7 +487,7 @@ describe('PlaceDetailScreen — title, rating, facts', () => {
   it('reads the score and the count on one line, separated by a dot', () => {
     show();
     const rating = screen.getByTestId('detail-rating');
-    expect(rating.textContent).toBe('4.6\u00b71.2k reviews');
+    expect(rating.textContent).toBe('4.6\u00b71.2k on Google');
   });
 
   // Four stops for one fact is what this avoids: the star glyph, the
@@ -495,7 +495,7 @@ describe('PlaceDetailScreen — title, rating, facts', () => {
   it('speaks the rating as a single phrase', () => {
     show();
     expect(screen.getByTestId('detail-rating').getAttribute('aria-label'))
-      .toBe('4.6 \u2014 1.2k reviews');
+      .toBe('4.6 \u2014 1.2k on Google');
   });
 
   it('says only the score when nobody is counted', () => {
@@ -636,6 +636,19 @@ describe('PlaceDetailScreen — title, rating, facts', () => {
     await waitFor(() => expect(spies.reloadCheckins).toHaveBeenCalledTimes(1));
     expect(spies.note).toHaveBeenCalledTimes(noted);
     expect(alert).not.toHaveBeenCalled();
+  });
+
+  // A visit is to a day (owner, 27 Nov 2026): the pill is worn the day
+  // of the visit and plain the next, and plain, the tap checks in.
+  it('is plain again the day after a visit, and the tap checks in rather than opening the history', async () => {
+    state.checkin = true;
+    state.uid = 'u1';
+    state.checkins = [visit('k1', 25 * 60)];
+    show();
+    expect(screen.queryByTestId('detail-checked-in')).toBeNull();
+    fireEvent.click(screen.getByTestId('detail-checkin'));
+    await waitFor(() => expect(spies.addCheckin).toHaveBeenCalledWith({ ownerId: 'u1', placeSlug: 'cong-caphe', cityId: 'hanoi' }));
+    expect(screen.queryByTestId('checkin-visit')).toBeNull();
   });
 
   // ── the sheet that follows the tap (24 Nov 2026) ──
@@ -2313,8 +2326,10 @@ describe('PlaceDetailScreen — what is this place, said without interruption', 
       reviewer_url: null,
       google_place_id: 'ChIJabc',
     }));
-    expect(screen.queryByText(/on Google/)).toBeNull();
     const credit = screen.getByTestId('blurb-credit');
+    // The credit names the platform by its mark; the words "on Google"
+    // are the score line's, about the rating (27 Nov 2026), not this.
+    expect(credit.textContent).not.toContain('on Google');
     expect(credit.querySelector('[data-icon="logo-google"]')).toBeTruthy();
     expect(credit.textContent).toContain('Google');
     fireEvent.click(credit);

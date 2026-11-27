@@ -14,7 +14,7 @@ import ActionSheet, { type SheetAction } from '../../components/ActionSheet';
 import { CountBadge, GradientCta, PressableScale } from '../../components/ui';
 import { Glyph, ICON } from '../../components/ui/glyph';
 import { useSession } from '../../lib/auth';
-import { canRepeat, latestCheckin, visitsAt } from '../../lib/checkin';
+import { canRepeat, visitedToday, visitsAt } from '../../lib/checkin';
 import { useMyCheckins } from '../../lib/checkins';
 import type { Place } from '../../lib/data';
 import { clockOf, dateline } from '../../lib/format';
@@ -52,7 +52,11 @@ export function CheckinPill({ place, name, cover, cityId, askToSignIn }: {
   const [checkinMenu, setCheckinMenu] = useState(false);
   const tap = useCheckIn({ uid, visits, askToSignIn });
 
-  const latestVisit = latestCheckin(visits.data, place.slug);
+  // Worn for the day of the reader's newest visit here, plain after it:
+  // `visitedToday`. Plain, the tap is a check-in, and the history sheet
+  // is reached again by the day's first visit — or from the Visited list
+  // on the reader's own page, which holds every visit.
+  const worn = visitedToday(visits.data, place.slug, new Date());
   const visitsHere = visitsAt(visits.data, place.slug);
   // The tap, its refusals and the sheet that follows: `useCheckIn`.
   const checkIn = () => tap.checkIn({
@@ -146,12 +150,12 @@ export function CheckinPill({ place, name, cover, cityId, askToSignIn }: {
         <PressableScale
           // Rest: the tap is the visit. Worn: the tap is the menu —
           // again, or undo — so a slip never writes a second row.
-          onPress={latestVisit ? () => setCheckinMenu(true) : () => { void checkIn(); }}
+          onPress={worn ? () => setCheckinMenu(true) : () => { void checkIn(); }}
           disabled={tap.checking}
           haptic="selection"
           accessibilityRole="button"
-          accessibilityState={{ selected: !!latestVisit, busy: tap.checking }}
-          accessibilityLabel={latestVisit
+          accessibilityState={{ selected: !!worn, busy: tap.checking }}
+          accessibilityLabel={worn
             ? t('Visited — options', 'Đã qua — tuỳ chọn', '訪問済み — オプション', '已打卡 — 选项', '已打卡 — 選項')
             : t('Check in', 'Check-in', 'チェックイン', '打卡', '打卡')}
           style={s.checkinSlot}
@@ -175,10 +179,10 @@ export function CheckinPill({ place, name, cover, cityId, askToSignIn }: {
           // The rest label is a verb because a button is one: "Check
           // in", not the noun. Vietnamese has no such split and keeps
           // "Check-in".
-          contentStyle={[s.checkin, latestVisit && s.checkinOn]}
-          testID={latestVisit ? 'detail-checked-in' : 'detail-checkin'}
+          contentStyle={[s.checkin, worn && s.checkinOn]}
+          testID={worn ? 'detail-checked-in' : 'detail-checkin'}
         >
-          <Glyph name={latestVisit ? 'checkmark-circle' : 'checkmark-circle-outline'} size={ICON.text} color={latestVisit ? colors.okInk : colors.accent} />
+          <Glyph name={worn ? 'checkmark-circle' : 'checkmark-circle-outline'} size={ICON.text} color={worn ? colors.okInk : colors.accent} />
           {/* ── one width in both states ──
               The pill was as wide as its word, and the two words
               are not the same length: "Check-in" and "Đã qua" are
@@ -197,8 +201,8 @@ export function CheckinPill({ place, name, cover, cityId, askToSignIn }: {
               right in all three languages and at every Dynamic
               Type step, because it is the other word itself. */}
           <View style={s.checkinWords}>
-            <Text style={[s.goText, latestVisit && s.checkinOnText]}>
-              {latestVisit ? t('Visited', 'Đã qua', '訪問済み', '已打卡', '已打卡') : t('Check in', 'Check-in', 'チェックイン', '打卡', '打卡')}
+            <Text style={[s.goText, worn && s.checkinOnText]}>
+              {worn ? t('Visited', 'Đã qua', '訪問済み', '已打卡', '已打卡') : t('Check in', 'Check-in', 'チェックイン', '打卡', '打卡')}
             </Text>
             <Text
               style={[s.goText, s.checkinGhost]}
@@ -206,7 +210,7 @@ export function CheckinPill({ place, name, cover, cityId, askToSignIn }: {
               importantForAccessibility="no-hide-descendants"
               testID="detail-checkin-ghost"
             >
-              {latestVisit ? t('Check in', 'Check-in', 'チェックイン', '打卡', '打卡') : t('Visited', 'Đã qua', '訪問済み', '已打卡', '已打卡')}
+              {worn ? t('Check in', 'Check-in', 'チェックイン', '打卡', '打卡') : t('Visited', 'Đã qua', '訪問済み', '已打卡', '已打卡')}
             </Text>
           </View>
         </PressableScale>
@@ -217,7 +221,7 @@ export function CheckinPill({ place, name, cover, cityId, askToSignIn }: {
           list scrolls past HISTORY_ROWS rows rather than growing the
           sheet off the top of the screen — three a day for a regular
           adds up — and the count in the header says when it does. */}
-      {latestVisit && (
+      {worn && (
         <ActionSheet
           visible={checkinMenu}
           onClose={closeMenu}

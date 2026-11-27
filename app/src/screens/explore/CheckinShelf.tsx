@@ -230,6 +230,7 @@ export function CheckinShelf({ navigation, cards }: { navigation: Nav; cards: re
                     style={page.shelfLikeHit}
                     contentStyle={page.shelfLikes}
                     countStyle={s.meta}
+                    brief
                     hitSlop={{ top: 14, bottom: 14, left: 16, right: 12 }}
                     testID="checkin-shelf-heart"
                     countTestID="checkin-shelf-likes"

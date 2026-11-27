@@ -29,6 +29,12 @@ export function ScoreRow({ place, name, cover, cityId, askToSignIn }: {
   const showPrice = useFlag('place_price');
   const showCheckin = useFlag('place_checkin');
   const reviews = fmtCount(place.rating_count);
+  // "109 on Google", not "109 reviews" (owner, 27 Nov 2026): the page now
+  // carries its own "Đánh giá từ khách" further down, and two counts of
+  // "đánh giá" on one page, Google's 109 and the app's 2, read as one
+  // figure that disagreed with itself. The rating and its count are
+  // Google's; this says whose.
+  const onGoogle = t(`${reviews} on Google`, `${reviews} trên Google`, `Google ${reviews}件`, `Google ${reviews} 条`, `Google ${reviews} 條`);
   const priceShown = showPrice && (place.price_display || place.price_vnd != null);
   if (!(place.rating || showCheckin || priceShown)) return null;
 
@@ -51,16 +57,14 @@ export function ScoreRow({ place, name, cover, cityId, askToSignIn }: {
           style={s.ratingRow}
           testID="detail-rating"
           accessibilityRole="text"
-          accessibilityLabel={reviews
-            ? `${place.rating} — ${reviews} ${t('reviews', 'đánh giá', '件のレビュー', '条评价', '條評價')}`
-            : String(place.rating)}
+          accessibilityLabel={reviews ? `${place.rating} — ${onGoogle}` : String(place.rating)}
         >
           <Glyph name="star" size={ICON.action} color={colors.accent} />
           <Text style={s.ratingValue}>{place.rating}</Text>
           {reviews ? (
             <>
               <Text style={s.ratingDot}>·</Text>
-              <Text style={s.ratingCount}>{reviews} {t('reviews', 'đánh giá', '件のレビュー', '条评价', '條評價')}</Text>
+              <Text style={s.ratingCount}>{onGoogle}</Text>
             </>
           ) : null}
         </View>
