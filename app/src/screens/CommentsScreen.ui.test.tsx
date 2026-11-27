@@ -8,7 +8,7 @@
 // real; only the one RPC wrapper and the providers are stood in.
 
 import React from 'react';
-import { Alert, Keyboard, StyleSheet } from 'react-native';
+import { Alert, StyleSheet } from 'react-native';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { act, cleanup, fireEvent, render, screen, viewStyleOf, within } from '../uitest/render';
 import type { CommentRow as Row, Subject } from '../lib/comments';
@@ -340,27 +340,17 @@ describe('writing', () => {
     expect(screen.getByTestId('comments-empty')).toBeTruthy();
   });
 
-  // The home indicator's margin, which the field gives up to the keyboard.
-  it('sits on the phone\'s own margin, and on the keyboard without it', async () => {
-    // Every listener, not the last: the page's is not the only one on the keyboard.
-    const heard: Record<string, (() => void)[]> = {};
-    const removed: string[] = [];
-    const listen = vi.spyOn(Keyboard, 'addListener').mockImplementation(((event: string, cb: () => void) => {
-      (heard[event] ??= []).push(cb);
-      return { remove: () => { removed.push(event); } };
-    }) as never);
+  // The field is docked over the foot and the thread is given the room
+  // under its last line (27 Nov 2026) — `keyboard.ui.test.tsx` has the ride.
+  it('docks the field with the phone\'s margin under it, and leaves the thread room for it', async () => {
     await show([]);
-    // Off the committed tree: an element's own fiber can be the one from
-    // before the last render, and would answer with the old margin.
     const pad = () => (StyleSheet.flatten(propsWhere((q) => q.testID === 'composer').style as never) as { paddingBottom?: number }).paddingBottom;
     expect(pad()).toBe(42);
-    act(() => heard.keyboardWillShow.forEach((f) => f()));
-    expect(pad()).toBe(8);
-    act(() => heard.keyboardWillHide.forEach((f) => f()));
-    expect(pad()).toBe(42);
-    cleanup();
-    expect([...new Set(removed)].sort()).toEqual(['keyboardWillHide', 'keyboardWillShow']);
-    listen.mockRestore();
+    const room = () => (StyleSheet.flatten(propsWhere((q) => q.testID === 'comments-room').style as never) as { height: number }).height;
+    expect(room()).toBe(0);
+    act(() => (propsWhere((q) => q.testID === 'keyboard-dock' && 'onLayout' in q).onLayout as (e: unknown) => void)({ nativeEvent: { layout: { height: 88 } } }));
+    expect(room()).toBe(88);
+    expect(document.querySelector('[data-testid="keyboard-dock"] [data-testid="composer"]')).toBeTruthy();
   });
 
   it('posts a comment that answers nobody under this subject, and the thread asks again', async () => {

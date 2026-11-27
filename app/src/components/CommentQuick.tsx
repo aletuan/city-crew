@@ -31,9 +31,10 @@
 // were; the comment is a press on that bubble away.
 
 import React, { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
-import { Animated, Easing, Keyboard, Modal, Platform, Pressable, StyleSheet, View, type KeyboardEvent } from 'react-native';
+import { Animated, Keyboard, Modal, Pressable, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import CommentComposer from './CommentComposer';
+import { useRide } from './keyboard';
 import { useProfile, useSession } from '../lib/auth';
 import type { Mention, Subject } from '../lib/comments';
 import { commentsChanged } from '../lib/commentsChanged';
@@ -72,35 +73,61 @@ export default function CommentQuick({ target, onClose }: { target: Target | nul
   const { profile } = useProfile();
   const { session } = useSession();
   const insets = useSafeAreaInsets();
-  const ride = useRide(insets.bottom);
+  const { ride } = useRide(insets.bottom);
+
+  // What is on screen: the target given, or — on its way out — the last
+  // one. Put away, the field is not unmounted on the spot (27 Nov 2026):
+  // it was, and vanished in one frame while the keyboard under it took
+  // twelve to fall and the dim eighteen to clear. Now the keyboard is sent
+  // down, the field rides it (`useRide`), and the dim and the field clear
+  // over that fall; the `Modal` goes when they have.
+  const last = useRef(target);
+  if (target) last.current = target;
+  const held = target ?? last.current;
+  const showing = target !== null;
+  const [mounted, setMounted] = useState(showing);
+  if (showing && !mounted) setMounted(true);
+  const shown = useRef(new Animated.Value(0)).current;
+  const was = useRef(showing);
+  useEffect(() => {
+    if (was.current && !showing) Keyboard.dismiss();
+    was.current = showing;
+    const run = Animated.timing(shown, { toValue: showing ? 1 : 0, duration: showing ? DIM_IN_MS : DIM_OUT_MS, useNativeDriver: true });
+    run.start(({ finished }) => { if (finished && !showing) setMounted(false); });
+    return () => run.stop();
+  }, [showing, shown]);
 
   // Whom and what "@" offers: asked when a target is set, not before.
   const taggable = useTaggableQuery(target ? target.subject : null, session?.user?.id);
 
   const send = async (body: string, mentions: Mention[]) => {
     // Never without a target: the field is not mounted without one.
-    await postComment((target as Target).subject, null, body, mentions);
+    await postComment((held as Target).subject, null, body, mentions);
     commentsChanged();
     onClose();
   };
 
   return (
-    <Modal visible={target !== null} transparent animationType="fade" onRequestClose={onClose} statusBarTranslucent>
-      <Pressable
-        style={s.backdrop}
-        onPress={onClose}
-        accessibilityLabel={t('Close', 'Đóng', '閉じる', '关闭', '關閉')}
-        testID="comment-quick-close"
-      />
+    // No animation of the `Modal`'s own: its fade took the field with it,
+    // which showed the page through the field for its first frames.
+    <Modal visible={mounted} transparent animationType="none" onRequestClose={onClose} statusBarTranslucent>
+      <Animated.View style={[StyleSheet.absoluteFill, { opacity: shown }]}>
+        <Pressable
+          style={s.backdrop}
+          onPress={onClose}
+          accessibilityLabel={t('Close', 'Đóng', '閉じる', '关闭', '關閉')}
+          testID="comment-quick-close"
+        />
+      </Animated.View>
       {/* The field rides the keyboard — see `useRide`. Touches above it
           fall through to the dim. */}
       <View style={s.dock} pointerEvents="box-none">
-        {target ? (
-          <Animated.View style={{ transform: [{ translateY: ride }] }} testID="comment-quick">
+        {held ? (
+          <Animated.View style={{ opacity: shown.interpolate(SOLID), transform: [{ translateY: ride }] }} testID="comment-quick">
             <CommentComposer
               avatarUrl={profile?.avatar_url}
               replyTo={null}
-              about={target.about}
+              about={held.about}
               onSend={send}
               autoFocus
               taggable={taggable.data}
@@ -117,54 +144,15 @@ export default function CommentQuick({ target, onClose }: { target: Target | nul
   );
 }
 
-/**
- * How far the field stands above the screen's foot: by the keyboard's
- * height, less the home indicator's margin the field keeps under its
- * row, which the keyboard then covers (owner, 22 Nov 2026).
- *
- * It was a `KeyboardAvoidingView`, and the field came up after the
- * keyboard rather than with it. The field is focused as it mounts, so
- * iOS sends `keyboardWillShow` while the `Modal` is still coming in and
- * the view has not been laid out; with no frame of its own it reckons
- * the overlap as nothing, stands still, and only moves when its layout
- * arrives — a beat late, for the keyboard's whole duration, behind two
- * `await`s on the way (React Native 0.88, `_relativeKeyboardHeight`).
- * The margin went in a render of its own besides (`useKeyboardUp`), a
- * jump on top of the late slide.
- *
- * So the field is moved here, on the native driver, from the same event
- * and for its duration, on the keyboard's own curve: it needs no layout
- * and crosses no bridge to start. iOS alone: Android sends no `Will`,
- * and its window gives way to the keyboard itself.
- *
- * Rejected the same day: focusing only once the `Modal` has shown (the
- * keyboard would come up a quarter-second late, and the `await`s stay),
- * and `react-native-keyboard-controller`, which follows the keyboard
- * frame by frame but is a native module — a new binary through
- * TestFlight for one field.
- */
-export function useRide(margin: number): Animated.Value {
-  const ride = useRef(new Animated.Value(0)).current;
-  useEffect(() => {
-    if (Platform.OS !== 'ios') return undefined;
-    const to = (y: number, e: KeyboardEvent) => Animated.timing(ride, {
-      toValue: y,
-      duration: e.duration || KEYBOARD_MS,
-      easing: KEYBOARD_CURVE,
-      useNativeDriver: true,
-    }).start();
-    const up = Keyboard.addListener('keyboardWillShow', (e) => to(Math.min(0, margin - e.endCoordinates.height), e));
-    const down = Keyboard.addListener('keyboardWillHide', (e) => to(0, e));
-    return () => { up.remove(); down.remove(); };
-  }, [ride, margin]);
-  return ride;
-}
-
-/** The keyboard's own run when an event leaves it out: iOS's 250ms. */
-const KEYBOARD_MS = 250;
-/** The keyboard's curve (UIKit's private curve 7), as it is commonly
- *  drawn: quick away, long settle. */
-const KEYBOARD_CURVE = Easing.bezier(0.17, 0.59, 0.4, 0.77);
+/** The dim's way in. */
+const DIM_IN_MS = 200;
+/** Its way out, and the field's: the keyboard's fall as far as the screen's
+ *  foot — 88% of its travel is gone at 183 ms and the rest is under the
+ *  edge (`keyboard.tsx`, the same recording), so a little over that. */
+const DIM_OUT_MS = 250;
+/** The field against the dim: solid for all but the first of the way in
+ *  and the last of the way out — a field, not a ghost of one. */
+const SOLID = { inputRange: [0, 0.35, 1], outputRange: [0, 1, 1] };
 
 type Quick = (subject: Subject, about?: string) => void;
 const Ctx = createContext<Quick | null>(null);

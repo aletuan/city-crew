@@ -6,7 +6,7 @@
 // words; and that the dim behind it puts it away having sent nothing.
 
 import React from 'react';
-import { Animated, Keyboard, Platform, Text, View } from 'react-native';
+import { Animated, Keyboard, Text, View } from 'react-native';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { act, cleanup, fireEvent, render, screen } from '../uitest/render';
 import { changes } from '../lib/commentsChanged';
@@ -99,65 +99,11 @@ describe('the field over the page', () => {
     expect(screen.getByTestId('composer-field')).toBeTruthy();
   });
 
+  // How far it rides, and on what run, is `keyboard.ui.test.tsx`.
   describe('riding the keyboard', () => {
-    const heard: Record<string, ((e: unknown) => void)[]> = {};
-    let removed = 0;
-    let os: string;
-    beforeEach(() => {
-      for (const k of Object.keys(heard)) delete heard[k];
-      removed = 0;
-      os = Platform.OS;
-      vi.spyOn(Keyboard, 'addListener').mockImplementation(((event: string, cb: (e: unknown) => void) => {
-        (heard[event] ??= []).push(cb);
-        return { remove: () => { removed += 1; } };
-      }) as never);
-    });
-    afterEach(() => { (Platform as { OS: string }).OS = os; });
-    const timing = () => vi.spyOn(Animated, 'timing').mockImplementation((() => ({ start: () => {} })) as never);
-    const ios = () => { (Platform as { OS: string }).OS = 'ios'; };
-
-    it('keeps the home indicator\'s margin under the field, up or down', () => {
-      ios();
-      timing();
+    it('keeps the home indicator\'s margin under the field, for the keyboard to cover', () => {
       render(<CommentQuick target={{ subject: SUBJECT }} onClose={onClose} />);
-      const pad = () => getComputedStyle(screen.getByTestId('composer')).paddingBottom;
-      expect(pad()).toBe('42px');
-      act(() => heard.keyboardWillShow.forEach((f) => f({ duration: 310, endCoordinates: { height: 336 } })));
-      expect(pad()).toBe('42px');
-    });
-
-    it('rises by the keyboard less that margin, on its run and on the native driver, and comes back down', () => {
-      ios();
-      const run = timing();
-      render(<CommentQuick target={{ subject: SUBJECT }} onClose={onClose} />);
-      act(() => heard.keyboardWillShow.forEach((f) => f({ duration: 310, endCoordinates: { height: 336 } })));
-      expect(run).toHaveBeenCalledOnce();
-      expect(run.mock.calls[0][1]).toMatchObject({ toValue: -302, duration: 310, useNativeDriver: true });
-      act(() => heard.keyboardWillHide.forEach((f) => f({ duration: 0, endCoordinates: { height: 0 } })));
-      // An event with no run of its own takes the keyboard's.
-      expect(run.mock.calls[1][1]).toMatchObject({ toValue: 0, duration: 250 });
-    });
-
-    it('never sinks below the foot for a keyboard shorter than the margin', () => {
-      ios();
-      const run = timing();
-      render(<CommentQuick target={{ subject: SUBJECT }} onClose={onClose} />);
-      act(() => heard.keyboardWillShow.forEach((f) => f({ duration: 250, endCoordinates: { height: 20 } })));
-      expect(run.mock.calls[0][1]).toMatchObject({ toValue: 0 });
-    });
-
-    it('stops listening when it goes', () => {
-      ios();
-      timing();
-      const { unmount } = render(<CommentQuick target={{ subject: SUBJECT }} onClose={onClose} />);
-      unmount();
-      expect(removed).toBe(2);
-    });
-
-    it('leaves the keyboard to the window off iOS', () => {
-      (Platform as { OS: string }).OS = 'android';
-      render(<CommentQuick target={{ subject: SUBJECT }} onClose={onClose} />);
-      expect(heard.keyboardWillShow).toBeUndefined();
+      expect(getComputedStyle(screen.getByTestId('composer')).paddingBottom).toBe('42px');
     });
 
     it('carries the field\'s own ground on down under it', () => {
@@ -165,6 +111,58 @@ describe('the field over the page', () => {
       const under = getComputedStyle(screen.getByTestId('comment-quick-under'));
       expect(under.top).toBe('100%');
       expect(under.backgroundColor).toBe(getComputedStyle(screen.getByTestId('composer')).backgroundColor);
+    });
+  });
+
+  // Put away, it leaves with the keyboard and not ahead of it (27 Nov 2026).
+  describe('coming and going', () => {
+    type Run = { to: number; ms: number; end?: (r: { finished: boolean }) => void; stopped: boolean };
+    const runs: Run[] = [];
+    beforeEach(() => {
+      runs.length = 0;
+      vi.spyOn(Animated, 'timing').mockImplementation(((_v: unknown, c: { toValue: number; duration: number }) => {
+        const run: Run = { to: c.toValue, ms: c.duration, stopped: false };
+        runs.push(run);
+        return { start: (end?: Run['end']) => { run.end = end; }, stop: () => { run.stopped = true; } };
+      }) as never);
+    });
+
+    it('brings the dim in over 200 ms, with no fade of the whole sheet to take the field with it', () => {
+      render(<CommentQuick target={{ subject: SUBJECT }} onClose={onClose} />);
+      expect(runs.at(-1)).toMatchObject({ to: 1, ms: 200 });
+      act(() => runs.at(-1)!.end!({ finished: true }));
+      expect(screen.getByTestId('comment-quick')).toBeTruthy();
+    });
+
+    it('sends the keyboard down and keeps the field, with what it was about, until the dim has cleared', () => {
+      const dismiss = vi.spyOn(Keyboard, 'dismiss').mockImplementation(() => {});
+      const { rerender } = render(<CommentQuick target={{ subject: SUBJECT, about: 'Street food in Hanoi' }} onClose={onClose} />);
+      expect(dismiss).not.toHaveBeenCalled();
+      rerender(<CommentQuick target={null} onClose={onClose} />);
+      expect(dismiss).toHaveBeenCalledOnce();
+      expect(runs.at(-1)).toMatchObject({ to: 0, ms: 250 });
+      expect(screen.getByTestId('comment-quick')).toBeTruthy();
+      expect(screen.getByText('Street food in Hanoi')).toBeTruthy();
+      act(() => runs.at(-1)!.end!({ finished: true }));
+      expect(screen.queryByTestId('comment-quick')).toBeNull();
+    });
+
+    it('stays when it is raised again before it has gone', () => {
+      vi.spyOn(Keyboard, 'dismiss').mockImplementation(() => {});
+      const { rerender } = render(<CommentQuick target={{ subject: SUBJECT }} onClose={onClose} />);
+      rerender(<CommentQuick target={null} onClose={onClose} />);
+      const out = runs.at(-1)!;
+      rerender(<CommentQuick target={{ subject: SUBJECT, about: 'Another list' }} onClose={onClose} />);
+      expect(out.stopped).toBe(true);
+      act(() => out.end!({ finished: false }));
+      expect(screen.getByText('Another list')).toBeTruthy();
+      expect(runs.at(-1)).toMatchObject({ to: 1 });
+    });
+
+    it('does not put a keyboard away that it never raised', () => {
+      const dismiss = vi.spyOn(Keyboard, 'dismiss').mockImplementation(() => {});
+      render(<CommentQuick target={null} onClose={onClose} />);
+      expect(dismiss).not.toHaveBeenCalled();
     });
   });
 

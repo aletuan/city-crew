@@ -43,8 +43,11 @@
 //
 // "Reply" under a comment opens nothing: it names that comment as what
 // the field's next words answer, and puts the cursor in the field. The
-// page is wrapped in a `KeyboardAvoidingView`, so the field rides up on
-// the keyboard and the thread shortens above it.
+// field is docked over the page's foot and rides the keyboard
+// (`useKeyboardDock`); the thread keeps its height and is given the room
+// under its last line. It was a `KeyboardAvoidingView` until 27 Nov 2026,
+// and on the owner's recording the field was off the screen for the first
+// 270 ms of the keyboard's rise — `components/keyboard.tsx`.
 //
 // Sent, the app is told (`commentsChanged`) and this page's own query
 // asks again, as the cards' counts do. Nothing is drawn ahead of the
@@ -64,12 +67,12 @@
 
 import React, { useEffect, useMemo, useState } from 'react';
 import {
-  ActivityIndicator, KeyboardAvoidingView, Platform, RefreshControl, ScrollView, StyleSheet, Text, View,
+  ActivityIndicator, RefreshControl, ScrollView, StyleSheet, Text, View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import CommentComposer from '../components/CommentComposer';
 import CommentRow, { INDENT } from '../components/CommentRow';
-import { useKeyboardUp } from '../components/keyboard';
+import { useKeyboardDock } from '../components/keyboard';
 import { useCommentHearts } from './comments/useCommentHearts';
 import { useCommentMenu } from './comments/useCommentMenu';
 import { useThreadFocus } from './comments/useThreadFocus';
@@ -135,10 +138,10 @@ export default function CommentsScreen({ navigation, route }: {
 
   // The bar is away while this page is in front — see the header.
   useTabBarAway(navigation);
-  // The home indicator's margin under the field, and none while the
-  // keyboard is up — `useKeyboardUp`.
+  // The field keeps the home indicator's margin under its row, up or
+  // down: the keyboard covers it.
   const insets = useSafeAreaInsets();
-  const typing = useKeyboardUp();
+  const { dock, room } = useKeyboardDock(insets.bottom);
   const now = Date.now();
   // Your own face in the last tab is its first page — `toPerson`.
   const onPerson = (handle: string) => toPerson(navigation, handle, profile.handle);
@@ -235,10 +238,7 @@ export default function CommentsScreen({ navigation, route }: {
       compactTitle
       right={owner.right}
     >
-      {/* The field rides up on the keyboard and the thread shortens
-          above it. `padding` on iOS, where the keyboard overlays the
-          window; Android resizes the window itself. */}
-      <KeyboardAvoidingView style={s.fill} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+      <View style={s.fill}>
         <ScrollView
           ref={focus.scroll}
           style={s.fill}
@@ -254,19 +254,23 @@ export default function CommentsScreen({ navigation, route }: {
         >
           {state}
           {branches.slice(0, Math.max(shown, focus.reveal.shown)).map(branch)}
+          {/* Room for the docked field, and for the keyboard under it. */}
+          <View style={{ height: room }} testID="comments-room" />
         </ScrollView>
-        <CommentComposer
-          avatarUrl={profile?.avatar_url}
-          replyTo={replyTo}
-          onCancelReply={cancelReply}
-          onSend={send}
-          onGuest={me ? undefined : askIn}
-          inputRef={field}
-          taggable={taggable.data}
-          closed={owner.closed}
-          bottomInset={typing ? 0 : insets.bottom}
-        />
-      </KeyboardAvoidingView>
+        {dock(
+          <CommentComposer
+            avatarUrl={profile?.avatar_url}
+            replyTo={replyTo}
+            onCancelReply={cancelReply}
+            onSend={send}
+            onGuest={me ? undefined : askIn}
+            inputRef={field}
+            taggable={taggable.data}
+            closed={owner.closed}
+            bottomInset={insets.bottom}
+          />,
+        )}
+      </View>
       {menuSheet}
       {owner.node}
     </Screen>
