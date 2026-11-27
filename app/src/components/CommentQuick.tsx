@@ -73,7 +73,7 @@ export default function CommentQuick({ target, onClose }: { target: Target | nul
   const { profile } = useProfile();
   const { session } = useSession();
   const insets = useSafeAreaInsets();
-  const { ride } = useRide(insets.bottom);
+  const { ride } = useRide(insets.bottom, QUICK_LEAD);
 
   // What is on screen: the target given, or — on its way out — the last
   // one. Put away, the field is not unmounted on the spot (27 Nov 2026):
@@ -144,6 +144,10 @@ export default function CommentQuick({ target, onClose }: { target: Target | nul
   );
 }
 
+/** The field's head start on the keyboard, as measured here: a frame late
+ *  going up — it is mounted and focused in the same breath — and on time
+ *  coming down, since it sends the keyboard down itself (`keyboard.tsx`). */
+const QUICK_LEAD = { rise: 1 };
 /** The dim's way in. */
 const DIM_IN_MS = 200;
 /** Its way out, and the field's: the keyboard's fall as far as the screen's

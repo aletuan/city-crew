@@ -141,7 +141,7 @@ export default function CommentsScreen({ navigation, route }: {
   // The field keeps the home indicator's margin under its row, up or
   // down: the keyboard covers it.
   const insets = useSafeAreaInsets();
-  const { dock, room } = useKeyboardDock(insets.bottom);
+  const { dock, room } = useKeyboardDock(insets.bottom, THREAD_LEAD);
   const now = Date.now();
   // Your own face in the last tab is its first page — `toPerson`.
   const onPerson = (handle: string) => toPerson(navigation, handle, profile.handle);
@@ -276,6 +276,10 @@ export default function CommentsScreen({ navigation, route }: {
     </Screen>
   );
 }
+
+/** The field's head start on the keyboard, as measured on this page: on
+ *  time going up, two frames late coming down (`components/keyboard.tsx`). */
+const THREAD_LEAD = { fall: 2 };
 
 const s = StyleSheet.create({
   fill: { flex: 1 },

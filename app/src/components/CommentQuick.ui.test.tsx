@@ -6,7 +6,7 @@
 // words; and that the dim behind it puts it away having sent nothing.
 
 import React from 'react';
-import { Animated, Keyboard, Text, View } from 'react-native';
+import { Animated, Keyboard, Platform, Text, View } from 'react-native';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { act, cleanup, fireEvent, render, screen } from '../uitest/render';
 import { changes } from '../lib/commentsChanged';
@@ -104,6 +104,28 @@ describe('the field over the page', () => {
     it('keeps the home indicator\'s margin under the field, for the keyboard to cover', () => {
       render(<CommentQuick target={{ subject: SUBJECT }} onClose={onClose} />);
       expect(getComputedStyle(screen.getByTestId('composer')).paddingBottom).toBe('42px');
+    });
+
+    // The head start each way, as measured for this field — `keyboard.tsx`.
+    it('sets off a frame into the keyboard\'s rise, and with it on the way down', () => {
+      const os = Platform.OS;
+      (Platform as { OS: string }).OS = 'ios';
+      const heard: Record<string, ((e: unknown) => void)[]> = {};
+      vi.spyOn(Keyboard, 'addListener').mockImplementation(((event: string, cb: (e: unknown) => void) => {
+        (heard[event] ??= []).push(cb);
+        return { remove: () => {} };
+      }) as never);
+      const runs: number[] = [];
+      vi.spyOn(Animated, 'timing').mockImplementation(((_v: unknown, c: { duration: number }) => {
+        runs.push(c.duration);
+        return { start: () => {}, stop: () => {} };
+      }) as never);
+      render(<CommentQuick target={{ subject: SUBJECT }} onClose={onClose} />);
+      runs.length = 0;
+      act(() => heard.keyboardWillShow.forEach((f) => f({ endCoordinates: { height: 336 } })));
+      act(() => heard.keyboardWillHide.forEach((f) => f({ endCoordinates: { height: 0 } })));
+      expect(runs).toEqual([333, 350]);
+      (Platform as { OS: string }).OS = os;
     });
 
     it('carries the field\'s own ground on down under it', () => {

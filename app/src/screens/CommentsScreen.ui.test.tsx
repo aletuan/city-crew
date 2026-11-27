@@ -8,7 +8,7 @@
 // real; only the one RPC wrapper and the providers are stood in.
 
 import React from 'react';
-import { Alert, StyleSheet } from 'react-native';
+import { Alert, Animated, Keyboard, Platform, StyleSheet } from 'react-native';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { act, cleanup, fireEvent, render, screen, viewStyleOf, within } from '../uitest/render';
 import type { CommentRow as Row, Subject } from '../lib/comments';
@@ -338,6 +338,28 @@ describe('writing', () => {
     await show([]);
     expect(screen.getByTestId('composer')).toBeTruthy();
     expect(screen.getByTestId('comments-empty')).toBeTruthy();
+  });
+
+  // The head start each way, as measured for this field — `keyboard.tsx`.
+  it('rides up with the keyboard, and two frames into its fall on the way down', async () => {
+    const os = Platform.OS;
+    (Platform as { OS: string }).OS = 'ios';
+    const heard: Record<string, ((e: unknown) => void)[]> = {};
+    vi.spyOn(Keyboard, 'addListener').mockImplementation(((event: string, cb: (e: unknown) => void) => {
+      (heard[event] ??= []).push(cb);
+      return { remove: () => {} };
+    }) as never);
+    const runs: number[] = [];
+    vi.spyOn(Animated, 'timing').mockImplementation(((_v: unknown, c: { duration: number }) => {
+      runs.push(c.duration);
+      return { start: () => {}, stop: () => {} };
+    }) as never);
+    await show([]);
+    runs.length = 0;
+    act(() => heard.keyboardWillShow.forEach((f) => f({ endCoordinates: { height: 336 } })));
+    act(() => heard.keyboardWillHide.forEach((f) => f({ endCoordinates: { height: 0 } })));
+    expect(runs).toEqual([350, 317]);
+    (Platform as { OS: string }).OS = os;
   });
 
   // The field is docked over the foot and the thread is given the room
