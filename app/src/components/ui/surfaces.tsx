@@ -426,6 +426,18 @@ export const glassHalo = (light: boolean) => ({
 });
 
 /**
+ * The hairline round a small face that stands on a light ground — the
+ * tab bar's own face (`FloatingTabBar`) and the faces on a check-in card
+ * (`explore/CheckinShelf`). A face with a white or pale photograph
+ * otherwise melts into cream paper at its edge (owner, on a phone, 27 Nov
+ * 2026); a faint line, the way Slack, Messages and Google draw a small
+ * avatar, keeps the circle without reading as a frame. Plain values, as a
+ * border must be (a `dyn` pair on a border follows the phone, not the
+ * app — `bgHex`), picked by the app's scheme where it is drawn.
+ */
+export const FACE_EDGE = { light: 'rgba(0,0,0,0.14)', dark: 'rgba(255,255,255,0.24)' };
+
+/**
  * Somebody's face, or the fact that they have not shown one.
  *
  * Four screens had drawn this circle for themselves — the crew list, the

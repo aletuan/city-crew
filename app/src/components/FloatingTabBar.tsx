@@ -39,7 +39,7 @@ import { Animated, Platform, StyleSheet, View } from 'react-native';
 import type { BottomTabBarProps } from '@react-navigation/bottom-tabs';
 import { useProfile, useSession } from '../lib/auth';
 import { avatarSource } from './avatarImages';
-import { Avatar } from './ui/surfaces';
+import { Avatar, FACE_EDGE } from './ui/surfaces';
 import { CHANNEL } from '../lib/channel';
 import { useCrew } from '../lib/crew';
 import { splitFriendships } from '../lib/friends';
@@ -159,9 +159,6 @@ const LIFT_SCALE = 1.06;
 // at Instagram's own ratio (their face 26 beside 24 glyphs). The dot
 // keeps its place on the 22 box, which puts it on the face's shoulder.
 const FACE = 26;
-/** The idle face's hairline: plain values, as a border must be (a `dyn`
- *  pair on a border follows the phone, not the app — `bgHex`). */
-const FACE_EDGE = { light: 'rgba(0,0,0,0.14)', dark: 'rgba(255,255,255,0.24)' };
 
 /** A tab's mark, idle or on the pill. The pill's copies live only in its
  *  window, so where the pill is, the mark wears the pill's ink. */
