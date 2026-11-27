@@ -36,10 +36,12 @@ import { Glyph, ICON } from './ui/glyph';
 import type { Tile, VisitPhotos as Photos } from './useVisitPhotos';
 
 export const TILE = 72;
-const GAP = 10;
+/** Between a visit's photos, here and wherever the same photos are shown
+ *  again (`placeDetail/GuestReviews`). */
+export const TILE_GAP = 10;
 /** The side a tile gets on a screen `width` wide: 72, or less where four
  *  of them and their gaps do not fit between the sheet's margins. */
-export const tileFor = (width: number) => Math.min(TILE, Math.floor((width - 2 * space.page - 3 * GAP) / 4));
+export const tileFor = (width: number) => Math.min(TILE, Math.floor((width - 2 * space.page - 3 * TILE_GAP) / 4));
 const SLOP = { top: 10, bottom: 10, left: 10, right: 10 };
 
 export default function VisitPhotos({ photos, onView }: {
@@ -130,7 +132,7 @@ function PhotoTile({ tile, n, photos, box, onView }: {
 }
 
 const s = StyleSheet.create({
-  row: { flexDirection: 'row', gap: GAP },
+  row: { flexDirection: 'row', gap: TILE_GAP },
   tile: { borderRadius: 12, overflow: 'hidden', backgroundColor: colors.surfaceGlassStrong },
   add: {
     alignItems: 'center', justifyContent: 'center', gap: 2,
