@@ -6,11 +6,14 @@
 
 import React from 'react';
 import { AppState } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { act, cleanup, fireEvent, render, screen, waitFor, within } from '../../uitest/render';
 
 const data = vi.hoisted(() => ({
   cards: [] as unknown[],
+  // A network answer that has not come yet, when set.
+  hold: null as Promise<void> | null,
   fetchHighlightCheckins: vi.fn(),
   likeCheckin: vi.fn(async (_id: string, _on: boolean) => {}),
   signCheckinPhotos: vi.fn(async (paths: readonly string[]): Promise<Record<string, string>> =>
@@ -18,7 +21,11 @@ const data = vi.hoisted(() => ({
 }));
 vi.mock('../../lib/data', async (orig) => ({
   ...(await orig<Record<string, unknown>>()),
-  fetchHighlightCheckins: async (city: string) => { data.fetchHighlightCheckins(city); return data.cards; },
+  fetchHighlightCheckins: async (city: string) => {
+    data.fetchHighlightCheckins(city);
+    if (data.hold) await data.hold;
+    return data.cards;
+  },
   likeCheckin: data.likeCheckin,
   signCheckinPhotos: data.signCheckinPhotos,
 }));
@@ -31,6 +38,7 @@ import { forgetSignedPhotos } from '../../components/useSignedPhotos';
 import type { Nav } from '../../nav';
 import { CheckinShelf, FEATURED_MIN, useHighlights } from './CheckinShelf';
 import { FACE_EDGE } from '../../components/ui/surfaces';
+import { cacheKey, packCache } from '../../lib/data/cache';
 
 const card = (id: string, over: Record<string, unknown> = {}) => ({
   id, place_slug: `slug-${id}`, place: { name_en: `Place ${id}`, name_vi: '', i18n: null },
@@ -47,9 +55,11 @@ const show = async () => {
   await settle();
 };
 
-beforeEach(() => {
+beforeEach(async () => {
+  for (const reader of ['me', 'someone']) await AsyncStorage.removeItem(cacheKey('highlights', 'hanoi', reader));
   who.me = 'me';
   data.cards = [];
+  data.hold = null;
   data.fetchHighlightCheckins.mockClear();
   data.likeCheckin.mockReset().mockResolvedValue(undefined);
   navigate.mockClear();
@@ -193,6 +203,27 @@ describe('CheckinShelf', () => {
     expect(within(words).getByTestId('checkin-shelf-note').textContent).toBe('Just words.');
     expect(within(bare).getByTestId('checkin-shelf-waiting')).toBeTruthy();
     expect(data.signCheckinPhotos.mock.calls.flatMap(([paths]) => paths)).toEqual(['u/c/pc.jpg']);
+  });
+
+  // The first frame (27 Nov 2026): the last launch's shelf is drawn while
+  // this launch's is on its way, so nothing below it moves when it lands.
+  it('draws the last launch’s shelf for this city and reader before the network answers', async () => {
+    await AsyncStorage.setItem(cacheKey('highlights', 'hanoi', 'me'), packCache([card('a'), card('b'), card('c')], Date.now()));
+    let answer: () => void = () => {};
+    data.hold = new Promise<void>((done) => { answer = done; });
+    data.cards = [card('a'), card('b'), card('c'), card('d')];
+    await show();
+    expect(screen.getAllByTestId('checkin-shelf-card')).toHaveLength(3);
+    await act(async () => { answer(); });
+    await settle();
+    expect(screen.getAllByTestId('checkin-shelf-card')).toHaveLength(4);
+  });
+
+  it('keeps another reader’s shelf to themselves', async () => {
+    await AsyncStorage.setItem(cacheKey('highlights', 'hanoi', 'someone'), packCache([card('a'), card('b'), card('c')], Date.now()));
+    data.hold = new Promise<void>(() => {});
+    await show();
+    expect(screen.queryByTestId('checkin-shelf')).toBeNull();
   });
 
   // The owner's day (26 Nov 2026): two cards in the morning, a third
