@@ -191,6 +191,9 @@ vi.mock('../lib/i18n', () => ({
 
 // What only you see on your own page has its own tests (`Counts` in the
 // account's, `Requests` beside it); here, only where it stands.
+// The clock's ink, as the page asks for it (`useOwnedStatusBar`).
+const statusBar = vi.hoisted(() => ({ set: vi.fn() }));
+vi.mock('expo-status-bar', () => ({ setStatusBarStyle: statusBar.set, StatusBar: () => null }));
 vi.mock('./profile/Counts', () => ({ Counts: ({ light }: { light?: boolean }) => <div data-testid="owner-counts" data-light={String(!!light)} /> }));
 vi.mock('./person/Requests', () => ({
   Requests: ({ onOpen }: { onOpen: () => void }) => <button type="button" data-testid="owner-requests" onClick={onOpen} />,
@@ -549,6 +552,14 @@ describe('the bio, and the way to write one', () => {
     expect(inks[2]).toBeGreaterThanOrEqual(inks[1]);
     expect((drawn.locations as number[])[1]).toBeLessThanOrEqual(0.2);
     expect(viewStyleOf(scrim)).toMatchObject({ position: 'absolute', top: 50, bottom: 0 });
+    // Once the head is measured the scrim follows it (`scrimOver`): a
+    // friend's head stands low, 170 down here, and the photograph over
+    // it is left a photograph — the scrim begins 48 over the head.
+    act(() => { (propsWhere((p) => p.testID === 'person-head-row').onLayout as (e: unknown) => void)({ nativeEvent: { layout: { y: 170, height: 84 } } }); });
+    const moved = propsWhere((p) => p.testID === 'person-cover-foot-scrim');
+    expect((moved.style as { top?: number }[])[1].top).toBe(122);
+    const run = moved.locations as number[];
+    expect(122 + run[1] * (272 - 122)).toBeCloseTo(170, 6);
     // The sheet: the page's own ground, round at the top only, last in
     // the box so it covers the photograph's foot.
     const dress = viewStyleOf(sheet);
@@ -1496,9 +1507,10 @@ const propsWhere = (pick: (p: Record<string, unknown>) => boolean): Record<strin
   }
   throw new Error('nothing matched');
 };
-/** The row of acts laid out with its foot at 300, and the page scrolled. */
+/** The cover, where the friend button now is, laid out with its foot at
+ *  300, and the page scrolled. */
 const layRow = () => act(() => {
-  (propsWhere((q) => q.testID === 'person-acts').onLayout as (e: unknown) => void)({ nativeEvent: { layout: { y: 250, height: 50 } } });
+  (propsWhere((q) => q.testID === 'person-head').onLayout as (e: unknown) => void)({ nativeEvent: { layout: { y: 0, height: 300 } } });
 });
 const scrollAt = (y: number, content: number) => act(() => {
   (propsWhere((q) => typeof q.onScroll === 'function' && 'contentContainerStyle' in q).onScroll as (e: unknown) => void)({
@@ -1554,103 +1566,73 @@ describe('the bar over the cover', () => {
   });
 });
 
-// What there is to do about a person, in a row of its own under the head
-// (owner, 16 Nov 2026). The friend button stood at the end of the name's
-// row and, at 44, cut a long name and its handle.
-describe('the row of acts', () => {
+// What there is to do about a person: the friend button, at the end of
+// the head's row on the cover (owner, 28 Nov 2026). From 16 Nov it was a
+// row of its own under the head, beside a "Message — Soon" that answered
+// nothing — about 80 of the page before the first card.
+describe('the friend button on the cover', () => {
   const edge = (requester: string, addressee: string, status: 'pending' | 'accepted'): FriendshipRow =>
     ({ requester, addressee, status, created_at: '2026-11-01T00:00:00Z', responded_at: null }) as FriendshipRow;
-  const headRow = () => screen.getByTestId('person-cover').nextElementSibling as HTMLElement;
+  const headRow = () => screen.getByTestId('person-head-row');
 
-  it('holds the friend button and Message, under the head and the bio in it', async () => {
+  it('stands at the end of the head’s row, after the names, and nothing is under the cover for it', async () => {
     await show();
     const acts = screen.getByTestId('person-acts');
-    expect(viewStyleOf(acts).flexDirection).toBe('row');
-    // The friend button first, then Message.
     expect(acts.contains(screen.getByTestId('person-add'))).toBe(true);
-    expect(acts.contains(screen.getByTestId('person-message'))).toBe(true);
-    expect(screen.getByTestId('person-add').compareDocumentPosition(screen.getByTestId('person-message')) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
-    // Out of the name's row, which the name now has to itself.
-    expect(headRow().contains(screen.getByTestId('person-add'))).toBe(false);
-    expect(headRow().compareDocumentPosition(acts) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
-    // The bio first, in the head: who they are, then what to do about them.
-    expect(headRow().contains(screen.getByTestId('person-bio'))).toBe(true);
-    expect(acts.contains(screen.getByTestId('person-bio'))).toBe(false);
+    expect(acts.parentElement).toBe(headRow());
+    expect(headRow().lastElementChild).toBe(acts);
+    // The names keep what is left of the row, and the bio with them.
+    const names = screen.getByTestId('role-row').parentElement!;
+    expect(names.nextElementSibling).toBe(acts);
+    expect(viewStyleOf(names).flex).toBe(1);
+    expect(names.contains(screen.getByTestId('person-bio'))).toBe(true);
+    // It fades under the bar with the head it is in.
+    expect(screen.getByTestId('person-head').contains(acts)).toBe(true);
+    // No row under the head, no rule, and no Message that is not built:
+    // the first card is next.
+    expect(screen.queryByTestId('person-acts-rule')).toBeNull();
+    expect(screen.queryByTestId('person-message')).toBeNull();
+    expect(screen.queryByText('Message')).toBeNull();
+    expect(screen.queryByText('Soon')).toBeNull();
   });
 
-  // One group in the page's middle, a rule between (owner, 17 Nov 2026):
-  // the reference. Two equal halves, for a morning, set the pair 190
-  // apart.
-  it('lays the two out as one centred group, the same space either side of a short rule', async () => {
+  // On a photograph each state has a ground of its own (`FriendButton`).
+  it('draws Add friend as a pill of the photograph’s light ink, dark words on it, at the chip’s 32', async () => {
     await show();
-    const acts = screen.getByTestId('person-acts');
-    const [left, rule, right] = Array.from(acts.children) as HTMLElement[];
-    expect(acts.children).toHaveLength(3);
-    expect(left.contains(screen.getByTestId('person-add')) || left === screen.getByTestId('person-add')).toBe(true);
-    expect(rule).toBe(screen.getByTestId('person-acts-rule'));
-    expect(right).toBe(screen.getByTestId('person-message'));
-    const row = viewStyleOf(acts);
-    expect(row).toMatchObject({ justifyContent: 'center', alignItems: 'center', gap: 22 });
-    // Neither stretches: a group, not halves.
-    for (const one of [left, right]) expect(viewStyleOf(one).flex).toBeUndefined();
-    const line = viewStyleOf(rule);
-    expect(line.width).toBe(1);
-    expect(Number(line.height)).toBeLessThan(44 / 2);
+    const add = screen.getByTestId('person-add');
+    expect(add.getAttribute('role')).toBe('button');
+    const face = add.firstElementChild!.firstElementChild as HTMLElement;
+    expect(viewStyleOf(face)).toMatchObject({ minHeight: 32, backgroundColor: onPhoto.text, borderWidth: 0 });
+    expect(textStyleOf(screen.getByText('Add friend'))?.color).toBe('#151614');
+    expect(face.querySelector('[data-icon]')!.getAttribute('data-color')).toBe('#151614');
   });
 
-  // What stands — Friends, Requested — is words at Message's own size
-  // beside it, and Message is words too.
-  it('sets "Friends" and Message in the same type, one plain and one dimmed', async () => {
+  it('says Friends and Requested on dark glass, in the light ink, and neither is a press', async () => {
     crew.ships.data = [edge('me-id', 'lan-id', 'accepted')];
     await show();
     const friends = screen.getByTestId('person-friends');
     expect(screen.getByTestId('person-acts').firstElementChild).toBe(friends);
-    const said = textStyleOf(screen.getByText('Friends'));
-    const message = textStyleOf(screen.getByText('Message'));
-    expect(said).toMatchObject({ fontSize: 16, color: colors.textSecondary });
-    expect(message?.fontSize).toBe(said?.fontSize);
-    expect(message?.fontWeight).toBe(said?.fontWeight);
+    expect(viewStyleOf(friends)).toMatchObject({ minHeight: 32, backgroundColor: 'rgba(10,11,10,0.55)', borderColor: onPhoto.line });
+    expect(textStyleOf(screen.getByText('Friends'))?.color).toBe(onPhoto.text);
     const tick = friends.querySelector('[data-icon="checkmark"]')!;
-    expect([tick.getAttribute('data-size'), tick.getAttribute('data-color')]).toEqual(['18', String(colors.textSecondary)]);
-    // "Soon" slanted beside it, as the reference.
-    expect(textStyleOf(screen.getByText('Soon'))).toMatchObject({ fontStyle: 'italic' });
-  });
-
-  // Not built yet, and said so: dimmed, "Soon" beside the word, and no
-  // press at all — nothing pretends to answer one.
-  it('draws Message as not yet a button: dimmed, said to be coming, and no press', async () => {
-    const navigation = await show();
-    const message = screen.getByTestId('person-message');
-    expect(message.textContent).toBe('Message' + 'Soon');
-    const face = message.firstElementChild as HTMLElement;
-    expect(viewStyleOf(face)).toMatchObject({ opacity: 0.45, minHeight: 44 });
-    // Words, not a pill: beside "Friends" a dimmed pill was the louder of the two.
-    expect(viewStyleOf(face).backgroundColor).toBeUndefined();
-    expect(viewStyleOf(face).borderWidth).toBeUndefined();
-    expect(message.getAttribute('aria-disabled')).toBe('true');
-    expect(message.getAttribute('aria-label')).toBe('Message, Soon');
-    fireEvent.click(message);
-    expect(navigation.navigate).not.toHaveBeenCalled();
-    expect(data.sendFriendRequest).not.toHaveBeenCalled();
+    expect([tick.getAttribute('data-size'), tick.getAttribute('data-color')]).toEqual(['15', onPhoto.text]);
+    expect(friends.closest('[role="button"]')).toBeNull();
     cleanup();
-    state.lang = 'vi';
+    crew.ships.data = [edge('me-id', 'lan-id', 'pending')];
     await show();
-    expect(screen.getByTestId('person-message').textContent).toBe('Nhắn tin' + 'Sắp có');
+    const waiting = screen.getByTestId('person-requested');
+    expect(waiting.querySelector('[data-icon]')!.getAttribute('data-icon')).toBe('time-outline');
+    expect(viewStyleOf(waiting).backgroundColor).toBe('rgba(10,11,10,0.55)');
+    expect(waiting.closest('[role="button"]')).toBeNull();
   });
 
-  it('holds what already stands too, as the grey words', async () => {
-    crew.ships.data = [edge('me-id', 'lan-id', 'accepted')];
-    await show();
-    expect(screen.getByTestId('person-acts').contains(screen.getByTestId('person-friends'))).toBe(true);
-    expect(screen.getByTestId('person-message')).toBeTruthy();
-  });
-
-  // No friend button, no row: your own page, and nobody signed in.
+  // No friend button, nothing in its place: your own page, and nobody
+  // signed in.
   it('is not drawn on your own page, nor signed out', async () => {
     state.me = LAN.id;
     await show();
     expect(screen.queryByTestId('person-acts')).toBeNull();
-    expect(screen.queryByTestId('person-message')).toBeNull();
+    expect(headRow().lastElementChild).toBe(screen.getByTestId('role-row').parentElement);
     cleanup();
     state.me = null;
     await show();
@@ -1676,9 +1658,8 @@ describe('the friend button in the header', () => {
     scrollTo(900);
     expect(screen.queryByTestId('person-top-add')).toBeNull();
     expect(screen.getByTestId('person-more')).toBeTruthy();
-    // The row under the name is as it was.
+    // The button on the cover is as it was.
     expect(screen.getByTestId('person-add')).toBeTruthy();
-    expect(screen.getByTestId('person-message')).toBeTruthy();
   });
 
   it('is not there until the row has scrolled away, and goes when the row is back', async () => {
@@ -1691,9 +1672,11 @@ describe('the friend button in the header', () => {
     scrollTo(301);
     const top = screen.getByTestId('person-top-add');
     expect(top.textContent).toBe('Add friend');
-    // The chip's 32, where the row's is 44.
-    expect(viewStyleOf(top.firstElementChild!.firstElementChild as HTMLElement).minHeight).toBe(32);
-    expect(viewStyleOf(screen.getByTestId('person-add').firstElementChild!.firstElementChild as HTMLElement).minHeight).toBe(44);
+    // The chip's 32, on the page's ground: the bar is the page by now,
+    // and the cover's light pill would be a white lozenge on it.
+    const dress = viewStyleOf(top.firstElementChild!.firstElementChild as HTMLElement);
+    expect(dress.minHeight).toBe(32);
+    expect(dress.backgroundColor).toBe(colors.surfaceCard);
     // Before the ⋯, in the header.
     expect(top.compareDocumentPosition(screen.getByTestId('person-more')) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     scrollTo(120);
@@ -1753,34 +1736,6 @@ describe('the friend button', () => {
     await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Add friend' })); });
     expect(data.sendFriendRequest).toHaveBeenCalledExactlyOnceWith('me-id', 'lan-id');
     expect(screen.getByTestId('person-requested').textContent).toBe('Requested');
-  });
-
-  // The page's one act, at the button scale's 44 and in Edit profile's
-  // dress; a row of people keeps the 32 (owner, 16 Nov 2026).
-  it('draws Add friend at 44 on the page, on the card’s surface', async () => {
-    await show();
-    const add = screen.getByTestId('person-add').firstElementChild!.firstElementChild as HTMLElement;
-    expect(viewStyleOf(add)).toMatchObject({
-      minHeight: 44, backgroundColor: colors.surfaceCard, borderWidth: 1, borderColor: colors.borderGlassSoft,
-    });
-  });
-
-  // What already stands is a fact: grey words and a mark, no pill, and
-  // nothing to press. A clock while it waits, a tick once it is so.
-  it('says Requested and Friends as words with a mark, not as pills', async () => {
-    crew.ships.data = [edge('me-id', 'lan-id', 'pending')];
-    await show();
-    const waiting = screen.getByTestId('person-requested');
-    expect(waiting.querySelector('[data-icon]')!.getAttribute('data-icon')).toBe('time-outline');
-    expect([viewStyleOf(waiting).borderWidth, viewStyleOf(waiting).backgroundColor]).toEqual([undefined, undefined]);
-    expect(viewStyleOf(waiting).minHeight).toBe(44);
-    expect(waiting.closest('[role="button"]')).toBeNull();
-    cleanup();
-    crew.ships.data = [edge('me-id', 'lan-id', 'accepted')];
-    await show();
-    const friends = screen.getByTestId('person-friends');
-    expect(friends.querySelector('[data-icon]')!.getAttribute('data-icon')).toBe('checkmark');
-    expect(friends.textContent).toBe('Friends');
   });
 
   // The line that counts their lists counts only that. Until 16 Nov 2026
@@ -2126,12 +2081,46 @@ describe('the ⋯', () => {
 });
 
 describe('when there is nobody to show', () => {
-  it('turns while the profile is on its way', async () => {
+  // A spinner under the plain "Profile" header until 28 Nov 2026: on the
+  // owner's recording a friend's page opened as one layout and became
+  // another. The cover's place is held instead, dark to the screen's
+  // edges, with the bar's way back already over it.
+  it('holds the cover’s place while the profile is on its way, the way back already over it', async () => {
     state.people = {};
     state.lookup = { loading: true, error: null, reload: vi.fn() };
-    await show();
-    expect(screen.getByTestId('person-loading')).toBeTruthy();
+    const navigation = await show();
+    const hold = screen.getByTestId('person-loading');
+    expect(viewStyleOf(hold)).toMatchObject({ height: 272, marginHorizontal: -space.page });
+    // Dark, as a photograph under its scrim is: the bar's glyphs and
+    // the clock are light.
+    expect(viewStyleOf(hold).backgroundColor).toBe('#1C1D1C');
+    expect(statusBar.set).toHaveBeenLastCalledWith('light', true);
+    // The page's sheet over its foot, as on the page it will be.
+    expect(viewStyleOf(hold.lastElementChild!)).toMatchObject({ height: 18, borderTopLeftRadius: 22 });
+    // The bar: the way back, and no tools or name of a person not here.
+    expect(screen.getByTestId('person-bar')).toBeTruthy();
+    fireEvent.click(screen.getByTestId('person-back'));
+    expect(navigation.goBack).toHaveBeenCalledTimes(1);
+    expect(screen.queryByTestId('person-more')).toBeNull();
+    expect(screen.queryByTestId('person-tools-glass')).toBeNull();
+    expect(screen.queryByText('Profile')).toBeNull();
     expect(screen.queryByTestId('person-missing')).toBeNull();
+  });
+
+  // With nobody to show there is no cover under the clock, and the
+  // clock keeps the scheme's own ink: light ink was asked for whatever
+  // the page drew, and on the paper look it stood on the page's cream.
+  it('leaves the clock in the scheme’s ink on a page with no cover', async () => {
+    state.people = {};
+    state.scheme = 'light';
+    await show();
+    expect(screen.getByTestId('person-missing')).toBeTruthy();
+    expect(screen.queryByTestId('person-bar')).toBeNull();
+    expect(statusBar.set).toHaveBeenLastCalledWith('dark', true);
+    cleanup();
+    state.people = { lan: LAN };
+    await show();
+    expect(statusBar.set).toHaveBeenLastCalledWith('light', true);
   });
 
   it('says it could not load, and asks again', async () => {

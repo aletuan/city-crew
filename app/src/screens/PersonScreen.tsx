@@ -128,13 +128,13 @@ import { PencilGlyph } from '../components/PencilGlyph';
 import React, { useEffect, useRef, useState } from 'react';
 import { useScrollToTop } from '@react-navigation/native';
 import {
-  ActivityIndicator, Animated, type LayoutChangeEvent, type NativeScrollEvent, type NativeSyntheticEvent,
+  Animated, type LayoutChangeEvent, type NativeScrollEvent, type NativeSyntheticEvent,
   Pressable, ScrollView, StyleSheet, Text, View,
 } from 'react-native';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import {
-  Avatar, EmptyState, GradientCta, PressableScale, Screen, SECONDARY_CONTROL_H, useTabBarClearance,
+  Avatar, EmptyState, GradientCta, PressableScale, Screen, Skeleton, useTabBarClearance,
 } from '../components/ui';
 import { INK_GAP_END, PHOTO_DISC } from '../components/ui/controls';
 import { Glyph, ICON } from '../components/ui/glyph';
@@ -153,7 +153,7 @@ import { Requests } from './person/Requests';
 import { FindField, usePageFind } from './person/Find';
 import { OwnTools, Search } from './person/Tools';
 import { useWall } from './person/Wall';
-import { BAR_H, CoverBar, fadeUnderBar, useHeadFade, usePastCover } from './person/Bar';
+import { BAR_H, CoverBar, fadeUnderBar, scrimOver, useHeadFade, usePastCover } from './person/Bar';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useCardCopy } from './person/useCardCopy';
 import { OwnFace, useOwnPicture } from './person/OwnFace';
@@ -186,6 +186,10 @@ const FACE = 72;
 /** Everyone else's ring: 2 of the photograph's light ink. It was 4 of
  *  the page, which on the cover is a band of cream. */
 const FACE_RING = 2;
+/** The cover before its photograph: the scrim's own ink, opaque. The
+ *  bar's light glyphs and the clock stand on it as they will on the
+ *  picture; on the page's cream they would be gone. */
+const COVER_HOLD = '#1C1D1C';
 /** The cover's height under the clock, running to the screen's edges:
  *  272, so with a 59pt clock the photograph is 331 and, the page's sheet
  *  risen 18 over its foot, about 313 of it shows — three quarters of
@@ -240,7 +244,6 @@ const CAMERA_RESERVE = CAMERA_RIGHT + PHOTO_DISC - space.page + 8;
  * as well (`ON_PHOTO_SHADOW`), for the letter on one bright spot.
  */
 const FOOT_SCRIM = ['rgba(10,11,10,0)', 'rgba(10,11,10,0.54)', 'rgba(10,11,10,0.66)'] as const;
-const FOOT_SCRIM_AT = [0, 0.2, 1] as const;
 const ON_PHOTO_SHADOW = { textShadowColor: 'rgba(0,0,0,0.45)', textShadowOffset: { width: 0, height: 1 }, textShadowRadius: 3 } as const;
 /** How far the name shrinks to stay on its line beside the picture
  *  before it is cut: 22 to about 17, still the largest words on the
@@ -304,7 +307,7 @@ export default function PersonScreen({ navigation, route, home }: {
   const { lists, open, seenOf } = usePageLists(me, person?.id);
   const coverFor = (c: Collection) => coverUriOf(c, membersOf(c, places.data));
 
-  const { friendButton, crew } = useFriendButtons(me, 'person', 'page');
+  const { friendButton, crew } = useFriendButtons(me, 'person', 'photo');
   // Report, block, unblock — `usePersonMenu`.
   const menu = usePersonMenu(me, person, crew);
 
@@ -356,7 +359,7 @@ export default function PersonScreen({ navigation, route, home }: {
   // — `person/Bar`. Not while searching: the box stands in the head's
   // place and the page wears its plain header again.
   const coverH = useSafeAreaInsets().top + COVER_UNDER_CLOCK;
-  const bar = usePastCover(coverH, person, find.on);
+  const bar = usePastCover(coverH, person, find.on, who.loading);
   const { bleed } = bar;
   const onBack = home ? undefined : () => navigation.goBack();
 
@@ -389,7 +392,7 @@ export default function PersonScreen({ navigation, route, home }: {
       />
     </>
   ) : who.loading ? (
-    <ActivityIndicator color={colors.accent} style={s.spinner} testID="person-loading" />
+    <CoverHold coverH={coverH} />
   ) : who.error ? (
     <EmptyState
       icon="cloud-offline"
@@ -670,6 +673,8 @@ function Head({ me, person, own, cover, coverH, scroll, onCover, trying, friend,
   // it at once: on the recording the camera rode up over the bell and
   // the gear while the head beside it was fading.
   const cameraFade = fadeUnderBar(scroll, UNDER_BAR - BAR_H, PHOTO_DISC);
+  // The words' scrim, from just over the head down — `scrimOver`.
+  const scrim = scrimOver(coverH, top + BAR_H, fade.top);
   return (
     <>
       {/* The head, whole, on the photograph (owner, 28 Nov 2026): the
@@ -678,7 +683,7 @@ function Head({ me, person, own, cover, coverH, scroll, onCover, trying, friend,
           photograph is one press (its sheet, on your own page) and lies
           under the rest, beside it and not around it: a press inside a
           press is the inner one's on a phone and a warning on the web. */}
-      <View style={[s.coverCard, { height: coverH }]} testID="person-head">
+      <View style={[s.coverCard, { height: coverH }]} onLayout={onRowLayout} testID="person-head">
         <Pressable
           style={StyleSheet.absoluteFill}
           testID="person-cover"
@@ -694,7 +699,7 @@ function Head({ me, person, own, cover, coverH, scroll, onCover, trying, friend,
               so the light clock and the bar's glass read on a pale sky. */}
           <LinearGradient colors={['rgba(0,0,0,0.38)', 'rgba(0,0,0,0)']} style={s.scrim} pointerEvents="none" testID="person-cover-scrim" />
           {/* The words' scrim — see `footScrim`. */}
-          <LinearGradient colors={FOOT_SCRIM} locations={FOOT_SCRIM_AT} style={[s.footScrim, { top: top + BAR_H }]} pointerEvents="none" testID="person-cover-foot-scrim" />
+          <LinearGradient colors={FOOT_SCRIM} locations={[0, scrim.at, 1]} style={[s.footScrim, { top: scrim.top }]} pointerEvents="none" testID="person-cover-foot-scrim" />
           {/* The cover's camera, on your own page: it says the picture is
               a control, as the avatar's badge does, under the bar's tools
               in the band the head leaves free (`COVER_UNDER_CLOCK`). The
@@ -735,6 +740,11 @@ function Head({ me, person, own, cover, coverH, scroll, onCover, trying, friend,
             {/* What they say about themselves — `Bio`. */}
             <Bio me={me} person={person} onAdd={() => navigation.navigate('EditProfile', { focus: 'bio' })} focused={() => navigation.isFocused()} />
           </View>
+          {/* What there is to do about this person, at the row's end
+              (28 Nov 2026) — `FriendButton`'s `photo`. Not on your own
+              page, nor signed out: no button, and the names keep the
+              row. */}
+          {friend ? <View testID="person-acts">{friend}</View> : null}
         </Animated.View>
         {/* Your counts, yours to see (`profile/Counts`), in the
             photograph's light ink. */}
@@ -743,10 +753,6 @@ function Head({ me, person, own, cover, coverH, scroll, onCover, trying, friend,
             corners, and under them the page. */}
         <View style={s.sheet} pointerEvents="none" testID="person-sheet" />
       </View>
-      {/* What there is to do about this person, in a row of its own —
-          `Acts`. Not on your own page, nor signed out: no friend button,
-          no row. */}
-      {friend ? <Acts friend={friend} onLayout={onRowLayout} /> : null}
       {/* What the two of you have in common — `InCommon`. It took the
           "mutual saves" this line counted, for a friend only, until 16
           Nov 2026. Hidden the same day, not removed: `IN_COMMON_ON`. */}
@@ -807,63 +813,26 @@ function usePastRow(duck: ((e: NativeSyntheticEvent<NativeScrollEvent>) => void)
 }
 
 /**
- * What there is to do about this person: the friend button, and Message.
+ * The cover's place, held while the profile is on its way: its height,
+ * dark to the screen's edges as a photograph is, with the face's disc
+ * and two bars where the name and handle will stand, and the page's
+ * sheet over its foot. The bar is already over it (`usePastCover`'s
+ * `holding`), so the way back does not move when the page arrives.
  *
- * A row of its own under the name (owner, 16 Nov 2026). The friend
- * button stood at the end of the name's row for an evening, and at 44 it
- * took nearly half the width beside the picture: "Le Nguyen Ngoc Minh"
- * shrank as far as it could and "@lenguyenngocminh" was cut. Under the
- * head the name has the whole width and the buttons have theirs.
- *
- * Rejected for it: the button as an icon alone (four states become four
- * glyphs, two of them ticks), and the button on the cover photograph
- * (the grey words for "Requested" and "Friends" cannot be read on a
- * photograph, and would need the pill they had just lost).
- *
- * ── one group in the middle, a rule between (owner, 17 Nov 2026) ──
- *
- * The friend button, a short rule, Message: one group, 22 either side
- * of the rule, in the middle of the page — the owner's reference.
- *
- * Before it the two stood from the page's left edge, grey words beside
- * a dimmed pill. Then, for a morning, in two equal halves of the page's
- * width: each act sat in the middle of its own half, which put them 190
- * apart with the rule alone between, and the owner read it, beside the
- * reference, as two things that had drifted. A group keeps them a pair.
- *
- * Both are words here when nothing is asked: "Friends" and "Requested"
- * at the body's 16 with a mark, Message the same and dimmed. Add friend
- * and Accept keep their pills — those are the two that are buttons.
- *
- * Message is not built. It is drawn anyway, dimmed and said to be
- * coming — the owner's choice over leaving the place empty — as
- * `ActionSheet` draws a row that is not yet a thing to do: 0.45, the
- * figure the app's dimmed controls share, "Soon" beside the word, and
- * the press refused, so nothing pretends to answer one. When messages
- * exist it becomes a button where it stands.
+ * A spinner under the plain "Profile" header until 28 Nov 2026: on the
+ * owner's recording the page opened as one layout and became another.
  */
-function Acts({ friend, onLayout }: { friend: React.ReactNode; onLayout: (e: LayoutChangeEvent) => void }) {
-  const { t } = useI18n();
-  const message = t('Message', 'Nhắn tin', 'メッセージ', '发消息', '發訊息');
-  const soon = t('Soon', 'Sắp có', '近日公開', '即将推出', '即將推出');
+function CoverHold({ coverH }: { coverH: number }) {
   return (
-    <View style={s.acts} onLayout={onLayout} testID="person-acts">
-      {friend}
-      <View style={s.actsRule} testID="person-acts-rule" />
-      <PressableScale
-        // `disabled` alone, as `ActionSheet`'s rows that are not yet a
-        // thing to do: the press is dropped and VoiceOver says dimmed.
-        disabled
-        scaleTo={1}
-        contentStyle={s.message}
-        accessibilityRole="button"
-        accessibilityLabel={`${message}, ${soon}`}
-        testID="person-message"
-      >
-        <Glyph name="chatbubble-outline" size={ICON.action} color={colors.text} />
-        <Text style={s.messageText}>{message}</Text>
-        <Text style={s.messageSoon}>{soon}</Text>
-      </PressableScale>
+    <View style={[s.coverCard, { height: coverH }]} testID="person-loading">
+      <View style={s.headRow}>
+        <Skeleton style={s.holdFace} />
+        <View style={s.holdNames}>
+          <Skeleton style={s.holdName} />
+          <Skeleton style={s.holdHandle} />
+        </View>
+      </View>
+      <View style={s.sheet} />
     </View>
   );
 }
@@ -879,7 +848,6 @@ const s = StyleSheet.create({
     flexDirection: 'row', justifyContent: 'flex-end', minHeight: 44,
     paddingHorizontal: space.page, paddingTop: 6, paddingBottom: 14,
   },
-  spinner: { marginTop: 20 },
   // The accent's tint: a cover with no photograph to wear.
   tint: { backgroundColor: colors.accentSoft },
   // A disc of the photograph's own dark: it reads on a light sky. The
@@ -905,7 +873,9 @@ const s = StyleSheet.create({
   // To the screen's edges and under the clock (owner, 22 Nov 2026): the
   // page's margins taken back, no rounding. See `person/Bar`. The head
   // stands at its foot (28 Nov 2026), over the sheet's rise.
-  coverCard: { marginHorizontal: -space.page, overflow: 'hidden', justifyContent: 'flex-end' },
+  // Dark under the photograph (`COVER_HOLD`): what shows while it is
+  // held, and in the 160ms a photograph takes to come in.
+  coverCard: { backgroundColor: COVER_HOLD, marginHorizontal: -space.page, overflow: 'hidden', justifyContent: 'flex-end' },
   coverPhoto: { width: '100%' },
   // 120 of the photograph's top: the clock and the bar's 50 under it,
   // and as far again to fade over.
@@ -937,20 +907,12 @@ const s = StyleSheet.create({
     color: onPhoto.text, fontSize: 22, lineHeight: TITLE_LINE, fontFamily: display.bold,
     letterSpacing: 0.2, ...ON_PHOTO_SHADOW,
   },
-  // The row of acts — see `Acts`: one group in the page's middle, 22
-  // either side of the rule, 14 under the head.
-  acts: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 22, marginTop: 14 },
-  // The rule between them: a hairline 20 tall, under half the row's 44,
-  // so it parts two things without fencing them.
-  actsRule: { width: 1, height: 20, backgroundColor: colors.borderGlass },
-  // Words and a mark at the button scale's height, dimmed: a button that
-  // is not one yet.
-  message: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, opacity: 0.45,
-    minHeight: SECONDARY_CONTROL_H,
-  },
-  messageText: { color: colors.text, ...type.body },
-  messageSoon: { color: colors.text, fontSize: 15, fontStyle: 'italic' },
+  // The held cover's marks: the face's 76 and two lines' worth of bar,
+  // in the light ink at a strength that reads as "not yet", on the dark.
+  holdFace: { width: FACE + FACE_RING * 2, height: FACE + FACE_RING * 2, borderRadius: FACE / 2 + FACE_RING, backgroundColor: onPhoto.line },
+  holdNames: { flex: 1, gap: 10 },
+  holdName: { width: 140, height: 18, borderRadius: 9, backgroundColor: onPhoto.line },
+  holdHandle: { width: 90, height: 12, borderRadius: 6, backgroundColor: onPhoto.line },
   // The header's end: the small friend button, when it is there, then
   // the ⋯.
   topRight: { flexDirection: 'row', alignItems: 'center', gap: 10 },

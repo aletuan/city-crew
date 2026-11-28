@@ -25,7 +25,7 @@
 // rounded cover with the glass pill over it (the cover a card among the
 // cards under it, smaller, and the head no longer the page's own).
 
-import React, { useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Animated, StyleSheet, View, type LayoutChangeEvent, type NativeScrollEvent, type NativeSyntheticEvent } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { BarInk, RoundIconButton, useOwnedStatusBar } from '../../components/ui';
@@ -46,7 +46,7 @@ const FADE = 44;
  * Where the scroll is, against the foot of the cover: `y` for the fades,
  * and `past` once the cover has left the bar.
  */
-export function usePastCover(coverH: number, person: FriendProfile | null, searching: boolean) {
+export function usePastCover(coverH: number, person: FriendProfile | null, searching: boolean, holding = false) {
   const insets = useSafeAreaInsets();
   const y = useRef(new Animated.Value(0)).current;
   const [past, setPast] = useState(false);
@@ -57,8 +57,19 @@ export function usePastCover(coverH: number, person: FriendProfile | null, searc
   const nearRef = useRef(false);
   // The cover's foot reaches the bar's when the page has scrolled this far.
   const end = coverH - insets.top - BAR_H;
-  // Light ink on the photograph; past it, the scheme's own (null).
-  const applyBar = useOwnedStatusBar(() => (pastRef.current ? null : 'light'));
+  // Only over a cover: not while the search box stands in the head's
+  // place, nor on a page with nobody to show. While the profile is on
+  // its way (`holding`) the cover's place is held, dark, to the screen's
+  // edges (`CoverHold`), so the bar is over that: on the owner's
+  // recording of 28 Nov 2026 a friend's page opened on the plain header
+  // and a spinner, and became this page a moment later.
+  const bleed = (!!person || holding) && !searching;
+  const bleedRef = useRef(bleed);
+  bleedRef.current = bleed;
+  // Light ink on the photograph; past it, or with no cover under the
+  // clock at all, the scheme's own (null).
+  const applyBar = useOwnedStatusBar(() => (pastRef.current || !bleedRef.current ? null : 'light'));
+  useEffect(() => { applyBar(); }, [bleed, applyBar]);
   const onScroll = (e: NativeSyntheticEvent<NativeScrollEvent>) => {
     const at = e.nativeEvent.contentOffset.y;
     y.setValue(at);
@@ -73,9 +84,6 @@ export function usePastCover(coverH: number, person: FriendProfile | null, searc
   };
   const ground = y.interpolate({ inputRange: [end - FADE, end], outputRange: [0, 1], extrapolate: 'clamp' });
   const glass = y.interpolate({ inputRange: [end - FADE, end], outputRange: [1, 0], extrapolate: 'clamp' });
-  // Only over a cover: not before the page has a person, nor while the
-  // search box stands in the head's place.
-  const bleed = !!person && !searching;
   return { past, near, onScroll, ground, glass, bleed, person, scroll: y };
 }
 
@@ -100,8 +108,8 @@ export function useHeadFade(scroll: Animated.Value) {
     const { y, height } = e.nativeEvent.layout;
     setAt((was) => (was && was.y === y && was.h === height ? was : { y, h: height }));
   };
-  if (!at) return { opacity: 1 as const, onLayout };
-  return { opacity: fadeUnderBar(scroll, at.y - top - BAR_H, at.h), onLayout };
+  if (!at) return { opacity: 1 as const, onLayout, top: null };
+  return { opacity: fadeUnderBar(scroll, at.y - top - BAR_H, at.h), onLayout, top: at.y };
 }
 
 /**
@@ -119,6 +127,33 @@ export function fadeUnderBar(scroll: Animated.Value, meet: number, h: number) {
   });
 }
 
+/** How far over the head the words' scrim begins. */
+const SCRIM_LEAD = 48;
+
+/**
+ * Where the scrim under the head's words stands on a cover `coverH`
+ * tall: its top, and how far down its own run it is at full strength.
+ *
+ * It begins `SCRIM_LEAD` over the head and is at strength where the head
+ * begins, so the photograph over that is the photograph. Until the
+ * owner's recording of 28 Nov 2026 it ran from the bar's foot and was at
+ * strength a fifth of the way down — right for your own page, whose head
+ * (bio, counts) begins about 53 under the bar, and wrong for anybody
+ * else's, whose head is the face and two lines and begins about 110
+ * under it: the whole of a friend's cover was under 54% of dark.
+ *
+ * `headTop` is the head's measured place in the cover, null before it is
+ * measured: then, as it was. Never over the bar's foot (`barFoot`).
+ */
+export function scrimOver(coverH: number, barFoot: number, headTop: number | null): { top: number; at: number } {
+  if (headTop === null) return { top: barFoot, at: 0.2 };
+  const top = Math.max(barFoot, headTop - SCRIM_LEAD);
+  const run = coverH - top;
+  // A head at the bar's foot, or under the cover's: at strength from the top.
+  const at = run > 0 ? Math.min(1, Math.max(0, (headTop - top) / run)) : 0;
+  return { top, at };
+}
+
 export function CoverBar({ bar, onBack, backTestID, tools }: {
   bar: ReturnType<typeof usePastCover>;
   /** Somebody else's page, opened from somewhere: the way back. */
@@ -128,9 +163,10 @@ export function CoverBar({ bar, onBack, backTestID, tools }: {
 }) {
   const insets = useSafeAreaInsets();
   const { t } = useI18n();
-  if (!bar.bleed || !bar.person) return null;
-  // The name as the head shows it: given, or the handle.
-  const title = bar.person.full_name || atHandle(bar.person.handle);
+  if (!bar.bleed) return null;
+  // The name as the head shows it: given, or the handle. None while the
+  // profile is on its way: the bar is the way back and nothing else.
+  const title = bar.person ? bar.person.full_name || atHandle(bar.person.handle) : '';
   return (
     <View style={[s.bar, { paddingTop: insets.top }]} pointerEvents="box-none" testID="person-bar">
       <Animated.View style={[StyleSheet.absoluteFill, s.ground, { opacity: bar.ground }]} pointerEvents="none" testID="person-bar-ground" />
@@ -146,8 +182,9 @@ export function CoverBar({ bar, onBack, backTestID, tools }: {
             ? <Animated.Text style={[s.title, { opacity: bar.ground }]} numberOfLines={1} testID="person-bar-title">{title}</Animated.Text>
             : <View style={s.gap} />}
           <View>
-            <Animated.View style={[s.pill, { opacity: bar.glass }]} pointerEvents="none" testID="person-tools-glass" />
-            {tools}
+            {/* The tools are the person's: none while there is nobody yet. */}
+            {bar.person ? <Animated.View style={[s.pill, { opacity: bar.glass }]} pointerEvents="none" testID="person-tools-glass" /> : null}
+            {bar.person ? tools : null}
           </View>
         </View>
       </BarInk.Provider>
