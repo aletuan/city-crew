@@ -164,25 +164,13 @@ export const s = StyleSheet.create({
   // 4, so the score's line (8 down) starts 12 under the photograph, the
   // gap the mock-up leaves there.
   body: { paddingHorizontal: space.page, paddingTop: 4 },
-  // Body face, not display: the qualifier is a fact about the title, not
-  // a second title, and the change of face is what says so. 8 down, 12
-  // under the photograph, as the score's line would be without it.
-  // Centred, each line of it, under the centred name in the bar.
-  subtitle: { color: colors.textSecondary, ...type.body, marginTop: 8, textAlign: 'center' },
-  // Under the pick mark the two are one head, not two lines: 4 between
-  // them, where the mark's 6 below and this line's 8 above would leave
-  // 14 — wider than either keeps from the photograph (8), which reads as
-  // two separate things. The 4 is reasoned, not measured on a phone.
-  subtitleUnderPick: { marginTop: -2 },
-
   // ── the rating, as a line rather than a badge ──
   //
   // `center`, not a baseline: the star is the tallest thing here and the
   // eye reads it against the number, not against the number's feet.
   //
-  // 8 above, against the subtitle's 4. The subtitle is part of the name
-  // and sits close enough to be read with it; the score is a different
-  // fact and takes the wider gap that says so.
+  // 8 above: the score is a different fact from the pick mark over it
+  // and takes the gap that says so.
   ratingRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   // The rating's line, with check-in pinned to its right. Centred on the
   // pill: the line is one 24pt row of text beside a 44pt control, and a

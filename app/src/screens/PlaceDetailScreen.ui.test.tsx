@@ -18,7 +18,7 @@
 import React from 'react';
 import { Alert, Linking, Share, StyleSheet, type StyleProp, type TextStyle, type ViewStyle } from 'react-native';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { act, cleanup, fireEvent, render, screen, textStyleOf, viewStyleOf, waitFor, within } from '../uitest/render';
+import { act, cleanup, fireEvent, render, screen, viewStyleOf, waitFor, within } from '../uitest/render';
 import { pinImage } from '../components/mapPins';
 import type { Place } from '../lib/data';
 import type { Nav, RootRoute } from '../nav';
@@ -380,21 +380,23 @@ describe('PlaceDetailScreen — loading and missing', () => {
 });
 
 describe('PlaceDetailScreen — title, rating, facts', () => {
-  it('splits the branch off the name and prints it as a subtitle', () => {
+  // The half `splitName` cuts off — a branch, a tagline — was a line
+  // under the photograph until 28 Nov 2026 (owner): the address row says
+  // where and the highlight paragraph says what. Each case below is one
+  // the old rule printed; the last is the one that pins the address.
+  it('prints the brand in the bar and the qualifier nowhere', () => {
     show();
     expect(screen.getByTestId('detail-name').textContent).toBe('Cộng Cà Phê');
-    expect(screen.getByText('Old Quarter')).toBeTruthy();
-  });
-
-  it('drops a subtitle that only repeats the neighbourhood', () => {
-    show(place({ name_en: 'Cafe Slow - Hai Ba Trung', address: null }));
-    expect(screen.getByTestId('detail-name').textContent).toBe('Cafe Slow');
+    expect(screen.queryByText('Old Quarter')).toBeNull();
     expect(screen.queryByTestId('detail-subtitle')).toBeNull();
+    cleanup();
+    show(place({ name_en: 'Jumarc - Korean Modern Bar Kitchen', is_featured: true }));
+    expect(screen.getByTestId('detail-name').textContent).toBe('Jumarc');
+    expect(screen.queryByText('Korean Modern Bar Kitchen')).toBeNull();
   });
 
-  // The district had a line of its own under the subtitle, for a place
-  // with no address, until 15 Nov 2026: all 1,477 places had an address
-  // that day, and the head is two centred lines at most.
+  // The district had a line of its own, for a place with no address,
+  // until 15 Nov 2026: all 1,477 places had an address that day.
   it('prints no district line, with an address or without one', () => {
     show(place({ name_en: 'Plain' }));
     expect(screen.queryByText('Hai Ba Trung')).toBeNull();
@@ -404,44 +406,19 @@ describe('PlaceDetailScreen — title, rating, facts', () => {
   });
 
   // Centred under the photograph, as the name is in the bar (owner, 15
-  // Nov 2026): the pick mark, the subtitle, or the two as one head.
-  it('centres the pick mark and the subtitle, and closes the gap between them', () => {
+  // Nov 2026), and alone there now.
+  it('centres the pick mark', () => {
     show(place({ name_en: 'Jumarc - Korean Modern Bar Kitchen', is_featured: true }));
     const pick = screen.getByTestId('detail-pick');
-    const sub = screen.getByTestId('detail-subtitle');
     expect(viewStyleOf(pick)?.justifyContent).toBe('center');
-    expect(textStyleOf(sub)?.textAlign).toBe('center');
-    // The mark first, the subtitle under it, 4 apart: 6 below + (−2) above.
-    expect(pick.compareDocumentPosition(sub) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     expect(viewStyleOf(pick)?.marginBottom).toBe(6);
-    expect(textStyleOf(sub)?.marginTop).toBe(-2);
-    cleanup();
-    // Alone, the subtitle keeps its 8 from the photograph.
-    show(place({ name_en: 'Jumarc - Korean Modern Bar Kitchen', is_featured: false }));
-    expect(textStyleOf(screen.getByTestId('detail-subtitle'))?.textAlign).toBe('center');
-    expect(textStyleOf(screen.getByTestId('detail-subtitle'))?.marginTop).toBe(8);
   });
 
-  // ── the subtitle against the address ──
-  //
-  // The commoner half of the rule, and the half the neighbourhood test
-  // cannot reach: 128 of the catalog's 250 subtitles name the street the
-  // address row prints a few lines down. See `subtitleBeside`.
-  it('drops a subtitle the address row already prints', () => {
+  // A branch named for its street is still said once, by the address.
+  it('leaves a street in the name to the address row', () => {
     show(place({ name_en: 'Cộng Cà Phê - Trieu Viet Vuong' }));
     expect(screen.getByTestId('detail-name').textContent).toBe('Cộng Cà Phê');
-    // Once, as the address — not twice.
     expect(screen.getAllByText(/Trieu Viet Vuong/)).toHaveLength(1);
-  });
-
-  // The one that pins *which* address is used. "Hanoi" is in the raw
-  // column and not in the string the row prints, because `shortAddress`
-  // cuts the city; judged against the raw column this subtitle would
-  // vanish over a word the reader cannot see.
-  it('judges the subtitle against the printed address, not the raw column', () => {
-    show(place({ name_en: 'Cộng Cà Phê - Hanoi', address: '152 Trieu Viet Vuong, Hai Ba Trung, Hanoi, Vietnam' }));
-    expect(screen.getByTestId('detail-name').textContent).toBe('Cộng Cà Phê');
-    expect(screen.getByText('Hanoi')).toBeTruthy();
     expect(screen.getByTestId('detail-address').textContent).toBe('152 Trieu Viet Vuong, Hai Ba Trung');
   });
 

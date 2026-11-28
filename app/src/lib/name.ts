@@ -36,10 +36,13 @@
 //
 // ── who shows which half ──
 //
-// The detail screen shows both, the subtitle filtered by
-// `subtitleBeside`. Every list row — `PlaceCard`, `MapPlaceCard`, the
+// Every surface shows the title alone: `PlaceCard`, `MapPlaceCard`, the
 // Search zero-state rows, the plan editor's stop cards, the gallery's
-// header — shows the title alone. Since 2 Oct 2026 the catalog writes
+// header — and, since 28 Nov 2026, the detail screen, which until then
+// printed the subtitle under the photograph, filtered by
+// `subtitleBeside` (owner; the measurements are in `PlaceDetailScreen`
+// and `docs/place-naming.md`). `subtitleBeside` is kept, uncalled, with
+// its tests: the line was hidden, and one call brings it back. Since 2 Oct 2026 the catalog writes
 // the qualifier to the ward-or-building rule (`docs/place-naming.md`,
 // rule 4), and the ward is what a row prints under the name already;
 // the owner ruled that two branches of one brand in one ward is rare
