@@ -120,6 +120,10 @@ Làm thành ba phần; hai phần đầu đã xong, phần ba chờ feed cộng 
   **ngày** (không giờ) và ghi chú, và thả tim được; chủ trang thấy mọi
   lần ghé của mình kèm dấu ai xem được, và sửa ghi chú ngay trên thẻ.
   Tim thuộc về từng lần check-in, không thuộc về địa điểm.
+  *Sửa 28/11/2026 (owner):* thẻ có ghi chú mở đầu bằng ghi chú — dưới
+  dòng "ai, khi nào", trước ảnh, cỡ 16 màu chữ chính, 4 dòng rồi "Đọc
+  thêm" — và dòng đầu ghi tên địa điểm ("Minh đã check-in tại …"); địa
+  điểm thành một hàng chạm được dưới ảnh. Thẻ không có ghi chú giữ như cũ.
   Migration `20261124150000_checkin_friends.sql`: bảng `checkin_likes`
   (đóng với client), `person_checkins`, `like_checkin`,
   `checkin_hearts_takeout`. Bảng `checkins` vẫn chỉ chính chủ đọc: bạn

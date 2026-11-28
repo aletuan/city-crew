@@ -6,7 +6,7 @@
 // its card.
 
 import React from 'react';
-import { Text } from 'react-native';
+import { StyleSheet, Text } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { act, cleanup, fireEvent, propsWhere, render, screen, waitFor, within } from '../../uitest/render';
@@ -277,7 +277,7 @@ describe('the column waiting for the visits', () => {
     await mount('me', LAN);
     await waitFor(() => expect(cards()).toHaveLength(1));
     expect(holding()).toBe(false);
-    expect(screen.getByTestId('activity-desc').textContent).toBe('Kept.');
+    expect(screen.getByTestId('person-visit-note').textContent).toBe('Kept.');
     // And the fresh answer replaces it.
     await read.answer([]);
     expect(cards()).toHaveLength(0);
@@ -296,14 +296,14 @@ describe('the column waiting for the visits', () => {
 });
 
 describe('a friend’s visit', () => {
-  it('says who checked in and on what day, the place, its kind and city, and their note', async () => {
-    await show('me', LAN, [visit('k1', { note: 'Crisp sourdough.', likes: 3 })]);
+  it('says who checked in and on what day, the place, its kind and city', async () => {
+    await show('me', LAN, [visit('k1', { likes: 3 })]);
     const card = cards()[0];
     // The sentence, then a space and the pin (whose glyph has no text).
     expect(within(card).getByTestId('activity-line').textContent).toBe('Lan Pham checked in ');
     expect(within(card).getByTestId('activity-when').textContent).toBe('today');
     expect(within(card).getByTestId('activity-open').getAttribute('aria-label')).toBe('Place k1, Cafés · Hanoi');
-    expect(within(card).getByTestId('activity-desc').textContent).toBe('Crisp sourdough.');
+    expect(within(card).queryByTestId('activity-lead')).toBeNull();
     expect(within(card).getByTestId('activity-mark').getAttribute('aria-label')).toBe('Friends');
     expect(within(card).getByTestId('activity-likes').textContent).toBe('3');
   });
@@ -318,7 +318,31 @@ describe('a friend’s visit', () => {
     await show('me', LAN, [visit('k1'), visit('k2', { note: 'Theirs.' })]);
     expect(screen.queryByTestId('visit-note-add')).toBeNull();
     expect(screen.queryByTestId('visit-note')).toBeNull();
-    expect(screen.queryByTestId('activity-desc')?.textContent).toBe('Theirs.');
+    expect(screen.getByTestId('person-visit-note').textContent).toBe('Theirs.');
+  });
+
+  // Their words first (owner, 28 Nov 2026): before the picture, at the
+  // card's reading size, with the place named in the head and as a row
+  // under the picture.
+  it('leads with their note, names the place in the head, and puts the place in a row under the picture', async () => {
+    await show('me', LAN, [visit('k1', { note: 'Crisp sourdough.' })]);
+    const card = cards()[0];
+    expect(within(card).getByTestId('activity-line').textContent).toBe('Lan Pham checked in at Place k1 ');
+    const lead = within(card).getByTestId('activity-lead');
+    expect(lead.textContent).toBe('Crisp sourdough.');
+    expect(within(lead).getByTestId('person-visit-note')).toBeTruthy();
+    expect((StyleSheet.flatten(propsWhere((q) => q.testID === 'person-visit-note').style as never) as { fontSize: number }).fontSize).toBe(16);
+    const open = within(card).getByTestId('activity-open');
+    expect(lead.compareDocumentPosition(open) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(open.contains(lead)).toBe(false);
+    expect(within(open).getByTestId('activity-place-row').textContent).toBe('Place k1Cafés · Hanoi');
+    expect(within(card).queryByTestId('activity-desc')).toBeNull();
+  });
+
+  it('names the place in the head in the reader\'s language', async () => {
+    i18n.lang = 'vi';
+    await show('me', LAN, [visit('k1', { note: 'Ngon.', place: { name_en: 'Place k1', name_vi: 'Quán k1', cover: null, categories: [] } })]);
+    expect(within(cards()[0]).getByTestId('activity-line').textContent).toBe('Lan Pham đã check-in tại Quán k1 ');
   });
 
   it('names the place in the reader’s language, by the handle when they gave no name, and says less when less is known', async () => {
@@ -399,6 +423,12 @@ describe('your own visits', () => {
     expect(within(bare).getByTestId('visit-note-add')).toBeTruthy();
     expect(within(noted).getByTestId('visit-note').textContent).toBe('Mine.');
     expect(screen.queryByTestId('activity-desc')).toBeNull();
+    // A note of yours leads its card, as a friend's does; the ask for one
+    // stays in the line under the place, where the card is as it was.
+    expect(within(noted).getByTestId('activity-lead').contains(within(noted).getByTestId('visit-note'))).toBe(true);
+    expect(within(noted).queryByTestId('visit-note-add')).toBeNull();
+    expect(within(bare).queryByTestId('activity-lead')).toBeNull();
+    expect(within(bare).getByTestId('activity-open').contains(within(bare).getByTestId('visit-note-add'))).toBe(true);
   });
 
   it('opens the sheet over that visit from its note, not the place, with its words, its day and its answer', async () => {

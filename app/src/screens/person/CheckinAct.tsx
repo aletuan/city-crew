@@ -25,6 +25,15 @@
 //
 // The newest visit at each place, not every visit (`person_checkins`).
 //
+// ── the words before the picture (owner, 28 Nov 2026) ──
+//
+// A visit with a note leads with it (`ActivityCard` › `lead`): a friend's
+// at 16pt in the page's ink, four lines and a "Read more" (`MoreText`);
+// your own the same size as the control that edits it (`VisitNote`). The
+// head then names the place — "Minh checked in at 3 Con Mực" — since the
+// words come before the picture that used to say where; the place itself
+// is the row under the picture. A visit with no note is the card it was.
+//
 // ── the heart, before the server has heard ──
 //
 // Flipped here on the press and written behind it, as a list's is
@@ -73,6 +82,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Modal, StyleSheet, Text } from 'react-native';
 import ActivityCard, { type ActivityMark } from '../../components/ActivityCard';
+import MoreText from '../../components/MoreText';
 import CheckinSheet from '../../components/CheckinSheet';
 import PersonSheet from '../../components/PersonSheet';
 import PhotoViewer from '../../components/PhotoViewer';
@@ -216,6 +226,15 @@ export function useVisitCards({ me, person, onPlace }: {
     const shared = !own || (v.audience != null && v.audience !== 'private');
     const kind = v.place.categories[0];
     const pics = shown(v);
+    const name = nameOf(v);
+    // What leads the card: a note, yours or a friend's. Yours with none
+    // still asks for one, in the place a note's line always had.
+    const said = v.note ? (own ? <VisitNote note={v.note} onEdit={() => setNoteFor(v)} lead /> : <MoreText text={v.note} style={s.said} testID="person-visit-note" />) : null;
+    const taken = own && v.note_hidden ? (
+      <Text style={s.taken} testID="person-visit-note-hidden">
+        {t('City Crew hid this note from others.', 'City Crew đã ẩn ghi chú này với người khác.', 'このメモは City Crew により他の人から非表示になりました。', 'City Crew 已对他人隐藏此备注。', 'City Crew 已對他人隱藏此備註。')}
+      </Text>
+    ) : null;
     return (
       <ActivityCard
         key={v.id}
@@ -223,14 +242,18 @@ export function useVisitCards({ me, person, onPlace }: {
         // Never without a person: there are no visits to draw without one.
         face={(person as FriendProfile).avatar_url}
         who={(person as FriendProfile).full_name || atHandle((person as FriendProfile).handle)}
-        did={t(' checked in', ' đã check-in', 'さんがチェックイン', ' 打卡了', ' 打卡了')}
+        did={said
+          ? t(` checked in at ${name}`, ` đã check-in tại ${name}`, `さんが${name}にチェックイン`, ` 在${name}打卡了`, ` 在${name}打卡了`)
+          : t(' checked in', ' đã check-in', 'さんがチェックイン', ' 打卡了', ' 打卡了')}
         didGlyph="location-outline"
         when={dayLabel(v.day, new Date(), lang, t)}
         // Anybody else is told Public when it is and nothing for Friends
         // (`person_checkins`), so a card on somebody else's page wears
         // the friends' mark unless it says otherwise.
         mark={markOf(v, shared, t)}
-        title={nameOf(v)}
+        lead={said ? <>{said}{taken}</> : undefined}
+        placeRow={!!said}
+        title={name}
         // A visit with photos of its own draws none of the place's while
         // its links are on their way — the plain ground instead: the
         // place's cover, then the reader's photo, read as the card
@@ -242,17 +265,7 @@ export function useVisitCards({ me, person, onPlace }: {
           onPress: (at) => setViewing({ v, at }),
         } : undefined}
         meta={[kind ? categoryLabel(kind, t) : null, cityShortById(cities, v.city_id, t)].filter(Boolean).join(' · ')}
-        desc={own ? null : v.note}
-        under={own ? (
-          <>
-            <VisitNote note={v.note} onEdit={() => setNoteFor(v)} />
-            {v.note_hidden ? (
-              <Text style={s.taken} testID="person-visit-note-hidden">
-                {t('City Crew hid this note from others.', 'City Crew đã ẩn ghi chú này với người khác.', 'このメモは City Crew により他の人から非表示になりました。', 'City Crew 已对他人隐藏此备注。', 'City Crew 已對他人隱藏此備註。')}
-              </Text>
-            ) : null}
-          </>
-        ) : undefined}
+        under={own && !said ? <VisitNote note={null} onEdit={() => setNoteFor(v)} /> : undefined}
         // Your own is refused by `canReport` (`reportable`): yours to edit or
         // take back, not to report.
         onMore={own || canReport({ kind: 'checkin', id: v.id, ownerId: personId }) ? {
@@ -396,5 +409,7 @@ function VisitMenu({ visit, person, name, own, onEdit, onPlace, onRemove, onRepo
 const s = StyleSheet.create({
   // Under the note, in the byline's quiet ink and size: a fact about the
   // note, not a second note.
+  // A friend's words at the card's reading size and in the page's ink — see the header.
+  said: { color: colors.text, fontSize: 16, lineHeight: 22 },
   taken: { color: colors.textTertiary, fontSize: 13, lineHeight: 17, marginTop: 2 },
 });
