@@ -10,6 +10,7 @@
 // reader not (`CLAUDE.md`'s lesson from 15 Nov, when a card named the
 // reader as the author of somebody else's list).
 import React from 'react';
+import { AccessibilityInfo, Animated } from 'react-native';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { Image } from 'expo-image';
 import { act, cleanup, pullControl, fireEvent, render, screen, textStyleOf, viewStyleOf, waitFor, within } from '../uitest/render';
@@ -2474,6 +2475,55 @@ describe('searching the page', () => {
     expect(screen.getByTestId('person-find-input').getAttribute('placeholder')).toBe("Search Lan Phạm's collections");
     // Nothing typed: every list still there.
     expect(titles()).toHaveLength(2);
+  });
+
+  // The swap was a cut: the cover gone in a frame and a box in its
+  // place (owner, 28 Nov 2026). What the page becomes fades in, as
+  // Search's own screen does — both ways, and never on the first draw.
+  it('fades the page in on the swap, both ways, and not when it is first drawn or motion is reduced', async () => {
+    const timing = vi.spyOn(Animated, 'timing');
+    await show();
+    const page = screen.getByTestId('person-page');
+    const seen = () => Number(getComputedStyle(page).opacity || '1');
+    expect(seen()).toBe(1);
+    const mine = () => timing.mock.calls.filter(([, c]) => c.duration === 220);
+    expect(mine()).toHaveLength(0);
+    fireEvent.click(screen.getByTestId('person-search'));
+    // From nothing, to whole, in 220.
+    expect(mine()).toHaveLength(1);
+    expect(mine()[0][1]).toMatchObject({ toValue: 1, duration: 220, useNativeDriver: true });
+    expect(page.contains(screen.getByTestId('person-find-input'))).toBe(true);
+    fireEvent.click(screen.getByTestId('person-find-cancel'));
+    expect(mine()).toHaveLength(2);
+    expect(page.contains(screen.getByTestId('person-cover'))).toBe(true);
+    cleanup();
+    timing.mockClear();
+    vi.spyOn(AccessibilityInfo, 'isReduceMotionEnabled').mockResolvedValue(true);
+    await show();
+    await act(async () => {});
+    fireEvent.click(screen.getByTestId('person-search'));
+    expect(mine()).toHaveLength(0);
+    expect(Number(getComputedStyle(screen.getByTestId('person-page')).opacity || '1')).toBe(1);
+    timing.mockRestore();
+    vi.mocked(AccessibilityInfo.isReduceMotionEnabled).mockRestore();
+  });
+
+  // The owner's screenshot of 28 Nov 2026: "Start your page" and its two
+  // buttons under "Search your collections", on a page with nothing on
+  // it. Searching, an empty page draws nothing under the box.
+  it('draws no invitation under the box on a page with nothing on it, and puts it back with the head', async () => {
+    state.me = LAN.id;
+    state.shelf = [];
+    state.mine = [];
+    await show();
+    expect(screen.getByTestId('person-no-lists')).toBeTruthy();
+    fireEvent.click(screen.getByTestId('person-search'));
+    expect(screen.getByTestId('person-find-input')).toBeTruthy();
+    expect(screen.queryByTestId('person-no-lists')).toBeNull();
+    expect(screen.queryByText('Start your page')).toBeNull();
+    expect(screen.queryByTestId('person-find-none')).toBeNull();
+    fireEvent.click(screen.getByTestId('person-find-cancel'));
+    expect(screen.getByTestId('person-no-lists')).toBeTruthy();
   });
 
   it('finds a list by the name of a place in it, and says which, marks or none', async () => {

@@ -150,7 +150,7 @@ import { useProfile, useSession } from '../lib/auth';
 import { useVisitCards } from './person/CheckinAct';
 import Shared, { useReach } from './person/Shared';
 import { Requests } from './person/Requests';
-import { FindField, usePageFind } from './person/Find';
+import { FindField, usePageFind, useSwapFade } from './person/Find';
 import { OwnTools, Search } from './person/Tools';
 import { useWall } from './person/Wall';
 import { BAR_H, CoverBar, fadeUnderBar, scrimOver, useHeadFade, usePastCover } from './person/Bar';
@@ -354,11 +354,13 @@ export default function PersonScreen({ navigation, route, home }: {
   const bar = usePastCover(coverH, person, find.on, who.loading);
   const { bleed } = bar;
   const onBack = home ? undefined : () => navigation.goBack();
+  const swap = useSwapFade(find.on);
 
   const page = person ? (
-    <>
+    <Animated.View style={{ opacity: swap }} testID="person-page">
       {/* Searching, the box takes the head's place over the same feed,
-          narrowed — `person/Find`. */}
+          narrowed — `person/Find`; the page fades in on the swap
+          (`useSwapFade`). */}
       {find.on
         ? <FindField find={find} name={own ? null : person.full_name || atHandle(person.handle)} />
         : <Head me={me} person={person} own={own} cover={wall.cover} coverH={coverH} scroll={bar.scroll} onCover={wall.onCover} trying={wall.trying} friend={friend} onRowLayout={top.onRowLayout} navigation={navigation} />}
@@ -382,8 +384,9 @@ export default function PersonScreen({ navigation, route, home }: {
         reach={end.reach}
         onCreate={() => navigation.navigate('CollectionForm')}
         onExplore={toExplore}
+        finding={find.on}
       />
-    </>
+    </Animated.View>
   ) : who.loading ? (
     <CoverHold coverH={coverH} />
   ) : who.error ? (
