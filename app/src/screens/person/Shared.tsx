@@ -94,7 +94,7 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, type NativeScrollEvent, type NativeSyntheticEvent, StyleSheet, Text, View } from 'react-native';
 import { Image } from 'expo-image';
 import ActivityCard, { type ActivityMark, type CardCopy } from '../../components/ActivityCard';
-import { Card, fireHaptic, PressableScale, SECONDARY_CONTROL_H } from '../../components/ui';
+import { Card, fireHaptic, GradientCta, PressableScale, SECONDARY_CONTROL_H } from '../../components/ui';
 import { Glyph, ICON } from '../../components/ui/glyph';
 import { agoLabel } from '../../lib/ago';
 import { useLikes } from '../../lib/catalog';
@@ -107,7 +107,7 @@ import { localized } from '../../lib/localized';
 import { actsOn, type ListSeen } from '../../lib/person';
 import { useSaveActions } from '../../lib/save';
 import { SEEN_GLYPH, seenName } from '../../lib/shares';
-import { colors, font, radius, space, type } from '../../theme';
+import { colors, font, space, type } from '../../theme';
 import { useCardComments } from './useCardComments';
 
 /** No visits, the same array every render: `actsOn` is memoised on it. */
@@ -164,43 +164,66 @@ export function marks(seen: ListSeen, t: T): ActivityMark {
 }
 
 /**
- * Your own page with no collection at all, none made and none copied
- * (owner, 21 Nov 2026). Your own page draws every list of yours, the
- * private ones with their padlock, so this card means "none yet" and
- * not "none public": it said "No public collections yet" until then,
- * which a reader with no list at all read as being told to share one.
+ * Your own page with nothing on it: no collection, made or copied, and
+ * no visit. The first thing a new reader's own page says to them.
  *
- * With a way to make the first: an outlined pill in the accent, the
- * button this page lends to a thing done elsewhere. Not `GradientCta`,
- * the button an empty tab's own card wears (Collections' first-list
- * card makes the same list): the person page is where lists are shown,
- * and a second gradient there would outweigh the face and the cover
- * above it. Rejected the same day: a second state, "See your
- * collections ›", for a reader whose lists are all private — that
- * reader's page shows them, so the card is never drawn for them.
+ * ── what it says (owner, 28 Nov 2026) ──
+ *
+ * "Start your page", the two things that put something on it, and a
+ * button for each. It said "No collections yet — Your collections will
+ * show here" with one outlined pill, "Create your first collection",
+ * from 21 Nov: written when this page was a page of lists. It is a feed
+ * of visits and lists now, a visit is the easier first thing to do, and
+ * the card said nothing of it; and the sentence described the empty
+ * place rather than asking for anything.
+ *
+ * The first button is `GradientCta`, the app's one filled button. On 21
+ * Nov that was turned down for an outlined pill — "a second gradient
+ * there would outweigh the face and the cover above it". On the owner's
+ * screenshot of a new account the pill read as a secondary control on
+ * the one screen where it is the only thing to do, and there is no
+ * first gradient on this page for it to be second to. The second is
+ * words in the accent, the secondary control's 44 tall: it leaves the
+ * page (Explore, where a place to check in at is found), and two filled
+ * buttons side by side are a choice with no answer.
+ *
+ * Still "none yet" and not "none public": your own page draws every
+ * list of yours, the private ones with their padlock. Rejected on 21
+ * Nov and still: a second state, "See your collections ›", for a reader
+ * whose lists are all private — that reader's page shows them.
  */
-function FirstOfYours({ onCreate }: { onCreate: () => void }) {
+function FirstOfYours({ onCreate, onExplore }: { onCreate: () => void; onExplore: () => void }) {
   const { t } = useI18n();
   return (
     <Card style={s.none} testID="person-no-lists">
-      <Text style={s.noneTitle}>{t('No collections yet', 'Chưa có bộ sưu tập nào', 'コレクションはまだありません', '还没有合集', '還沒有合集')}</Text>
-      <Text style={s.noneBody}>{t('Your collections will show here.', 'Bộ sưu tập của bạn sẽ hiện ở đây.', 'あなたのコレクションがここに表示されます。', '你的合集会显示在这里。', '你的合集會顯示在這裡。')}</Text>
-      <PressableScale
-          onPress={onCreate}
+      <Text style={s.noneTitle}>{t('Start your page', 'Bắt đầu trang của bạn', 'あなたのページを始めましょう', '开始你的主页', '開始你的主頁')}</Text>
+      <Text style={s.noneBody}>
+        {t(
+          'Check in at a place or save a few into a collection. They show up here.',
+          'Check-in một địa điểm hoặc lưu vài nơi vào bộ sưu tập. Chúng sẽ hiện ở đây.',
+          'スポットにチェックインするか、いくつかをコレクションに保存しましょう。ここに表示されます。',
+          '在一个地点打卡，或把几个地点存进合集。它们会显示在这里。', '在一個地點打卡，或把幾個地點存進合集。它們會顯示在這裡。',
+        )}
+      </Text>
+      <View style={s.firstRow}>
+        <GradientCta icon="add" label={t('Create a collection', 'Tạo bộ sưu tập', 'コレクションを作る', '创建合集', '建立合集')} onPress={onCreate} testID="person-first-list" />
+        <PressableScale
+          onPress={onExplore}
           scaleTo={0.96}
           haptic="selection"
           accessibilityRole="button"
-          contentStyle={s.first}
-          testID="person-first-list"
+          contentStyle={s.second}
+          testID="person-first-visit"
         >
-          <Glyph name="add" size={ICON.text} color={colors.accent} />
-          <Text style={s.firstText}>{t('Create your first collection', 'Tạo bộ sưu tập đầu tiên', '最初のコレクションを作る', '创建你的第一个合集', '建立你的第一個合集')}</Text>
-      </PressableScale>
+          <Glyph name="location-outline" size={ICON.text} color={colors.accent} />
+          <Text style={s.secondText}>{t('Find a place to check in', 'Tìm chỗ để check-in', 'チェックインする場所を探す', '找个地方打卡', '找個地方打卡')}</Text>
+        </PressableScale>
+      </View>
     </Card>
   );
 }
 
-export default function Shared({ me, person, lists, visits = NO_VISITS, visitCard, holding, seenOf, coverFor, onOpen, onComments, copyOf, reasonOf, missed, reach = 0, onCreate }: {
+export default function Shared({ me, person, lists, visits = NO_VISITS, visitCard, holding, seenOf, coverFor, onOpen, onComments, copyOf, reasonOf, missed, reach = 0, onCreate, onExplore }: {
   me: string | null;
   person: FriendProfile;
   /** The collections this reader may see here, newest first
@@ -234,6 +257,8 @@ export default function Shared({ me, person, lists, visits = NO_VISITS, visitCar
   reach?: number;
   /** Opens the form on a new collection: your own page, with none. */
   onCreate: () => void;
+  /** Your own empty page's second way to begin: to Explore. */
+  onExplore: () => void;
 }) {
   const { t, lang } = useI18n();
   const { likes, myLikes, toggleLike } = useLikes();
@@ -319,7 +344,7 @@ export default function Shared({ me, person, lists, visits = NO_VISITS, visitCar
           </Text>
         </Card>
       ) : none && me && person.id === me ? (
-        <FirstOfYours onCreate={onCreate} />
+        <FirstOfYours onCreate={onCreate} onExplore={onExplore} />
       ) : none ? (
         <Card style={s.none} testID="person-no-lists">
           <Text style={s.noneTitle}>
@@ -375,13 +400,11 @@ const s = StyleSheet.create({
   none: { padding: space.cardPadding, gap: 6, marginTop: TOP },
   noneTitle: { color: colors.text, fontSize: 15, fontWeight: font.semibold },
   noneBody: { color: colors.textSecondary, ...type.meta },
-  // The outlined pill in your own empty card (`FirstOfYours`): the
-  // secondary control's 44, the accent's line and words, 10 under the
-  // sentence above it (with the card's 6, 16 in all).
-  first: {
-    flexDirection: 'row', alignItems: 'center', gap: 6, alignSelf: 'flex-start', marginTop: 10,
-    minHeight: SECONDARY_CONTROL_H, paddingHorizontal: 16, borderRadius: radius.pill,
-    borderWidth: 1, borderColor: colors.accentLine,
-  },
-  firstText: { color: colors.accent, fontSize: 15, fontWeight: font.semibold },
+  // Your own empty card's two ways to begin (`FirstOfYours`): 10 under
+  // the sentence (with the card's 6, 16 in all), side by side, and the
+  // second under the first on a phone too narrow for both.
+  firstRow: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', columnGap: 16, rowGap: 4, marginTop: 10 },
+  // Words and a mark in the accent, the secondary control's 44 tall.
+  second: { flexDirection: 'row', alignItems: 'center', gap: 6, minHeight: SECONDARY_CONTROL_H },
+  secondText: { color: colors.accent, fontSize: 15, fontWeight: font.semibold },
 });

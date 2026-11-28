@@ -136,7 +136,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import {
   Avatar, EmptyState, GradientCta, PressableScale, Screen, Skeleton, useTabBarClearance,
 } from '../components/ui';
-import { INK_GAP_END, PHOTO_DISC } from '../components/ui/controls';
+import { PHOTO_DISC } from '../components/ui/controls';
 import { Glyph, ICON } from '../components/ui/glyph';
 import { useFriendButtons } from '../components/FriendButton';
 import { usePullControl } from '../lib/usePull';
@@ -169,7 +169,11 @@ import { IN_COMMON_ON, listsBy, listsOn, seenOn, TOP_FRIEND_ON } from '../lib/pe
 import { useMyLists } from '../lib/save';
 import { sharesByList } from '../lib/shares';
 import { colors, display, font, onPhoto, photoSheet, space, type } from '../theme';
-import { toProfileRoom, type Nav, type RootRoute } from '../nav';
+import { goTo, toProfileRoom, type Nav, type RootRoute } from '../nav';
+
+/** To Explore, a sibling tab this screen's own navigator cannot address
+ *  (`goTo`): where a place to check in at is found. */
+const toExplore = () => goTo('Explore', { screen: 'ExploreHome' });
 
 /** The face: 72, everyone's and your own (owner's recording, 28 Nov
  *  2026: "is the avatar too big?"). Measured on it, your own stood 103
@@ -211,23 +215,11 @@ const COVER_UNDER_CLOCK = 272;
 /** The page's sheet over the cover's foot: `photoSheet`, Explore's too. */
 const SHEET_RISE = photoSheet.rise;
 const SHEET_ROUND = photoSheet.round;
-/** The camera and the trial's label stand this far under the clock: the
- *  bar, and 4 clear of its glass. It was 8; the 4 are the camera's
- *  distance from the name's line when a bio runs to two lines. */
-const UNDER_BAR = BAR_H + 4;
-/** The camera's distance from the screen's edge: its middle under the
- *  middle of the settings glyph over it. That control is a 44 box hung
- *  past the page's margin by its glyph's empty edge (`INK_GAP_END`), so
- *  its middle is `page − gap + 22` in; the camera's 36 puts its own
- *  there from 4 less. On the recording of 28 Nov it stood at the margin
- *  itself, its middle 9 left of the gear's. */
-const CAMERA_RIGHT = space.page - INK_GAP_END['settings-outline'] + (44 - PHOTO_DISC) / 2;
-/** What the name's line keeps clear at its end on your own page: as far
- *  as the camera reaches in from the page's margin, and 8. With a bio of
- *  three lines the names' column is taller than the face, and the name's
- *  line rises into the camera's height — on the first recording of 28
- *  Nov the camera sat on the role's mark. */
-const CAMERA_RESERVE = CAMERA_RIGHT + PHOTO_DISC - space.page + 8;
+/** The trial's label stands this far under the clock: the bar, and 10
+ *  clear of its glass. */
+const UNDER_BAR = BAR_H + 10;
+/** The camera's reach past its 36 a side: the 44 a thumb is owed. */
+const CAMERA_SLOP = (44 - PHOTO_DISC) / 2;
 /**
  * The scrim the head's words stand on, from the bar's foot to the
  * cover's: clear at its top, 54% a fifth of the way down — where the
@@ -389,6 +381,7 @@ export default function PersonScreen({ navigation, route, home }: {
         onComments={(c) => navigation.navigate('Comments', { subject: { kind: 'collection', id: c.id as string } })}
         reach={end.reach}
         onCreate={() => navigation.navigate('CollectionForm')}
+        onExplore={toExplore}
       />
     </>
   ) : who.loading ? (
@@ -669,10 +662,8 @@ function Head({ me, person, own, cover, coverH, scroll, onCover, trying, friend,
   const { t } = useI18n();
   const top = useSafeAreaInsets().top;
   const fade = useHeadFade(scroll);
-  // The camera and the trial's label are 4 under the bar and go under
-  // it at once: on the recording the camera rode up over the bell and
-  // the gear while the head beside it was fading.
-  const cameraFade = fadeUnderBar(scroll, UNDER_BAR - BAR_H, PHOTO_DISC);
+  // The trial's label is just under the bar and goes under it at once.
+  const tryingFade = fadeUnderBar(scroll, UNDER_BAR - BAR_H, 24);
   // The words' scrim, from just over the head down — `scrimOver`.
   const scrim = scrimOver(coverH, top + BAR_H, fade.top);
   return (
@@ -700,19 +691,10 @@ function Head({ me, person, own, cover, coverH, scroll, onCover, trying, friend,
           <LinearGradient colors={['rgba(0,0,0,0.38)', 'rgba(0,0,0,0)']} style={s.scrim} pointerEvents="none" testID="person-cover-scrim" />
           {/* The words' scrim — see `footScrim`. */}
           <LinearGradient colors={FOOT_SCRIM} locations={[0, scrim.at, 1]} style={[s.footScrim, { top: scrim.top }]} pointerEvents="none" testID="person-cover-foot-scrim" />
-          {/* The cover's camera, on your own page: it says the picture is
-              a control, as the avatar's badge does, under the bar's tools
-              in the band the head leaves free (`COVER_UNDER_CLOCK`). The
-              whole cover is the press. */}
-          {onCover ? (
-            <Animated.View style={[s.coverEdit, { top: top + UNDER_BAR, opacity: cameraFade }]} testID="person-cover-edit">
-              <Glyph name="camera-outline" size={ICON.action} color="#fff" />
-            </Animated.View>
-          ) : null}
           {/* Said on the picture itself, so a look is never taken for a
               change: nobody else sees it until Save. */}
           {trying ? (
-            <Animated.View style={[s.trying, { top: top + UNDER_BAR + 6, opacity: cameraFade }]} testID="person-cover-trying">
+            <Animated.View style={[s.trying, { top: top + UNDER_BAR, opacity: tryingFade }]} testID="person-cover-trying">
               <Text style={s.tryingText}>{t('Trying it', 'Đang xem thử', '試しに表示中', '预览中', '預覽中')}</Text>
             </Animated.View>
           ) : null}
@@ -729,7 +711,7 @@ function Head({ me, person, own, cover, coverH, scroll, onCover, trying, friend,
               editor's medal, with the sheet that says what it means —
               `PersonRole`. */}
           <View style={s.names} pointerEvents="box-none">
-            <PersonRole me={me} personId={person.id} line={TITLE_LINE} onPhoto reserve={onCover ? CAMERA_RESERVE : undefined}>
+            <PersonRole me={me} personId={person.id} line={TITLE_LINE} onPhoto>
               {person.full_name
                 ? <Text style={s.title} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={TITLE_SHRINK} testID="person-name">{person.full_name}</Text>
                 : <Text style={s.title} numberOfLines={1} testID="person-handle">{atHandle(person.handle)}</Text>}
@@ -745,6 +727,26 @@ function Head({ me, person, own, cover, coverH, scroll, onCover, trying, friend,
               page, nor signed out: no button, and the names keep the
               row. */}
           {friend ? <View testID="person-acts">{friend}</View> : null}
+          {/* On your own page, in the same place: the cover's camera.
+              The end of the head's row is where the thing to do about
+              this page stands — a friend's button on theirs, this on
+              yours (owner's screenshot, 28 Nov 2026).
+
+              It stood under the bar's tools, alone between them and the
+              name: first on the name's own line, then 4 under the bar
+              with the name's line kept clear of it. Not in the bar's
+              pill with the tools: the pill stays when the cover has
+              gone, and a way to change a cover that is not there would
+              stay with it.
+
+              The whole cover is still the press, and the one VoiceOver
+              is told of ("Change cover"); this is the same press for a
+              thumb that aims at the mark, so it is not named twice. */}
+          {onCover ? (
+            <Pressable onPress={onCover} hitSlop={CAMERA_SLOP} accessible={false} style={s.coverEdit} testID="person-cover-edit">
+              <Glyph name="camera-outline" size={ICON.action} color="#fff" />
+            </Pressable>
+          ) : null}
         </Animated.View>
         {/* Your counts, yours to see (`profile/Counts`), in the
             photograph's light ink. */}
@@ -859,14 +861,14 @@ const s = StyleSheet.create({
   // white that draws its edge where the dark fill cannot: on a night
   // street the ring is the disc, on a pale sky the fill is.
   coverEdit: {
-    position: 'absolute', right: CAMERA_RIGHT, width: PHOTO_DISC, height: PHOTO_DISC, borderRadius: PHOTO_DISC / 2,
+    width: PHOTO_DISC, height: PHOTO_DISC, borderRadius: PHOTO_DISC / 2,
     alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(0,0,0,0.55)',
     borderWidth: StyleSheet.hairlineWidth * 2, borderColor: 'rgba(255,255,255,0.45)',
   },
-  // The cover's corner, opposite the face: what the sheet is trying on.
-  // Beside the camera at the foot: the cover's top is the bar's now.
+  // The cover's corner, under the bar's tools: what the sheet is trying
+  // on.
   trying: {
-    position: 'absolute', right: CAMERA_RIGHT + PHOTO_DISC + 6, paddingHorizontal: 10, paddingVertical: 4,
+    position: 'absolute', right: space.page, paddingHorizontal: 10, paddingVertical: 4,
     borderRadius: 999, backgroundColor: 'rgba(0,0,0,0.55)',
   },
   tryingText: { color: '#fff', fontSize: 12, fontWeight: font.medium },
