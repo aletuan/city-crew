@@ -31,8 +31,9 @@
 // typed is matched as words against the places' city names, which is
 // the same answer on one person's few lists, without a chip to show it.
 
-import { useDeferredValue, useMemo, useState } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { useDeferredValue, useEffect, useMemo, useRef, useState } from 'react';
+import { Animated, Easing, StyleSheet, View } from 'react-native';
+import { useReducedMotion } from '../../components/ui/motion';
 import SearchField from '../../components/SearchField';
 import { useCityList } from '../../lib/city';
 import { cityShortById } from '../../lib/cityName';
@@ -73,6 +74,40 @@ export function usePageFind(lists: Collection[], places: Place[]) {
     /** Something is typed, and nothing answers it. */
     none: asked.trim() !== '' && hits.length === 0,
   };
+}
+
+/** How long the page takes to come back in after the swap. */
+export const SWAP_MS = 220;
+
+/**
+ * The page's fade as the box takes the head's place, and as the head
+ * comes back (owner, 28 Nov 2026).
+ *
+ * The swap was a cut: a cover a third of the screen tall gone in one
+ * frame and a box where it stood, the feed jumping up under it. Search
+ * on its own screen dissolves in since the same day (`App.tsx`); this is
+ * the same act on a page that keeps its place, so it wears the same
+ * motion: what the page becomes fades in over `SWAP_MS`. Not a
+ * cross-fade — the head and the box are one place in the page, and two
+ * layouts drawn over each other for a fifth of a second is the cover's
+ * foot through a search box.
+ *
+ * Nothing on the page's first drawing, and nothing under Reduce Motion.
+ * Judged by eye, not timed: `Animated` does not tick where the tests
+ * run. Not seen on a phone.
+ */
+export function useSwapFade(on: boolean): Animated.Value {
+  const shown = useRef(new Animated.Value(1)).current;
+  const was = useRef(on);
+  const still = useReducedMotion();
+  useEffect(() => {
+    if (was.current === on) return;
+    was.current = on;
+    if (still) return;
+    shown.setValue(0);
+    Animated.timing(shown, { toValue: 1, duration: SWAP_MS, easing: Easing.out(Easing.quad), useNativeDriver: true }).start();
+  }, [on, still, shown]);
+  return shown;
 }
 
 /** The box, in the head's place while searching. */

@@ -223,7 +223,7 @@ function FirstOfYours({ onCreate, onExplore }: { onCreate: () => void; onExplore
   );
 }
 
-export default function Shared({ me, person, lists, visits = NO_VISITS, visitCard, holding, seenOf, coverFor, onOpen, onComments, copyOf, reasonOf, missed, reach = 0, onCreate, onExplore }: {
+export default function Shared({ me, person, lists, visits = NO_VISITS, visitCard, holding, seenOf, coverFor, onOpen, onComments, copyOf, reasonOf, missed, reach = 0, onCreate, onExplore, finding = false }: {
   me: string | null;
   person: FriendProfile;
   /** The collections this reader may see here, newest first
@@ -259,6 +259,11 @@ export default function Shared({ me, person, lists, visits = NO_VISITS, visitCar
   onCreate: () => void;
   /** Your own empty page's second way to begin: to Explore. */
   onExplore: () => void;
+  /** The page is being searched (`person/Find`). A page with nothing on
+   *  it then draws nothing under the box: on the owner's screenshot of
+   *  28 Nov 2026 "Start your page" and its two buttons stood under
+   *  "Search your collections", an invitation in answer to a question. */
+  finding?: boolean;
 }) {
   const { t, lang } = useI18n();
   const { likes, myLikes, toggleLike } = useLikes();
@@ -343,7 +348,7 @@ export default function Shared({ me, person, lists, visits = NO_VISITS, visitCar
             )}
           </Text>
         </Card>
-      ) : none && me && person.id === me ? (
+      ) : none && finding ? null : none && me && person.id === me ? (
         <FirstOfYours onCreate={onCreate} onExplore={onExplore} />
       ) : none ? (
         <Card style={s.none} testID="person-no-lists">
