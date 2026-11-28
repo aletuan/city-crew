@@ -90,7 +90,7 @@ import { PressableScale } from './ui';
 import { Glyph, ICON } from './ui/glyph';
 import { useRoleOfQuery } from '../lib/data';
 import { useI18n } from '../lib/i18n';
-import { colors } from '../theme';
+import { colors, onPhoto } from '../theme';
 
 export type Role = 'editor' | 'guide';
 type T = (en: string, vi: string, ja?: string, zh?: string, hant?: string) => string;
@@ -131,12 +131,20 @@ export function roleSays(role: Role, t: T): string {
 /** The disc alone: the role's glyph in the role's colour. `named` makes
  *  it a thing VoiceOver reads, by the role's name — the disc on another
  *  person's page, which is nobody's press. */
-export function RoleDisc({ role, named = false }: { role: Role; named?: boolean }) {
+export function RoleDisc({ role, named = false, onPhoto: lit = false }: {
+  role: Role;
+  named?: boolean;
+  /** The disc stands on a photograph: its soft tint, a wash of the
+   *  role's colour, is nothing there (the owner's recording, 28 Nov
+   *  2026: an editor's medal lost in a river), so it takes the
+   *  photograph's light ground and keeps its ring and glyph. */
+  onPhoto?: boolean;
+}) {
   const { t } = useI18n();
   const look = dressOf(role);
   return (
     <View
-      style={[d.disc, look.dress]}
+      style={[d.disc, look.dress, lit && d.lit]}
       accessible={named || undefined}
       accessibilityRole={named ? 'image' : undefined}
       accessibilityLabel={named ? roleName(role, t) : undefined}
@@ -148,7 +156,7 @@ export function RoleDisc({ role, named = false }: { role: Role; named?: boolean 
 }
 
 /** The disc as a press, under its name for VoiceOver. */
-export function RoleButton({ role, onPress }: { role: Role; onPress: () => void }) {
+export function RoleButton({ role, onPress, onPhoto: lit }: { role: Role; onPress: () => void; onPhoto?: boolean }) {
   const { t } = useI18n();
   return (
     <PressableScale
@@ -162,7 +170,7 @@ export function RoleButton({ role, onPress }: { role: Role; onPress: () => void 
       onPress={onPress}
       testID="role-badge"
     >
-      <RoleDisc role={role} />
+      <RoleDisc role={role} onPhoto={lit} />
     </PressableScale>
   );
 }
@@ -198,20 +206,25 @@ export function RoleBody({ role }: { role: Role }) {
  * first line, whatever the name's size. `own`: the page is the reader's,
  * and only then is the disc a press.
  */
-export function WithRole({ role, own, line, children }: {
+export function WithRole({ role, own, line, onPhoto: lit, reserve, children }: {
   role: Role | null;
   own: boolean;
   line: number;
+  /** The name is on a photograph: see `RoleDisc`. */
+  onPhoto?: boolean;
+  /** Room kept clear after the row, for something that stands over its
+   *  end — the cover's camera on a person's own page. */
+  reserve?: number;
   children: React.ReactNode;
 }) {
   const [open, setOpen] = useState(false);
   return (
-    <View style={d.row} testID="role-row">
+    <View style={[d.row, reserve ? { marginRight: reserve } : null]} testID="role-row">
       <View style={d.name}>{children}</View>
       {role ? (
         <>
           <View style={[d.mark, { height: line }]} testID="role-mark">
-            {own ? <RoleButton role={role} onPress={() => setOpen(true)} /> : <RoleDisc role={role} named />}
+            {own ? <RoleButton role={role} onPress={() => setOpen(true)} onPhoto={lit} /> : <RoleDisc role={role} named onPhoto={lit} />}
           </View>
           {own ? (
             <ActionSheet visible={open} onClose={() => setOpen(false)} header={<RoleHead role={role} />}>
@@ -227,14 +240,16 @@ export function WithRole({ role, own, line, children }: {
 /** A person's name on their page, with the mark the database says they
  *  wear — the question (`useRoleOfQuery`), then `WithRole`, a press on
  *  your own page and a still mark on anybody else's (see the header). */
-export default function PersonRole({ me, personId, line, children }: {
+export default function PersonRole({ me, personId, line, onPhoto: lit, reserve, children }: {
   me: string | null;
   personId: string;
   line: number;
+  onPhoto?: boolean;
+  reserve?: number;
   children: React.ReactNode;
 }) {
   const role = useRoleOfQuery(me, personId).data ?? null;
-  return <WithRole role={role} own={me === personId} line={line}>{children}</WithRole>;
+  return <WithRole role={role} own={me === personId} line={line} onPhoto={lit} reserve={reserve}>{children}</WithRole>;
 }
 
 /** The disc: 20, from the 24 it was on a picture's corner, where it
@@ -251,6 +266,8 @@ const d = StyleSheet.create({
     width: DISC, height: DISC, borderRadius: DISC / 2, borderWidth: 1,
     alignItems: 'center', justifyContent: 'center',
   },
+  // On a photograph — see `RoleDisc`.
+  lit: { backgroundColor: onPhoto.text },
   guide: { borderColor: colors.ok, backgroundColor: colors.okSoft },
   editor: { borderColor: colors.accent, backgroundColor: colors.accentSoft },
   // The name, then the mark: 6 between, the near end of the reference's

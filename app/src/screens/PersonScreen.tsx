@@ -128,7 +128,7 @@ import { PencilGlyph } from '../components/PencilGlyph';
 import React, { useEffect, useRef, useState } from 'react';
 import { useScrollToTop } from '@react-navigation/native';
 import {
-  ActivityIndicator, type LayoutChangeEvent, type NativeScrollEvent, type NativeSyntheticEvent,
+  ActivityIndicator, Animated, type LayoutChangeEvent, type NativeScrollEvent, type NativeSyntheticEvent,
   Pressable, ScrollView, StyleSheet, Text, View,
 } from 'react-native';
 import { Image } from 'expo-image';
@@ -153,7 +153,7 @@ import { Requests } from './person/Requests';
 import { FindField, usePageFind } from './person/Find';
 import { OwnTools, Search } from './person/Tools';
 import { useWall } from './person/Wall';
-import { CoverBar, usePastCover } from './person/Bar';
+import { BAR_H, CoverBar, useHeadFade, usePastCover } from './person/Bar';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useCardCopy } from './person/useCardCopy';
 import { OwnFace, useOwnPicture } from './person/OwnFace';
@@ -178,35 +178,53 @@ import { toProfileRoom, type Nav, type RootRoute } from '../nav';
  *  — the Account page's picture, 103 across with the ring (`Face`). */
 const FACE = 80;
 /** The cover's height under the clock, running to the screen's edges:
- *  232, so with a 59pt clock the photograph is 291 and, the page's sheet
- *  risen 18 over its foot, about 273 of it shows — a third of an 852pt
- *  phone, against the 48% Explore's cover takes (two to three, agreed with
- *  the owner on 28 Nov 2026).
+ *  272, so with a 59pt clock the photograph is 331 and, the page's sheet
+ *  risen 18 over its foot, about 313 of it shows — three quarters of
+ *  Explore's cover on a 932pt phone (447).
+ *
+ *  It was 232 for a morning (28 Nov 2026), sized to hold the head and no
+ *  more: on the owner's recording the bar ended 109 down and the face
+ *  began at 107, so not a point of the photograph was free of something
+ *  drawn on it, and it read as a header's ground. The 40 are the band of
+ *  picture between the bar and the head, where the camera stands. Not
+ *  more: on a 667pt phone this is already 44% of the screen (computed,
+ *  not seen on one), and this page is a list to read.
  *
  *  It was 200 (22 Nov 2026) with the face a quarter over its foot and the
  *  name, the bio and the counts on the page under it: measured on the
  *  owner's screenshot the head ended 391pt down, and the first card began
  *  there. With the head on the photograph it ends where the cover does. */
-const COVER_UNDER_CLOCK = 232;
+const COVER_UNDER_CLOCK = 272;
 /** The page's sheet over the cover's foot: `photoSheet`, Explore's too. */
 const SHEET_RISE = photoSheet.rise;
 const SHEET_ROUND = photoSheet.round;
 /** The camera and the trial's label stand this far under the clock: the
- *  bar's 6 and its 44 row, and 8 clear of its glass. */
-const UNDER_BAR = 58;
+ *  bar, and 4 clear of its glass. It was 8; the 4 are the camera's
+ *  distance from the name's line when a bio runs to two lines. */
+const UNDER_BAR = BAR_H + 4;
+/** What the name's line keeps clear at its end on your own page: the
+ *  camera's 36 and 8. With a bio of two lines or three the names' column
+ *  is as tall as the face or taller, and the name's line rises into the
+ *  camera's height (two lines: by 1.5; three: by 16) — on the recording
+ *  of 28 Nov the camera sat on the role's mark. */
+const CAMERA_RESERVE = PHOTO_DISC + 8;
 /**
- * The scrim the head's words stand on: clear at its top, 50% by the
- * middle of its run, 66% at the cover's foot — Explore's ink
- * (`explore/Hero`), lighter than Explore's foot.
+ * The scrim the head's words stand on, from the bar's foot to the
+ * cover's: clear at its top, 54% a fifth of the way down — where the
+ * head begins — and 66% at the cover's foot.
  *
  * White on a photograph clears 4.5:1 once the photograph's own luminance
  * is under 0.18, which a pure white one reaches under 54% of this ink (by
- * the contrast formula, not measured on a phone). The counts and the bio
- * stand where it is past that; the name's line stands at about 45–50%, so
- * the words also carry a soft shadow (`ON_PHOTO_SHADOW`) for the cover
- * that is a white sky exactly there.
+ * the contrast formula, not measured on a phone).
+ *
+ * Until the owner's recording of 28 Nov 2026 it began 30% down the cover
+ * and reached 50% at 45% of its run. Worked out against that recording,
+ * the name stood where it was about 16% and the handle a little more: on
+ * a bright river "@trang" was nearly gone. The words carry a soft shadow
+ * as well (`ON_PHOTO_SHADOW`), for the letter on one bright spot.
  */
-const FOOT_SCRIM = ['rgba(10,11,10,0)', 'rgba(10,11,10,0.5)', 'rgba(10,11,10,0.66)'] as const;
+const FOOT_SCRIM = ['rgba(10,11,10,0)', 'rgba(10,11,10,0.54)', 'rgba(10,11,10,0.66)'] as const;
+const FOOT_SCRIM_AT = [0, 0.2, 1] as const;
 const ON_PHOTO_SHADOW = { textShadowColor: 'rgba(0,0,0,0.45)', textShadowOffset: { width: 0, height: 1 }, textShadowRadius: 3 } as const;
 /** How far the name shrinks to stay on its line beside the picture
  *  before it is cut: 22 to about 17, still the largest words on the
@@ -338,7 +356,7 @@ export default function PersonScreen({ navigation, route, home }: {
           narrowed — `person/Find`. */}
       {find.on
         ? <FindField find={find} name={own ? null : person.full_name || atHandle(person.handle)} />
-        : <Head me={me} person={person} own={own} cover={wall.cover} coverH={coverH} onCover={wall.onCover} trying={wall.trying} ring={ring} friend={friend} onRowLayout={top.onRowLayout} navigation={navigation} />}
+        : <Head me={me} person={person} own={own} cover={wall.cover} coverH={coverH} scroll={bar.scroll} onCover={wall.onCover} trying={wall.trying} ring={ring} friend={friend} onRowLayout={top.onRowLayout} navigation={navigation} />}
 
       {/* What they have shared: what they did, newest first, and every
           — `person/Shared`. */}
@@ -618,10 +636,12 @@ function useReloadOnReturn(navigation: Nav, on: boolean, reload: () => void) {
  * Its own function since 20 Nov 2026, when searching the page
  * (`person/Find`) put a box in its place.
  */
-function Head({ me, person, own, cover, coverH, onCover, trying, ring, friend, onRowLayout, navigation }: {
+function Head({ me, person, own, cover, coverH, scroll, onCover, trying, ring, friend, onRowLayout, navigation }: {
   me: string | null;
   /** The cover's whole height, the clock's inset with it. */
   coverH: number;
+  /** How far the page has scrolled — the head fades under the bar. */
+  scroll: Animated.Value;
   person: FriendProfile;
   own: boolean;
   cover: string | undefined;
@@ -636,6 +656,7 @@ function Head({ me, person, own, cover, coverH, onCover, trying, ring, friend, o
 }) {
   const { t } = useI18n();
   const top = useSafeAreaInsets().top;
+  const fade = useHeadFade(scroll);
   return (
     <>
       {/* The head, whole, on the photograph (owner, 28 Nov 2026): the
@@ -660,11 +681,11 @@ function Head({ me, person, own, cover, coverH, onCover, trying, ring, friend, o
               so the light clock and the bar's glass read on a pale sky. */}
           <LinearGradient colors={['rgba(0,0,0,0.38)', 'rgba(0,0,0,0)']} style={s.scrim} pointerEvents="none" testID="person-cover-scrim" />
           {/* The words' scrim — see `footScrim`. */}
-          <LinearGradient colors={FOOT_SCRIM} locations={[0, 0.45, 1]} style={s.footScrim} pointerEvents="none" testID="person-cover-foot-scrim" />
+          <LinearGradient colors={FOOT_SCRIM} locations={FOOT_SCRIM_AT} style={[s.footScrim, { top: top + BAR_H }]} pointerEvents="none" testID="person-cover-foot-scrim" />
           {/* The cover's camera, on your own page: it says the picture is
               a control, as the avatar's badge does, under the bar's tools
-              where the head leaves the photograph free. The whole cover
-              is the press. */}
+              in the band the head leaves free (`COVER_UNDER_CLOCK`). The
+              whole cover is the press. */}
           {onCover ? (
             <View style={[s.coverEdit, { top: top + UNDER_BAR }]} testID="person-cover-edit">
               <Glyph name="camera-outline" size={ICON.action} color="#fff" />
@@ -678,7 +699,8 @@ function Head({ me, person, own, cover, coverH, onCover, trying, ring, friend, o
             </View>
           ) : null}
         </Pressable>
-        <View style={s.headRow} pointerEvents="box-none" testID="person-head-row">
+        {/* Faded as the page carries it under the bar — `useHeadFade`. */}
+        <Animated.View style={[s.headRow, { opacity: fade.opacity }]} pointerEvents="box-none" onLayout={fade.onLayout} testID="person-head-row">
           {/* Your own in the level's ring — `person/OwnFace`. */}
           <Face own={own} url={person.avatar_url} ring={ring} />
           {/* The name, beside the picture, and the handle right under it
@@ -689,7 +711,7 @@ function Head({ me, person, own, cover, coverH, onCover, trying, ring, friend, o
               editor's medal, with the sheet that says what it means —
               `PersonRole`. */}
           <View style={s.names} pointerEvents="box-none">
-            <PersonRole me={me} personId={person.id} line={TITLE_LINE}>
+            <PersonRole me={me} personId={person.id} line={TITLE_LINE} onPhoto reserve={onCover ? CAMERA_RESERVE : undefined}>
               {person.full_name
                 ? <Text style={s.title} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={TITLE_SHRINK} testID="person-name">{person.full_name}</Text>
                 : <Text style={s.title} numberOfLines={1} testID="person-handle">{atHandle(person.handle)}</Text>}
@@ -700,10 +722,10 @@ function Head({ me, person, own, cover, coverH, onCover, trying, ring, friend, o
             {/* What they say about themselves — `Bio`. */}
             <Bio me={me} person={person} onAdd={() => navigation.navigate('EditProfile', { focus: 'bio' })} focused={() => navigation.isFocused()} />
           </View>
-        </View>
+        </Animated.View>
         {/* Your counts, yours to see (`profile/Counts`), in the
             photograph's light ink. */}
-        {own && me ? <View style={s.counts} pointerEvents="box-none"><Counts navigation={navigation} light /></View> : null}
+        {own && me ? <Animated.View style={[s.counts, { opacity: fade.opacity }]} pointerEvents="box-none"><Counts navigation={navigation} light /></Animated.View> : null}
         {/* The page's sheet, risen over the cover's foot: its two round
             corners, and under them the page. */}
         <View style={s.sheet} pointerEvents="none" testID="person-sheet" />
@@ -875,12 +897,14 @@ const s = StyleSheet.create({
   // 120 of the photograph's top: the clock and the bar's 50 under it,
   // and as far again to fade over.
   scrim: { position: 'absolute', top: 0, left: 0, right: 0, height: 120 },
-  // The lower 70% of the photograph, darkening to its foot — see
-  // `FOOT_SCRIM`.
-  footScrim: { position: 'absolute', left: 0, right: 0, bottom: 0, height: '70%' },
+  // From the bar's foot (`top`, inline: it owes the clock its inset) to
+  // the photograph's, darkening — see `FOOT_SCRIM`.
+  footScrim: { position: 'absolute', left: 0, right: 0, bottom: 0 },
   // The face and the names in a row, at the page's margin, their middles
   // level: the face is the taller, so the names sit beside it.
-  headRow: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: space.page, paddingBottom: 12 },
+  // 18 to the counts under it, from 12: the level's pill hangs off the
+  // face's foot and stood 4 over the first figure (recording, 28 Nov).
+  headRow: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: space.page, paddingBottom: 18 },
   // The page's ground around the face, so it parts from the photograph.
   faceRing: { borderWidth: 4, borderRadius: FACE / 2 + 4 },
   // The name over the handle over the bio, one column beside the picture.
@@ -917,7 +941,9 @@ const s = StyleSheet.create({
   // the ⋯.
   topRight: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   // The handle, right under the name: an address, quieter.
-  handle: { color: onPhoto.textSecondary, ...type.meta, lineHeight: 20, ...ON_PHOTO_SHADOW },
+  // The photograph's full ink, not its second: the handle is the
+  // smallest line on the picture, and it is quiet by its size.
+  handle: { color: onPhoto.text, ...type.meta, lineHeight: 20, ...ON_PHOTO_SHADOW },
   // What they say, in the photograph's ink and the bio's italic, 2 under
   // the handle. A bubble with a tail toward the face until 28 Nov 2026.
   bio: { color: onPhoto.text, ...type.meta, lineHeight: 20, fontStyle: 'italic', marginTop: 2, ...ON_PHOTO_SHADOW },

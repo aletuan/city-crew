@@ -56,13 +56,27 @@ thì đánh dấu bước đó ở đây, trong cùng PR.
    **Phần đầu trang nằm trên ảnh** (chủ dự án, 28/11/2026, theo ảnh tham
    khảo): ảnh đại diện (giữ vòng cấp độ và huy hiệu), tên, @handle, bio và
    — ở trang của chính mình — bốn con số đều đứng trên ảnh bìa, mực sáng
-   `onPhoto`, không đổi theo giao diện sáng/tối. Ảnh cao 232pt dưới đồng
-   hồ (trước là 200), tức khoảng 275pt trên máy có tai thỏ, bằng chừng 2/3
-   hero của Explore. Trang nổi lên trên chân ảnh như một tấm sheet: đè
-   18pt, bo 22pt hai góc trên. Dưới chữ là một dải tối: 0,5 từ khoảng 60% chiều cao ảnh,
-   0,66 ở chân — chữ trắng trên ảnh trắng tinh cần 0,54 để đạt 4,5:1 (số
-   tính, chưa đo trên máy thật). Nút máy ảnh lên góc trên phải, dưới cụm
-   công cụ.
+   `onPhoto`, không đổi theo giao diện sáng/tối. Ảnh cao 272pt dưới đồng
+   hồ. Trang nổi lên trên chân ảnh như một tấm sheet: đè 18pt, bo 22pt hai
+   góc trên.
+
+   Sửa sau video quay máy thật của chủ dự án (28/11/2026, bản 232pt):
+   - **232 → 272.** Ở 232 thanh công cụ kết thúc ở 109pt và ảnh đại diện
+     bắt đầu ở 107pt: không còn điểm ảnh nào trống, ảnh bìa đọc như nền
+     của header. 40pt thêm là dải ảnh giữa thanh công cụ và phần đầu.
+     Không hơn: trên máy 667pt ảnh đã chiếm khoảng 44% màn hình (số tính).
+   - **Phần đầu mờ dần khi cuộn tới thanh công cụ** (`useHeadFade`), theo
+     đúng quy tắc của chữ trên hero Explore: trước đó ảnh đại diện chui
+     dưới đồng hồ và tên bị cụm công cụ cắt ngang.
+   - **Dải tối** chạy từ chân thanh công cụ tới chân ảnh, đạt 0,54 ở 1/5
+     quãng — chỗ phần đầu bắt đầu — và 0,66 ở chân. Bản trước đạt 0,5 ở
+     45% quãng, nên tên chỉ đứng trên khoảng 16% và @handle gần mất trên
+     ảnh sáng. Chữ trắng trên ảnh trắng tinh cần 0,54 để đạt 4,5:1 (số
+     tính, chưa đo trên máy thật). @handle dùng mực sáng đầy đủ.
+   - **Nút máy ảnh** đứng 4pt dưới thanh công cụ, trong dải trống; dòng
+     tên ở trang của mình chừa 44pt cuối dòng cho nó. Huy hiệu vai trò
+     trên ảnh có nền sáng (nền nhạt gốc của nó chìm vào ảnh).
+   - Hàng ảnh đại diện cách hàng số 18pt (trước 12): nhãn cấp độ chạm số.
 
    Bong bóng bio bỏ hẳn: bio là một dòng nghiêng trên ảnh, tối đa ba dòng
    (chiều cao ảnh cố định; dòng thứ tư sẽ đẩy tên lên dưới thanh công cụ).
