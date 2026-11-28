@@ -47,13 +47,29 @@ thì đánh dấu bước đó ở đây, trong cùng PR.
    có trong file xuất dữ liệu.
 
 7. **Tràn viền** (chủ dự án, 22/11/2026): ảnh bìa chạy hết hai mép và lên
-   dưới đồng hồ, cao 200pt dưới đồng hồ; mép trên có dải tối mờ. Nút quay
-   lại (trang người khác) và cụm công cụ nằm trong kính tối mờ như nút máy
-   ảnh; cuộn qua ảnh thì nền trang và tên người hiện dần, icon và đồng hồ
-   chuyển sang mực của trang (`person/Bar`). Khi tìm kiếm trong trang,
-   trang trở lại header thường. Ảnh đại diện giữ mức đè cũ (26pt, khoảng
-   40%): đè một nửa đã thử trong một giờ, nhưng đuôi bong bóng bio chỉ
-   xuống dưới ảnh đại diện, hai khối rời nhau.
+   dưới đồng hồ; mép trên có dải tối mờ. Nút quay lại (trang người khác)
+   và cụm công cụ nằm trong kính tối mờ như nút máy ảnh; cuộn qua ảnh thì
+   nền trang và tên người hiện dần, icon và đồng hồ chuyển sang mực của
+   trang (`person/Bar`). Khi tìm kiếm trong trang, trang trở lại header
+   thường.
+
+   **Phần đầu trang nằm trên ảnh** (chủ dự án, 28/11/2026, theo ảnh tham
+   khảo): ảnh đại diện (giữ vòng cấp độ và huy hiệu), tên, @handle, bio và
+   — ở trang của chính mình — bốn con số đều đứng trên ảnh bìa, mực sáng
+   `onPhoto`, không đổi theo giao diện sáng/tối. Ảnh cao 232pt dưới đồng
+   hồ (trước là 200), tức khoảng 275pt trên máy có tai thỏ, bằng chừng 2/3
+   hero của Explore. Trang nổi lên trên chân ảnh như một tấm sheet: đè
+   18pt, bo 22pt hai góc trên. Dưới chữ là một dải tối: 0,5 từ khoảng 60% chiều cao ảnh,
+   0,66 ở chân — chữ trắng trên ảnh trắng tinh cần 0,54 để đạt 4,5:1 (số
+   tính, chưa đo trên máy thật). Nút máy ảnh lên góc trên phải, dưới cụm
+   công cụ.
+
+   Bong bóng bio bỏ hẳn: bio là một dòng nghiêng trên ảnh, tối đa ba dòng
+   (chiều cao ảnh cố định; dòng thứ tư sẽ đẩy tên lên dưới thanh công cụ).
+   Một ô kính trên ảnh là một tấm ảnh thứ hai. Đã cân nhắc và loại: giữ
+   ảnh đại diện đè nửa trong nửa ngoài (tên phải nằm dưới ảnh, bốn con số
+   lại rời xuống trang); ảnh cao bằng hero của Explore (trang cá nhân là
+   nơi đọc danh sách, nội dung đầu tiên bị đẩy khỏi màn hình đầu).
 
 ## Dữ liệu
 

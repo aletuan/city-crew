@@ -4,7 +4,7 @@
 
 import { StyleSheet } from 'react-native';
 import { ICON, SECONDARY_CONTROL_H } from '../../components/ui';
-import { colors, font, quoteFace, radius, space, type } from '../../theme';
+import { colors, font, onPhoto, quoteFace, radius, space, type } from '../../theme';
 
 /**
  * Where the glyph sits on a two-line row: level with the first line, as
@@ -176,6 +176,12 @@ export const s = StyleSheet.create({
   statN: { color: colors.text, fontSize: 18, fontWeight: font.bold, fontVariant: ['tabular-nums'] },
   statLabel: { color: colors.textTertiary, fontSize: 13, fontWeight: font.medium },
   statDivider: { width: StyleSheet.hairlineWidth, height: 28, backgroundColor: colors.borderGlassSoft },
+  // On a photograph (`Counts` › `light`): the photo's inks, no rule under
+  // the row, and 12 to whatever the cover ends in.
+  statsLight: { marginTop: 0, paddingBottom: 12, borderBottomWidth: 0 },
+  statNLight: { color: onPhoto.text },
+  statLabelLight: { color: onPhoto.textSecondary },
+  statDividerLight: { backgroundColor: onPhoto.line },
   // The dash is a placeholder, so it takes the label's grey rather than
   // the ink a real count is drawn in.
   statPending: { color: colors.textTertiary },

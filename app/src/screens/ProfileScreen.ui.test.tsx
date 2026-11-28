@@ -24,6 +24,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { BaseNavigationContainer, createNavigationContainerRef, createNavigatorFactory, useNavigationBuilder } from '@react-navigation/core';
 import { CommonActions, StackRouter, TabRouter } from '@react-navigation/routers';
 import { act, cleanup, fireEvent, render, screen, textStyleOf, viewStyleOf, waitFor, within } from '../uitest/render';
+import { colors, onPhoto } from '../theme';
 import { CATEGORIES } from '../lib/categories';
 import { useScrollToTop } from '@react-navigation/native';
 import { navRef, type Nav } from '../nav';
@@ -1008,6 +1009,30 @@ describe('the four doors', () => {
     draw();
     expect(screen.queryByTestId('stats-failed')).toBeNull();
     expect(screen.getByRole('button', { name: '0 Trips' })).toBeTruthy();
+  });
+
+  // On the person page's photograph (28 Nov 2026) the row is drawn in
+  // the photograph's ink, which does not turn with the scheme: figures,
+  // labels, a dash still loading and the words of a failure alike. The
+  // hairline under the row goes, the sheet's edge is there instead.
+  it('draws in the photograph’s light ink when asked to, and in the page’s otherwise', () => {
+    state.counts = { mineLoaded: true, mineError: null, tripsLoaded: false, tripsError: 'offline' };
+    const r = nav();
+    render(<Counts navigation={r.n} light />);
+    const lists = screen.getByRole('button', { name: '0 Collections' });
+    expect(textStyleOf(within(lists).getByText('0'))?.color).toBe(onPhoto.text);
+    expect(textStyleOf(within(lists).getByText('Collections'))?.color).toBe(onPhoto.textSecondary);
+    const dash = screen.getByRole('button', { name: 'Trips, loading' });
+    expect(textStyleOf(within(dash).getByText('—'))?.color).toBe(onPhoto.textSecondary);
+    expect(viewStyleOf(lists.parentElement!).borderBottomWidth).toBe(0);
+    expect(viewStyleOf(lists.nextElementSibling!).backgroundColor).toBe(onPhoto.line);
+    expect(textStyleOf(screen.getByText("Couldn't load your counts."))?.color).toBe(onPhoto.textSecondary);
+    cleanup();
+    draw();
+    const plain = screen.getByRole('button', { name: '0 Collections' });
+    expect(textStyleOf(within(plain).getByText('0'))?.color).toBe(colors.text);
+    expect(textStyleOf(within(plain).getByText('Collections'))?.color).toBe(colors.textTertiary);
+    expect(viewStyleOf(plain.nextElementSibling!).backgroundColor).toBe(colors.borderGlassSoft);
   });
 
 });
