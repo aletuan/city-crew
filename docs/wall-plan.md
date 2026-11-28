@@ -111,6 +111,16 @@ thì đánh dấu bước đó ở đây, trong cùng PR.
      (cần id); sửa đúng là trả vai trò cùng lượt đọc hồ sơ, tức đổi phía
      server.
 
+   Sau ảnh chụp trang của một tài khoản mới (cùng ngày):
+   - **Nút máy ảnh về cuối hàng tên**, canh giữa theo ảnh đại diện — đúng
+     chỗ nút kết bạn đứng ở trang người khác: cuối hàng là "việc làm với
+     trang này". Trước đó nó đứng riêng dưới cụm công cụ. Không đưa vào
+     pill công cụ: pill còn lại khi ảnh bìa đã cuộn qua.
+   - **Card khi trang còn trống** (`person/Shared`, `FirstOfYours`): "Bắt
+     đầu trang của bạn", nói cả check-in lẫn bộ sưu tập, một nút đặc "Tạo
+     bộ sưu tập" và một dòng chữ "Tìm chỗ để check-in" (mở Explore).
+
+
 
    Bong bóng bio bỏ hẳn: bio là một dòng nghiêng trên ảnh, tối đa ba dòng
    (chiều cao ảnh cố định; dòng thứ tư sẽ đẩy tên lên dưới thanh công cụ).

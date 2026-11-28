@@ -606,29 +606,30 @@ describe('the bio, and the way to write one', () => {
     expect(seen(row)).toBe(0);
   });
 
-  // The camera stood on the role's mark in that recording. It is 4 under
-  // the bar now, in the band the taller cover leaves free, and the name's
-  // line keeps its 36 and 8 clear — on your own page, where there is one.
-  it('keeps the cover’s camera clear of the name: under the bar, and the name’s line stops short of it', async () => {
+  // The cover's camera stands at the end of the head's row (owner's
+  // screenshot, 28 Nov 2026), where a friend's button stands on theirs.
+  // It was under the bar's tools, alone between them and the name: on
+  // the name's own line at first, then 4 under the bar.
+  it('stands the cover’s camera at the end of the head’s row, after the names, and it goes with the head', async () => {
     state.me = LAN.id;
     state.role = 'editor';
     await show();
-    // Its middle under the gear's: that 44 box hangs 13 past the page's
-    // margin (22), so its middle is 31 in; the camera's 36 is there
-    // from 13.
     const camera = screen.getByTestId('person-cover-edit');
-    expect(viewStyleOf(camera)).toMatchObject({ top: 54, right: 13 });
-    // As far as the camera reaches inside the margin (13 + 36 − 22), and 8.
-    expect(viewStyleOf(screen.getByTestId('role-row'))).toMatchObject({ marginRight: 35 });
-    // 4 under the bar, so it goes under it at once: gone by 4 and 60%
-    // of its 36 — on the recording it rode up over the bell and the gear.
-    const seen = () => Number(getComputedStyle(camera).opacity || '1');
-    expect(seen()).toBe(1);
-    scrollTo(12.8);
-    expect(seen()).toBeCloseTo(0.5, 2);
-    scrollTo(26);
-    expect(seen()).toBe(0);
-    scrollTo(0);
+    const row = screen.getByTestId('person-head-row');
+    expect(row.lastElementChild).toBe(camera);
+    expect(camera.previousElementSibling).toBe(screen.getByTestId('role-row').parentElement);
+    // In the row's flow, its middle on the row's (the face's): no place
+    // of its own on the cover any more, and nothing kept clear for it.
+    const at = viewStyleOf(camera);
+    expect(at.position).toBeUndefined();
+    expect(at.top).toBeUndefined();
+    expect(viewStyleOf(row).alignItems).toBe('center');
+    expect(viewStyleOf(screen.getByTestId('role-row')).marginRight).toBeUndefined();
+    // Not in the cover's press, which lies under the row: a press in a
+    // press. It fades with the row it is in.
+    expect(screen.getByTestId('person-cover').contains(camera)).toBe(false);
+    // Its 36 and 4 a side: the 44 a thumb is owed.
+    expect(propsWhere((p) => p.testID === 'person-cover-edit').hitSlop).toBe(4);
     // The mark on the photograph's light ground: its own soft tint is a
     // wash of the role's colour, and nothing on a picture.
     const disc = screen.getByTestId('role-badge').querySelector('[data-icon]')!.parentElement!;
@@ -637,7 +638,6 @@ describe('the bio, and the way to write one', () => {
     state.me = 'someone-else';
     await show();
     expect(screen.queryByTestId('person-cover-edit')).toBeNull();
-    expect(viewStyleOf(screen.getByTestId('role-row')).marginRight).toBeUndefined();
     expect(viewStyleOf(screen.getByTestId('role-disc')).backgroundColor).toBe(onPhoto.text);
   });
 
@@ -1287,13 +1287,17 @@ describe('lists that are not for everybody', () => {
       expect(acts()).toHaveLength(3);
     });
 
-    // The camera is on the cover, and the whole cover is the door
+    // The camera is on the cover's head, and the whole cover is the door
     // (docs/wall-plan.md); the header's row keeps search first, as on
     // everybody else's page. On somebody else's page neither is there.
     it('opens the cover\'s sheet from the camera on the cover and from the cover, on your own page only', async () => {
       await show('me');
       const camera = screen.getByTestId('person-cover-edit');
-      expect(screen.getByTestId('person-cover').contains(camera)).toBe(true);
+      expect(screen.getByTestId('person-head').contains(camera)).toBe(true);
+      // The cover is the one VoiceOver is told of; the camera is the
+      // same press and is not named a second time.
+      expect(camera.getAttribute('aria-label')).toBeNull();
+      expect(camera.getAttribute('role')).toBeNull();
       // The photograph disc, with the action glyph and a white hairline,
       // so it is not lost on a dark cover (owner, 24 Nov 2026).
       expect(camera.querySelector('[data-icon="camera-outline"]')!.getAttribute('data-size')).toBe('18');
@@ -1323,20 +1327,35 @@ describe('lists that are not for everybody', () => {
       state.shelf = [];
       const navigation = await show('me');
       const card = screen.getByTestId('person-no-lists');
-      // In your own person, and "none" rather than "none public": your
-      // page shows your private lists too (21 Nov 2026).
-      expect(within(card).getByText('No collections yet')).toBeTruthy();
-      expect(within(card).getByText('Your collections will show here.')).toBeTruthy();
+      // What it asks for, and both things that put something on the
+      // page (28 Nov 2026): the page is a feed of visits and lists, and
+      // the card spoke of lists alone, as a place that was empty.
+      expect(within(card).getByText('Start your page')).toBeTruthy();
+      expect(within(card).getByText('Check in at a place or save a few into a collection. They show up here.')).toBeTruthy();
+      expect(screen.queryByText('No collections yet')).toBeNull();
       expect(screen.queryByText('No public collections yet')).toBeNull();
       expect(screen.queryByText('When they share a collection, it will show here.')).toBeNull();
       expect(screen.getByTestId('person-settings')).toBeTruthy();
-      // And the way to the first: an outlined pill, the secondary
-      // control's height, opening the form on a new collection.
-      const first = within(card).getByRole('button', { name: 'Create your first collection' });
-      expect(viewStyleOf(screen.getByTestId('person-first-list').firstElementChild as HTMLElement))
-        .toMatchObject({ minHeight: 44, borderWidth: 1, borderColor: colors.accentLine });
-      expect(textStyleOf(within(card).getByText('Create your first collection'))?.color).toBe(colors.accent);
+      // The first way: the app's filled button — an outlined pill from
+      // 21 Nov, which read as a secondary control on the one screen
+      // where it is the only thing to do.
+      const first = within(card).getByRole('button', { name: 'Create a collection' });
       expect(first.querySelector('[data-icon="add"]')).toBeTruthy();
+      // Filled: its mark and words are the ink that stands on the
+      // accent, not the accent on the card.
+      expect(first.querySelector('[data-icon="add"]')!.getAttribute('data-color')).toBe(String(colors.accentInk));
+      expect(textStyleOf(within(card).getByText('Create a collection'))?.color).toBe(colors.accentInk);
+      expect(screen.getByTestId('person-first-list')).toBeTruthy();
+      // The second, quieter and after it: words in the accent, 44 tall,
+      // to Explore — a sibling tab, so by `goTo`.
+      const second = within(card).getByRole('button', { name: 'Find a place to check in' });
+      expect(first.compareDocumentPosition(second) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+      expect(viewStyleOf(second.firstElementChild as HTMLElement)).toMatchObject({ minHeight: 44 });
+      expect(viewStyleOf(second.firstElementChild as HTMLElement).backgroundColor).toBeUndefined();
+      expect(textStyleOf(within(card).getByText('Find a place to check in'))?.color).toBe(colors.accent);
+      fireEvent.click(second);
+      expect(out.goTo).toHaveBeenCalledExactlyOnceWith('Explore', { screen: 'ExploreHome' });
+      expect(navigation.navigate).not.toHaveBeenCalled();
       fireEvent.click(first);
       expect(navigation.navigate).toHaveBeenCalledWith('CollectionForm');
     });
@@ -1632,7 +1651,8 @@ describe('the friend button on the cover', () => {
     state.me = LAN.id;
     await show();
     expect(screen.queryByTestId('person-acts')).toBeNull();
-    expect(headRow().lastElementChild).toBe(screen.getByTestId('role-row').parentElement);
+    // Its place is the cover's camera's there.
+    expect(headRow().lastElementChild).toBe(screen.getByTestId('person-cover-edit'));
     cleanup();
     state.me = null;
     await show();

@@ -38,7 +38,7 @@ const show = (lists: Collection[], visits: PersonCheckin[] | undefined, me: stri
   <Shared
     me={me} person={LAN} lists={lists} visits={visits} visitCard={visitCard}
     seenOf={() => ({ kind: 'public' })} coverFor={(c) => `https://x/${c.slug}.jpg`}
-    onOpen={() => {}} onCreate={() => {}} reach={reach}
+    onOpen={() => {}} onCreate={() => {}} onExplore={() => {}} reach={reach}
   />,
 );
 /** The column as drawn, a visit by its id and a list by its title. */
@@ -78,7 +78,7 @@ describe('Shared, with visits', () => {
     page.rerender(
       <Shared
         me="me" person={LAN} lists={[]} visits={visits} visitCard={visitCard}
-        seenOf={() => ({ kind: 'public' })} coverFor={() => undefined} onOpen={() => {}} onCreate={() => {}} reach={1}
+        seenOf={() => ({ kind: 'public' })} coverFor={() => undefined} onOpen={() => {}} onCreate={() => {}} onExplore={() => {}} reach={1}
       />,
     );
     expect(screen.getAllByTestId('a-visit')).toHaveLength(7);
@@ -102,7 +102,7 @@ describe('Shared, with visits', () => {
     const page = render(
       <Shared
         me="me" person={LAN} lists={lists} visits={[]} visitCard={visitCard} holding
-        seenOf={() => ({ kind: 'public' })} coverFor={() => undefined} onOpen={() => {}} onCreate={() => {}}
+        seenOf={() => ({ kind: 'public' })} coverFor={() => undefined} onOpen={() => {}} onCreate={() => {}} onExplore={() => {}}
       />,
     );
     expect(screen.getByTestId('person-activity-wait')).toBeTruthy();
@@ -111,7 +111,7 @@ describe('Shared, with visits', () => {
     page.rerender(
       <Shared
         me="me" person={LAN} lists={lists} visits={[visit('k1', 22)]} visitCard={visitCard} holding={false}
-        seenOf={() => ({ kind: 'public' })} coverFor={() => undefined} onOpen={() => {}} onCreate={() => {}}
+        seenOf={() => ({ kind: 'public' })} coverFor={() => undefined} onOpen={() => {}} onCreate={() => {}} onExplore={() => {}}
       />,
     );
     expect(screen.queryByTestId('person-activity-wait')).toBeNull();
@@ -122,7 +122,7 @@ describe('Shared, with visits', () => {
     render(
       <Shared
         me="me" person={LAN} lists={[]} visits={[]} visitCard={visitCard} holding
-        seenOf={() => ({ kind: 'public' })} coverFor={() => undefined} onOpen={() => {}} onCreate={() => {}}
+        seenOf={() => ({ kind: 'public' })} coverFor={() => undefined} onOpen={() => {}} onCreate={() => {}} onExplore={() => {}}
       />,
     );
     expect(screen.queryByTestId('person-no-lists')).toBeNull();

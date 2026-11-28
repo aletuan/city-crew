@@ -206,20 +206,17 @@ export function RoleBody({ role }: { role: Role }) {
  * first line, whatever the name's size. `own`: the page is the reader's,
  * and only then is the disc a press.
  */
-export function WithRole({ role, own, line, onPhoto: lit, reserve, children }: {
+export function WithRole({ role, own, line, onPhoto: lit, children }: {
   role: Role | null;
   own: boolean;
   line: number;
   /** The name is on a photograph: see `RoleDisc`. */
   onPhoto?: boolean;
-  /** Room kept clear after the row, for something that stands over its
-   *  end — the cover's camera on a person's own page. */
-  reserve?: number;
   children: React.ReactNode;
 }) {
   const [open, setOpen] = useState(false);
   return (
-    <View style={[d.row, reserve ? { marginRight: reserve } : null]} testID="role-row">
+    <View style={d.row} testID="role-row">
       <View style={d.name}>{children}</View>
       {role ? (
         <>
@@ -240,16 +237,15 @@ export function WithRole({ role, own, line, onPhoto: lit, reserve, children }: {
 /** A person's name on their page, with the mark the database says they
  *  wear — the question (`useRoleOfQuery`), then `WithRole`, a press on
  *  your own page and a still mark on anybody else's (see the header). */
-export default function PersonRole({ me, personId, line, onPhoto: lit, reserve, children }: {
+export default function PersonRole({ me, personId, line, onPhoto: lit, children }: {
   me: string | null;
   personId: string;
   line: number;
   onPhoto?: boolean;
-  reserve?: number;
   children: React.ReactNode;
 }) {
   const role = useRoleOfQuery(me, personId).data ?? null;
-  return <WithRole role={role} own={me === personId} line={line} onPhoto={lit} reserve={reserve}>{children}</WithRole>;
+  return <WithRole role={role} own={me === personId} line={line} onPhoto={lit}>{children}</WithRole>;
 }
 
 /** The disc: 20, from the 24 it was on a picture's corner, where it
