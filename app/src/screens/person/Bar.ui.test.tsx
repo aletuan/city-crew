@@ -16,6 +16,7 @@ const Probe = () => <Text testID="probe">{String(useContext(BarInk))}</Text>;
 const bar = (past: boolean, near = past): ReturnType<typeof usePastCover> => ({
   past, near, bleed: true, onScroll: () => {},
   ground: new Animated.Value(past ? 1 : 0), glass: new Animated.Value(past ? 0 : 1),
+  scroll: new Animated.Value(0),
   person: { id: 'p', handle: 'lan', full_name: 'Lan Phạm' } as ReturnType<typeof usePastCover>['person'],
 });
 

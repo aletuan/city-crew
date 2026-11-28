@@ -304,10 +304,12 @@ describe('whose page it is', () => {
     expect(name.textContent).toBe('Lan Phạm');
     expect(handle.textContent).toBe('@lan');
     expect(screen.getByTestId('person-bio').textContent).toBe('Coffee first, then the rest.');
-    // Name strong, handle quiet — both in the photograph's light ink,
-    // which does not turn with the scheme (28 Nov 2026).
+    // Name strong, handle quiet by its size — both in the photograph's
+    // full light ink, which does not turn with the scheme (28 Nov 2026).
+    // The handle wore the second ink for a morning, and on a bright
+    // river it was nearly gone.
     expect(textStyleOf(name)?.color).toBe(onPhoto.text);
-    expect(textStyleOf(handle)?.color).toBe(onPhoto.textSecondary);
+    expect(textStyleOf(handle)?.color).toBe(onPhoto.text);
     expect(Number(textStyleOf(name)?.fontSize)).toBeGreaterThan(Number(textStyleOf(handle)?.fontSize));
     // Both beside the picture, the handle right under the name: one
     // column in the picture's row. The handle ran under the whole row
@@ -345,17 +347,18 @@ describe('whose page it is', () => {
     // 80 since 19 Nov 2026, from 88 (owner, after an outside review).
     expect(viewStyleOf(face.querySelector('img')!)).toMatchObject({ width: 80, height: 80 });
     // The cover to the screen's edges and under the clock (22 Nov 2026):
-    // 232 under it since 28 Nov (200 before), the clock's inset (none
-    // here) on top.
+    // 272 under it since 28 Nov (200, then 232 for a morning), the
+    // clock's inset (none here) on top.
     const head = screen.getByTestId('person-head');
-    expect(viewStyleOf(screen.getByTestId('person-cover').firstElementChild!)).toMatchObject({ height: 232 });
-    expect(viewStyleOf(head)).toMatchObject({ height: 232, marginHorizontal: -space.page, overflow: 'hidden' });
+    expect(viewStyleOf(screen.getByTestId('person-cover').firstElementChild!)).toMatchObject({ height: 272 });
+    expect(viewStyleOf(head)).toMatchObject({ height: 272, marginHorizontal: -space.page, overflow: 'hidden' });
     expect(viewStyleOf(head).borderRadius).toBeUndefined();
     // The face stands on the photograph whole (28 Nov 2026): nothing of
     // it hangs under the cover any more, and the row sits at its foot.
     const row = screen.getByTestId('person-head-row');
     expect(viewStyleOf(row).marginTop).toBeUndefined();
-    expect(viewStyleOf(row)).toMatchObject({ alignItems: 'center', paddingHorizontal: space.page });
+    // 18 under it to the counts: the level's pill hangs off the face.
+    expect(viewStyleOf(row)).toMatchObject({ alignItems: 'center', paddingHorizontal: space.page, paddingBottom: 18 });
     expect(viewStyleOf(head).justifyContent).toBe('flex-end');
   });
 
@@ -529,14 +532,19 @@ describe('the bio, and the way to write one', () => {
     // tap on the bio's invitation would open the wall's sheet too.
     expect([...head.children]).toEqual([cover, row, sheet]);
     expect(cover.contains(row)).toBe(false);
-    // The scrim under the words: 0.5 from just under the middle, 0.66 at
-    // the foot. White on white needs 0.54 for 4.5:1 (computed).
+    // The scrim under the words, from the bar's foot (50; no inset here)
+    // to the cover's: white on white needs 0.54 for 4.5:1 (computed),
+    // and it is there a fifth of the way down, where the head begins —
+    // not at 45% of a shorter run, which left the name on 16%.
     const scrim = screen.getByTestId('person-cover-foot-scrim');
     expect(cover.contains(scrim)).toBe(true);
     const drawn = propsWhere((p) => p.testID === 'person-cover-foot-scrim');
-    const last = String((drawn.colors as string[]).at(-1));
-    expect(Number(last.match(/([\d.]+)\)$/)![1])).toBeGreaterThanOrEqual(0.54);
-    expect(viewStyleOf(scrim)).toMatchObject({ position: 'absolute', bottom: 0 });
+    const inks = (drawn.colors as string[]).map((c) => Number(c.match(/([\d.]+)\)$/)![1]));
+    expect(inks[0]).toBe(0);
+    expect(inks[1]).toBeGreaterThanOrEqual(0.54);
+    expect(inks[2]).toBeGreaterThanOrEqual(inks[1]);
+    expect((drawn.locations as number[])[1]).toBeLessThanOrEqual(0.2);
+    expect(viewStyleOf(scrim)).toMatchObject({ position: 'absolute', top: 50, bottom: 0 });
     // The sheet: the page's own ground, round at the top only, last in
     // the box so it covers the photograph's foot.
     const dress = viewStyleOf(sheet);
@@ -544,6 +552,64 @@ describe('the bio, and the way to write one', () => {
     expect(dress.backgroundColor).toBe(colors.bg);
     // Nobody else's page counts anything.
     expect(screen.queryByTestId('owner-counts')).toBeNull();
+  });
+
+  // The owner's recording (28 Nov 2026): a second into a scroll the face
+  // was under the clock and the name cut by the tools. The head fades as
+  // it reaches the bar's foot, by Explore's rule for its hero's words.
+  it('fades the head, and your counts with it, as the page carries them under the bar', async () => {
+    state.me = LAN.id;
+    await show();
+    const row = screen.getByTestId('person-head-row');
+    const counts = screen.getByTestId('owner-counts').parentElement!;
+    const seen = (el: Element) => Number(getComputedStyle(el).opacity || '1');
+    // Not measured yet: nothing fades, however far the page has gone.
+    scrollTo(120);
+    expect(seen(row)).toBe(1);
+    scrollTo(0);
+    // The row 90 down the cover and 100 tall: it meets the bar's foot
+    // (50) after 40 of scroll. The fade runs from 24 before that to
+    // where 60% of the row is under: 16 to 100.
+    act(() => { (propsWhere((p) => p.testID === 'person-head-row').onLayout as (e: unknown) => void)({ nativeEvent: { layout: { y: 90, height: 100 } } }); });
+    expect(seen(row)).toBe(1);
+    scrollTo(16);
+    expect(seen(row)).toBe(1);
+    scrollTo(58);
+    expect(seen(row)).toBeCloseTo(0.5, 2);
+    expect(seen(counts)).toBeCloseTo(0.5, 2);
+    scrollTo(100);
+    expect(seen(row)).toBe(0);
+    // Gone before the bar says the name again (from 178).
+    expect(screen.queryByTestId('person-bar-title')).toBeNull();
+    scrollTo(0);
+    expect(seen(row)).toBe(1);
+    // A head already at the bar's foot (large type) starts fading at
+    // rest and never asks for a range that runs backwards.
+    act(() => { (propsWhere((p) => p.testID === 'person-head-row').onLayout as (e: unknown) => void)({ nativeEvent: { layout: { y: 0, height: 10 } } }); });
+    expect(seen(row)).toBe(1);
+    scrollTo(1);
+    expect(seen(row)).toBe(0);
+  });
+
+  // The camera stood on the role's mark in that recording. It is 4 under
+  // the bar now, in the band the taller cover leaves free, and the name's
+  // line keeps its 36 and 8 clear — on your own page, where there is one.
+  it('keeps the cover’s camera clear of the name: under the bar, and the name’s line stops short of it', async () => {
+    state.me = LAN.id;
+    state.role = 'editor';
+    await show();
+    expect(viewStyleOf(screen.getByTestId('person-cover-edit'))).toMatchObject({ top: 54, right: space.page });
+    expect(viewStyleOf(screen.getByTestId('role-row'))).toMatchObject({ marginRight: 44 });
+    // The mark on the photograph's light ground: its own soft tint is a
+    // wash of the role's colour, and nothing on a picture.
+    const disc = screen.getByTestId('role-badge').querySelector('[data-icon]')!.parentElement!;
+    expect(viewStyleOf(disc).backgroundColor).toBe(onPhoto.text);
+    cleanup();
+    state.me = 'someone-else';
+    await show();
+    expect(screen.queryByTestId('person-cover-edit')).toBeNull();
+    expect(viewStyleOf(screen.getByTestId('role-row')).marginRight).toBeUndefined();
+    expect(viewStyleOf(screen.getByTestId('role-disc')).backgroundColor).toBe(onPhoto.text);
   });
 
   it('draws your own counts on the photograph, in its light ink, between the names and the sheet', async () => {
@@ -1423,7 +1489,7 @@ const scrollTo = (y: number) => scrollAt(y, 2000);
 
 // The cover to the screen's edges and the bar over it (owner, 22 Nov
 // 2026) — `person/Bar`. The clock's inset is none here, so the cover is
-// 200 tall and leaves the bar's 50 at 150; the page's ground comes in
+// 272 tall and leaves the bar's 50 at 222; the page's ground comes in
 // over the 44 before that.
 describe('the bar over the cover', () => {
   const ink = (id: string) => screen.getByTestId(id).querySelector('[data-icon]')!.getAttribute('data-color');
@@ -1445,13 +1511,13 @@ describe('the bar over the cover', () => {
   it('takes the page’s ink and the person’s name once the cover has left it', async () => {
     await show();
     // Inside the fade: the name is drawn, the glyphs still light.
-    // The cover's foot meets the bar's at 232 − 50 = 182; the fade is
+    // The cover's foot meets the bar's at 272 − 50 = 222; the fade is
     // the 44 before it.
-    scrollTo(142);
+    scrollTo(182);
     expect(screen.getByTestId('person-bar-title').textContent).toBe('Lan Phạm');
     expect(ink('person-search')).toBe(onPhoto.text);
     // Past it: the page's ink.
-    scrollTo(182);
+    scrollTo(222);
     expect(ink('person-search')).toBe(String(colors.text));
     expect(ink('person-back')).toBe(String(colors.text));
     // And back again.

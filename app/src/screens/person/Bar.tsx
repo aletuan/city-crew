@@ -26,7 +26,7 @@
 // cards under it, smaller, and the head no longer the page's own).
 
 import React, { useRef, useState } from 'react';
-import { Animated, StyleSheet, View, type NativeScrollEvent, type NativeSyntheticEvent } from 'react-native';
+import { Animated, StyleSheet, View, type LayoutChangeEvent, type NativeScrollEvent, type NativeSyntheticEvent } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { BarInk, RoundIconButton, useOwnedStatusBar } from '../../components/ui';
 import { ICON } from '../../components/ui/glyph';
@@ -38,7 +38,7 @@ import { colors, display, onPhoto, space } from '../../theme';
 /** The glass the cover's camera wears: the photograph's own dark. */
 const GLASS = 'rgba(0,0,0,0.42)';
 /** The bar's own height under the clock: the header's 44 and its 6 over. */
-const BAR_H = 50;
+export const BAR_H = 50;
 /** The run of scroll the page's ground takes to come in. */
 const FADE = 44;
 
@@ -76,7 +76,40 @@ export function usePastCover(coverH: number, person: FriendProfile | null, searc
   // Only over a cover: not before the page has a person, nor while the
   // search box stands in the head's place.
   const bleed = !!person && !searching;
-  return { past, near, onScroll, ground, glass, bleed, person };
+  return { past, near, onScroll, ground, glass, bleed, person, scroll: y };
+}
+
+/**
+ * The head's fade as the page carries it up under the bar (owner's
+ * recording, 28 Nov 2026: the face under the clock and the name cut by
+ * the tools, a second after the page began to move). The head stands on
+ * the cover since that day, so it passes behind the bar's glass on its
+ * way out; before, it stood on the page under the cover and the bar had
+ * its own ground by the time they met.
+ *
+ * Explore's rule for its hero's words, and for the same reason
+ * (`explore/Hero`): from 24 before the head's top meets the bar's foot
+ * to where 60% of it has gone under. Until the head is measured nothing
+ * fades: words gone because a layout has not arrived are worse than
+ * words under a bar.
+ */
+export function useHeadFade(scroll: Animated.Value) {
+  const top = useSafeAreaInsets().top;
+  const [at, setAt] = useState<{ y: number; h: number } | null>(null);
+  const onLayout = (e: LayoutChangeEvent) => {
+    const { y, height } = e.nativeEvent.layout;
+    setAt((was) => (was && was.y === y && was.h === height ? was : { y, h: height }));
+  };
+  if (!at) return { opacity: 1 as const, onLayout };
+  // How far the page scrolls before the head's top is at the bar's foot.
+  const meet = at.y - top - BAR_H;
+  const from = Math.max(0, meet - 24);
+  const opacity = scroll.interpolate({
+    inputRange: [from, Math.max(from + 1, meet + at.h * 0.6)],
+    outputRange: [1, 0],
+    extrapolate: 'clamp',
+  });
+  return { opacity, onLayout };
 }
 
 export function CoverBar({ bar, onBack, backTestID, tools }: {
