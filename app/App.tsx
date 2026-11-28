@@ -93,6 +93,20 @@ const detailOptions = ({ route }: { route: { params: RootStackParamList['Collect
   { animation: detailAnimation(route.params?.from) }
 );
 
+// Search dissolves in rather than sliding (owner, 28 Nov 2026). It is a
+// mode, not a place under the page it was opened from: its only way out
+// is Cancel in its own box, there is no back control to point left, and
+// a page sliding in from the right says "one level down" of a screen
+// that is not below anything. The same in every stack that holds it.
+//
+// The owner's reference blurred the page out and the menu in (about
+// 330ms to open and 300 to close, read off a 60fps recording of it). The
+// blur is left out: a native stack cannot blur the page that is leaving,
+// and that app's ground is near black, where a blur hides everything —
+// Explore's is a photograph. `fade` is the stack's own cross-fade.
+// Not seen on a phone.
+const searchOptions = { animation: 'fade' } as const;
+
 // A catch around every screen, so a render that throws takes its own
 // screen with it and nothing else — the tab bar is outside it, and the
 // reader can walk away to another tab. See `components/ScreenBoundary`.
@@ -155,7 +169,7 @@ function ExploreStack() {
   return (
     <Stack.Navigator screenOptions={stackOptions} screenLayout={screenLayout}>
       <Stack.Screen name="ExploreHome" component={ExploreScreen} />
-      <Stack.Screen name="Search" component={SearchScreen} />
+      <Stack.Screen name="Search" component={SearchScreen} options={searchOptions} />
       <Stack.Screen name="AddPlace" component={AddPlaceScreen} />
       <Stack.Screen name="PlaceDetail" component={PlaceDetailScreen} />
       <Stack.Screen name="Gallery" component={GalleryScreen} />
@@ -206,7 +220,7 @@ function CollectionsStack() {
       <Stack.Screen name="PlaceDetail" component={PlaceDetailScreen} />
       <Stack.Screen name="Gallery" component={GalleryScreen} />
       {/* Opened from a list to add places to it, and back is the list. */}
-      <Stack.Screen name="Search" component={SearchScreen} />
+      <Stack.Screen name="Search" component={SearchScreen} options={searchOptions} />
     </Stack.Navigator>
   );
 }
@@ -247,7 +261,7 @@ function ProfileStack() {
       <Stack.Screen name="Person" component={PersonScreen} />
       <Stack.Screen name="PlaceDetail" component={PlaceDetailScreen} />
       <Stack.Screen name="Gallery" component={GalleryScreen} />
-      <Stack.Screen name="Search" component={SearchScreen} />
+      <Stack.Screen name="Search" component={SearchScreen} options={searchOptions} />
     </Stack.Navigator>
   );
 }
