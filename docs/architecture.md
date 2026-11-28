@@ -190,8 +190,8 @@ trường test migration không có `pg_cron`. Hiện có bốn job, đọc từ
 mỗi giờ), `label-photos` (phút 23 mỗi giờ), `refresh-places` (19:43 mỗi
 ngày), `prune-checkin-photos` (03:23 mỗi ngày).
 
-**Migration** được CI test nhưng **không tự apply** — xem `CLAUDE.md`,
-mục Supabase.
+**Migration** được CI test; merge chỉ apply sau khi được duyệt, và deploy
+function cùng EAS Update chờ nó — xem `docs/migrations.md`.
 
 ## Dashboard
 
