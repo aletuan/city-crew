@@ -14,13 +14,13 @@
 // drawn. That stays until there is a reason to show it.
 //
 // The picture stays where every face on this page stands, and the ring
-// spreads out from it (`RING_OUT`): into the cover above and the page's
+// spreads out from it (`RING_OUT_ON_PHOTO`): into the cover above and the page's
 // margin to the left, which the card's padding leaves room for.
 
 import { useMemo } from 'react';
 import { View } from 'react-native';
 import AvatarPicker from '../../components/AvatarPicker';
-import { RING_OUT } from '../../components/EngagementRing';
+import { RING_OUT_ON_PHOTO } from '../../components/EngagementRing';
 import { useProfile } from '../../lib/auth';
 import { savedPlaces } from '../../lib/badges';
 import type { FriendProfile } from '../../lib/data';
@@ -47,8 +47,10 @@ export function OwnFace({ size }: { size: number }) {
   // Distinct places, as the Account page counted them: `savedPlaces`.
   const saved = useMemo(() => savedPlaces(mine.data), [mine.data]);
   return (
-    <View style={{ margin: -RING_OUT }} testID="person-own-face">
-      <HeroFace saved={saved} size={size}><AvatarPicker size={size} showCamera={false} /></HeroFace>
+    // On the cover's photograph since 28 Nov 2026, so in the ring's
+    // dress for one (`EngagementRing`, `onPhoto`).
+    <View style={{ margin: -RING_OUT_ON_PHOTO }} testID="person-own-face">
+      <HeroFace saved={saved} size={size} onPhoto><AvatarPicker size={size} showCamera={false} /></HeroFace>
     </View>
   );
 }

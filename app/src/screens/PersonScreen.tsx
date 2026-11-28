@@ -136,7 +136,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import {
   Avatar, EmptyState, GradientCta, PressableScale, Screen, SECONDARY_CONTROL_H, useTabBarClearance,
 } from '../components/ui';
-import { PHOTO_DISC } from '../components/ui/controls';
+import { INK_GAP_END, PHOTO_DISC } from '../components/ui/controls';
 import { Glyph, ICON } from '../components/ui/glyph';
 import { useFriendButtons } from '../components/FriendButton';
 import { usePullControl } from '../lib/usePull';
@@ -153,7 +153,7 @@ import { Requests } from './person/Requests';
 import { FindField, usePageFind } from './person/Find';
 import { OwnTools, Search } from './person/Tools';
 import { useWall } from './person/Wall';
-import { BAR_H, CoverBar, useHeadFade, usePastCover } from './person/Bar';
+import { BAR_H, CoverBar, fadeUnderBar, useHeadFade, usePastCover } from './person/Bar';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useCardCopy } from './person/useCardCopy';
 import { OwnFace, useOwnPicture } from './person/OwnFace';
@@ -168,15 +168,24 @@ import { useI18n } from '../lib/i18n';
 import { IN_COMMON_ON, listsBy, listsOn, seenOn, TOP_FRIEND_ON } from '../lib/person';
 import { useMyLists } from '../lib/save';
 import { sharesByList } from '../lib/shares';
-import { useScheme } from '../lib/theme';
-import { bgHex, colors, display, font, onPhoto, photoSheet, space, type } from '../theme';
+import { colors, display, font, onPhoto, photoSheet, space, type } from '../theme';
 import { toProfileRoom, type Nav, type RootRoute } from '../nav';
 
-/** The face: 80, from 88 (owner, 19 Nov 2026, after an outside review
- *  that found the face large beside the cover and the name), in a ring
- *  of page 4 wide: 88 across. Your own is 88 itself, in the level's ring
- *  — the Account page's picture, 103 across with the ring (`Face`). */
-const FACE = 80;
+/** The face: 72, everyone's and your own (owner's recording, 28 Nov
+ *  2026: "is the avatar too big?"). Measured on it, your own stood 103
+ *  across with its ring — 24% of a 430pt screen, and taller than the
+ *  name, handle and bio beside it together (about 69), so the eye went
+ *  to the picture before the name. 72 is 82 across in the level's ring
+ *  (`EngagementRing`, `onPhoto`) and 76 in everyone else's ring of 2.
+ *
+ *  It was 80 in a ring of page 4 wide, and your own 88 bare in the
+ *  level's ring (19 Nov 2026) — on the page, under the cover. The
+ *  Account page's picture is still 88 in the page's ring
+ *  (`profile/Hero`); that one stands on the page. */
+const FACE = 72;
+/** Everyone else's ring: 2 of the photograph's light ink. It was 4 of
+ *  the page, which on the cover is a band of cream. */
+const FACE_RING = 2;
 /** The cover's height under the clock, running to the screen's edges:
  *  272, so with a 59pt clock the photograph is 331 and, the page's sheet
  *  risen 18 over its foot, about 313 of it shows — three quarters of
@@ -202,12 +211,19 @@ const SHEET_ROUND = photoSheet.round;
  *  bar, and 4 clear of its glass. It was 8; the 4 are the camera's
  *  distance from the name's line when a bio runs to two lines. */
 const UNDER_BAR = BAR_H + 4;
-/** What the name's line keeps clear at its end on your own page: the
- *  camera's 36 and 8. With a bio of two lines or three the names' column
- *  is as tall as the face or taller, and the name's line rises into the
- *  camera's height (two lines: by 1.5; three: by 16) — on the recording
- *  of 28 Nov the camera sat on the role's mark. */
-const CAMERA_RESERVE = PHOTO_DISC + 8;
+/** The camera's distance from the screen's edge: its middle under the
+ *  middle of the settings glyph over it. That control is a 44 box hung
+ *  past the page's margin by its glyph's empty edge (`INK_GAP_END`), so
+ *  its middle is `page − gap + 22` in; the camera's 36 puts its own
+ *  there from 4 less. On the recording of 28 Nov it stood at the margin
+ *  itself, its middle 9 left of the gear's. */
+const CAMERA_RIGHT = space.page - INK_GAP_END['settings-outline'] + (44 - PHOTO_DISC) / 2;
+/** What the name's line keeps clear at its end on your own page: as far
+ *  as the camera reaches in from the page's margin, and 8. With a bio of
+ *  three lines the names' column is taller than the face, and the name's
+ *  line rises into the camera's height — on the first recording of 28
+ *  Nov the camera sat on the role's mark. */
+const CAMERA_RESERVE = CAMERA_RIGHT + PHOTO_DISC - space.page + 8;
 /**
  * The scrim the head's words stand on, from the bar's foot to the
  * cover's: clear at its top, 54% a fifth of the way down — where the
@@ -235,17 +251,15 @@ const TITLE_LINE = 28;
 /** The invitation's one 20pt line, grown to the 44 a thumb is owed. */
 const BIO_ADD_SLOP = { top: 12, bottom: 12 };
 
-/** The face at the head: everyone's ringed in page; yours bare, in the
- *  level's ring, whose gap is the page (`OwnFace`, `EngagementRing`) —
- *  a second band of page inside it was 7.5 of white round the picture
- *  (owner, 19 Nov 2026), so the 4 went to the picture: 88, the Account
- *  page's, in the same ring, 103 across. Out of the screen for its
+/** The face at the head, on the cover's photograph: everyone's in a thin
+ *  ring of its light ink; yours bare, in the level's ring dressed for a
+ *  photograph (`OwnFace`, `EngagementRing`). Out of the screen for its
  *  ceiling. */
-function Face({ own, url, ring }: { own: boolean; url: string | null | undefined; ring: { borderColor: string } }) {
+function Face({ own, url }: { own: boolean; url: string | null | undefined }) {
   // Yours is the picker itself, which draws your own picture (`OwnFace`).
-  if (own) return <OwnFace size={FACE + 8} />;
+  if (own) return <OwnFace size={FACE} />;
   return (
-    <View style={[s.faceRing, ring]}>
+    <View style={s.faceRing}>
       <Avatar url={url || null} size={FACE} />
     </View>
   );
@@ -345,10 +359,6 @@ export default function PersonScreen({ navigation, route, home }: {
   const bar = usePastCover(coverH, person, find.on);
   const { bleed } = bar;
   const onBack = home ? undefined : () => navigation.goBack();
-  // A ring is a border, and a dynamic colour on a border flattens against
-  // the phone's appearance rather than the app's (`bgHex`).
-  const { scheme } = useScheme();
-  const ring = { borderColor: bgHex[scheme] };
 
   const page = person ? (
     <>
@@ -356,7 +366,7 @@ export default function PersonScreen({ navigation, route, home }: {
           narrowed — `person/Find`. */}
       {find.on
         ? <FindField find={find} name={own ? null : person.full_name || atHandle(person.handle)} />
-        : <Head me={me} person={person} own={own} cover={wall.cover} coverH={coverH} scroll={bar.scroll} onCover={wall.onCover} trying={wall.trying} ring={ring} friend={friend} onRowLayout={top.onRowLayout} navigation={navigation} />}
+        : <Head me={me} person={person} own={own} cover={wall.cover} coverH={coverH} scroll={bar.scroll} onCover={wall.onCover} trying={wall.trying} friend={friend} onRowLayout={top.onRowLayout} navigation={navigation} />}
 
       {/* What they have shared: what they did, newest first, and every
           — `person/Shared`. */}
@@ -636,7 +646,7 @@ function useReloadOnReturn(navigation: Nav, on: boolean, reload: () => void) {
  * Its own function since 20 Nov 2026, when searching the page
  * (`person/Find`) put a box in its place.
  */
-function Head({ me, person, own, cover, coverH, scroll, onCover, trying, ring, friend, onRowLayout, navigation }: {
+function Head({ me, person, own, cover, coverH, scroll, onCover, trying, friend, onRowLayout, navigation }: {
   me: string | null;
   /** The cover's whole height, the clock's inset with it. */
   coverH: number;
@@ -649,7 +659,6 @@ function Head({ me, person, own, cover, coverH, scroll, onCover, trying, ring, f
   onCover?: () => void;
   /** The sheet has the cover trying on a picture not yet saved. */
   trying?: boolean;
-  ring: { borderColor: string };
   friend: React.ReactNode;
   onRowLayout: (e: LayoutChangeEvent) => void;
   navigation: Nav;
@@ -657,6 +666,10 @@ function Head({ me, person, own, cover, coverH, scroll, onCover, trying, ring, f
   const { t } = useI18n();
   const top = useSafeAreaInsets().top;
   const fade = useHeadFade(scroll);
+  // The camera and the trial's label are 4 under the bar and go under
+  // it at once: on the recording the camera rode up over the bell and
+  // the gear while the head beside it was fading.
+  const cameraFade = fadeUnderBar(scroll, UNDER_BAR - BAR_H, PHOTO_DISC);
   return (
     <>
       {/* The head, whole, on the photograph (owner, 28 Nov 2026): the
@@ -687,22 +700,22 @@ function Head({ me, person, own, cover, coverH, scroll, onCover, trying, ring, f
               in the band the head leaves free (`COVER_UNDER_CLOCK`). The
               whole cover is the press. */}
           {onCover ? (
-            <View style={[s.coverEdit, { top: top + UNDER_BAR }]} testID="person-cover-edit">
+            <Animated.View style={[s.coverEdit, { top: top + UNDER_BAR, opacity: cameraFade }]} testID="person-cover-edit">
               <Glyph name="camera-outline" size={ICON.action} color="#fff" />
-            </View>
+            </Animated.View>
           ) : null}
           {/* Said on the picture itself, so a look is never taken for a
               change: nobody else sees it until Save. */}
           {trying ? (
-            <View style={[s.trying, { top: top + UNDER_BAR + 6 }]} testID="person-cover-trying">
+            <Animated.View style={[s.trying, { top: top + UNDER_BAR + 6, opacity: cameraFade }]} testID="person-cover-trying">
               <Text style={s.tryingText}>{t('Trying it', 'Đang xem thử', '試しに表示中', '预览中', '預覽中')}</Text>
-            </View>
+            </Animated.View>
           ) : null}
         </Pressable>
         {/* Faded as the page carries it under the bar — `useHeadFade`. */}
         <Animated.View style={[s.headRow, { opacity: fade.opacity }]} pointerEvents="box-none" onLayout={fade.onLayout} testID="person-head-row">
           {/* Your own in the level's ring — `person/OwnFace`. */}
-          <Face own={own} url={person.avatar_url} ring={ring} />
+          <Face own={own} url={person.avatar_url} />
           {/* The name, beside the picture, and the handle right under it
               — or the handle alone, for somebody who gave no name. The
               name shrinks before it is cut: see `title`.
@@ -878,14 +891,14 @@ const s = StyleSheet.create({
   // white that draws its edge where the dark fill cannot: on a night
   // street the ring is the disc, on a pale sky the fill is.
   coverEdit: {
-    position: 'absolute', right: space.page, width: PHOTO_DISC, height: PHOTO_DISC, borderRadius: PHOTO_DISC / 2,
+    position: 'absolute', right: CAMERA_RIGHT, width: PHOTO_DISC, height: PHOTO_DISC, borderRadius: PHOTO_DISC / 2,
     alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(0,0,0,0.55)',
     borderWidth: StyleSheet.hairlineWidth * 2, borderColor: 'rgba(255,255,255,0.45)',
   },
   // The cover's corner, opposite the face: what the sheet is trying on.
   // Beside the camera at the foot: the cover's top is the bar's now.
   trying: {
-    position: 'absolute', right: 58, paddingHorizontal: 10, paddingVertical: 4,
+    position: 'absolute', right: CAMERA_RIGHT + PHOTO_DISC + 6, paddingHorizontal: 10, paddingVertical: 4,
     borderRadius: 999, backgroundColor: 'rgba(0,0,0,0.55)',
   },
   tryingText: { color: '#fff', fontSize: 12, fontWeight: font.medium },
@@ -905,8 +918,9 @@ const s = StyleSheet.create({
   // 18 to the counts under it, from 12: the level's pill hangs off the
   // face's foot and stood 4 over the first figure (recording, 28 Nov).
   headRow: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: space.page, paddingBottom: 18 },
-  // The page's ground around the face, so it parts from the photograph.
-  faceRing: { borderWidth: 4, borderRadius: FACE / 2 + 4 },
+  // What parts the face from the photograph — see `FACE_RING`. A plain
+  // hex: a dynamic colour on a border can come back stale (`bgHex`).
+  faceRing: { borderWidth: FACE_RING, borderRadius: FACE / 2 + FACE_RING, borderColor: onPhoto.text },
   // The name over the handle over the bio, one column beside the picture.
   names: { flex: 1 },
   counts: { paddingHorizontal: space.page },
