@@ -38,25 +38,48 @@
 // page — the reason that button left the tint. The two are a pair: what
 // you do on your own page, what you do on somebody else's.
 //
-// 32 in a row of people (`CHIP_H`), where every row has one. 44 on a
-// person's page (`SECONDARY_CONTROL_H`, `size: 'page'`), where it is the
-// page's one act and Edit profile's opposite number. Accept takes the
-// same two sizes and keeps the gradient: it is a question waiting on
-// the reader, and should be the loudest thing beside a name.
+// 32 in a row of people (`CHIP_H`), where every row has one. Accept
+// keeps the gradient: it is a question waiting on the reader, and should
+// be the loudest thing beside a name.
+//
+// ── on a person's page: on the cover (owner, 28 Nov 2026) ──
+//
+// `size: 'photo'`. The page's head stands on its cover photograph since
+// that day, and the button with it, at the end of the head's row. It
+// was a row of its own under the head, 44 tall, beside a "Message — Soon"
+// that answered nothing: about 80 of the page before the first card, on
+// the owner's recording of a friend's page.
+//
+// On a photograph each state needs a ground of its own:
+//   - Add friend: the photograph's light ink as a pill, dark words on
+//     it — the one thing on the cover that is plainly a button;
+//   - Accept: the gradient, as everywhere;
+//   - Friends, Requested: the dark glass the cover's other marks wear
+//     (Explore's date pill), light words. Still a fact and not a press.
+//     The rule above took the pill off the facts because down a list of
+//     people it made every row look pressable; here there is one, and
+//     grey words cannot be read on a picture — the reason this place was
+//     turned down on 16 Nov.
+// All at the chip's 32, with its slop: the name beside it needs the room
+// (at 44 "Le Nguyen Ngoc Minh" shrank as far as it could, 16 Nov).
 
 import React, { useState } from 'react';
 import { Alert, StyleSheet, Text, View } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Glyph, ICON } from './ui/glyph';
-import { CHIP_H, CHIP_SLOP, PressableScale, SECONDARY_CONTROL_H, successHaptic } from './ui';
+import { CHIP_H, CHIP_SLOP, PressableScale, successHaptic } from './ui';
 import { useCrew } from '../lib/crew';
 import { acceptFriendRequest, sendFriendRequest } from '../lib/data';
 import { type Pledged, quietReason, rowButton } from '../lib/friends';
 import { useI18n } from '../lib/i18n';
 import { usePending } from '../lib/pending';
-import { colors, font, gradAI, radius } from '../theme';
+import { colors, font, gradAI, onPhoto, radius } from '../theme';
 
-export function useFriendButtons(me: string | null, prefix: string, size: 'row' | 'page' = 'row') {
+/** Words on the photograph's light ink: the charcoal page's own ground,
+ *  fixed, as everything on a photograph is. 15.9:1 on #F7F7F5. */
+const PHOTO_INK = '#151614';
+
+export function useFriendButtons(me: string | null, prefix: string, size: 'row' | 'photo' = 'row') {
   const { t } = useI18n();
   // The friend buttons — see the header. `pledged` is each tap until the
   // crew is read again; `run` keeps one write per person in flight.
@@ -94,12 +117,11 @@ export function useFriendButtons(me: string | null, prefix: string, size: 'row' 
    *   - `actsOnly`, for a place that has room for a thing to do and none
    *     for a fact: Add friend or Accept, and nothing for what stands.
    */
-  const friendButton = (id: string | null, as: { size?: 'row' | 'page'; prefix?: string; actsOnly?: boolean } = {}) => {
+  const friendButton = (id: string | null, as: { size?: 'row' | 'photo'; prefix?: string; actsOnly?: boolean } = {}) => {
     const state = rowButton(id, me, crew.ships.data, crew.blocks.data, pledged);
     if (!state || !id) return null;
-    // On a page the buttons are 44 and need no slop to reach it.
-    const page = (as.size ?? size) === 'page';
-    const slop = page ? undefined : CHIP_SLOP;
+    const lit = (as.size ?? size) === 'photo';
+    const slop = CHIP_SLOP;
     const name = as.prefix ?? prefix;
     if (state === 'add') {
       return (
@@ -110,9 +132,9 @@ export function useFriendButtons(me: string | null, prefix: string, size: 'row' 
           accessibilityRole="button"
           testID={`${name}-add`}
         >
-          <View style={[s.addBtn, page && s.onPage]}>
-            <Glyph name="person-add-outline" size={ICON.text} color={colors.accent} />
-            <Text style={s.addText}>{t('Add friend', 'Kết bạn', '友達に追加', '加好友', '加好友')}</Text>
+          <View style={[s.addBtn, lit && s.addOnPhoto]}>
+            <Glyph name="person-add-outline" size={ICON.text} color={lit ? PHOTO_INK : colors.accent} />
+            <Text style={[s.addText, lit && s.addTextOnPhoto]}>{t('Add friend', 'Kết bạn', '友達に追加', '加好友', '加好友')}</Text>
           </View>
         </PressableScale>
       );
@@ -126,7 +148,7 @@ export function useFriendButtons(me: string | null, prefix: string, size: 'row' 
           accessibilityRole="button"
           testID={`${name}-accept`}
         >
-          <LinearGradient {...gradAI} style={[s.acceptBtn, page && s.onPage]}>
+          <LinearGradient {...gradAI} style={s.acceptBtn}>
             <Glyph name="checkmark" size={ICON.text} color={colors.accentInk} />
             <Text style={s.acceptText}>{t('Accept', 'Đồng ý', '承認', '接受', '接受')}</Text>
           </LinearGradient>
@@ -136,13 +158,13 @@ export function useFriendButtons(me: string | null, prefix: string, size: 'row' 
     // A state, not a control: drawn as Crew's quiet outline, read as words.
     if (as.actsOnly) return null;
     return (
-      <View style={[s.quiet, page && s.quietOnPage]} testID={`${name}-${state}`}>
+      <View style={[s.quiet, lit && s.quietOnPhoto]} testID={`${name}-${state}`}>
         <Glyph
           name={state === 'friends' ? 'checkmark' : 'time-outline'}
-          size={page ? ICON.action : ICON.text}
-          color={page ? colors.textSecondary : colors.textTertiary}
+          size={ICON.text}
+          color={lit ? onPhoto.text : colors.textTertiary}
         />
-        <Text style={[s.quietText, page && s.quietTextOnPage]}>
+        <Text style={[s.quietText, lit && s.quietTextOnPhoto]}>
           {state === 'friends'
             ? t('Friends', 'Bạn bè', '友達', '好友', '好友')
             : t('Requested', 'Đã gửi', '送信済み', '已发送', '已傳送')}
@@ -162,9 +184,10 @@ const s = StyleSheet.create({
   },
   // Edit profile's weight, with its dress.
   addText: { color: colors.text, fontSize: 14, fontWeight: font.semibold },
-  // On a person's page: the button scale's 44 and Edit profile's 16 of
-  // side room.
-  onPage: { minHeight: SECONDARY_CONTROL_H, paddingHorizontal: 16 },
+  // On a cover: the photograph's light ink as the pill, and no hairline
+  // (a translucent edge on a picture is bright where the picture is).
+  addOnPhoto: { backgroundColor: onPhoto.text, borderWidth: 0 },
+  addTextOnPhoto: { color: PHOTO_INK },
   // Crew's Accept, at the chip's height rather than its request card's.
   acceptBtn: {
     flexDirection: 'row', alignItems: 'center', gap: 6,
@@ -175,10 +198,12 @@ const s = StyleSheet.create({
   // A fact, not a button: words and a mark, the height of the button
   // that would stand here so a row of people keeps its line.
   quiet: { flexDirection: 'row', alignItems: 'center', gap: 5, minHeight: CHIP_H },
-  quietOnPage: { minHeight: SECONDARY_CONTROL_H },
   quietText: { color: colors.textTertiary, fontSize: 14, fontWeight: font.medium },
-  // On a person's page the fact stands beside Message as its equal, in
-  // the body's 16 and a shade darker: there it is half of a row, not a
-  // note at the end of one (owner, 17 Nov 2026).
-  quietTextOnPage: { color: colors.textSecondary, fontSize: 16, fontWeight: font.regular },
+  // On a cover: Explore's date pill — the dark glass and its hairline —
+  // so the words have a ground whatever the photograph is.
+  quietOnPhoto: {
+    paddingHorizontal: 12, borderRadius: radius.pill, backgroundColor: 'rgba(10,11,10,0.55)',
+    borderWidth: StyleSheet.hairlineWidth, borderColor: onPhoto.line,
+  },
+  quietTextOnPhoto: { color: onPhoto.text },
 });

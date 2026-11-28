@@ -91,6 +91,27 @@ thì đánh dấu bước đó ở đây, trong cùng PR.
    - Chưa làm: cho ảnh bìa giãn khi kéo xuống. Ảnh giãn sẽ che vòng xoay
      pull-to-refresh nằm sau nội dung; cần xem trên máy thật trước.
 
+   Sửa sau video trang bạn bè (cùng ngày). Chiều cao ảnh giữ 272pt như
+   trang của mình: ảnh bìa là thứ chủ trang chọn cho khách xem.
+   - **Dải tối bám theo phần đầu** (`scrimOver`): bắt đầu 48pt phía trên
+     phần đầu và đủ độ tối tại đỉnh phần đầu. Trước đó nó chạy từ chân
+     thanh công cụ, đúng cho trang của mình (phần đầu cách thanh khoảng
+     53pt) nhưng phủ tối cả ảnh ở trang bạn bè (cách khoảng 110pt).
+   - **Nút kết bạn lên ảnh**, cuối hàng tên (`FriendButton`, `photo`):
+     "Kết bạn" là pill sáng chữ tối, "Đồng ý" giữ gradient, "Bạn bè" /
+     "Đã gửi" là pill kính tối, vẫn là thông tin chứ không phải nút. Hàng
+     riêng dưới ảnh (16–17/11) và "Nhắn tin — Sắp có" bỏ hẳn: khoảng 80pt
+     trước card đầu tiên, một nửa là nút chưa bấm được. Quyết định 16/11
+     đã loại vị trí trên ảnh vì chữ xám không đọc được; pill kính giải
+     quyết điều đó.
+   - **Giữ chỗ ảnh bìa khi đang tải** (`CoverHold`): khối tối cao bằng ảnh
+     bìa, có nút quay lại, thay cho header "Profile" và vòng xoay rồi nhảy
+     sang bố cục khác.
+   - Chưa làm: huy hiệu vai trò hiện trễ. Nó được hỏi sau khi có hồ sơ
+     (cần id); sửa đúng là trả vai trò cùng lượt đọc hồ sơ, tức đổi phía
+     server.
+
+
    Bong bóng bio bỏ hẳn: bio là một dòng nghiêng trên ảnh, tối đa ba dòng
    (chiều cao ảnh cố định; dòng thứ tư sẽ đẩy tên lên dưới thanh công cụ).
    Một ô kính trên ảnh là một tấm ảnh thứ hai. Đã cân nhắc và loại: giữ
