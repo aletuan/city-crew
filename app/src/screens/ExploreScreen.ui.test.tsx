@@ -14,7 +14,7 @@ import React from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Animated, Dimensions } from 'react-native';
-import { act, fireEvent, propsWhere, render, screen, waitFor, within } from '../uitest/render';
+import { act, fireEvent, propsWhere, render, screen, viewStyleOf, waitFor, within } from '../uitest/render';
 import { switchOrDoor } from '../components/ExploreFilterSheet';
 import { pinImage } from '../components/mapPins';
 import { appFlags } from '../lib/flags';
@@ -24,7 +24,7 @@ import { cacheKey, packCache } from '../lib/data/cache';
 import { usePlacesQuery } from '../lib/data/hooks';
 import * as placesApi from '../lib/data/places';
 import type { Nav } from '../nav';
-import { colors, coverScrim } from '../theme';
+import { colors, coverScrim, photoSheet, space } from '../theme';
 
 const tourState = vi.hoisted(() => ({ step: -1, next: vi.fn() }));
 vi.mock('../components/SignupTour', async orig => ({
@@ -2355,6 +2355,55 @@ describe('the status bar over the photograph', () => {
     scrollTo(turn + 1);
     expect(veil()).toBe(1);
     expect(spies.setStatusBarStyle).toHaveBeenLastCalledWith('dark', true);
+  });
+
+  // The photograph ends on the page's sheet (owner, 28 Nov 2026): square
+  // to the screen's edges, a wash that leaves the picture's foot a
+  // picture, and the page risen 18 over it with two round corners — the
+  // person page's cover ends the same way.
+  it('ends the photograph on the page’s sheet, under a wash that stops short of black', () => {
+    state.scheme = 'light';
+    state.places.data = [place('a')];
+    render(<ExploreScreen navigation={nav()} />);
+    const sheet = screen.getByTestId('explore-hero-sheet');
+    const hero = sheet.parentElement!;
+    expect(hero.lastElementChild).toBe(sheet);
+    expect(hero.contains(screen.getByTestId('explore-hero-words'))).toBe(true);
+    const box = viewStyleOf(hero);
+    expect(box.borderBottomLeftRadius).toBeUndefined();
+    expect(box.borderBottomRightRadius).toBeUndefined();
+    const dress = viewStyleOf(sheet);
+    expect(dress).toMatchObject({ height: photoSheet.rise, borderTopLeftRadius: photoSheet.round, borderTopRightRadius: photoSheet.round, overflow: 'hidden' });
+    expect(dress.backgroundColor).toBe(colors.bg);
+    // 24 from the sheet's edge to the content, as from the photograph's
+    // before: the sheet and what is left under it.
+    expect(photoSheet.rise + Number(box.marginBottom)).toBe(space.titleToContent);
+    // The wash: enough for light ink on a white photograph (0.54 for
+    // 4.5:1, computed), and no more than 0.85 — at 0.97 the last fifth
+    // of the picture was black.
+    const foot = Number(String((propsWhere((p) => p.testID === 'explore-hero-scrim').colors as string[]).at(-1)).match(/([\d.]+)\)$/)![1]);
+    expect(foot).toBeGreaterThanOrEqual(0.8);
+    expect(foot).toBeLessThanOrEqual(0.85);
+    // Paper has no glow, so nothing is drawn in the sheet's window.
+    expect(screen.getByTestId('explore-hero-sheet-glow').childElementCount).toBe(0);
+  });
+
+  // In the dark theme the page glows behind the list (`AmbientWarmth`),
+  // fixed to the screen. The sheet shows a second copy, held where the
+  // first is, or it would be a flat band across the glow.
+  it('shows the page’s glow through the sheet in the dark theme, held to the screen as the page scrolls', () => {
+    state.places.data = [place('a')];
+    render(<ExploreScreen navigation={nav()} />);
+    const heroH = Math.min(500, Math.max(330, Math.round(Dimensions.get('window').height * 0.48)));
+    const glow = screen.getByTestId('explore-hero-sheet-glow');
+    expect(glow.childElementCount).toBe(1);
+    const lift = () => Number(getComputedStyle(glow).transform.match(/translateY\((-?[\d.]+)px\)/)![1]);
+    // At rest the sheet's top is `heroH − 18` down the screen, and the
+    // copy is lifted by that to hang from the screen's top.
+    expect(lift()).toBe(photoSheet.rise - heroH);
+    // The sheet goes up with the page; the copy comes down by as much.
+    scrollTo(100);
+    expect(lift()).toBe(photoSheet.rise - heroH + 100);
   });
 
   it('draws no ground under the clock on the map, whose bar has its own', async () => {

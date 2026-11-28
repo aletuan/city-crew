@@ -3,7 +3,7 @@
 
 import { StyleSheet } from 'react-native';
 import { CHIP_H, SECONDARY_CONTROL_H } from '../../components/ui';
-import { colors, display, font, onPhoto, radius, space, type } from '../../theme';
+import { colors, display, font, onPhoto, photoSheet, radius, space, type } from '../../theme';
 
 /**
  * The pinned filter row's own breathing room, above and below its chips.
@@ -55,16 +55,25 @@ export const s = StyleSheet.create({
   // an image lights up wherever the photo is bright and vanishes where
   // it's dark, reading as a broken frame. Edges end in shadow instead.
   //
-  // Only the bottom corners round now that the photo owns the top edge.
-  // The gradient's last stop is near-opaque dark, so in the dark theme
-  // the edge dissolves into the page and reads as the mockup's fade; on
-  // paper the same corners read as a dark sheet ending — a deliberate
-  // edge, not a failed blend into white.
+  // Square to the screen's edges, and ended by the page's sheet over its
+  // foot (`heroSheet`, 28 Nov 2026). Its own bottom corners were round
+  // (`radius.card`) until then, over a wash that reached 0.97: in the
+  // dark theme the hero dissolved into the page, on paper it read as a
+  // dark card ending. The sheet is one edge in both.
+  //
+  // The gap to the content is the same 24 it was, counted from the
+  // sheet's upper edge: the sheet's 18 and 6 under it.
   hero: {
-    borderBottomLeftRadius: radius.card, borderBottomRightRadius: radius.card,
     overflow: 'hidden', justifyContent: 'flex-end',
-    marginBottom: space.titleToContent,
+    marginBottom: space.titleToContent - photoSheet.rise,
   },
+  heroSheet: {
+    height: photoSheet.rise, backgroundColor: colors.bg, overflow: 'hidden',
+    borderTopLeftRadius: photoSheet.round, borderTopRightRadius: photoSheet.round,
+  },
+  // No height of its own: `AmbientWarmth` hangs from it by its own
+  // offsets, as it hangs from the screen.
+  heroSheetGlow: { position: 'absolute', left: 0, right: 0, top: 0 },
   // The old fixed header's row, laid on the photograph: dateline left,
   // search right. `top` is inline — it owes the safe area its offset.
   heroTop: {

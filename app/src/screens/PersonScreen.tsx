@@ -169,7 +169,7 @@ import { IN_COMMON_ON, listsBy, listsOn, seenOn, TOP_FRIEND_ON } from '../lib/pe
 import { useMyLists } from '../lib/save';
 import { sharesByList } from '../lib/shares';
 import { useScheme } from '../lib/theme';
-import { bgHex, colors, display, font, onPhoto, space, type } from '../theme';
+import { bgHex, colors, display, font, onPhoto, photoSheet, space, type } from '../theme';
 import { toProfileRoom, type Nav, type RootRoute } from '../nav';
 
 /** The face: 80, from 88 (owner, 19 Nov 2026, after an outside review
@@ -188,10 +188,9 @@ const FACE = 80;
  *  owner's screenshot the head ended 391pt down, and the first card began
  *  there. With the head on the photograph it ends where the cover does. */
 const COVER_UNDER_CLOCK = 232;
-/** How far the page's sheet rises over the cover's foot, and the round
- *  of its upper corners: the reference's, read off it at about 18 and 22. */
-const SHEET_RISE = 18;
-const SHEET_ROUND = 22;
+/** The page's sheet over the cover's foot: `photoSheet`, Explore's too. */
+const SHEET_RISE = photoSheet.rise;
+const SHEET_ROUND = photoSheet.round;
 /** The camera and the trial's label stand this far under the clock: the
  *  bar's 6 and its 44 row, and 8 clear of its glass. */
 const UNDER_BAR = 58;

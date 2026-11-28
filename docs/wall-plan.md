@@ -71,6 +71,13 @@ thì đánh dấu bước đó ở đây, trong cùng PR.
    lại rời xuống trang); ảnh cao bằng hero của Explore (trang cá nhân là
    nơi đọc danh sách, nội dung đầu tiên bị đẩy khỏi màn hình đầu).
 
+   Hero của Explore kết thúc cùng một kiểu (28/11/2026): tấm sheet dùng
+   chung `photoSheet` trong `theme.ts` (18/22), dải tối ở chân hero giảm
+   từ 0,97 xuống 0,82. Kính tối của ô ngày và nút tìm (0,55) **không** gộp
+   với kính của thanh công cụ trang cá nhân (0,42): ô ngày mang chữ, và
+   với 0,42 cộng dải tối phía trên, nền dưới chữ chỉ đạt khoảng 0,52 —
+   dưới mức 0,54 cần cho 4,5:1 trên ảnh trắng (số tính).
+
 ## Dữ liệu
 
 `profiles` thêm hai cột:
