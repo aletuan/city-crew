@@ -131,6 +131,7 @@ export type Database = {
           id: string
           path: string
           position: number
+          uploaded_by: string | null
           user_id: string
           width: number
         }
@@ -144,6 +145,7 @@ export type Database = {
           id?: string
           path: string
           position: number
+          uploaded_by?: string | null
           user_id: string
           width: number
         }
@@ -157,6 +159,7 @@ export type Database = {
           id?: string
           path?: string
           position?: number
+          uploaded_by?: string | null
           user_id?: string
           width?: number
         }

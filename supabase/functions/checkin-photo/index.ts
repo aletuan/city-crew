@@ -1,5 +1,6 @@
 // Add a photo to one of your check-ins, or take one away (K2 of
-// `docs/checkin-photos-plan.md`, owner, 24 Nov 2026).
+// `docs/checkin-photos-plan.md`, owner, 24 Nov 2026) — or, for an editor,
+// to a check-in the desk keeps for somebody (owner, 28 Nov 2026).
 //
 // The only way a file reaches the `checkin-photos` bucket: no client has
 // a write policy on it (`20261124230000_checkin_photos.sql`). So every
@@ -20,23 +21,48 @@
 //      on an edge, and they are stored without their metadata — the GPS
 //      position a phone writes into EXIF goes here and never reaches the
 //      bucket.
-//   4. Where: `checkin_photo_slot` says which of the visit's three places
-//      is free, or why none may be had — not your visit, full, fifteen
-//      today, three hundred in all.
-//   5. The file, then the row; if the row is refused, the file is taken
+//   4. Whose: the visit's own row says who owns it, and a visit that is
+//      not there is a 404. The caller, and it is an upload as it always
+//      was. Somebody else, and the caller must be an editor or is told
+//      what they were always told, `photo:not_yours`.
+//   5. Where: `checkin_photo_slot`, asked for the owner, says which of the
+//      visit's three places is free, or why none may be had — full,
+//      fifteen today, three hundred in all. The owner's caps, whoever is
+//      uploading: an editor is not a way round them.
+//   6. The file, then the row; if the row is refused, the file is taken
 //      back, so nothing is left that no row names.
 //
 // The path is the owner, the visit and the row's own id, which the
 // table's check holds as well; nothing the caller sends goes into it but
-// the visit, and that only after step 4 has said the visit is theirs.
+// the visit, and the owner in it is read from that visit, never sent.
+//
+// ── an editor ──
+//
+// The `check-in-review` skill writes check-ins for handles the desk
+// manages, and their photographs had no way in: this is the bucket's one
+// door and it took the caller for the owner. An editor's upload is the
+// owner's in every way a reader can see — `user_id`, the path, the caps —
+// and `uploaded_by` on the row says who did it
+// (`20261128123000_checkin_photo_uploader.sql`).
+//
+// Who is an editor is asked of the `editors` table by the caller's email,
+// here. `is_editor()` cannot be asked: it reads `auth.jwt()`, and this
+// client is the service role, whose token is not the caller's. The email
+// is GoTrue's answer for the token, not anything in the body.
+//
+// Asked only when the visit is somebody else's, so an ordinary upload
+// costs one read more than it did (the visit's owner) and not two.
 //
 // ── a removal ──
 //
-// The caller's own photo only — the service role reads past RLS, so the
-// owner is part of the question. The row goes first, so the photo stops
-// being readable the moment the request is answered; the file after it.
-// A file whose removal fails is an orphan, and `prune-checkin-photos`
-// takes those.
+// The caller's own photo — the service role reads past RLS, so the owner
+// is part of the question. An editor may also take back what an editor
+// attached (`uploaded_by` set), theirs or another editor's, so a wrong
+// photograph from the desk can be undone by the desk; never one its owner
+// uploaded, which is found for nobody else and answered 404 as before.
+// The row goes first, so the photo stops being readable the moment the
+// request is answered; the file after it. A file whose removal fails is
+// an orphan, and `prune-checkin-photos` takes those.
 
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { http } from "../_shared/http.ts";
@@ -87,6 +113,13 @@ Deno.serve(async (req) => {
   const { data: userData } = await admin.auth.getUser(token);
   const uid: string | undefined = userData?.user?.id;
   if (!uid) return json({ error: "not signed in" }, 401);
+  const email = (userData?.user?.email ?? "").toLowerCase();
+  // An account with no email is nobody's editor, and is not asked about.
+  const isEditor = async (): Promise<boolean> => {
+    if (!email) return false;
+    const { data } = await admin.from("editors").select("email").eq("email", email).maybeSingle();
+    return !!data;
+  };
 
   let body: { checkin?: unknown; image?: unknown; remove?: unknown } = {};
   try { body = await req.json(); } catch (_) { return json({ error: "a JSON body" }, 400); }
@@ -94,11 +127,22 @@ Deno.serve(async (req) => {
   // ── a removal ──
   if (body.remove !== undefined) {
     if (typeof body.remove !== "string" || !UUID.test(body.remove)) return json({ error: "remove: a photo id" }, 400);
-    const { data: row, error: readErr } = await admin.from("checkin_photos")
+    const { data: mine, error: readErr } = await admin.from("checkin_photos")
       .select("id, path").eq("id", body.remove).eq("user_id", uid).maybeSingle();
     if (readErr) return json({ error: readErr.message }, 500);
+    let row: { id: string; path: string } | null = mine;
+    if (!row && await isEditor()) {
+      // Not the caller's own: an editor may still take back what the desk
+      // attached. Read by id alone, and only a row somebody else uploaded
+      // for its owner counts.
+      const { data: theirs, error: deskErr } = await admin.from("checkin_photos")
+        .select("id, path, uploaded_by").eq("id", body.remove).maybeSingle();
+      if (deskErr) return json({ error: deskErr.message }, 500);
+      if (theirs?.uploaded_by) row = { id: theirs.id, path: theirs.path };
+    }
     if (!row) return json({ error: "no such photo" }, 404);
-    const { error: delErr } = await admin.from("checkin_photos").delete().eq("id", row.id).eq("user_id", uid);
+    // By the path as well as the id: the row deleted is the row read.
+    const { error: delErr } = await admin.from("checkin_photos").delete().eq("id", row.id).eq("path", row.path);
     if (delErr) return json({ error: delErr.message }, 500);
     await admin.storage.from(BUCKET).remove([row.path]).catch(() => {});
     return json({ removed: true });
@@ -115,19 +159,32 @@ Deno.serve(async (req) => {
   if (!jpeg.ok) return json({ error: jpeg.why }, 415);
   if (jpeg.width > MAX_EDGE || jpeg.height > MAX_EDGE) return json({ error: "too_large" }, 422);
 
-  const { data: position, error: slotErr } = await admin.rpc("checkin_photo_slot", { p_user: uid, p_checkin: body.checkin });
+  // Whose visit it is, from the visit.
+  const { data: visit, error: visitErr } = await admin.from("checkins")
+    .select("user_id").eq("id", body.checkin).maybeSingle();
+  if (visitErr) return json({ error: visitErr.message }, 500);
+  if (!visit) return json({ error: "no such check-in" }, 404);
+  let owner = uid;
+  let uploadedBy: string | null = null;
+  if (visit.user_id !== uid) {
+    if (!(await isEditor())) return json({ error: "photo:not_yours" }, 403);
+    owner = visit.user_id;
+    uploadedBy = uid;
+  }
+
+  const { data: position, error: slotErr } = await admin.rpc("checkin_photo_slot", { p_user: owner, p_checkin: body.checkin });
   if (slotErr) {
     const status = REFUSED[slotErr.message];
     return status ? json({ error: slotErr.message }, status) : json({ error: slotErr.message }, 500);
   }
 
   const id = crypto.randomUUID();
-  const path = `${uid}/${body.checkin}/${id}.jpg`;
+  const path = `${owner}/${body.checkin}/${id}.jpg`;
   const { error: upErr } = await admin.storage.from(BUCKET)
     .upload(path, jpeg.bytes, { contentType: "image/jpeg", upsert: false });
   if (upErr) return json({ error: upErr.message }, 500);
 
-  const row = { id, checkin_id: body.checkin, user_id: uid, position, path, width: jpeg.width, height: jpeg.height, bytes: jpeg.bytes.length };
+  const row = { id, checkin_id: body.checkin, user_id: owner, uploaded_by: uploadedBy, position, path, width: jpeg.width, height: jpeg.height, bytes: jpeg.bytes.length };
   const { error: rowErr } = await admin.from("checkin_photos").insert(row);
   if (rowErr) {
     // The file goes back, so nothing is left that no row names. Two
