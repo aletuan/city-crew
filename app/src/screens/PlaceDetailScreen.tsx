@@ -37,7 +37,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Glyph, ICON } from '../components/ui/glyph';
 import { photosOf } from '../lib/data';
 import { shortAddress } from '../lib/address';
-import { splitName, subtitleBeside } from '../lib/name';
+import { splitName } from '../lib/name';
 import { useCity } from '../lib/city';
 import { kindsInOrder } from '../lib/categories';
 import PhotoCarousel from '../components/PhotoCarousel';
@@ -98,26 +98,34 @@ export default function PlaceDetailScreen({ navigation, route }: { navigation: N
   // is still cut from a short, ward-less address. See `shortAddress`.
   const cityNames = city ? [city.name_vi, city.name_en, city.short_vi, city.short_en] : [];
   const address = shortAddress(place.address, cityNames);
-  // The brand as the title and the qualifier Google's listing hung off
-  // it — a branch, a tagline — as a subtitle beneath, rather than three
-  // lines of display type. See `lib/name` for the cut. The subtitle is
-  // dropped when it only repeats what the card already prints: the
-  // neighbourhood line under it, or the address row further down.
-  const neighborhood = localized(place, 'neighborhood', lang);
-  // The district is not printed here. Until 15 Nov 2026 it was, as a line
-  // under the subtitle, for a place with no address row — and on that day
-  // every one of the catalog's 1,477 places had an address, so the line
-  // was drawn for none of them and would have been a third line in a head
-  // that is now centred and two lines at most (owner). The subtitle is
-  // still judged against the district — a branch named after its ward
-  // ("CTQ Texas BBQ - Hà Đông") would otherwise repeat the word the
-  // address ends in. The cost, written down: a place with no address
-  // whose branch is its district says where it is nowhere on the page.
+  // The brand as the title; the qualifier Google's listing hung off it —
+  // a branch, a tagline — is printed nowhere on this screen. See
+  // `lib/name` for the cut.
+  //
+  // Until 28 Nov 2026 the qualifier was a line under the photograph,
+  // filtered by `subtitleBeside` so it never repeated the ward or the
+  // address. Measured that day on the 1,606 published places: 345 names
+  // carry a spaced dash and 167 of them drew the line — about 124
+  // taglines ("Cocktail Bar", "Pizza & Pasta"), 26 areas or branches and
+  // 17 buildings. The owner hid it for all of them: the address row a
+  // few lines down already says where, and the highlight paragraph says
+  // what — the 54 of the 167 that had no paragraph were each given one
+  // the same day, so no place lost its only description. Weighed
+  // against it: keeping the line for taglines alone (a rule the reader
+  // cannot see, and the paragraph says it better), and keeping it for
+  // branches alone (the address distinguishes two branches already).
+  // The cost, written down: two branches of one brand now differ on
+  // this screen by address and photographs only.
+  //
+  // Hidden, not unbuilt: `subtitleBeside` stays in `lib/name` with its
+  // tests, so the line can come back as one call.
+  //
+  // The district is not printed here either. Until 15 Nov 2026 it was,
+  // for a place with no address row — and on that day every one of the
+  // catalog's 1,477 places had an address, so the line was drawn for
+  // none of them (owner).
   const fullName = localized(place, 'name', lang);
   const name = splitName(fullName);
-  // `address`, not `place.address`: the test is against what the reader
-  // can actually see, and the short one is what the row prints.
-  const subtitle = subtitleBeside(name, neighborhood, address);
 
   // What lies over the hero whether or not it has photographs: the scrim.
   // Laid between the pages and the marks by `PhotoCarousel`, so the marks
@@ -258,28 +266,15 @@ export default function PlaceDetailScreen({ navigation, route }: { navigation: N
               state (`theme.ts`) and a place being featured is not
               something the reader did. The uppercase is a no-op on the
               Japanese, which has no case, so one style serves three.
-              Centred, with the subtitle under it (owner, 15 Nov 2026):
-              the two are said of the whole place, as the name in the bar
-              above them is, and the bar's name is centred. Rejected the
-              same day: both on one line with a dot between — two faces
-              and two cases on a line, and a long tagline breaks mid-way. */}
+              Centred (owner, 15 Nov 2026): it is said of the whole place,
+              as the name in the bar above it is, and the bar's name is
+              centred. The name's qualifier sat under it until 28 Nov
+              2026; see the note at `splitName` above. */}
           {place.is_featured ? (
             <View style={s.pick} testID="detail-pick">
               <Glyph name="ribbon-outline" size={ICON.meta} color={colors.accent} />
               <Text style={s.pickText}>{t('City Crew pick', 'City Crew chọn', 'City Crew のおすすめ', 'City Crew 精选', 'City Crew 精選')}</Text>
             </View>
-          ) : null}
-          {/* What `splitName` took off the name — a branch, a tagline —
-              under the photograph rather than in the bar: the bar holds the
-              brand on one line, and a chain's branch is the part a reader
-              would lose first to the cut. */}
-          {subtitle ? (
-            <Text
-              style={[s.subtitle, place.is_featured && s.subtitleUnderPick]}
-              testID="detail-subtitle"
-            >
-              {subtitle}
-            </Text>
           ) : null}
           <ScoreRow
             place={place} name={fullName} cover={coverUri}

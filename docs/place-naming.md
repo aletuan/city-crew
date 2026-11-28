@@ -117,11 +117,31 @@ Phần sau gạch là phường hoặc khu — thứ card đã in ở dòng dư�
 và màn chi tiết in cả địa chỉ. `Comfy Coffee & Bakes – Thủ Đức` trên card
 trong phường Thủ Đức là một thông tin in hai lần. Nên `PlaceCard`,
 `MapPlaceCard`, dòng gợi ý trên Search và card điểm dừng trong trình sửa
-plan chỉ in `splitName(...).title` (`lib/name.ts`); màn chi tiết vẫn in đủ
-tên, với hậu tố làm subtitle khi nó nói điều địa chỉ chưa nói
-(`subtitleBeside`). Hai chi nhánh cùng một thương hiệu trong cùng một
-phường là chuyện hiếm, và khi có, dòng phường vẫn khác nhau hoặc màn chi
-tiết phân xử — chủ sở hữu quyết định như vậy ngày 2/10/2026.
+plan chỉ in `splitName(...).title` (`lib/name.ts`). Hai chi nhánh cùng một
+thương hiệu trong cùng một phường là chuyện hiếm, và khi có, dòng phường
+vẫn khác nhau hoặc địa chỉ ở màn chi tiết phân xử — chủ sở hữu quyết định
+như vậy ngày 2/10/2026.
+
+### Màn chi tiết cũng không in phần sau gạch (28/11/2026)
+
+Đến 28/11/2026 màn chi tiết in hậu tố thành một dòng nhỏ dưới ảnh, khi nó
+nói điều phường và địa chỉ chưa nói (`subtitleBeside`). Đo ngày hôm đó
+trên 1.606 địa điểm đang publish: 345 tên có gạch, 167 tên hiện dòng này —
+khoảng 124 là tagline ("Cocktail Bar", "Pizza & Pasta"), 26 là khu hoặc
+chi nhánh, 17 là toà nhà.
+
+Chủ sở hữu quyết định ẩn dòng đó cho tất cả: địa chỉ ngay bên dưới đã nói
+"ở đâu", còn "quán gì" là việc của đoạn Điểm nổi bật. 54 trong 167 địa
+điểm chưa có đoạn đó, và cả 54 được viết blurb cùng ngày, nên không quán
+nào mất mô tả duy nhất của mình. Đã cân nhắc và bỏ: chỉ giữ dòng cho
+tagline, hoặc chỉ giữ cho chi nhánh — cả hai là quy tắc người đọc không
+nhìn thấy được.
+
+Cái giá: hai chi nhánh của một thương hiệu giờ chỉ khác nhau ở địa chỉ và
+ảnh trên màn chi tiết. Dòng này được **ẩn, không gỡ**: `subtitleBeside`
+vẫn nằm trong `lib/name.ts` cùng test, không nơi nào gọi; hệ quả cho việc
+đặt tên là tagline sau gạch không còn hiện ở đâu trong app, nên quy tắc 5
+(không giữ slogan trong tên) càng đáng theo.
 
 ## Dòng phường
 
