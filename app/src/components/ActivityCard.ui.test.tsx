@@ -143,33 +143,52 @@ describe('what a card draws under its words', () => {
   });
 });
 
-// Somebody's own words first (owner, 28 Nov 2026): under the head, before
-// the picture, outside the press into the place; the place a row after.
-describe('a card that leads with words', () => {
-  it('draws them after the head and before the picture, outside the press', () => {
-    render(<ActivityCard {...base} uri="https://img/c.jpg" lead={<Text>Crisp sourdough.</Text>} placeRow goes />);
+// Somebody's own words first, then the place as a row, then the picture
+// (owner, 28 Nov 2026).
+describe('a card in the place-first order', () => {
+  it('draws the words after the head, then the row, then the picture, each outside the other', () => {
+    render(<ActivityCard {...base} uri="https://img/c.jpg" lead={<Text>Crisp sourdough.</Text>} placeRow />);
     const lead = screen.getByTestId('activity-lead');
     const open = screen.getByTestId('activity-open');
+    const cover = screen.getByTestId('activity-cover');
     expect(lead.textContent).toBe('Crisp sourdough.');
     expect(open.contains(lead)).toBe(false);
+    expect(open.contains(cover)).toBe(false);
     expect(screen.getByTestId('activity-line').compareDocumentPosition(lead) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
-    expect(lead.compareDocumentPosition(open.querySelector('img')!) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(lead.compareDocumentPosition(open) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(open.compareDocumentPosition(cover) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(cover.querySelector('img')!.getAttribute('src')).toBe('https://img/c.jpg');
   });
 
-  it('puts the place in a row with its pin and its ›, and keeps what is drawn under it', () => {
-    render(<ActivityCard {...base} lead={<Text>w</Text>} placeRow desc="never drawn here" under={<Text testID="u">under</Text>} />);
+  it('puts the place in a row with its pin and its ›, the one thing a screen reader hears of the place', () => {
+    const onOpen = vi.fn();
+    render(<ActivityCard {...base} onOpen={onOpen} placeRow desc="never drawn here" />);
     const row = screen.getByTestId('activity-place-row');
-    expect(row.textContent).toContain(base.title);
-    expect(row.textContent).toContain(base.meta);
+    expect(row.textContent).toBe(`${base.title}${base.meta}`);
     expect(within(row).getByTestId('activity-goes')).toBeTruthy();
-    expect(screen.getByTestId('u')).toBeTruthy();
+    expect(screen.getByTestId('activity-open').getAttribute('aria-label')).toBe(`${base.title}, ${base.meta}`);
     expect(screen.queryByTestId('activity-desc')).toBeNull();
+    // The tint where there is no cover, and still a way into the place.
+    expect(screen.getByTestId('activity-tint')).toBeTruthy();
+    fireEvent.click(screen.getByTestId('activity-cover'));
+    fireEvent.click(screen.getByTestId('activity-open'));
+    expect(onOpen).toHaveBeenCalledTimes(2);
   });
 
-  it('is the card it was without them', () => {
-    render(<ActivityCard {...base} />);
+  it('wears a visit\'s own photos under the row, as their own press', () => {
+    const onPress = vi.fn();
+    render(<ActivityCard {...base} placeRow photo={{ pages: [{ uri: 'https://p/1.jpg', cacheKey: '1' }], onPress }} />);
+    expect(screen.queryByTestId('activity-cover')).toBeNull();
+    expect(screen.getByTestId('activity-open').compareDocumentPosition(screen.getByTestId('activity-photo')) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    fireEvent.click(screen.getByTestId('activity-photo'));
+    expect(onPress).toHaveBeenCalledWith(0);
+  });
+
+  it('is the card it was without it', () => {
+    render(<ActivityCard {...base} uri="https://img/c.jpg" />);
     expect(screen.queryByTestId('activity-lead')).toBeNull();
     expect(screen.queryByTestId('activity-place-row')).toBeNull();
+    expect(screen.getByTestId('activity-open').querySelector('img')).toBeTruthy();
   });
 });
 

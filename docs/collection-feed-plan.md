@@ -124,6 +124,11 @@ Làm thành ba phần; hai phần đầu đã xong, phần ba chờ feed cộng 
   dòng "ai, khi nào", trước ảnh, cỡ 16 màu chữ chính, 4 dòng rồi "Đọc
   thêm" — và dòng đầu ghi tên địa điểm ("Minh đã check-in tại …"); địa
   điểm thành một hàng chạm được dưới ảnh. Thẻ không có ghi chú giữ như cũ.
+  *Sửa lại cùng ngày, sau video trên máy:* dòng đầu dài tới ba dòng và
+  tên địa điểm lặp hai lần, cột thì xen hai kiểu thẻ. Nay mọi thẻ
+  check-in một thứ tự: ai (một dòng "đã check-in") → ghi chú nếu có →
+  hàng địa điểm → ảnh. Lời mời viết ghi chú chỉ còn ở lần check-in mới
+  nhất chưa có ghi chú; bút chì đứng ngang dòng đầu của ghi chú.
   Migration `20261124150000_checkin_friends.sql`: bảng `checkin_likes`
   (đóng với client), `person_checkins`, `like_checkin`,
   `checkin_hearts_takeout`. Bảng `checkins` vẫn chỉ chính chủ đọc: bạn

@@ -5,8 +5,9 @@
 // asks to edit.
 
 import React from 'react';
+import { StyleSheet } from 'react-native';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { cleanup, fireEvent, render, screen, textStyleOf } from '../uitest/render';
+import { cleanup, fireEvent, propsWhere, render, screen, textStyleOf } from '../uitest/render';
 
 vi.mock('../lib/i18n', () => ({ useI18n: () => ({ lang: 'en', t: (en: string) => en }) }));
 
@@ -42,3 +43,20 @@ describe('VisitNote', () => {
     expect(onEdit).toHaveBeenCalledTimes(1);
   });
 });
+
+// The pencil on the first line, not the middle of a four-line note
+// (owner's recording, 28 Nov 2026): the row hangs from the top, and the
+// glyph sits in a box one line tall.
+describe('the pencil', () => {
+  const flat = (id: string) => StyleSheet.flatten(propsWhere((q) => q.testID === id).style as never) as Record<string, unknown>;
+  it('hangs from the top of the note, on its first line, at the note\'s line height', () => {
+    render(<VisitNote note="Four lines of words." onEdit={() => {}} lead />);
+    expect((StyleSheet.flatten(propsWhere((q) => q.testID === 'visit-note').contentStyle as never) as Record<string, unknown>).alignItems).toBe('flex-start');
+    expect(flat('visit-note-pen')).toMatchObject({ height: 22, justifyContent: 'center' });
+  });
+  it('fits the smaller line where the note is not the card\'s lead', () => {
+    render(<VisitNote note="Words." onEdit={() => {}} />);
+    expect(flat('visit-note-pen')).toMatchObject({ height: 20 });
+  });
+});
+

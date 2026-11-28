@@ -21,7 +21,7 @@
 // press to the inner one.
 
 import React from 'react';
-import { StyleSheet, Text } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 import { useI18n } from '../lib/i18n';
 import { colors } from '../theme';
 import { PencilGlyph } from './PencilGlyph';
@@ -55,12 +55,15 @@ export default function VisitNote({ note, onEdit, lead = false }: {
       {note ? (
         <>
           <Text style={lead ? s.lead : s.said} numberOfLines={lead ? 4 : 2}>{note}</Text>
-          <PencilGlyph color={colors.sun} />
+          {/* On the first line, not the middle of the paragraph: centred
+              on four lines it floated by nothing (owner's recording,
+              28 Nov 2026). */}
+          <View style={lead ? s.penLead : s.pen} testID="visit-note-pen"><PencilGlyph color={colors.sun} /></View>
         </>
       ) : (
         <>
           <Text style={s.ask} numberOfLines={1}>{ask}</Text>
-          <PencilGlyph color={colors.sun} />
+          <View style={s.pen}><PencilGlyph color={colors.sun} /></View>
         </>
       )}
     </PressableScale>
@@ -68,7 +71,10 @@ export default function VisitNote({ note, onEdit, lead = false }: {
 }
 
 const s = StyleSheet.create({
-  row: { flexDirection: 'row', alignItems: 'center', gap: 6, alignSelf: 'flex-start', marginTop: 2 },
+  row: { flexDirection: 'row', alignItems: 'flex-start', gap: 6, alignSelf: 'flex-start', marginTop: 2 },
+  // The glyph's box the height of the first line, the glyph in its middle.
+  pen: { height: 20, justifyContent: 'center' },
+  penLead: { height: 22, justifyContent: 'center' },
   said: { flexShrink: 1, color: colors.textSecondary, fontSize: 14, lineHeight: 20 },
   lead: { flexShrink: 1, color: colors.text, fontSize: 16, lineHeight: 22 },
   ask: { flexShrink: 1, color: colors.textTertiary, fontSize: 14, lineHeight: 20, fontStyle: 'italic' },
