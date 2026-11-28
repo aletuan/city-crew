@@ -9,6 +9,7 @@ import { afterEach, beforeEach, describe, expect, it, type MockInstance, vi } fr
 import { AccessibilityInfo, Animated } from 'react-native';
 import { act, fireEvent, render, screen, textStyleOf, viewStyleOf } from '../uitest/render';
 import { colors, onPhoto } from '../theme';
+import { LIKE_ON_DARK, LIKE_ON_LIGHT } from '../lib/likeInk';
 
 const state = vi.hoisted(() => ({ lang: 'en' as 'en' | 'vi' }));
 vi.mock('../lib/i18n', () => ({
@@ -65,11 +66,15 @@ describe('what it draws', () => {
     expect(glyph()).toEqual(['heart', '18', String(colors.like)]);
   });
 
-  it('is 15 and white over a photograph, and the photograph’s accent once liked', () => {
+  it('is 15 and white over a photograph, and the like’s red for a photograph once liked', () => {
     const { rerender } = render(heart({ tone: 'photo' }));
     expect(glyph()).toEqual(['heart-outline', '15', String(onPhoto.text)]);
     rerender(heart({ tone: 'photo', liked: true }));
-    expect(glyph()).toEqual(['heart', '15', String(onPhoto.accent)]);
+    expect(glyph()).toEqual(['heart', '15', String(onPhoto.like)]);
+    // The like's own red in every look (28 Nov 2026), not the look's
+    // accent: that was a teal on one look and near-white on another.
+    expect(onPhoto.like).toBe(LIKE_ON_DARK);
+    expect([LIKE_ON_LIGHT, LIKE_ON_DARK]).toContain(String(colors.like));
   });
 
   it('prints the tally from one, in the type it was handed, and nothing at none', () => {

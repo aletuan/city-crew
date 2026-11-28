@@ -103,15 +103,18 @@ export const PRESS_WINDOW_MS = 1000;
  *
  * `card`: on a card's ground — 18, a control's step, the secondary grey, `colors.like`
  * when liked (`collectionDetail/styles`, `ACT_GLYPH`, has the argument).
- * `photo`: over a photograph — 15, the step below, white, the accent as it is drawn on
- * photographs; a tile has no room for more and white on a picture needs
- * no help.
+ * `photo`: over a photograph — 15, the step below, white, `onPhoto.like` when liked; a
+ * tile has no room for more and white on a picture needs no help.
+ *
+ * Liked is the same red in every look (`lib/likeInk`, 28 Nov 2026): it
+ * followed the look's accent, and was a teal, a gold or the grey of the
+ * unliked heart depending on the look.
  */
 export type HeartTone = 'card' | 'photo';
 type Ink = NonNullable<React.ComponentProps<typeof Glyph>['color']>;
 const TONE: Record<HeartTone, { size: IconSize; on: Ink; off: Ink }> = {
   card: { size: ICON.action, on: colors.like, off: colors.textSecondary },
-  photo: { size: ICON.text, on: onPhoto.accent, off: onPhoto.text },
+  photo: { size: ICON.text, on: onPhoto.like, off: onPhoto.text },
 };
 
 /**

@@ -50,6 +50,7 @@
 // its stops itself.
 
 import { DynamicColorIOS, Platform, Settings, type OpaqueColorValue } from 'react-native';
+import { LIKE_ON_DARK, likeInk } from './lib/likeInk';
 import { LOOK_DEFS, readLook, storeOf, type Look, type Pinned } from './lib/look';
 import { PALETTES, type Palette } from './palettes';
 
@@ -107,10 +108,14 @@ export const LOOKS: Record<Look, Sides> = {
 export const loadedLook: Look = readLook(storeOf(() => Settings));
 
 const SIDES = LOOKS[loadedLook];
+/** Two sides' values as one colour: plain where they agree, a `dyn` pair
+ *  where they do not. */
+const sides = (light: string, dark: string): Color => (light === dark ? light : dyn(light, dark));
+/** The liked heart's red on each side of the look — `colors.like`. */
+const LIKE_INK = { light: likeInk(SIDES.light.bg), dark: likeInk(SIDES.dark.bg) } as const;
 /** One token, as a plain value where the look's two sides agree and as a
  *  `dyn` pair where they do not. */
-const pick = (k: Exclude<keyof Palette, 'gradAI' | 'switchOn'>): Color =>
-  (SIDES.light[k] === SIDES.dark[k] ? SIDES.light[k] : dyn(SIDES.light[k], SIDES.dark[k]));
+const pick = (k: Exclude<keyof Palette, 'gradAI' | 'switchOn'>): Color => sides(SIDES.light[k], SIDES.dark[k]);
 
 /** A palette's switch track: its own where it has one, else `accentFaint`. */
 export const switchOnOf = (p: Palette): string => p.switchOn ?? p.accentFaint;
@@ -239,19 +244,17 @@ export const colors = {
    */
   accent: pick('accent'),
   /**
-   * A heart that has been liked, on a card (owner, 18 Nov 2026).
+   * A heart that has been liked, on a card or on the page: one red in
+   * every look, the deeper or the lighter of two by the look's ground —
+   * `lib/likeInk`, which has the argument and the measurements.
    *
-   * The accent's value under its own name. A liked heart was the accent
-   * on a list's page and `bad` on a person's page — two reds for one
-   * state, and the second borrowed from the colour for deleting things,
-   * which would take the heart with it the day that colour changes. Red
-   * is what a liked heart is on Instagram, Threads and TikTok; this app's
-   * accent is already a red, the coral, and a second, brighter one beside
-   * it was weighed and not taken. A different red is this one line.
+   * It was the accent under its own name from 18 Nov to 28 Nov 2026,
+   * from when every look's accent was the coral; before that the accent
+   * on a list's page and `bad` on a person's, two reds for one state.
    *
-   * On a photograph the heart keeps `onPhoto.accent`.
+   * On a photograph: `onPhoto.like`.
    */
-  like: pick('accent'),
+  like: sides(LIKE_INK.light, LIKE_INK.dark),
   /**
    * The accent **as a surface** — a ticked checkbox, anything that must
    * read as switched on. One value for both themes, and the same coral the
@@ -474,6 +477,11 @@ export const onPhoto = {
   /** The accent as it must appear over a photograph: the bright coral,
    *  never the paper theme's darker one, which disappears into a scrim. */
   accent: SIDES.light.onPhotoAccent,
+  /** A liked heart on a photograph: the like's red for a dark ground
+   *  (`lib/likeInk`), in every look. It was `accent` above until 28 Nov
+   *  2026 — near-white on Slate (ΔE 7 from the unliked heart's white),
+   *  a teal on Duck. */
+  like: LIKE_ON_DARK,
   /**
    * The rating star, and the one colour in the app that is not coral.
    *

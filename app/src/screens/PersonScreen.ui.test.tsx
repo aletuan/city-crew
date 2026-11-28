@@ -17,6 +17,7 @@ import type { Nav, RootRoute } from '../nav';
 import type { FriendshipRow } from '../lib/friends';
 import type { Collection } from '../lib/types';
 import { colors, onPhoto, space } from '../theme';
+import { LIKE_ON_DARK, LIKE_ON_LIGHT } from '../lib/likeInk';
 
 type AlertButton = { text: string; onPress?: () => void };
 const alert = vi.hoisted(() => vi.fn<(title: string, body?: string, buttons?: AlertButton[]) => void>());
@@ -1204,7 +1205,9 @@ describe('lists that are not for everybody', () => {
       };
       expect(worn(shared)).toEqual(['heart-outline', '18', String(colors.textSecondary)]);
       expect(worn(open)).toEqual(['heart', '18', String(colors.like)]);
-      expect(colors.like).toBe(colors.accent);
+      // One red for a liked heart in every look (`lib/likeInk`), since
+      // 28 Nov 2026 — the look's accent until then.
+      expect([LIKE_ON_LIGHT, LIKE_ON_DARK]).toContain(String(colors.like));
     });
 
     it('shows the likes a private list kept as a figure, with nothing to press', async () => {
