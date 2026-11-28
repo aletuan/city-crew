@@ -101,15 +101,22 @@ export function useHeadFade(scroll: Animated.Value) {
     setAt((was) => (was && was.y === y && was.h === height ? was : { y, h: height }));
   };
   if (!at) return { opacity: 1 as const, onLayout };
-  // How far the page scrolls before the head's top is at the bar's foot.
-  const meet = at.y - top - BAR_H;
+  return { opacity: fadeUnderBar(scroll, at.y - top - BAR_H, at.h), onLayout };
+}
+
+/**
+ * The rule itself, for a thing whose place is known without measuring
+ * (the cover's camera, 4 under the bar): `meet` is how far the page
+ * scrolls before its top is at the bar's foot, `h` its height. The range
+ * never runs backwards, however near the bar the thing starts.
+ */
+export function fadeUnderBar(scroll: Animated.Value, meet: number, h: number) {
   const from = Math.max(0, meet - 24);
-  const opacity = scroll.interpolate({
-    inputRange: [from, Math.max(from + 1, meet + at.h * 0.6)],
+  return scroll.interpolate({
+    inputRange: [from, Math.max(from + 1, meet + h * 0.6)],
     outputRange: [1, 0],
     extrapolate: 'clamp',
   });
-  return { opacity, onLayout };
 }
 
 export function CoverBar({ bar, onBack, backTestID, tools }: {

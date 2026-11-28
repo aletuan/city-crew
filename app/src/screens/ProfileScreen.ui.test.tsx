@@ -216,8 +216,9 @@ vi.mock('../components/AvatarPicker', () => ({
 // this screen's.
 vi.mock('../components/EngagementRing', () => ({
   RING_OUT: 7.5,
-  default: ({ level, progress, fresh, onExplain, children }: { level: number; progress: number; fresh?: boolean; onExplain: () => void; children: React.ReactNode }) => (
-    <div data-testid="ring" data-level={level} data-progress={progress} data-fresh={String(!!fresh)}>
+  RING_OUT_ON_PHOTO: 5,
+  default: ({ size, level, progress, fresh, onPhoto, onExplain, children }: { size: number; level: number; progress: number; fresh?: boolean; onPhoto?: boolean; onExplain: () => void; children: React.ReactNode }) => (
+    <div data-testid="ring" data-size={size} data-photo={String(!!onPhoto)} data-level={level} data-progress={progress} data-fresh={String(!!fresh)}>
       {children}
       {/* The pill, which the real ring makes a press. */}
       <button type="button" data-testid="ring-explain" onClick={onExplain} />
@@ -1067,6 +1068,23 @@ describe('the level ring', () => {
     const ring = screen.getByTestId('ring');
     expect(ring.getAttribute('data-level')).toBe('2');
     expect(Number(ring.getAttribute('data-progress'))).toBeCloseTo(0.2);
+  });
+
+  // The person page's face went onto the cover's photograph and took a
+  // smaller picture and a thinner ring for it (28 Nov 2026). The owner
+  // asked that Account's be checked: it stands on the page, and is the
+  // 88 in the page's ring it was.
+  it('dresses the ring for a photograph on your own person page, and leaves Account’s as it was', () => {
+    draw();
+    const own = screen.getByTestId('ring');
+    expect(own.getAttribute('data-photo')).toBe('true');
+    // The ring spreads 5 from the picture there, not the page's 7.5.
+    expect(viewStyleOf(screen.getByTestId('person-own-face')).margin).toBe(-5);
+    cleanup();
+    state.profile = { full_name: 'Le Minh', handle: 'leminh' };
+    render(<ProfileScreen navigation={nav().n} />);
+    const account = screen.getByTestId('ring');
+    expect([account.getAttribute('data-size'), account.getAttribute('data-photo')]).toEqual(['88', 'false']);
   });
 
   // The pill says what the level is (owner, 16 Nov 2026), in the

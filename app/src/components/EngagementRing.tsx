@@ -40,6 +40,19 @@
 // of 3.5 on every page that draws the ring, and your own page hands in
 // the bare picture: the 4 it dropped went to the picture, 80 to 88.
 //
+// ── on a photograph (owner's recording, 28 Nov 2026) ──
+//
+// Your own person page stands its head on the cover now, so there the
+// ring is wholly on a photograph, and everything about it that was
+// tuned against the page showed: the band of page (3.5) and the track
+// (4, a pale neutral made to be seen on paper) read together as 7.5 of
+// cream round the picture — "is the circle too thick?". `onPhoto` is
+// the ring for that ground: 2 of the photograph's dark between picture
+// and track, a track of 3 in the photograph's light ink at 40%, and the
+// pill's halo in the same dark instead of the page. 5 a side, from 7.5.
+// The Account page and the badge sheet do not pass it and are as they
+// were.
+//
 // The pill is a press that says what the level is (owner, 16 Nov 2026) —
 // as the role's disc on the opposite corner says what the role is. What
 // it says is the caller's (`onExplain`): the ring is handed a level, not
@@ -67,8 +80,16 @@ const STROKE = 4;
  *  caller that keeps the picture where it was and lets the ring spread
  *  (a negative margin of this much). */
 export const RING_OUT = GAP + STROKE;
+/** The same on a photograph — see the head of the file. */
+const PHOTO_GAP = 2;
+const PHOTO_STROKE = 3;
+export const RING_OUT_ON_PHOTO = PHOTO_GAP + PHOTO_STROKE;
+/** What parts the picture, and the pill, from the track there: the
+ *  scrim's ink (`onPhoto`'s ground), not the page. */
+const PHOTO_GROUND = 'rgba(10,11,10,0.45)';
+const PHOTO_TRACK = 'rgba(247,247,245,0.4)';
 
-export default function EngagementRing({ size, level, progress, onExplain, children }: {
+export default function EngagementRing({ size, level, progress, onExplain, onPhoto: lit = false, children }: {
   /** The avatar's diameter. The ring is drawn outside it. */
   size: number;
   level: number;
@@ -76,19 +97,23 @@ export default function EngagementRing({ size, level, progress, onExplain, child
   progress: number;
   /** The pill, pressed: say what the level is. */
   onExplain: () => void;
+  /** The ring stands on a photograph — see the head of the file. */
+  onPhoto?: boolean;
   children: React.ReactNode;
 }) {
   const { t } = useI18n();
   // Read rather than resolved: see `ringTrack` for why this cannot be a
   // dynamic pair.
   const { scheme } = useScheme();
-  const track = ringTrack[scheme];
+  const track = lit ? PHOTO_TRACK : ringTrack[scheme];
+  const gap = lit ? PHOTO_GAP : GAP;
+  const stroke = lit ? PHOTO_STROKE : STROKE;
 
   // A gap of page between avatar and track, so the ring reads as a
   // separate object rather than a border the picture grew.
-  const box = size + (GAP + STROKE) * 2;
+  const box = size + (gap + stroke) * 2;
   const c = box / 2;
-  const r = (box - STROKE) / 2;
+  const r = (box - stroke) / 2;
   // Clamped, not trusted: a progress of 1 would close the ring and say
   // "level complete" on an account that has just levelled up.
   const pct = Math.max(0, Math.min(progress, 0.999));
@@ -105,9 +130,9 @@ export default function EngagementRing({ size, level, progress, onExplain, child
       <Svg width={box} height={box} style={StyleSheet.absoluteFill}>
         {/* The gap, in the page's own colour: what lies under it is not
             always the page (see the head). Plain hex, as the track is. */}
-        <Circle cx={c} cy={c} r={size / 2 + GAP} fill={bgHex[scheme]} testID="ring-ground" />
+        <Circle cx={c} cy={c} r={size / 2 + gap} fill={lit ? PHOTO_GROUND : bgHex[scheme]} testID="ring-ground" />
         {/* The headroom, drawn whole and then covered by the arc. */}
-        <Circle cx={c} cy={c} r={r} stroke={track} strokeWidth={STROKE} fill="none" />
+        <Circle cx={c} cy={c} r={r} stroke={track} strokeWidth={stroke} fill="none" />
         {/* Floored, so a new account gets a ring rather than a bare
             track — see `MIN_ARC`. */}
         {visibleSweep(pct).map((seg) => {
@@ -118,7 +143,7 @@ export default function EngagementRing({ size, level, progress, onExplain, child
               key={seg.a0}
               d={`M ${x0} ${y0} A ${r} ${r} 0 0 1 ${x1} ${y1}`}
               stroke={sampleSweep(ringSweep, seg.t)}
-              strokeWidth={STROKE}
+              strokeWidth={stroke}
               // Round caps on every segment, not just the two ends. Butt
               // caps leave a hairline of track showing at each join where
               // the antialiasing of two abutting strokes does not quite
@@ -144,7 +169,7 @@ export default function EngagementRing({ size, level, progress, onExplain, child
           CGColor once and can come back stale after a theme change, which
           is what put a black ring on the camera badge. */}
       <View style={s.pillRow} pointerEvents="box-none">
-      <View style={s.halo}>
+      <View style={[s.halo, lit && s.haloLit]} testID="level-halo">
         <PressableScale
           // The role disc's press, on the other corner (0.9 there).
           scaleTo={0.9}
@@ -192,6 +217,9 @@ const s = StyleSheet.create({
     // from the arc it lies on.
     shadowColor: '#000', shadowOpacity: 0.1, shadowRadius: 3, shadowOffset: { width: 0, height: 1 },
   },
+  // On a photograph: the dark that parts the track from the picture,
+  // and no shadow — a shadow under a translucent fill shows through it.
+  haloLit: { backgroundColor: PHOTO_GROUND, shadowOpacity: 0 },
   badge: {
     paddingHorizontal: 8, paddingVertical: 3, borderRadius: 999,
   },

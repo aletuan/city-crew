@@ -16,7 +16,7 @@ import { act, cleanup, pullControl, fireEvent, render, screen, textStyleOf, view
 import type { Nav, RootRoute } from '../nav';
 import type { FriendshipRow } from '../lib/friends';
 import type { Collection } from '../lib/types';
-import { bgHex, colors, onPhoto, space } from '../theme';
+import { colors, onPhoto, space } from '../theme';
 
 type AlertButton = { text: string; onPress?: () => void };
 const alert = vi.hoisted(() => vi.fn<(title: string, body?: string, buttons?: AlertButton[]) => void>());
@@ -339,13 +339,16 @@ describe('whose page it is', () => {
     expect(cards()).toHaveLength(2);
   });
 
-  it('wears their face, not the reader’s, ringed in the page’s own ground', async () => {
+  it('wears their face, not the reader’s, in a thin ring of the photograph’s light ink', async () => {
     await show();
     const face = screen.getByTestId('person-cover').nextElementSibling!.firstElementChild as HTMLElement;
     expect(face.querySelector('img')!.getAttribute('src')).toBe('https://faces/lan.jpg');
-    expect(viewStyleOf(face)).toMatchObject({ borderWidth: 4, borderColor: bgHex.dark });
-    // 80 since 19 Nov 2026, from 88 (owner, after an outside review).
-    expect(viewStyleOf(face.querySelector('img')!)).toMatchObject({ width: 80, height: 80 });
+    // 2 of the photograph's ink: 4 of the page, which it was while the
+    // face hung under the cover, is a band of cream on a picture.
+    expect(viewStyleOf(face)).toMatchObject({ borderWidth: 2, borderColor: onPhoto.text, borderRadius: 38 });
+    // 72 since 28 Nov 2026 (owner's recording: the face too big beside
+    // the name); 80 from 19 Nov, 88 before.
+    expect(viewStyleOf(face.querySelector('img')!)).toMatchObject({ width: 72, height: 72 });
     // The cover to the screen's edges and under the clock (22 Nov 2026):
     // 272 under it since 28 Nov (200, then 232 for a morning), the
     // clock's inset (none here) on top.
@@ -598,8 +601,22 @@ describe('the bio, and the way to write one', () => {
     state.me = LAN.id;
     state.role = 'editor';
     await show();
-    expect(viewStyleOf(screen.getByTestId('person-cover-edit'))).toMatchObject({ top: 54, right: space.page });
-    expect(viewStyleOf(screen.getByTestId('role-row'))).toMatchObject({ marginRight: 44 });
+    // Its middle under the gear's: that 44 box hangs 13 past the page's
+    // margin (22), so its middle is 31 in; the camera's 36 is there
+    // from 13.
+    const camera = screen.getByTestId('person-cover-edit');
+    expect(viewStyleOf(camera)).toMatchObject({ top: 54, right: 13 });
+    // As far as the camera reaches inside the margin (13 + 36 − 22), and 8.
+    expect(viewStyleOf(screen.getByTestId('role-row'))).toMatchObject({ marginRight: 35 });
+    // 4 under the bar, so it goes under it at once: gone by 4 and 60%
+    // of its 36 — on the recording it rode up over the bell and the gear.
+    const seen = () => Number(getComputedStyle(camera).opacity || '1');
+    expect(seen()).toBe(1);
+    scrollTo(12.8);
+    expect(seen()).toBeCloseTo(0.5, 2);
+    scrollTo(26);
+    expect(seen()).toBe(0);
+    scrollTo(0);
     // The mark on the photograph's light ground: its own soft tint is a
     // wash of the role's colour, and nothing on a picture.
     const disc = screen.getByTestId('role-badge').querySelector('[data-icon]')!.parentElement!;
@@ -2341,20 +2358,21 @@ describe('your own page', () => {
     await show('me', true, PROFILE_STACK);
     expect(screen.getByTestId('person-own-face')).toBeTruthy();
     expect(screen.getByTestId('level-badge')).toBeTruthy();
-    // Your picture at 88, bare, in the level's ring: 103 across, the
-    // Account page's own (`profile/Hero`). No band of page inside the
-    // ring (owner, 19 Nov 2026): the ring's gap is the page's.
+    // Your picture at 72, bare, in the level's ring as it is drawn on a
+    // photograph (28 Nov 2026): 2 of dark and a track of 3, 82 across.
+    // It was 88 in the page's ring, 103 across — a quarter of the screen.
     const ring = screen.getByTestId('avatar-box').firstElementChild!;
-    expect(viewStyleOf(ring)).toMatchObject({ width: 103, height: 103 });
+    expect(viewStyleOf(ring)).toMatchObject({ width: 82, height: 82 });
+    expect(screen.getByTestId('ring-ground').getAttribute('fill')).not.toMatch(/^#/);
     const sizes = [...screen.getByTestId('person-own-face').querySelectorAll('*')].map((el) => getComputedStyle(el).width);
-    expect(sizes).toContain('88px');
-    expect(sizes).not.toContain('80px');
+    expect(sizes).toContain('72px');
+    expect(sizes).not.toContain('88px');
     // Nothing between the ring and the picture: no band of page of its own.
     expect([...screen.getByTestId('person-own-face').querySelectorAll('*')].some((el) => getComputedStyle(el).borderWidth === '4px')).toBe(false);
     // The picture is the picker the Account page draws (owner, 19 Nov
     // 2026), without its camera badge: pressed, it changes your picture.
     const picker = screen.getByTestId('own-picker');
-    expect([picker.getAttribute('data-size'), picker.getAttribute('data-camera')]).toEqual(['88', 'false']);
+    expect([picker.getAttribute('data-size'), picker.getAttribute('data-camera')]).toEqual(['72', 'false']);
   });
 
   // One picture on both pages (owner, 19 Nov 2026): the picker writes

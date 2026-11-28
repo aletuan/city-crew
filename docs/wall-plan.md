@@ -78,6 +78,19 @@ thì đánh dấu bước đó ở đây, trong cùng PR.
      trên ảnh có nền sáng (nền nhạt gốc của nó chìm vào ảnh).
    - Hàng ảnh đại diện cách hàng số 18pt (trước 12): nhãn cấp độ chạm số.
 
+   Sửa sau video thứ hai cùng ngày:
+   - **Ảnh đại diện 72pt** cho mọi người (trước: 80 trong viền 4, của
+     mình 88). Đo trên video, ảnh của mình rộng 103pt cả vòng — 24% bề
+     ngang máy 430pt, cao hơn cả khối tên, handle, bio (khoảng 69pt).
+   - **Vòng cấp độ trên ảnh** (`EngagementRing`, `onPhoto`): 2pt nền tối
+     và vòng 3pt mực sáng 40%, tổng 5pt mỗi bên (trước 7,5pt màu kem).
+     Ảnh của người khác: viền 2pt mực sáng. Trang Account không đổi: ảnh
+     88 trong vòng của trang, vì nó đứng trên nền trang (có test giữ).
+   - **Nút máy ảnh** gióng tâm với bánh răng phía trên (lệch 9pt) và mờ
+     đi ngay khi cuộn: trước đó nó trượt lên đè chuông và bánh răng.
+   - Chưa làm: cho ảnh bìa giãn khi kéo xuống. Ảnh giãn sẽ che vòng xoay
+     pull-to-refresh nằm sau nội dung; cần xem trên máy thật trước.
+
    Bong bóng bio bỏ hẳn: bio là một dòng nghiêng trên ảnh, tối đa ba dòng
    (chiều cao ảnh cố định; dòng thứ tư sẽ đẩy tên lên dưới thanh công cụ).
    Một ô kính trên ảnh là một tấm ảnh thứ hai. Đã cân nhắc và loại: giữ

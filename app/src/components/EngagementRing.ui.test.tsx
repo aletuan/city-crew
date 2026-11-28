@@ -17,7 +17,7 @@
 import React from 'react';
 import { Text } from 'react-native';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { cleanup, fireEvent, render, screen } from '../uitest/render';
+import { cleanup, fireEvent, render, screen, viewStyleOf } from '../uitest/render';
 import { bgHex, ringTrack } from '../theme';
 import { visibleSweep } from '../lib/ring';
 
@@ -81,6 +81,39 @@ describe('the engagement ring', () => {
     cleanup();
     ring(0.4);
     expect(screen.getByTestId('ring-ground').getAttribute('fill')).toBe(bgHex.light);
+  });
+
+  // On your own person page the ring is on the cover's photograph
+  // (28 Nov 2026), where the band of page and the paper's track were
+  // 7.5 of cream round the picture. There: 2 of the photograph's dark,
+  // a track of 3 in its light ink, and the pill's halo in the dark too.
+  it('is thinner on a photograph, and wears the photograph’s inks, not the page’s', () => {
+    theme.scheme = 'light';
+    const { container } = render(
+      <EngagementRing size={72} level={3} progress={0.4} onExplain={explain} onPhoto>
+        <Text>face</Text>
+      </EngagementRing>,
+    );
+    const ground = screen.getByTestId('ring-ground');
+    expect(ground.getAttribute('fill')).toBe('rgba(10,11,10,0.45)');
+    // 72 / 2 + 2; the track's inner edge is there: (82 − 3) / 2 − 1.5.
+    expect(Number(ground.getAttribute('r'))).toBe(38);
+    const rail = track(container)!;
+    expect(Number(rail.getAttribute('r')) - 1.5).toBe(38);
+    expect(rail.getAttribute('stroke-width') ?? rail.getAttribute('strokeWidth')).toBe('3');
+    expect(rail.getAttribute('stroke')).toBe('rgba(247,247,245,0.4)');
+    expect([...paths(container)].every((p) => (p.getAttribute('stroke-width') ?? p.getAttribute('strokeWidth')) === '3')).toBe(true);
+    expect(viewStyleOf(container.firstElementChild!)).toMatchObject({ width: 82, height: 82 });
+    const halo = viewStyleOf(screen.getByTestId('level-halo'));
+    expect(halo.backgroundColor).toBe('rgba(10,11,10,0.45)');
+    expect(halo.shadowOpacity).toBe(0);
+    // And off it, as it was: the page's band of 3.5 and a track of 4.
+    cleanup();
+    const plain = ring(0.4);
+    expect(Number(screen.getByTestId('ring-ground').getAttribute('r'))).toBe(47.5);
+    expect(screen.getByTestId('ring-ground').getAttribute('fill')).toBe(bgHex.light);
+    expect(track(plain.container)!.getAttribute('stroke-width') ?? track(plain.container)!.getAttribute('strokeWidth')).toBe('4');
+    expect(viewStyleOf(screen.getByTestId('level-halo')).shadowOpacity).toBe(0.1);
   });
 
   // Lighter since 19 Nov 2026 (owner): it read as a second object

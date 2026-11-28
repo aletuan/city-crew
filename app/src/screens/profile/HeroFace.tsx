@@ -78,7 +78,7 @@ import { useRewards } from '../../lib/rewards';
 import { colors, font } from '../../theme';
 import { s } from './styles';
 
-export function HeroFace({ saved, size, answers = true, children }: {
+export function HeroFace({ saved, size, answers = true, onPhoto, children }: {
   /** The distinct places the reader keeps — what the level is made of. */
   saved: number;
   /** The picture's diameter; the ring is drawn outside it. */
@@ -86,6 +86,9 @@ export function HeroFace({ saved, size, answers = true, children }: {
   /** Whether this one opens the sheet when the banner asks — see the
    *  header. Account's does not. */
   answers?: boolean;
+  /** The face stands on a photograph (your own person page's cover):
+   *  the ring's thinner dress for it — `EngagementRing`. */
+  onPhoto?: boolean;
   /** The picture: the face on your own person page, the photo picker on
    *  Account. */
   children: React.ReactNode;
@@ -104,7 +107,7 @@ export function HeroFace({ saved, size, answers = true, children }: {
   return (
     <>
       <View style={s.avatarBox} testID="avatar-box">
-        <EngagementRing size={size} level={level} progress={progress} onExplain={show}>
+        <EngagementRing size={size} level={level} progress={progress} onExplain={show} onPhoto={onPhoto}>
           {children}
         </EngagementRing>
       </View>
