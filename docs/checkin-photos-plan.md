@@ -250,6 +250,21 @@ Mỗi bước một PR, theo thứ tự. Cờ `checkin_photos` tắt suốt cả
   liệu, xoá tài khoản; Điều khoản thêm việc thứ năm của ban biên tập.
   Ẩn chứ không xoá: tệp còn đó, desk khôi phục được — xoá hẳn là việc
   của chủ ảnh.
+- **Sau K5 — biên tập viên tải ảnh hộ (owner, 28/11/2026).** Skill
+  `check-in-review` viết check-in cho các handle do desk quản lý; phần chữ
+  vào bằng SQL, phần ảnh không có đường vào vì `checkin-photo` coi người
+  gọi là chủ. Giờ function đọc chủ từ chính dòng check-in (không bao giờ
+  từ body): của người gọi thì như cũ; của người khác thì người gọi phải
+  có trong bảng `editors` (tra bằng email của token — `is_editor()` không
+  dùng được vì client ở đây là service role), không thì vẫn
+  `photo:not_yours`. Ảnh của biên tập viên là ảnh của chủ về mọi mặt —
+  `user_id`, đường dẫn, hạn mức 3 / 15 / 300 của chủ — và cột mới
+  `checkin_photos.uploaded_by` ghi ai đã tải
+  (`20261128123000_checkin_photo_uploader.sql`; client không đọc được
+  cột này). Biên tập viên xoá được ảnh do desk tải, không xoá được ảnh
+  chủ tự tải. Một check-in không tồn tại giờ trả 404 thay vì 403. Hạn
+  mức ngày tính vào chủ: 15 ảnh là 5 check-in đủ ảnh mỗi handle mỗi
+  ngày; chỉ nâng khi skill chạm trần.
 - **K6. Bật cờ** sau bản đã qua duyệt của Apple.
 
 ## Câu hỏi mở

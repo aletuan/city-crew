@@ -929,3 +929,12 @@ for f in "$ROOT"/supabase/migrations/*_checkin_note_or_photo.sql; do
   run "$DB" -f "$f" >/dev/null
 done
 run "$DB" -f "$HERE/checkin_note_or_photo_test.sql"
+
+# Who attached a check-in's photo (owner, 28 Nov 2026): the column the
+# editor's way through `checkin-photo` records. After public check-ins,
+# whose `checkin_photo_readable` it asks.
+echo "→ who attached a check-in's photo"
+for f in "$ROOT"/supabase/migrations/*_checkin_photo_uploader.sql; do
+  run "$DB" -f "$f" >/dev/null
+done
+run "$DB" -f "$HERE/checkin_photo_uploader_test.sql"
