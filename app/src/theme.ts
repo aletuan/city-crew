@@ -446,6 +446,15 @@ export const colors = {
 };
 
 /**
+ * The page rising over the foot of a full-bleed photograph, as a sheet:
+ * how far it covers the picture, and the round of its two upper corners.
+ * Read off the owner's reference (28 Nov 2026) at about 18 and 22. One
+ * pair for the person page's cover and Explore's hero, so the two
+ * photographs end the same way.
+ */
+export const photoSheet = { rise: 18, round: 22 } as const;
+
+/**
  * Type, hairlines and marks that sit **on a photograph**.
  *
  * These do not belong to either theme, and that is the whole point: their

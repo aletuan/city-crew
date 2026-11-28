@@ -9,7 +9,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { Glyph, ICON } from '../../components/ui/glyph';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { CitySwitcherModal } from '../../components/CitySwitcher';
-import { CHIP_SLOP, PressableScale } from '../../components/ui';
+import { AmbientWarmth, CHIP_SLOP, PressableScale } from '../../components/ui';
 import { useCurrentCity } from '../../lib/city';
 import { useSky } from '../../lib/sky';
 import { DEFAULT_TZ } from '../../lib/clock';
@@ -17,13 +17,59 @@ import { dayline } from '../../lib/format';
 import { coverOf, Place } from '../../lib/data';
 import { useI18n } from '../../lib/i18n';
 import { balanceBreak } from '../../lib/balance';
-import { colors, gradAI, onPhoto } from '../../theme';
+import { colors, gradAI, onPhoto, photoSheet } from '../../theme';
 import { s } from './styles';
 
 /** The dateline and search's distance under the status bar, at rest. */
 const TOP_GAP = 6;
 /** That row's height: the search disc, the taller of its two (`heroSearch`). */
 const ROW_H = 44;
+/**
+ * The wash over the photograph, clock to foot.
+ *
+ * The foot was 0.97 until 28 Nov 2026: the last fifth of the city's
+ * photograph was black, and in the dark theme the hero dissolved into
+ * the page — which was the intent then, and is what the owner's review
+ * of the two covers read as "the picture is half gone". It is 0.82 now
+ * and the photograph ends on an edge instead (`heroSheet`).
+ *
+ * What the words need, computed and not measured on a device: light ink
+ * on a pure white photograph wants 0.54 of this dark for 4.5:1. The
+ * headline stands at about the third stop (0.55), untouched by this
+ * change; the sub-line, the lowest light text, at about 0.61 (0.64
+ * before). 0.80 would do the same; under that the sub-line starts to
+ * depend on the photograph.
+ */
+const SCRIM = ['rgba(10,11,10,0.45)', 'rgba(10,11,10,0.06)', 'rgba(10,11,10,0.55)', 'rgba(10,11,10,0.82)'] as const;
+
+/**
+ * The page, risen over the photograph's foot as a sheet — the
+ * person page's cover ends the same way (`photoSheet`). Last in
+ * the box, so it covers the picture and the scrim.
+ *
+ * Its ground is the page's, and in the dark theme the page is
+ * not one colour here: `AmbientWarmth` glows behind the list,
+ * fixed to the screen, about 0.1 of ember at this height. A flat
+ * `colors.bg` strip would be a dark band between the photograph
+ * and the glow. So the sheet is a window onto a second copy of
+ * the glow, held where the first one is: the screen's copy hangs
+ * from the screen's top, this sheet's top is `heroH − rise −
+ * scroll` down the screen, and the copy is moved up by exactly
+ * that. On paper `AmbientWarmth` draws nothing and the sheet is
+ * the flat page. Not seen on a device.
+ */
+function HeroSheet({ heroH, scrollY }: { heroH: number; scrollY: Animated.Value }) {
+  return (
+    <View style={s.heroSheet} pointerEvents="none" testID="explore-hero-sheet">
+      <Animated.View
+        style={[s.heroSheetGlow, { transform: [{ translateY: Animated.add(scrollY, photoSheet.rise - heroH) }] }]}
+        testID="explore-hero-sheet-glow"
+      >
+        <AmbientWarmth />
+      </Animated.View>
+    </View>
+  );
+}
 
 export function Hero({ place, heroH, onStart, onSearch, scrollY }: {
   place: Place | undefined;
@@ -150,17 +196,13 @@ export function Hero({ place, heroH, onStart, onSearch, scrollY }: {
         : <View style={[StyleSheet.absoluteFill, { backgroundColor: colors.bgElevated }]} />}
       {/* Between the photograph and the scrim, which is the whole of the
           layout decision. Everything it draws is therefore under a wash
-          that reaches 0.97 by the foot of the hero, so the rule that
+          that reaches 0.82 by the foot of the hero (`SCRIM`), so the rule that
           weather must never fight the headline is enforced by geometry
           rather than by a second gradient that would drift the first time
           either was tuned.
 
        */}
-      <LinearGradient
-        colors={['rgba(10,11,10,0.45)', 'rgba(10,11,10,0.06)', 'rgba(10,11,10,0.55)', 'rgba(10,11,10,0.97)']}
-        locations={[0, 0.22, 0.64, 1]}
-        style={StyleSheet.absoluteFill}
-      />
+      <LinearGradient colors={SCRIM} locations={[0, 0.22, 0.64, 1]} style={StyleSheet.absoluteFill} testID="explore-hero-scrim" />
       {/* What the fixed header used to hold, embedded in the photograph:
           the dateline with the weather hanging off its end — nothing
           moves when the temperature arrives, nothing is missing when it
@@ -263,6 +305,7 @@ export function Hero({ place, heroH, onStart, onSearch, scrollY }: {
           </LinearGradient>
         </PressableScale>
       </Animated.View>
+      <HeroSheet heroH={heroH} scrollY={scrollY} />
       <CitySwitcherModal visible={switcherOpen} onClose={() => setSwitcherOpen(false)} />
     </View>
   );

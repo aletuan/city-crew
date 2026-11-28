@@ -26,7 +26,7 @@ import { useFlag } from '../lib/useFlag';
 import { useI18n } from '../lib/i18n';
 import { classifyLoadFail } from '../lib/loadfail';
 import { LoadFailBanner, LoadFailEmpty } from '../components/loadFail';
-import { radius, space } from '../theme';
+import { space } from '../theme';
 import { useScheme } from '../lib/theme';
 import { goTo, type Nav } from '../nav';
 import { startupTrace } from '../lib/trace';
@@ -202,7 +202,7 @@ export default function ExploreScreen({ navigation }: { navigation: Nav }) {
         <AmbientWarmth />
         {holding && (
           <View style={{ gap: space.cardGap }}>
-            <Skeleton style={{ height: heroH, borderRadius: 0, borderBottomLeftRadius: radius.card, borderBottomRightRadius: radius.card }} />
+            <Skeleton style={{ height: heroH, borderRadius: 0 }} />
             <View style={{ paddingHorizontal: space.page, gap: space.cardGap }}>
               <View style={{ flexDirection: 'row', gap: space.cardGap }}>
                 <Skeleton style={{ width: 176, height: 200 }} />
