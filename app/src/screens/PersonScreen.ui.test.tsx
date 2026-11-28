@@ -190,7 +190,7 @@ vi.mock('../lib/i18n', () => ({
 
 // What only you see on your own page has its own tests (`Counts` in the
 // account's, `Requests` beside it); here, only where it stands.
-vi.mock('./profile/Counts', () => ({ Counts: () => <div data-testid="owner-counts" /> }));
+vi.mock('./profile/Counts', () => ({ Counts: ({ light }: { light?: boolean }) => <div data-testid="owner-counts" data-light={String(!!light)} /> }));
 vi.mock('./person/Requests', () => ({
   Requests: ({ onOpen }: { onOpen: () => void }) => <button type="button" data-testid="owner-requests" onClick={onOpen} />,
 }));
@@ -304,9 +304,10 @@ describe('whose page it is', () => {
     expect(name.textContent).toBe('Lan Phạm');
     expect(handle.textContent).toBe('@lan');
     expect(screen.getByTestId('person-bio').textContent).toBe('Coffee first, then the rest.');
-    // Name strong, handle quiet.
-    expect(textStyleOf(name)?.color).toBe(colors.text);
-    expect(textStyleOf(handle)?.color).toBe(colors.textTertiary);
+    // Name strong, handle quiet — both in the photograph's light ink,
+    // which does not turn with the scheme (28 Nov 2026).
+    expect(textStyleOf(name)?.color).toBe(onPhoto.text);
+    expect(textStyleOf(handle)?.color).toBe(onPhoto.textSecondary);
     expect(Number(textStyleOf(name)?.fontSize)).toBeGreaterThan(Number(textStyleOf(handle)?.fontSize));
     // Both beside the picture, the handle right under the name: one
     // column in the picture's row. The handle ran under the whole row
@@ -318,7 +319,7 @@ describe('whose page it is', () => {
     const named = screen.getByTestId('role-row');
     expect(named.contains(name)).toBe(true);
     const column = named.parentElement!;
-    expect([...column.children]).toEqual([named, handle, screen.getByTestId('person-bio-row')]);
+    expect([...column.children]).toEqual([named, handle, screen.getByTestId('person-bio')]);
     expect(column.parentElement).toBe(row);
     expect(viewStyleOf(column).flexDirection).not.toBe('row');
     // The column takes the row's width beside the picture.
@@ -344,12 +345,18 @@ describe('whose page it is', () => {
     // 80 since 19 Nov 2026, from 88 (owner, after an outside review).
     expect(viewStyleOf(face.querySelector('img')!)).toMatchObject({ width: 80, height: 80 });
     // The cover to the screen's edges and under the clock (22 Nov 2026):
-    // 200 under it, the clock's inset (none here) on top.
-    expect(viewStyleOf(screen.getByTestId('person-cover').firstElementChild!)).toMatchObject({ height: 200 });
-    expect(viewStyleOf(screen.getByTestId('person-cover'))).toMatchObject({ marginHorizontal: -space.page });
-    expect(viewStyleOf(screen.getByTestId('person-cover')).borderRadius).toBeUndefined();
-    // 26 of the ringed face over the cover, the bubble level with its foot.
-    expect(viewStyleOf(screen.getByTestId('person-head-row'))).toMatchObject({ marginTop: -26 });
+    // 232 under it since 28 Nov (200 before), the clock's inset (none
+    // here) on top.
+    const head = screen.getByTestId('person-head');
+    expect(viewStyleOf(screen.getByTestId('person-cover').firstElementChild!)).toMatchObject({ height: 232 });
+    expect(viewStyleOf(head)).toMatchObject({ height: 232, marginHorizontal: -space.page, overflow: 'hidden' });
+    expect(viewStyleOf(head).borderRadius).toBeUndefined();
+    // The face stands on the photograph whole (28 Nov 2026): nothing of
+    // it hangs under the cover any more, and the row sits at its foot.
+    const row = screen.getByTestId('person-head-row');
+    expect(viewStyleOf(row).marginTop).toBeUndefined();
+    expect(viewStyleOf(row)).toMatchObject({ alignItems: 'center', paddingHorizontal: space.page });
+    expect(viewStyleOf(head).justifyContent).toBe('flex-end');
   });
 
   it('asks for the profile by the handle it was opened with, the `@` and case off', async () => {
@@ -371,7 +378,8 @@ describe('whose page it is', () => {
     const named = screen.getByTestId('role-row');
     expect(named.contains(handle)).toBe(true);
     expect([...named.parentElement!.children]).toEqual([named]);
-    expect(viewStyleOf(named.parentElement!)).toMatchObject({ flex: 1, marginTop: 32 });
+    expect(viewStyleOf(named.parentElement!)).toMatchObject({ flex: 1 });
+    expect(viewStyleOf(named.parentElement!).marginTop).toBeUndefined();
     // Once in the head; the bar's title says it again only past the cover.
     expect(within(screen.getByTestId('person-scroll')).getAllByText('@lan')).toHaveLength(1);
     expect(screen.queryByTestId('person-name')).toBeNull();
@@ -409,14 +417,16 @@ describe('the bio, and the way to write one', () => {
     expect(screen.queryByTestId('person-bio')).toBeNull();
     // Under the head, as the bio is: the row after the picture and names.
     expect(add.compareDocumentPosition(screen.getByTestId('person-handle')) & Node.DOCUMENT_POSITION_PRECEDING).toBeTruthy();
-    // The bubble a bio stands in, already drawn, tail and all (owner,
-    // 21 Nov 2026): the words faint and in the bio's italic, then a small
-    // pencil in the app's gold.
-    expect(viewStyleOf(add.firstElementChild as HTMLElement)).toMatchObject({ backgroundColor: colors.surfaceGlassStrong, borderRadius: 18, flexDirection: 'row' });
-    expect(textStyleOf(screen.getByText('Write a few words about you'))).toMatchObject({ color: colors.textTertiary, fontStyle: 'italic' });
-    // The thick gold pencil (`PencilGlyph`), the words' 15 high.
+    // A line on the photograph, as the bio is (28 Nov 2026; a bubble
+    // from 21 Nov until then): no well behind it, the words quieter and
+    // in the bio's italic, then a small pencil in the photograph's ink.
+    const well = viewStyleOf(add.firstElementChild as HTMLElement);
+    expect(well.flexDirection).toBe('row');
+    expect(well.backgroundColor).toBeUndefined();
+    expect(textStyleOf(screen.getByText('Write a few words about you'))).toMatchObject({ color: onPhoto.textSecondary, fontStyle: 'italic' });
+    // The thick pencil (`PencilGlyph`), the words' 15 high.
     const pencil = within(add).getByTestId('pencil-glyph');
-    expect([pencil.getAttribute('width'), pencil.getAttribute('fill')]).toEqual(['15', String(colors.sun)]);
+    expect([pencil.getAttribute('width'), pencil.getAttribute('fill')]).toEqual(['15', onPhoto.text]);
     expect(add.querySelector('[data-icon="add"]')).toBeNull();
     // Words first, the pencil beside them.
     expect(screen.getByText('Write a few words about you').compareDocumentPosition(pencil) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
@@ -481,55 +491,71 @@ describe('the bio, and the way to write one', () => {
     expect(screen.queryByTestId('person-bio-add')).toBeNull();
   });
 
-  // How it stands (owner, 17 Nov 2026), after the owner's reference: a
-  // speech bubble under the handle, beside the picture, with a tail
-  // toward the face.
-  it('draws the bio as a speech bubble under the handle, beside the picture, its tail toward the face', async () => {
+  // A speech bubble with a tail toward the face from 17 Nov 2026 until
+  // 28 Nov, when the head moved onto the photograph (owner: "no bubble
+  // any more"): a well of glass on a picture is a second picture.
+  it('draws the bio as a line on the photograph under the handle, with no bubble around it', async () => {
     await show();
-    const bubble = screen.getByTestId('person-bio-row');
     const bio = screen.getByTestId('person-bio');
     const handle = screen.getByTestId('person-handle');
-    expect(bubble.textContent).toBe('Coffee first, then the rest.');
-    expect(bubble.querySelector('[data-icon]')).toBeNull();
+    expect(bio.textContent).toBe('Coffee first, then the rest.');
+    expect(screen.queryByTestId('person-bio-row')).toBeNull();
+    expect(screen.queryByTestId('person-bio-tail')).toBeNull();
     // In the names' column, the line after the handle: beside the
     // picture, not under it.
-    expect(bubble.parentElement).toBe(handle.parentElement);
-    expect(handle.nextElementSibling).toBe(bubble);
-    const row = screen.getByTestId('person-cover').nextElementSibling as HTMLElement;
-    expect(row.contains(bubble)).toBe(true);
-    // The picture hangs so the bubble stands level with its foot: 26 of
-    // it on the cover (half for an hour on 22 Nov 2026, and back).
-    expect(viewStyleOf(row)).toMatchObject({ alignItems: 'flex-start', marginTop: -26 });
-    const dress = viewStyleOf(bubble);
-    // As wide as the words; a tinted well with no hairline.
-    expect(dress.alignSelf).toBe('flex-start');
-    expect(dress.backgroundColor).toBe(colors.surfaceGlassStrong);
-    expect(dress.borderWidth).toBeUndefined();
-    // Four corners the same: for an hour the upper left was tighter, and
-    // read as one corner gone square.
-    for (const corner of ['borderTopLeftRadius', 'borderTopRightRadius', 'borderBottomLeftRadius', 'borderBottomRightRadius'] as const) {
-      expect(dress[corner]).toBeUndefined();
-    }
-    expect(dress.borderRadius).toBe(18);
-    // The tail: a window left of the bubble's edge, about the first
-    // line's middle, showing the corner of a turned square in the
-    // bubble's own fill.
-    const tail = screen.getByTestId('person-bio-tail');
-    expect(tail.parentElement).toBe(bubble);
-    const win = viewStyleOf(tail);
-    expect(win).toMatchObject({ position: 'absolute', overflow: 'hidden' });
-    // Outside the bubble but for the half point that closes the round
-    // edge, so the two washes do not darken each other.
-    const lap = Number(win.left) + Number(win.width);
-    expect(lap).toBeGreaterThanOrEqual(0);
-    expect(lap).toBeLessThan(0.5);
-    // Centred on the first line's middle: 9 of padding and half of 21.
-    expect(Number(win.top) + Number(win.height) / 2).toBe(9 + 21 / 2);
-    const fill = viewStyleOf(tail.firstElementChild as HTMLElement);
-    expect(fill.backgroundColor).toBe(dress.backgroundColor);
-    expect(JSON.stringify(fill.transform)).toContain('-43deg');
-    // The page's ink, slanted as the reference.
-    expect(textStyleOf(bio)).toMatchObject({ color: colors.text, fontSize: 15, fontStyle: 'italic' });
+    expect(handle.nextElementSibling).toBe(bio);
+    expect(screen.getByTestId('person-head-row').contains(bio)).toBe(true);
+    // The photograph's ink, slanted as the reference, and shadowed: the
+    // scrim is measured for a white photograph, the shadow is for the
+    // letter that lands on one bright spot.
+    const ink = textStyleOf(bio)!;
+    expect(ink).toMatchObject({ color: onPhoto.text, fontSize: 15, fontStyle: 'italic' });
+    expect(Number(ink.textShadowRadius)).toBeGreaterThan(0);
+    // Three lines and no more: the cover's height is fixed, and a fourth
+    // would push the name up under the bar.
+    expect(propsWhere((p) => p.testID === 'person-bio').numberOfLines).toBe(3);
+  });
+
+  // The head on the photograph (owner, 28 Nov 2026, after a reference):
+  // picture, names and — on your own page — the four counts, all inside
+  // the cover's box, and the page rising over its foot as a sheet.
+  it('stands the whole head on the photograph, over a scrim at its foot, and the page rises over it as a sheet', async () => {
+    await show();
+    const head = screen.getByTestId('person-head');
+    const cover = screen.getByTestId('person-cover');
+    const row = screen.getByTestId('person-head-row');
+    const sheet = screen.getByTestId('person-sheet');
+    // The cover is the door (pressable) and must not hold the head: a
+    // tap on the bio's invitation would open the wall's sheet too.
+    expect([...head.children]).toEqual([cover, row, sheet]);
+    expect(cover.contains(row)).toBe(false);
+    // The scrim under the words: 0.5 from just under the middle, 0.66 at
+    // the foot. White on white needs 0.54 for 4.5:1 (computed).
+    const scrim = screen.getByTestId('person-cover-foot-scrim');
+    expect(cover.contains(scrim)).toBe(true);
+    const drawn = propsWhere((p) => p.testID === 'person-cover-foot-scrim');
+    const last = String((drawn.colors as string[]).at(-1));
+    expect(Number(last.match(/([\d.]+)\)$/)![1])).toBeGreaterThanOrEqual(0.54);
+    expect(viewStyleOf(scrim)).toMatchObject({ position: 'absolute', bottom: 0 });
+    // The sheet: the page's own ground, round at the top only, last in
+    // the box so it covers the photograph's foot.
+    const dress = viewStyleOf(sheet);
+    expect(dress).toMatchObject({ height: 18, borderTopLeftRadius: 22, borderTopRightRadius: 22 });
+    expect(dress.backgroundColor).toBe(colors.bg);
+    // Nobody else's page counts anything.
+    expect(screen.queryByTestId('owner-counts')).toBeNull();
+  });
+
+  it('draws your own counts on the photograph, in its light ink, between the names and the sheet', async () => {
+    state.me = LAN.id;
+    await show();
+    const head = screen.getByTestId('person-head');
+    const counts = screen.getByTestId('owner-counts');
+    expect(head.contains(counts)).toBe(true);
+    expect(counts.getAttribute('data-light')).toBe('true');
+    expect([...head.children].map((c) => c.getAttribute('data-testid') ?? (c.contains(counts) ? 'counts' : ''))).toEqual(['person-cover', 'person-head-row', 'counts', 'person-sheet']);
+    // Once: they left the page under the cover.
+    expect(screen.getAllByTestId('owner-counts')).toHaveLength(1);
   });
 
   // The form saves into your own profile; the page says the new words
@@ -1419,11 +1445,13 @@ describe('the bar over the cover', () => {
   it('takes the page’s ink and the person’s name once the cover has left it', async () => {
     await show();
     // Inside the fade: the name is drawn, the glyphs still light.
-    scrollTo(110);
+    // The cover's foot meets the bar's at 232 − 50 = 182; the fade is
+    // the 44 before it.
+    scrollTo(142);
     expect(screen.getByTestId('person-bar-title').textContent).toBe('Lan Phạm');
     expect(ink('person-search')).toBe(onPhoto.text);
     // Past it: the page's ink.
-    scrollTo(150);
+    scrollTo(182);
     expect(ink('person-search')).toBe(String(colors.text));
     expect(ink('person-back')).toBe(String(colors.text));
     // And back again.

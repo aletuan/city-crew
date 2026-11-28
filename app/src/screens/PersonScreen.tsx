@@ -90,7 +90,15 @@
 // quarter of the picture was on the cover, the name starts just under
 // the cover's edge, and the bubble's first line stood level with the
 // picture's foot — where a tail can point at the face. Half again for an
-// hour on 22 Nov 2026, and back: see `FACE_OVER`.
+// hour on 22 Nov 2026, and back.
+//
+// ── the head on the photograph (owner, 28 Nov 2026) ──
+//
+// All of it since: the picture whole on the cover, the name, the handle
+// and the bio beside it in the photograph's ink, the counts under them,
+// and the page a sheet risen over the cover's foot — the owner's
+// reference, and the way Explore's cover already carries its words. The
+// bubble went with it. `COVER_UNDER_CLOCK` has the measurements.
 //
 // ── the friend button ──
 //
@@ -161,7 +169,7 @@ import { IN_COMMON_ON, listsBy, listsOn, seenOn, TOP_FRIEND_ON } from '../lib/pe
 import { useMyLists } from '../lib/save';
 import { sharesByList } from '../lib/shares';
 import { useScheme } from '../lib/theme';
-import { bgHex, colors, display, font, space, type } from '../theme';
+import { bgHex, colors, display, font, onPhoto, space, type } from '../theme';
 import { toProfileRoom, type Nav, type RootRoute } from '../nav';
 
 /** The face: 80, from 88 (owner, 19 Nov 2026, after an outside review
@@ -169,37 +177,46 @@ import { toProfileRoom, type Nav, type RootRoute } from '../nav';
  *  of page 4 wide: 88 across. Your own is 88 itself, in the level's ring
  *  — the Account page's picture, 103 across with the ring (`Face`). */
 const FACE = 80;
-/** The cover's height under the clock, running to the screen's edges
- *  (owner, 22 Nov 2026): 200, so with a 59pt clock the photograph is
- *  259 — the "about 260" agreed that morning, under a third of an 932pt
- *  phone, and the feed comes down no further than the inset card's 170
- *  and the 58 of tools row over it had it. It was 170 inside the page's
- *  margins, rounded, under a row of its own for the tools. */
-const COVER_UNDER_CLOCK = 200;
-/** How much of the ringed picture lies over the cover: 26 of its 88 —
- *  about 40% measured on the owner's screenshot (70 of 180px). Set so
- *  the bio's bubble starts level with the picture's foot, where its tail
- *  points at the face (see the head's note above).
+/** The cover's height under the clock, running to the screen's edges:
+ *  232, so with a 59pt clock the photograph is 291 and, the page's sheet
+ *  risen 18 over its foot, about 273 of it shows — a third of an 852pt
+ *  phone, against the 48% Explore's cover takes (two to three, agreed with
+ *  the owner on 28 Nov 2026).
  *
- *  Half, its centre on the cover's foot as Facebook, X and LinkedIn set
- *  theirs, for an hour on 22 Nov 2026 (#1546): the face rose about 18
- *  and the bubble did not, so its tail pointed under the face and the
- *  two came apart (owner). Keeping half would mean moving the bubble, and
- *  the name and handle with it, for 10% more overlap. */
-const FACE_OVER = 26;
-/** The name starts this far under the cover's edge. */
-const NAME_DROP = 6;
+ *  It was 200 (22 Nov 2026) with the face a quarter over its foot and the
+ *  name, the bio and the counts on the page under it: measured on the
+ *  owner's screenshot the head ended 391pt down, and the first card began
+ *  there. With the head on the photograph it ends where the cover does. */
+const COVER_UNDER_CLOCK = 232;
+/** How far the page's sheet rises over the cover's foot, and the round
+ *  of its upper corners: the reference's, read off it at about 18 and 22. */
+const SHEET_RISE = 18;
+const SHEET_ROUND = 22;
+/** The camera and the trial's label stand this far under the clock: the
+ *  bar's 6 and its 44 row, and 8 clear of its glass. */
+const UNDER_BAR = 58;
+/**
+ * The scrim the head's words stand on: clear at its top, 50% by the
+ * middle of its run, 66% at the cover's foot — Explore's ink
+ * (`explore/Hero`), lighter than Explore's foot.
+ *
+ * White on a photograph clears 4.5:1 once the photograph's own luminance
+ * is under 0.18, which a pure white one reaches under 54% of this ink (by
+ * the contrast formula, not measured on a phone). The counts and the bio
+ * stand where it is past that; the name's line stands at about 45–50%, so
+ * the words also carry a soft shadow (`ON_PHOTO_SHADOW`) for the cover
+ * that is a white sky exactly there.
+ */
+const FOOT_SCRIM = ['rgba(10,11,10,0)', 'rgba(10,11,10,0.5)', 'rgba(10,11,10,0.66)'] as const;
+const ON_PHOTO_SHADOW = { textShadowColor: 'rgba(0,0,0,0.45)', textShadowOffset: { width: 0, height: 1 }, textShadowRadius: 3 } as const;
 /** How far the name shrinks to stay on its line beside the picture
  *  before it is cut: 22 to about 17, still the largest words on the
  *  page. */
 const TITLE_SHRINK = 0.78;
 /** The name's line, which the role's mark after it is centred on. */
 const TITLE_LINE = 28;
-/** The bio's bubble on one line: 9 of padding, a 21pt line, 9. */
-const BIO_ONE_LINE = 39;
-/** What the invitation's bubble adds above and below its one line to
- *  make the button scale's 44 for the thumb (`SECONDARY_CONTROL_H`). */
-const BIO_ADD_SLOP = { top: (SECONDARY_CONTROL_H - BIO_ONE_LINE) / 2, bottom: (SECONDARY_CONTROL_H - BIO_ONE_LINE) / 2 };
+/** The invitation's one 20pt line, grown to the 44 a thumb is owed. */
+const BIO_ADD_SLOP = { top: 12, bottom: 12 };
 
 /** The face at the head: everyone's ringed in page; yours bare, in the
  *  level's ring, whose gap is the page (`OwnFace`, `EngagementRing`) —
@@ -519,12 +536,10 @@ function Bio({ me, person, onAdd, focused }: { me: string | null; person: Friend
   const mine = !!me && person.id === me;
   const bio = (mine && profile.bio) || person.bio;
   if (bio) {
-    return (
-      <View style={s.bioBubble} testID="person-bio-row">
-        <View style={s.bioTail} testID="person-bio-tail"><View style={s.bioTailFill} /></View>
-        <Text style={s.bio} testID="person-bio">{bio}</Text>
-      </View>
-    );
+    // No bubble since 28 Nov 2026 (owner): on the photograph it was a
+    // second surface between the name and the picture behind it. Three
+    // lines at most — 13 of the 14 bios measured are one.
+    return <Text style={s.bio} numberOfLines={3} testID="person-bio">{bio}</Text>;
   }
   if (!mine) return null;
   return <BioInvite onAdd={onAdd} focused={focused} />;
@@ -560,12 +575,11 @@ function BioInvite({ onAdd, focused }: { onAdd: () => void; focused: () => boole
       hitSlop={BIO_ADD_SLOP}
       accessibilityRole="button"
       anchorRef={anchor}
-      contentStyle={[s.bioBubble, s.bioAdd]}
+      contentStyle={s.bioAdd}
       testID="person-bio-add"
     >
-      <View style={s.bioTail}><View style={s.bioTailFill} /></View>
       <Text style={s.bioAddText}>{t('Write a few words about you', 'Viết đôi dòng về bạn', '自分についてひとこと書く', '写几句介绍自己', '寫幾句介紹自己')}</Text>
-      <PencilGlyph color={colors.sun} />
+      <PencilGlyph color={onPhoto.text} />
     </PressableScale>
   );
 }
@@ -622,63 +636,78 @@ function Head({ me, person, own, cover, coverH, onCover, trying, ring, friend, o
   navigation: Nav;
 }) {
   const { t } = useI18n();
+  const top = useSafeAreaInsets().top;
   return (
     <>
-      <Pressable
-        style={s.coverCard}
-        testID="person-cover"
-        onPress={onCover}
-        disabled={!onCover}
-        accessibilityRole={onCover ? 'button' : undefined}
-        accessibilityLabel={onCover ? t('Change cover', 'Đổi ảnh bìa', 'カバーを変更', '更换封面', '更換封面') : undefined}
-      >
-        {cover
-          ? <Image source={{ uri: cover }} style={[s.coverPhoto, { height: coverH }]} contentFit="cover" transition={160} />
-          : <View style={[s.coverPhoto, { height: coverH }, s.tint]} testID="person-cover-tint" />}
-        {/* The clock's scrim: the photograph's top darkened, fading out,
-            so the light clock and the bar's glass read on a pale sky. */}
-        <LinearGradient colors={['rgba(0,0,0,0.38)', 'rgba(0,0,0,0)']} style={s.scrim} pointerEvents="none" testID="person-cover-scrim" />
-        {/* The cover's camera, on your own page: it says the picture is
-            a control, as the avatar's badge does, at the corner the face
-            and the trial label leave free. The whole cover is the press. */}
-        {onCover ? (
-          <View style={s.coverEdit} testID="person-cover-edit">
-            <Glyph name="camera-outline" size={ICON.action} color="#fff" />
-          </View>
-        ) : null}
-        {/* Said on the picture itself, so a look is never taken for a
-            change: nobody else sees it until Save. */}
-        {trying ? (
-          <View style={s.trying} testID="person-cover-trying">
-            <Text style={s.tryingText}>{t('Trying it', 'Đang xem thử', '試しに表示中', '预览中', '預覽中')}</Text>
-          </View>
-        ) : null}
-      </Pressable>
-      <View style={s.headRow} testID="person-head-row">
-        {/* Your own in the level's ring — `person/OwnFace`. */}
-        <Face own={own} url={person.avatar_url} ring={ring} />
-        {/* The name, beside the picture, and the handle right under it
-            — or the handle alone, for somebody who gave no name. The
-            name shrinks before it is cut: see `title`.
+      {/* The head, whole, on the photograph (owner, 28 Nov 2026): the
+          picture, the name and what they say, and on your own page your
+          counts — then the page's sheet, risen over the cover's foot. The
+          photograph is one press (its sheet, on your own page) and lies
+          under the rest, beside it and not around it: a press inside a
+          press is the inner one's on a phone and a warning on the web. */}
+      <View style={[s.coverCard, { height: coverH }]} testID="person-head">
+        <Pressable
+          style={StyleSheet.absoluteFill}
+          testID="person-cover"
+          onPress={onCover}
+          disabled={!onCover}
+          accessibilityRole={onCover ? 'button' : undefined}
+          accessibilityLabel={onCover ? t('Change cover', 'Đổi ảnh bìa', 'カバーを変更', '更换封面', '更換封面') : undefined}
+        >
+          {cover
+            ? <Image source={{ uri: cover }} style={[s.coverPhoto, { height: coverH }]} contentFit="cover" transition={160} />
+            : <View style={[s.coverPhoto, { height: coverH }, s.tint]} testID="person-cover-tint" />}
+          {/* The clock's scrim: the photograph's top darkened, fading out,
+              so the light clock and the bar's glass read on a pale sky. */}
+          <LinearGradient colors={['rgba(0,0,0,0.38)', 'rgba(0,0,0,0)']} style={s.scrim} pointerEvents="none" testID="person-cover-scrim" />
+          {/* The words' scrim — see `footScrim`. */}
+          <LinearGradient colors={FOOT_SCRIM} locations={[0, 0.45, 1]} style={s.footScrim} pointerEvents="none" testID="person-cover-foot-scrim" />
+          {/* The cover's camera, on your own page: it says the picture is
+              a control, as the avatar's badge does, under the bar's tools
+              where the head leaves the photograph free. The whole cover
+              is the press. */}
+          {onCover ? (
+            <View style={[s.coverEdit, { top: top + UNDER_BAR }]} testID="person-cover-edit">
+              <Glyph name="camera-outline" size={ICON.action} color="#fff" />
+            </View>
+          ) : null}
+          {/* Said on the picture itself, so a look is never taken for a
+              change: nobody else sees it until Save. */}
+          {trying ? (
+            <View style={[s.trying, { top: top + UNDER_BAR + 6 }]} testID="person-cover-trying">
+              <Text style={s.tryingText}>{t('Trying it', 'Đang xem thử', '試しに表示中', '预览中', '預覽中')}</Text>
+            </View>
+          ) : null}
+        </Pressable>
+        <View style={s.headRow} pointerEvents="box-none" testID="person-head-row">
+          {/* Your own in the level's ring — `person/OwnFace`. */}
+          <Face own={own} url={person.avatar_url} ring={ring} />
+          {/* The name, beside the picture, and the handle right under it
+              — or the handle alone, for somebody who gave no name. The
+              name shrinks before it is cut: see `title`.
 
-            After whichever stands first, a local guide's star or an
-            editor's medal, with the sheet that says what it means —
-            `PersonRole`. On the picture's corner for a day; after the
-            name since 17 Nov 2026 (owner), for the reasons written
-            there. */}
-        <View style={s.names}>
-          <PersonRole me={me} personId={person.id} line={TITLE_LINE}>
+              After whichever stands first, a local guide's star or an
+              editor's medal, with the sheet that says what it means —
+              `PersonRole`. */}
+          <View style={s.names} pointerEvents="box-none">
+            <PersonRole me={me} personId={person.id} line={TITLE_LINE}>
+              {person.full_name
+                ? <Text style={s.title} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={TITLE_SHRINK} testID="person-name">{person.full_name}</Text>
+                : <Text style={s.title} numberOfLines={1} testID="person-handle">{atHandle(person.handle)}</Text>}
+            </PersonRole>
             {person.full_name
-              ? <Text style={s.title} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={TITLE_SHRINK} testID="person-name">{person.full_name}</Text>
-              : <Text style={s.title} numberOfLines={1} testID="person-handle">{atHandle(person.handle)}</Text>}
-          </PersonRole>
-          {person.full_name
-            ? <Text style={s.handle} numberOfLines={1} testID="person-handle">{atHandle(person.handle)}</Text>
-            : null}
-          {/* What they say about themselves, as a bubble from the picture
-              — `Bio`. */}
-          <Bio me={me} person={person} onAdd={() => navigation.navigate('EditProfile', { focus: 'bio' })} focused={() => navigation.isFocused()} />
+              ? <Text style={s.handle} numberOfLines={1} testID="person-handle">{atHandle(person.handle)}</Text>
+              : null}
+            {/* What they say about themselves — `Bio`. */}
+            <Bio me={me} person={person} onAdd={() => navigation.navigate('EditProfile', { focus: 'bio' })} focused={() => navigation.isFocused()} />
+          </View>
         </View>
+        {/* Your counts, yours to see (`profile/Counts`), in the
+            photograph's light ink. */}
+        {own && me ? <View style={s.counts} pointerEvents="box-none"><Counts navigation={navigation} light /></View> : null}
+        {/* The page's sheet, risen over the cover's foot: its two round
+            corners, and under them the page. */}
+        <View style={s.sheet} pointerEvents="none" testID="person-sheet" />
       </View>
       {/* What there is to do about this person, in a row of its own —
           `Acts`. Not on your own page, nor signed out: no friend button,
@@ -688,15 +717,11 @@ function Head({ me, person, own, cover, coverH, onCover, trying, ring, friend, o
           "mutual saves" this line counted, for a friend only, until 16
           Nov 2026. Hidden the same day, not removed: `IN_COMMON_ON`. */}
       {IN_COMMON_ON ? <InCommon me={me} otherId={person.id} navigation={navigation} /> : null}
-      {/* What only you see on your own page, wherever it opens: your
-          counts (`profile/Counts`), then the requests waiting
-          (`person/Requests`). Their rooms through `toProfileRoom`. */}
-      {own && me ? (
-        <>
-          <Counts navigation={navigation} />
-          <Requests me={me} onOpen={() => toProfileRoom(navigation, 'Crew')} />
-        </>
-      ) : null}
+      {/* What only you see on your own page, wherever it opens: the
+          requests waiting (`person/Requests`), its room through
+          `toProfileRoom`. Your counts stood here until 28 Nov 2026; they
+          are on the photograph now, in `Head`'s box above. */}
+      {own && me ? <Requests me={me} onOpen={() => toProfileRoom(navigation, 'Crew')} /> : null}
     </>
   );
 }
@@ -832,44 +857,48 @@ const s = StyleSheet.create({
   // white that draws its edge where the dark fill cannot: on a night
   // street the ring is the disc, on a pale sky the fill is.
   coverEdit: {
-    position: 'absolute', right: 10, bottom: 10, width: PHOTO_DISC, height: PHOTO_DISC, borderRadius: PHOTO_DISC / 2,
+    position: 'absolute', right: space.page, width: PHOTO_DISC, height: PHOTO_DISC, borderRadius: PHOTO_DISC / 2,
     alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(0,0,0,0.55)',
     borderWidth: StyleSheet.hairlineWidth * 2, borderColor: 'rgba(255,255,255,0.45)',
   },
   // The cover's corner, opposite the face: what the sheet is trying on.
   // Beside the camera at the foot: the cover's top is the bar's now.
   trying: {
-    position: 'absolute', bottom: 17, right: 54, paddingHorizontal: 10, paddingVertical: 4,
+    position: 'absolute', right: 58, paddingHorizontal: 10, paddingVertical: 4,
     borderRadius: 999, backgroundColor: 'rgba(0,0,0,0.55)',
   },
   tryingText: { color: '#fff', fontSize: 12, fontWeight: font.medium },
   // To the screen's edges and under the clock (owner, 22 Nov 2026): the
-  // page's margins taken back, no rounding. See `person/Bar`.
-  coverCard: { marginHorizontal: -space.page, overflow: 'hidden' },
+  // page's margins taken back, no rounding. See `person/Bar`. The head
+  // stands at its foot (28 Nov 2026), over the sheet's rise.
+  coverCard: { marginHorizontal: -space.page, overflow: 'hidden', justifyContent: 'flex-end' },
   coverPhoto: { width: '100%' },
   // 120 of the photograph's top: the clock and the bar's 50 under it,
   // and as far again to fade over.
   scrim: { position: 'absolute', top: 0, left: 0, right: 0, height: 120 },
-  // The face half over the cover's lower edge, at the card's own inset,
-  // and the name beside it. On the picture's foot: its upper half lies
-  // over the cover.
-  headRow: {
-    flexDirection: 'row', alignItems: 'flex-start', gap: 12,
-    marginTop: -FACE_OVER, paddingHorizontal: space.cardPadding,
-  },
+  // The lower 70% of the photograph, darkening to its foot — see
+  // `FOOT_SCRIM`.
+  footScrim: { position: 'absolute', left: 0, right: 0, bottom: 0, height: '70%' },
+  // The face and the names in a row, at the page's margin, their middles
+  // level: the face is the taller, so the names sit beside it.
+  headRow: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: space.page, paddingBottom: 12 },
   // The page's ground around the face, so it parts from the photograph.
   faceRing: { borderWidth: 4, borderRadius: FACE / 2 + 4 },
-  // The name over the handle over the bio, one column beside the
-  // picture, begun just under the cover's edge.
-  names: { flex: 1, marginTop: FACE_OVER + NAME_DROP },
+  // The name over the handle over the bio, one column beside the picture.
+  names: { flex: 1 },
+  counts: { paddingHorizontal: space.page },
+  sheet: {
+    height: SHEET_RISE, backgroundColor: colors.bg,
+    borderTopLeftRadius: SHEET_ROUND, borderTopRightRadius: SHEET_ROUND,
+  },
   // The display face at 22, the size the page's own Profile heads its
   // sections in. It has the row to itself beside the picture — about
   // 240pt on a 390pt phone, by arithmetic — since the friend button left
   // for a row of its own; it still shrinks to `TITLE_SHRINK` before it
   // is cut, for the name that is longer than that.
   title: {
-    color: colors.text, fontSize: 22, lineHeight: TITLE_LINE, fontFamily: display.bold,
-    letterSpacing: 0.2,
+    color: onPhoto.text, fontSize: 22, lineHeight: TITLE_LINE, fontFamily: display.bold,
+    letterSpacing: 0.2, ...ON_PHOTO_SHADOW,
   },
   // The row of acts — see `Acts`: one group in the page's middle, 22
   // either side of the rule, 14 under the head.
@@ -889,30 +918,12 @@ const s = StyleSheet.create({
   // the ⋯.
   topRight: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   // The handle, right under the name: an address, quieter.
-  handle: { color: colors.textTertiary, ...type.meta, lineHeight: 20 },
-  // The bio's bubble — see `Bio`. 18 round at every corner, a point and
-  // a half under a one-line bubble's half-height (39), so one line is
-  // all but a pill. 4 under the handle and 4 left of the
-  // names' edge, as the reference sets it a little toward the picture.
-  bioBubble: {
-    alignSelf: 'flex-start', marginTop: 4, marginLeft: -4,
-    paddingHorizontal: 14, paddingVertical: 9,
-    borderRadius: 18,
-    backgroundColor: colors.surfaceGlassStrong,
-  },
-  // The tail's window, on the bubble's left edge about the first line's
-  // middle (9 of padding and half of 21 is 19.5; the window is 14 to 25);
-  // and the square turned in it, of which the window shows a corner.
-  bioTail: { position: 'absolute', left: -9, top: 14, width: 9.3, height: 11, overflow: 'hidden' },
-  bioTailFill: {
-    position: 'absolute', left: 0, top: 1, width: 24, height: 24,
-    backgroundColor: colors.surfaceGlassStrong,
-    transformOrigin: 'left top', transform: [{ rotate: '-43deg' }],
-  },
-  bio: { color: colors.text, ...type.meta, lineHeight: 21, fontStyle: 'italic' },
-  // The invitation in the bio's place — see `BioInvite`. The bubble's
-  // own box, its words and the pencil in a row, 6 apart; the words in
-  // the bio's type and italic, faint.
-  bioAdd: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  bioAddText: { color: colors.textTertiary, ...type.meta, lineHeight: 21, fontStyle: 'italic', flexShrink: 1 },
+  handle: { color: onPhoto.textSecondary, ...type.meta, lineHeight: 20, ...ON_PHOTO_SHADOW },
+  // What they say, in the photograph's ink and the bio's italic, 2 under
+  // the handle. A bubble with a tail toward the face until 28 Nov 2026.
+  bio: { color: onPhoto.text, ...type.meta, lineHeight: 20, fontStyle: 'italic', marginTop: 2, ...ON_PHOTO_SHADOW },
+  // The invitation in the bio's place — see `BioInvite`: its words and
+  // the pencil in a row, 6 apart, fainter than a bio.
+  bioAdd: { flexDirection: 'row', alignItems: 'center', gap: 6, alignSelf: 'flex-start', marginTop: 2 },
+  bioAddText: { color: onPhoto.textSecondary, ...type.meta, lineHeight: 20, fontStyle: 'italic', flexShrink: 1, ...ON_PHOTO_SHADOW },
 });

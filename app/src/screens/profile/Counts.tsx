@@ -33,7 +33,7 @@ import { s } from './styles';
  * zeros — the same figures an empty account shows, and read as one
  * (UX-14, 17 Oct 2026). A zero here is now only ever an answer.
  */
-export function StatTile({ n, label, onPress }: { n: number | null; label: string; onPress: () => void }) {
+export function StatTile({ n, label, onPress, light }: { n: number | null; label: string; onPress: () => void; light?: boolean }) {
   const { t } = useI18n();
   return (
     <PressableScale
@@ -46,13 +46,18 @@ export function StatTile({ n, label, onPress }: { n: number | null; label: strin
         ? `${label}, ${t('loading', 'đang tải', '読み込み中', '加载中', '載入中')}`
         : `${n} ${label}`}
     >
-      <Text style={[s.statN, n === null && s.statPending]}>{n ?? '—'}</Text>
-      <Text style={s.statLabel} numberOfLines={1}>{label}</Text>
+      <Text style={[s.statN, light && s.statNLight, n === null && (light ? s.statLabelLight : s.statPending)]}>{n ?? '—'}</Text>
+      <Text style={[s.statLabel, light && s.statLabelLight]} numberOfLines={1}>{label}</Text>
     </PressableScale>
   );
 }
 
-export function Counts({ navigation }: { navigation: Nav }) {
+export function Counts({ navigation, light = false }: {
+  navigation: Nav;
+  /** On a photograph — your page's cover since 28 Nov 2026: the figures
+   *  and the rules in its light ink, and no hairline under the row. */
+  light?: boolean;
+}) {
   const { t } = useI18n();
   const { session } = useSession();
   const mine = useMyLists();
@@ -124,16 +129,16 @@ export function Counts({ navigation }: { navigation: Nav }) {
           said twice on one page is one of them wasted, so those rows
           keep their words and lose their pills. Four short words fit
           where three with a long one did. */}
-      <View style={s.stats}>
-        <StatTile n={mine.loaded ? mine.data.length : null} label={t('Collections', 'Bộ sưu tập', 'コレクション', '合集', '合集')} onPress={() => hop('Collections', 'CollectionsHome')} />
-        <View style={s.statDivider} />
+      <View style={[s.stats, light && s.statsLight]}>
+        <StatTile n={mine.loaded ? mine.data.length : null} label={t('Collections', 'Bộ sưu tập', 'コレクション', '合集', '合集')} onPress={() => hop('Collections', 'CollectionsHome')} light={light} />
+        <View style={[s.statDivider, light && s.statDividerLight]} />
         {/* Distinct places, not visits: three evenings at one bar is one
             place been to — the figure the row below carried. */}
-        <StatTile n={visits.loaded ? visitSummary(visits.data).places : null} label={t('Check-ins', 'Check-in', 'チェックイン', '打卡', '打卡')} onPress={() => toProfileRoom(navigation, 'Visited')} />
-        <View style={s.statDivider} />
-        <StatTile n={ships.loaded ? friends : null} label={t('Friends', 'Bạn bè', '友達', '好友', '好友')} onPress={() => toProfileRoom(navigation, 'Crew')} />
-        <View style={s.statDivider} />
-        <StatTile n={trips.loaded ? trips.data.length : null} label={t('Trips', 'Chuyến đi', '旅程', '行程', '行程')} onPress={() => hop('Trips', 'TripsHome')} />
+        <StatTile n={visits.loaded ? visitSummary(visits.data).places : null} label={t('Check-ins', 'Check-in', 'チェックイン', '打卡', '打卡')} onPress={() => toProfileRoom(navigation, 'Visited')} light={light} />
+        <View style={[s.statDivider, light && s.statDividerLight]} />
+        <StatTile n={ships.loaded ? friends : null} label={t('Friends', 'Bạn bè', '友達', '好友', '好友')} onPress={() => toProfileRoom(navigation, 'Crew')} light={light} />
+        <View style={[s.statDivider, light && s.statDividerLight]} />
+        <StatTile n={trips.loaded ? trips.data.length : null} label={t('Trips', 'Chuyến đi', '旅程', '行程', '行程')} onPress={() => hop('Trips', 'TripsHome')} light={light} />
       </View>
       {/* A dash that stays a dash is a question the screen cannot answer,
           and it says so — only for a count still unknown: a fetch that
@@ -141,7 +146,7 @@ export function Counts({ navigation }: { navigation: Nav }) {
           those standing, and they are not wrong enough to interrupt. */}
       {counts.some((c) => !c.loaded && c.error) ? (
         <View style={s.statsFailed} testID="stats-failed">
-          <Text style={s.statsFailedText}>
+          <Text style={[s.statsFailedText, light && s.statLabelLight]}>
             {t("Couldn't load your counts.", 'Không tải được số liệu.', '件数を読み込めませんでした。', '无法加载统计数据。', '無法載入統計資料。')}
           </Text>
           <PressableScale
