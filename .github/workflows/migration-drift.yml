@@ -1,6 +1,7 @@
 # Is every migration in the repo on the live project?
 #
-# CI tests migrations; nothing applies them (CLAUDE.md, "Supabase"). A
+# CI tests migrations; a merge applies them only once approved
+# (docs/migrations.md). A
 # migration merged and never applied looks exactly like one that ran,
 # until a screen asks for a column that is not there — and a merge has
 # silently dropped an applied migration from the tree before. This job

@@ -60,7 +60,7 @@ Chinese line for a string already written, unless the string is listed there
 as meaning two things, with the reason.
 
 **A function has a ceiling**: 150 lines of code and a complexity of 25
-(`app/oversize.js`). The 20 files already over it are listed there, each
+(`app/oversize.js`). The files already over it are listed there, each
 at the size it stood at, and lint is red the moment one grows. Bring a
 function down and lower its number in the same change; nothing lowers it
 for you.
@@ -133,43 +133,16 @@ that reads like a race and is not one.
 
 Project ref **`amdvitzpogaejzzqroco`** (`citycrew-data`, ap-southeast-1).
 
-**CI tests migrations; a merge applies them only once approved.**
-`.github/workflows/apply-migrations.yml` runs on a merge that touches
-`supabase/migrations/`, waits in the `supabase-live` environment for its
-reviewer to press Approve, then applies what the live history lacks —
-each file and its history row in one transaction, under the file's own
-version — and checks the history afterwards. It does nothing while the
-`APPLY_MIGRATIONS` repository variable is not `on`: GitHub gives an
-environment it has not seen no reviewer at all. Until that variable is
-on, a migration merged is not a migration that has run; apply it
-yourself, as below. It refuses to apply onto a history that disagrees
-with the repo, or a file merged out of order
-(`data/scripts/apply-migrations.mjs`).
-
-**The Edge Functions deploy and the EAS Update wait for it.** Both start
-on the same merge and hold until every migration in the commit is on
-live (`.github/actions/wait-for-migrations`): thirty minutes, then red
-with nothing deployed — approve, and re-run the job (that file's header
-lists what each red message means and what to do). So a function or a
-screen and the migration it needs can merge together. What waiting
-cannot fix is the other direction: a migration that drops or renames
-something live code still reads breaks it from the approval until the
-new code is out. Add in one pull request, remove in a later one.
-
-`.github/workflows/migration-drift.yml` checks it for you: after a merge
-that touches `supabase/migrations/` it waits up to 30 minutes for the
-migration to appear on live, and goes red if it does not; it also runs
-daily. Since 25 Nov 2026 the live history and the folder agree version
-for version, both ways (155 each), and the job holds them to it.
-
-**By hand, apply a migration under its file's version.** The Supabase MCP's
-`apply_migration` stamps the minute it ran instead, which is how the two
-histories drifted apart. Run the file's SQL with `execute_sql` and record
-it in the same call:
-`insert into supabase_migrations.schema_migrations (version, name,
-statements) values ('<file version>', '<name>', array['<the SQL>'])`.
-A migration applied the other way shows up as "applied under another
-version", with the one-line update that fixes it.
+**A merge applies a migration only once approved, and the deploys wait
+for it.** `apply-migrations.yml` holds in the `supabase-live` environment
+for Approve; the Edge Functions deploy and the EAS Update hold until
+every migration in the commit is on live, thirty minutes, then red with
+nothing deployed. So code and the migration it needs can merge together;
+a migration that drops or renames what live code still reads cannot —
+add in one pull request, remove in a later one. By hand, never the
+Supabase MCP's `apply_migration`: it stamps the wrong version.
+**`docs/migrations.md` has all of it; read it before writing, applying
+or waiting on one.**
 
 **Edge Functions deploy themselves.**
 `.github/workflows/deploy-functions.yml` deploys the functions whose folder
@@ -224,8 +197,10 @@ the point:
 | | |
 |---|---|
 | `docs/architecture.md` | The layers of the app, which may import which, and what in CI turns red when one does. Read it before moving code between `screens/`, `components/` and `lib/`. |
+| `docs/migrations.md` | A migration from a merged file to the live project: the approval, what the deploys wait for, the drift check, applying by hand. Read it before writing, applying or waiting on one. |
 | `docs/tracing.md` | Measuring on a real device: the three trace tables, a measuring session, and the diagnosis order for an empty table. |
 | `docs/store/listing.md` | App Store copy in three languages, and the catalog figures to re-check before each submission. |
+| `docs/store/review-notes.md`, `docs/store/app-privacy-labels.md` | What is pasted into App Store Connect: the notes for App Review and the privacy answers. Each changes before the build it describes is submitted. `review-reply-2.1.md` is the record of one answered request. |
 | `app/README.md` | Running the app, the three ways onto a phone, and the Google Maps keys. |
 | `docs/testing/e2e-simulator.md` | The Maestro suite on the iOS simulator: what it checks, and the environment failures already hit. Setup is `app/.maestro/README.md`; how to write a flow is `app/.maestro/GUIDELINES.md`. |
 | `docs/testing/e2e-plan.md` | The Maestro flows not yet written — the person page, Account, friends and comments — case by case, with the selectors checked against main and the decisions still owed. Results of runs go to `e2e-latest.md`; this file is only the plan, kept apart so a new report cannot overwrite it. |
@@ -240,4 +215,7 @@ the point:
 | `docs/profile-home-plan.md` | The last tab opens your own person page and Account becomes a page under it (owner, 19 Nov 2026): the decisions, the rule that every reason for the tab's dot is visible on that page and clears when handled, the navigation traps, and the four pull requests P1–P4. A PR that does one marks it there in the same PR. Read it before touching `ProfileHome`, `AccountProfile`, `PersonScreen` or the tab bar's dots. |
 | `docs/wall-plan.md` | The cover on a person's page, chosen by its owner from a city, a collection's cover or one upload (owner, 21 Nov 2026): the decisions, the two columns on `profiles`, and the steps W1–W4. A PR that does one marks it there in the same PR. Read it before touching `usePageCover` or the person page's head. |
 | `docs/live-checkins-plan.md` | Check-ins pushed live to Explore's shelf (owner, 27 Nov 2026): Realtime Broadcast from database triggers, hearts as a delta the app applies in place and everything else as an empty signal that re-asks `featured_checkins`, what moves at once and what waits for the "new activity" pill, the cost at four sizes, the two thresholds, and the steps L0–L6 behind the `checkin_live` flag. A PR that does one marks it there in the same PR. Read it before adding anything that listens on a Realtime channel. |
+| `docs/ai-agent-planner.md` | The planner as an agent: the line between the deterministic planner and the model, the `plan-assist` contract, the taste profile, cost. Read it before touching `lib/planner.ts`, `lib/assist.ts` or `plan-assist`. |
+| `docs/signup-highlight-tour.md` | The five steps shown after sign-up and their words. Read it before touching `SignupTour`. |
+| `docs/mobile-setup.md` | Turning the data desk on from a phone: what is configured, and the secrets still set by hand. |
 | `docs/history/` | Plans and specs for work that already shipped. Provenance, not instructions. |

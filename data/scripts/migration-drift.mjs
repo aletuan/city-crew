@@ -1,7 +1,8 @@
 // Does the live project's migration history say what the repo says?
 //
-// CI tests every migration against a throwaway Postgres; nothing applies
-// one to the live project (CLAUDE.md, "Supabase"). So a migration merged
+// CI tests every migration against a throwaway Postgres; a merge applies
+// one to the live project only once approved (docs/migrations.md). So a
+// migration merged
 // and never applied reads exactly like one that ran, until a screen asks
 // for a column that is not there — and a merge has silently dropped an
 // applied migration from the tree before. This turns either into a red

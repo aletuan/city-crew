@@ -2,7 +2,7 @@
 # person says yes.
 #
 # Until 25 Nov 2026 nothing applied migrations; a person did, by hand,
-# and the history drifted (CLAUDE.md, "Supabase"). This job does the
+# and the history drifted (docs/migrations.md). This job does the
 # applying and leaves the deciding where it was:
 #
 # - It waits for approval. The job runs in the `supabase-live`

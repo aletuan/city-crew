@@ -6,6 +6,14 @@ disable-model-invocation: true
 
 # Ship a migration
 
+> **Read `docs/migrations.md` first (28 Nov 2026).** Since 25 Nov a merge
+> applies a migration itself once approved, the function deploy and the
+> EAS Update wait for it, and the live history and the folder agree
+> version for version. The steps below were written before that, for
+> applying by hand: they are still how to do it by hand, but the opening
+> line, step 5's place in the order and the list of known mismatches
+> under step 6 describe the repo as it was on 24 Oct.
+
 CLAUDE.md says it in one line: **CI tests migrations; nothing applies them
 to the live project.** A file merged into `supabase/migrations/` is a
 migration that has run in a throwaway Postgres, twice, and nowhere else.
