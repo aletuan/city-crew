@@ -322,27 +322,38 @@ describe('a friend’s visit', () => {
   });
 
   // Their words first (owner, 28 Nov 2026): before the picture, at the
-  // card's reading size, with the place named in the head and as a row
-  // under the picture.
-  it('leads with their note, names the place in the head, and puts the place in a row under the picture', async () => {
-    await show('me', LAN, [visit('k1', { note: 'Crisp sourdough.' })]);
+  // Their words first (owner, 28 Nov 2026), then the place as a row, then
+  // the picture — and the head stays one line, the place said once.
+  it('leads with their note, then the place as a row, then the picture, and keeps the head short', async () => {
+    await show('me', LAN, [visit('k1', { note: 'Crisp sourdough.', place: { name_en: 'Place k1', name_vi: 'Quán k1', cover: 'https://covers/k1.jpg', categories: ['cafes'] } })]);
     const card = cards()[0];
-    expect(within(card).getByTestId('activity-line').textContent).toBe('Lan Pham checked in at Place k1 ');
+    expect(within(card).getByTestId('activity-line').textContent).toBe('Lan Pham checked in ');
     const lead = within(card).getByTestId('activity-lead');
     expect(lead.textContent).toBe('Crisp sourdough.');
-    expect(within(lead).getByTestId('person-visit-note')).toBeTruthy();
     expect((StyleSheet.flatten(propsWhere((q) => q.testID === 'person-visit-note').style as never) as { fontSize: number }).fontSize).toBe(16);
     const open = within(card).getByTestId('activity-open');
-    expect(lead.compareDocumentPosition(open) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     expect(open.contains(lead)).toBe(false);
     expect(within(open).getByTestId('activity-place-row').textContent).toBe('Place k1Cafés · Hanoi');
+    const cover = within(card).getByTestId('activity-cover');
+    expect(lead.compareDocumentPosition(open) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(open.compareDocumentPosition(cover) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(cover.querySelector('img')!.getAttribute('src')).toBe('https://covers/k1.jpg');
     expect(within(card).queryByTestId('activity-desc')).toBeNull();
   });
 
-  it('names the place in the head in the reader\'s language', async () => {
-    i18n.lang = 'vi';
-    await show('me', LAN, [visit('k1', { note: 'Ngon.', place: { name_en: 'Place k1', name_vi: 'Quán k1', cover: null, categories: [] } })]);
-    expect(within(cards()[0]).getByTestId('activity-line').textContent).toBe('Lan Pham đã check-in tại Quán k1 ');
+  it('is in the same order with no note: the place, then the picture', async () => {
+    await show('me', LAN, [visit('k1')]);
+    const card = cards()[0];
+    expect(within(card).queryByTestId('activity-lead')).toBeNull();
+    const open = within(card).getByTestId('activity-open');
+    expect(within(open).getByTestId('activity-place-row')).toBeTruthy();
+    expect(open.compareDocumentPosition(within(card).getByTestId('activity-cover')) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+
+  it('opens the place from its picture as well as its row', async () => {
+    await show('me', LAN, [visit('k1')]);
+    fireEvent.click(within(cards()[0]).getByTestId('activity-cover'));
+    expect(onPlace).toHaveBeenCalledWith('slug-k1');
   });
 
   it('names the place in the reader’s language, by the handle when they gave no name, and says less when less is known', async () => {
@@ -423,12 +434,29 @@ describe('your own visits', () => {
     expect(within(bare).getByTestId('visit-note-add')).toBeTruthy();
     expect(within(noted).getByTestId('visit-note').textContent).toBe('Mine.');
     expect(screen.queryByTestId('activity-desc')).toBeNull();
-    // A note of yours leads its card, as a friend's does; the ask for one
-    // stays in the line under the place, where the card is as it was.
+    // Both lead their cards, the ask where a note would stand.
     expect(within(noted).getByTestId('activity-lead').contains(within(noted).getByTestId('visit-note'))).toBe(true);
     expect(within(noted).queryByTestId('visit-note-add')).toBeNull();
-    expect(within(bare).queryByTestId('activity-lead')).toBeNull();
-    expect(within(bare).getByTestId('activity-open').contains(within(bare).getByTestId('visit-note-add'))).toBe(true);
+    expect(within(bare).getByTestId('activity-lead').contains(within(bare).getByTestId('visit-note-add'))).toBe(true);
+  });
+
+  // Once, on the newest visit without a note (owner, 28 Nov 2026): said on
+  // every one it was eight times in a row, and read as none.
+  it('asks on the newest visit without a note, and on no other', async () => {
+    await show('me', ME, [
+      visit('k1', { audience: 'friends', note: 'Mine.' }),
+      visit('k2', { audience: 'private' }),
+      visit('k3', { audience: 'private' }),
+    ]);
+    const [, newest, older] = cards();
+    expect(screen.getAllByTestId('visit-note-add')).toHaveLength(1);
+    expect(within(newest).getByTestId('visit-note-add')).toBeTruthy();
+    expect(within(older).queryByTestId('activity-lead')).toBeNull();
+  });
+
+  it('asks nothing on a friend\'s page, whatever has no note', async () => {
+    await show('me', LAN, [visit('k1'), visit('k2')]);
+    expect(screen.queryByTestId('visit-note-add')).toBeNull();
   });
 
   it('opens the sheet over that visit from its note, not the place, with its words, its day and its answer', async () => {

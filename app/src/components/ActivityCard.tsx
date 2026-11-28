@@ -53,10 +53,17 @@
 // lines with an ellipsis and nothing to open the rest. It is the one thing
 // on the card that is found nowhere else — the picture and the name are
 // the place's own page — and it read as a caption to them. A card handed
-// `lead` draws it under the head, before the picture, and the place goes
-// to a row under the picture (`placeRow`): a pin, the name at 15, the kind
-// and city, and the › that says the row opens the place. A card with no
-// words to lead with keeps the picture and the name first, as before.
+// `lead` draws it under the head, before the picture.
+//
+// The same morning the place went to a row under the picture, and the
+// head said "checked in at <place>" so the words had somewhere to stand.
+// On a phone (owner's recording, 28 Nov 2026) the head ran to three lines
+// on a long name, the name was said twice, and a column of visits mixed
+// two orders — words, picture, row; and picture, name — so the eye looked
+// for the place in a new spot on every card. So a visit's card has one
+// order whether it has words or not (`placeRow`): who, the words if any,
+// the place as a row — a pin, the name at 15 on one line, the kind and
+// city, the › — and then the picture. A collection's card keeps its own.
 //
 // ── a visit's own photos (K4 of `docs/checkin-photos-plan.md`) ──
 //
@@ -88,6 +95,7 @@ import LikeHeart from './LikeHeart';
 import { CopyGlyph } from './CopyGlyph';
 import { Glyph, ICON, type GlyphName } from './ui/glyph';
 import { PressableScale } from './ui/controls';
+import { CONTROL_H } from './ui/layout';
 import PhotoCarousel, { type PageSize } from './PhotoCarousel';
 import { Avatar, Card } from './ui/surfaces';
 import { useI18n } from '../lib/i18n';
@@ -182,8 +190,8 @@ export default function ActivityCard({
    *  page, which a press edits (`VisitNote`). Inside the card's press,
    *  and React Native gives the press to the inner one. */
   under?: React.ReactNode;
-  /** The place as a row under the picture, for a card that leads with
-   *  words — see the header. */
+  /** The place as a row, before the picture — see the header. Nothing
+   *  is drawn under it: `under` and `desc` belong to the other order. */
   placeRow?: boolean;
   liked: boolean;
   likes: number;
@@ -261,26 +269,24 @@ export default function ActivityCard({
         ) : null}
       </View>
       {lead ? <View style={s.lead} testID="activity-lead">{lead}</View> : null}
-      {photo ? <PhotoPress photo={photo} /> : null}
-      <PressableScale
-        onPress={onOpen}
-        haptic="selection"
-        scaleTo={0.985}
-        accessibilityRole="button"
-        accessibilityLabel={[title, meta].join(', ')}
-        testID="activity-open"
-      >
-        {photo ? null : uri
-          // `memory-disk`, where `expo-image` defaults to `disk`: a feed
-          // prefetches the covers it is about to draw into memory, and a
-          // card must read from where they were put (`Avatar` has the
-          // same reason).
-          ? <Image source={{ uri }} style={s.photo} contentFit="cover" transition={160} cachePolicy="memory-disk" />
-          : <View style={[s.photo, s.tint]} testID="activity-tint" />}
-        {placeRow
-          ? <PlaceRow title={title} meta={meta} under={under} />
-          : <Words title={title} meta={meta} desc={desc} under={under} goes={goes} />}
-      </PressableScale>
+      {placeRow ? (
+        <PlaceFirst title={title} meta={meta} uri={uri} photo={photo} onOpen={onOpen} />
+      ) : (
+        <>
+          {photo ? <PhotoPress photo={photo} /> : null}
+          <PressableScale
+            onPress={onOpen}
+            haptic="selection"
+            scaleTo={0.985}
+            accessibilityRole="button"
+            accessibilityLabel={[title, meta].join(', ')}
+            testID="activity-open"
+          >
+            {photo ? null : <Cover uri={uri} />}
+            <Words title={title} meta={meta} desc={desc} under={under} goes={goes} />
+          </PressableScale>
+        </>
+      )}
       {onHeart ? (
         <View style={s.foot}>
           <LikeHeart
@@ -389,20 +395,54 @@ function Words({ title, meta, desc, under, goes }: {
   );
 }
 
-/** The place as a row, under a picture that words came before. */
-function PlaceRow({ title, meta, under }: { title: string; meta: string; under?: React.ReactNode }) {
+/** The picture a card wears when it has no photos of its own: the
+ *  cover, or the accent's tint where there is none. */
+function Cover({ uri }: { uri?: string }) {
+  return uri
+    // `memory-disk`, where `expo-image` defaults to `disk`: a feed
+    // prefetches the covers it is about to draw into memory, and a card
+    // must read from where they were put (`Avatar` has the same reason).
+    ? <Image source={{ uri }} style={s.photo} contentFit="cover" transition={160} cachePolicy="memory-disk" />
+    : <View style={[s.photo, s.tint]} testID="activity-tint" />;
+}
+
+/**
+ * The place as a row, then the picture (owner, 28 Nov 2026): who, what
+ * they said, where, then what it looked like — one order for every
+ * visit, with words or without. The row is the press into the place;
+ * the place's cover under it is the same press, silent to a screen
+ * reader, which has already heard the row. A visit's own photos are
+ * their own press, as everywhere.
+ */
+function PlaceFirst({ title, meta, uri, photo, onOpen }: {
+  title: string; meta: string; uri?: string; photo?: CardPhoto; onOpen: () => void;
+}) {
   return (
-    <View style={s.placeRowWrap}>
-      <View style={s.placeRow} testID="activity-place-row">
-        <Glyph name="location-outline" size={ICON.action} color={colors.textSecondary} />
-        <View style={s.placeWords}>
-          <Text style={s.placeName} numberOfLines={1}>{title}</Text>
-          <Text style={s.meta} numberOfLines={1}>{meta}</Text>
+    <>
+      <PressableScale
+        onPress={onOpen}
+        haptic="selection"
+        scaleTo={0.985}
+        accessibilityRole="button"
+        accessibilityLabel={[title, meta].join(', ')}
+        style={s.placeRowWrap}
+        testID="activity-open"
+      >
+        <View style={s.placeRow} testID="activity-place-row">
+          <Glyph name="location-outline" size={ICON.action} color={colors.textSecondary} />
+          <View style={s.placeWords}>
+            <Text style={s.placeName} numberOfLines={1}>{title}</Text>
+            <Text style={s.meta} numberOfLines={1}>{meta}</Text>
+          </View>
+          <Glyph name="chevron-forward" size={MARK} color={colors.textTertiary} testID="activity-goes" />
         </View>
-        <Glyph name="chevron-forward" size={MARK} color={colors.textTertiary} testID="activity-goes" />
-      </View>
-      {under}
-    </View>
+      </PressableScale>
+      {photo ? <PhotoPress photo={photo} /> : (
+        <PressableScale onPress={onOpen} scaleTo={0.985} accessible={false} importantForAccessibility="no-hide-descendants" testID="activity-cover">
+          <Cover uri={uri} />
+        </PressableScale>
+      )}
+    </>
   );
 }
 
@@ -410,11 +450,15 @@ const s = StyleSheet.create({
   off: { opacity: 0.35 },
   // Under the head's 12, the words at the card's edge, 12 to the picture.
   lead: { paddingHorizontal: space.cardPadding, paddingBottom: 12 },
-  placeRowWrap: { paddingHorizontal: space.cardPadding, paddingTop: 12, gap: 6 },
+  // The row stands between the words and the picture, 12 to the picture.
+  placeRowWrap: { paddingHorizontal: space.cardPadding, paddingBottom: 12 },
   // A hairline box, as a place's row is in a list: something to press,
   // where the plain words above were something to read.
+  // The tall step of the button scale (`CONTROL_H`, 52): the name's 20
+  // and the meta's 18 with 7 above and below, where padding of its own
+  // stood at 54.
   placeRow: {
-    flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 8, paddingHorizontal: 10,
+    flexDirection: 'row', alignItems: 'center', gap: 10, minHeight: CONTROL_H, paddingHorizontal: 10,
     borderRadius: 12, borderWidth: StyleSheet.hairlineWidth, borderColor: colors.borderGlass,
   },
   placeWords: { flex: 1, minWidth: 0 },
